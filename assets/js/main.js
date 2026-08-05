@@ -238,11 +238,11 @@
     toastTimer = setTimeout(function () { toastEl.classList.remove('is-visible'); }, 2600);
   }
 
-  /* --- Taburi (comentarii / interesați / participă) --- */
-  var tablist = document.querySelector('.tabs');
-
-  if (tablist) {
-    var tabs = Array.prototype.slice.call(tablist.querySelectorAll('.tab'));
+  /* --- Taburi (refolosibile: orice container cu data-tabs) --- */
+  // Merge pe comentariile din articol și pe autentificare/înregistrare deopotrivă.
+  document.querySelectorAll('[data-tabs]').forEach(function (tablist) {
+    var tabs = Array.prototype.slice.call(tablist.querySelectorAll('[role="tab"]'));
+    if (!tabs.length) return;
 
     function selectTab(tab, focus) {
       tabs.forEach(function (t) {
@@ -275,7 +275,13 @@
       if (e.key === 'End')        next = tabs[tabs.length - 1];
       if (next) { e.preventDefault(); selectTab(next, true); }
     });
-  }
+
+    // permite deschiderea unui tab anume din exterior (ex. #inregistrare)
+    tablist.selectTabById = function (id) {
+      var tab = tabs.filter(function (t) { return t.id === id; })[0];
+      if (tab) selectTab(tab, false);
+    };
+  });
 
   /* --- Butoanele de participare --- */
   var rsvpButtons = document.querySelectorAll('[data-rsvp]');
@@ -482,8 +488,8 @@
       {
         id: 'cf-phone', error: 'err-phone',
         check: function (v) {
-          // câmp opțional: validăm doar dacă a fost completat
-          if (v && !phonePattern.test(v)) return 'Numărul de telefon nu pare valid.';
+          if (!v) return 'Te rugăm să ne lași un număr de telefon.';
+          if (!phonePattern.test(v)) return 'Numărul de telefon nu pare valid.';
           return '';
         }
       },
@@ -551,6 +557,273 @@
       if (successBox) successBox.hidden = false;
       toast('Mesajul a fost trimis.');
     });
+  }
+
+
+  /* ------------------ 7. AUTENTIFICARE / ÎNREGISTRARE ------------------- */
+  var authTabs = document.getElementById('auth-tabs');
+
+  if (authTabs) {
+
+    /* --- Deschide tabul corect din URL sau din butoanele de sub formular --- */
+    // login.html#inregistrare sau ?tab=inregistrare deschide direct înregistrarea.
+    var params = new URLSearchParams(window.location.search);
+    var wanted = (window.location.hash === '#inregistrare' || params.get('tab') === 'inregistrare')
+      ? 'tab-register' : null;
+    if (wanted) authTabs.selectTabById(wanted);
+
+    document.querySelectorAll('[data-go-tab]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        authTabs.selectTabById(btn.getAttribute('data-go-tab'));
+        authTabs.scrollIntoView({ block: 'nearest' });
+      });
+    });
+
+    /* --- Mesajul „intră în cont ca să continui" --- */
+    // Acceptăm doar căi relative la site-ul nostru, ca parametrul redirect să nu
+    // poată fi folosit pentru a trimite utilizatorul pe un domeniu străin.
+    function safeRedirect() {
+      var value = params.get('redirect');
+      if (!value) return '';
+      if (value.charAt(0) !== '/' || value.charAt(1) === '/') return '';
+      return value;
+    }
+
+    var backTo = safeRedirect();
+    var notice = document.getElementById('auth-notice');
+    if (backTo && notice) notice.hidden = false;
+
+    function afterAuth(message) {
+      toast(message);
+      setTimeout(function () {
+        window.location.href = backTo || 'index.html';
+      }, 1000);
+    }
+
+    /* --- Butonul de afișare a parolei --- */
+    document.querySelectorAll('[data-toggle-pass]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var input = document.getElementById(btn.getAttribute('data-toggle-pass'));
+        if (!input) return;
+        var shown = input.type === 'text';
+        input.type = shown ? 'password' : 'text';
+        btn.setAttribute('aria-pressed', String(!shown));
+        btn.setAttribute('aria-label', shown ? 'Arată parola' : 'Ascunde parola');
+      });
+    });
+
+    /* --- Butoanele Google --- */
+    document.querySelectorAll('[data-google]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        // TODO: aici pornești fluxul OAuth (redirect spre /auth/google
+        // sau apel către SDK-ul Google Identity Services).
+        toast('Autentificarea cu Google se leagă la implementarea serverului.');
+      });
+    });
+
+    /* --- Verificări comune --- */
+    var emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+    function fieldOf(id) { return document.getElementById(id).closest('.field'); }
+
+    function setError(id, errorId, message) {
+      var input = document.getElementById(id);
+      var boxEl = document.getElementById(errorId);
+      var field = fieldOf(id);
+
+      if (message) {
+        field.classList.add('has-error');
+        input.setAttribute('aria-invalid', 'true');
+        boxEl.textContent = message;
+        boxEl.hidden = false;
+      } else {
+        field.classList.remove('has-error');
+        input.removeAttribute('aria-invalid');
+        boxEl.textContent = '';
+        boxEl.hidden = true;
+      }
+      return !message;
+    }
+
+    // Leagă un set de reguli la un formular: validare la blur, recontrol în
+    // timp real după prima eroare, iar la submit focus pe primul câmp greșit.
+    function wireForm(form, rules, onValid) {
+      function validate(rule) {
+        var input = document.getElementById(rule.id);
+        var value = input.type === 'checkbox' ? input.checked : input.value.trim();
+        return setError(rule.id, rule.error, rule.check(value));
+      }
+
+      rules.forEach(function (rule) {
+        var input = document.getElementById(rule.id);
+        if (!input) return;
+        var event = (input.type === 'checkbox' || input.tagName === 'SELECT') ? 'change' : 'blur';
+        input.addEventListener(event, function () { validate(rule); });
+        input.addEventListener('input', function () {
+          if (fieldOf(rule.id).classList.contains('has-error')) validate(rule);
+        });
+      });
+
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var firstBad = null;
+        rules.forEach(function (rule) {
+          if (!validate(rule) && !firstBad) firstBad = document.getElementById(rule.id);
+        });
+        if (firstBad) {
+          firstBad.focus();
+          toast('Mai sunt câmpuri de completat.');
+          return;
+        }
+        onValid();
+      });
+    }
+
+    /* --- Formularul de autentificare --- */
+    var loginForm = document.getElementById('login-form');
+
+    if (loginForm) {
+      wireForm(loginForm, [
+        {
+          id: 'lg-email', error: 'err-lg-email',
+          check: function (v) {
+            if (!v) return 'Scrie adresa de e-mail.';
+            if (!emailPattern.test(v)) return 'Adresa de e-mail nu pare validă.';
+            return '';
+          }
+        },
+        {
+          id: 'lg-password', error: 'err-lg-password',
+          check: function (v) { return v ? '' : 'Scrie parola.'; }
+        }
+      ], function () {
+        // TODO: trimite datele către server și tratează răspunsul
+        // (parolă greșită, cont inexistent etc.).
+        afterAuth('Bine ai revenit!');
+      });
+    }
+
+    /* --- Puterea parolei --- */
+    // Punctaj simplu, orientativ: lungime + varietate de caractere.
+    function passwordScore(value) {
+      if (!value) return 0;
+      var score = 0;
+      if (value.length >= 8)  score++;
+      if (value.length >= 12) score++;
+      if (/[a-z]/.test(value) && /[A-Z]/.test(value)) score++;
+      if (/\d/.test(value) && /[^\w\s]/.test(value)) score++;
+      return Math.min(score, 4);
+    }
+
+    var passInput = document.getElementById('rg-password');
+    var passMeter = document.getElementById('pass-meter');
+    var passHint  = document.getElementById('pass-hint');
+    var labels    = ['', 'Slabă', 'Acceptabilă', 'Bună', 'Puternică'];
+
+    if (passInput && passMeter) {
+      passInput.addEventListener('input', function () {
+        var value = passInput.value;
+        if (!value) { passMeter.hidden = true; return; }
+        var score = passwordScore(value);
+        passMeter.hidden = false;
+        passMeter.setAttribute('data-score', String(score));
+        passHint.textContent = labels[score];
+      });
+    }
+
+    /* --- Formularul de înregistrare --- */
+    var registerForm = document.getElementById('register-form');
+
+    if (registerForm) {
+      var minAge = 13;
+
+      wireForm(registerForm, [
+        {
+          id: 'rg-lastname', error: 'err-rg-lastname',
+          check: function (v) {
+            if (!v) return 'Scrie numele.';
+            if (v.length < 2) return 'Numele pare prea scurt.';
+            return '';
+          }
+        },
+        {
+          id: 'rg-firstname', error: 'err-rg-firstname',
+          check: function (v) {
+            if (!v) return 'Scrie prenumele.';
+            if (v.length < 2) return 'Prenumele pare prea scurt.';
+            return '';
+          }
+        },
+        {
+          id: 'rg-email', error: 'err-rg-email',
+          check: function (v) {
+            if (!v) return 'Scrie adresa de e-mail.';
+            if (!emailPattern.test(v)) return 'Adresa de e-mail nu pare validă.';
+            return '';
+          }
+        },
+        {
+          id: 'rg-birthdate', error: 'err-rg-birthdate',
+          check: function (v) {
+            if (!v) return 'Alege data nașterii.';
+            var born = new Date(v + 'T00:00:00');
+            if (isNaN(born.getTime())) return 'Data nu pare validă.';
+
+            var today = new Date();
+            if (born > today) return 'Data nașterii nu poate fi în viitor.';
+            if (born.getFullYear() < 1900) return 'Data nu pare validă.';
+
+            var age = today.getFullYear() - born.getFullYear();
+            var m = today.getMonth() - born.getMonth();
+            if (m < 0 || (m === 0 && today.getDate() < born.getDate())) age--;
+            if (age < minAge) return 'Trebuie să ai cel puțin ' + minAge + ' ani.';
+            return '';
+          }
+        },
+        {
+          id: 'rg-gender', error: 'err-rg-gender',
+          check: function (v) { return v ? '' : 'Alege o opțiune.'; }
+        },
+        {
+          id: 'rg-password', error: 'err-rg-password',
+          check: function (v) {
+            if (!v) return 'Alege o parolă.';
+            if (v.length < 8) return 'Parola trebuie să aibă minimum 8 caractere.';
+            if (passwordScore(v) < 2) return 'Parola e prea simplă — adaugă cifre sau litere mari.';
+            return '';
+          }
+        },
+        {
+          id: 'rg-password2', error: 'err-rg-password2',
+          check: function (v) {
+            if (!v) return 'Scrie parola din nou.';
+            if (v !== document.getElementById('rg-password').value) return 'Cele două parole nu coincid.';
+            return '';
+          }
+        },
+        {
+          id: 'rg-terms', error: 'err-rg-terms',
+          check: function (checked) {
+            return checked ? '' : 'Trebuie să accepți termenii ca să continui.';
+          }
+        }
+      ], function () {
+        // TODO: trimite datele către server (verifică acolo dacă e-mailul
+        // e deja folosit) și confirmă adresa prin e-mail.
+        afterAuth('Contul a fost creat. Bine ai venit!');
+      });
+
+      // Când schimbi parola, reverificăm și confirmarea, dacă era deja greșită.
+      var pass2 = document.getElementById('rg-password2');
+      if (passInput && pass2) {
+        passInput.addEventListener('input', function () {
+          if (pass2.value && fieldOf('rg-password2').classList.contains('has-error')) {
+            setError('rg-password2', 'err-rg-password2',
+              pass2.value === passInput.value ? '' : 'Cele două parole nu coincid.');
+          }
+        });
+      }
+    }
   }
 
 })();

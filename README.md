@@ -104,7 +104,7 @@ Antet de pagină, formular cu patru câmpuri (nume și prenume, e-mail, telefon,
 mesaj) și coloana cu datele de contact. Datele afișate sunt exemple — le
 înlocuiești cu cele reale direct în HTML.
 
-Telefonul e singurul câmp opțional; se validează doar dacă a fost completat.
+Toate cele patru câmpuri sunt obligatorii.
 
 Verificarea se face în JS, nu prin `required` din browser, ca mesajele să fie
 în română și în stilul paginii. Se validează la ieșirea din câmp, iar dacă un
@@ -115,7 +115,44 @@ Formularul nu trimite nimic încă — afișează doar confirmarea. Locul unde l
 serverul e marcat cu `// TODO` în `main.js`; acolo pui un `fetch` către
 endpoint-ul tău (sau `action` + `method` pe `<form>`, dacă preferi fără JS).
 
+## Pagina de cont (`login.html`)
+
+Un singur card, cu taburi de selecție între **Autentificare** și
+**Înregistrare**. Accesul cu Google e prezent în ambele, deasupra formularului,
+separat printr-o linie „sau".
+
+- **Autentificare:** e-mail, parolă, „ține-mă minte", link de parolă uitată.
+- **Înregistrare:** nume, prenume, e-mail, data nașterii, sex, parolă și
+  confirmarea ei, plus bifa de acceptare a termenilor.
+
+Ambele câmpuri de parolă au buton de afișare. La înregistrare, sub parolă apare
+un indicator de putere (patru trepte, calculate din lungime și varietatea
+caracterelor).
+
+### Cum deschizi direct un tab
+
+`login.html#inregistrare` sau `login.html?tab=inregistrare` deschide direct
+formularul de înregistrare. Butoanele „Creează unul" / „Autentifică-te" de sub
+formulare comută între taburi fără reîncărcarea paginii.
+
+### Întoarcerea după autentificare
+
+Paginile care cer cont trimit spre `login.html?redirect=<cale>`. După
+autentificare sau înregistrare, utilizatorul e dus înapoi acolo; dacă
+parametrul lipsește, ajunge pe prima pagină.
+
+Din motive de siguranță se acceptă doar căi relative de pe acest site — o
+valoare de forma `https://alt-domeniu.ro` sau `//alt-domeniu.ro` e ignorată, ca
+parametrul să nu poată fi folosit pentru a trimite utilizatorii pe un site
+străin.
+
+### Ce rămâne de legat
+
+Butoanele Google și cele două formulare sunt marcate cu `// TODO` în `main.js`.
+Verificările din browser sunt doar pentru comoditatea utilizatorului —
+**validarea reală trebuie făcută pe server** (e-mail deja folosit, parolă
+corectă, vârstă minimă).
+
 ## De făcut mai departe
 
-`despre.html`, `alatura-te.html` și `login.html` sunt deja legate, dar nu
-există încă.
+`despre.html` și `alatura-te.html` sunt deja legate, dar nu există încă.
