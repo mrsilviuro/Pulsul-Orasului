@@ -731,7 +731,10 @@ main { padding-block: 46px 64px; }
 .crumbs a:hover { color: var(--brand); }
 .crumbs__current { color: var(--text-soft); font-weight: 600; }
 
-.post { max-width: 760px; margin-inline: auto; }
+/* Articolul folosește toată lățimea containerului (1000px).
+   Dacă vrei rândurile mai scurte, la citit mai comod, pune aici un
+   max-width (ex. 760px) — restul paginii rămâne neschimbat. */
+.post { width: 100%; margin-inline: auto; }
 
 .post__cat {
   display: inline-block;
