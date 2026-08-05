@@ -1166,3 +1166,196 @@ main { padding-block: 46px 64px; }
   .comment__replies { padding-left: 12px; }
   .tab { padding: 11px 12px; font-size: 14px; }
 }
+
+/* =========================================================================
+   PAGINA DE CONTACT
+   13. Antet de pagină
+   14. Formular
+   15. Date de contact
+   ========================================================================= */
+
+/* -------------------------- 13. ANTET DE PAGINĂ ------------------------- */
+.page-head {
+  max-width: 640px;
+  margin-bottom: 38px;
+}
+.page-title {
+  font-size: clamp(30px, 5.5vw, 42px);
+  letter-spacing: -.03em;
+  margin-bottom: 12px;
+}
+.page-lead {
+  font-size: clamp(15.5px, 2.2vw, 17.5px);
+  line-height: 1.65;
+  color: var(--text-soft);
+}
+
+/* ----------------------------- 14. FORMULAR ----------------------------- */
+.contact {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+  gap: 40px;
+  align-items: start;
+}
+
+.contact__h2 {
+  font-size: 19px;
+  margin-bottom: 18px;
+}
+
+.contact__form-wrap {
+  padding: 26px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.form { display: grid; gap: 18px; }
+
+.field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+/* align-content: start — altfel, când câmpul vecin de pe același rând afișează
+   o eroare pe două linii, inputul de aici s-ar întinde ca să umple spațiul. */
+.field { display: grid; gap: 7px; min-width: 0; align-content: start; }
+
+.field label {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text);
+}
+.req { color: var(--brand); }
+.field__opt {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-faint);
+  text-transform: lowercase;
+}
+
+.field input,
+.field textarea {
+  width: 100%;
+  padding: 11px 14px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--bg);
+  font-size: 15px;
+  line-height: 1.55;
+  transition: border-color .18s var(--ease), box-shadow .18s var(--ease),
+              background-color .18s var(--ease);
+}
+.field textarea { resize: vertical; min-height: 120px; }
+.field input::placeholder,
+.field textarea::placeholder { color: var(--text-faint); }
+
+.field input:focus,
+.field textarea:focus {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px var(--brand-soft);
+}
+
+/* stare de eroare */
+.field.has-error input,
+.field.has-error textarea { border-color: #e0393b; }
+.field.has-error input:focus,
+.field.has-error textarea:focus { box-shadow: 0 0 0 3px rgba(224, 57, 59, .16); }
+
+.field__error {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #d32f31;
+}
+[data-theme="dark"] .field__error { color: #ff8a86; }
+
+.form__foot {
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 14px;
+  margin-top: 2px;
+}
+.form__note { font-size: 12.5px; color: var(--text-faint); }
+.form__foot .btn .ico { width: 16px; height: 16px; }
+
+.form__success {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 13px 16px;
+  border-radius: var(--radius);
+  border: 1px solid rgba(22, 163, 74, .35);
+  background: rgba(22, 163, 74, .1);
+  font-size: 14px;
+  font-weight: 600;
+  color: #15803d;
+}
+[data-theme="dark"] .form__success { color: #6ee7a0; }
+.form__success .ico { width: 18px; height: 18px; margin-top: 1px; color: #16a34a; }
+.form__success[hidden] { display: none; }
+
+/* ------------------------- 15. DATE DE CONTACT -------------------------- */
+.contact__info {
+  padding: 26px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-soft);
+}
+
+.info-list { display: grid; gap: 20px; }
+
+.info-item { display: flex; align-items: flex-start; gap: 12px; }
+.info-item__ico {
+  width: 36px; height: 36px;
+  display: grid; place-items: center;
+  border-radius: 11px;
+  background: var(--brand-soft);
+  color: var(--brand);
+  flex: none;
+}
+.info-item__ico .ico { width: 18px; height: 18px; }
+
+.info-item__label {
+  display: block;
+  font-size: 11.5px; font-weight: 800;
+  letter-spacing: .06em; text-transform: uppercase;
+  color: var(--text-faint);
+  margin-bottom: 2px;
+}
+.info-item__value {
+  display: block;
+  font-size: 14.5px; font-weight: 600;
+  line-height: 1.45;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+a.info-item__value { transition: color .18s var(--ease); }
+a.info-item__value:hover { color: var(--brand); }
+
+.info-social {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+.info-social .socials { margin-top: 9px; }
+
+.info-cta {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+.info-cta p { font-size: 14px; color: var(--text-soft); margin-bottom: 11px; }
+
+/* ------------------- responsive pagina de contact ----------------------- */
+@media (max-width: 860px) {
+  .contact { grid-template-columns: 1fr; gap: 26px; }
+}
+
+@media (max-width: 560px) {
+  .field-row { grid-template-columns: 1fr; gap: 18px; }
+  .contact__form-wrap,
+  .contact__info { padding: 20px 16px; }
+  .form__foot { flex-direction: column; align-items: stretch; }
+  .form__foot .btn { width: 100%; }
+  .form__note { order: 2; text-align: center; }
+}

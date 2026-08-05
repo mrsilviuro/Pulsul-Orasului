@@ -98,7 +98,24 @@ accesibil — merg și cu săgețile de la tastatură. Sub-comentariile stau în
 `<ul class="comment__replies">` în interiorul comentariului părinte; formularul
 de răspuns se generează din JS la click pe „Răspunde".
 
+## Pagina de contact (`contact.html`)
+
+Antet de pagină, formular cu patru câmpuri (nume și prenume, e-mail, telefon,
+mesaj) și coloana cu datele de contact. Datele afișate sunt exemple — le
+înlocuiești cu cele reale direct în HTML.
+
+Telefonul e singurul câmp opțional; se validează doar dacă a fost completat.
+
+Verificarea se face în JS, nu prin `required` din browser, ca mesajele să fie
+în română și în stilul paginii. Se validează la ieșirea din câmp, iar dacă un
+câmp e deja marcat greșit, se recontrolează pe măsură ce scrii. La trimitere,
+focusul sare pe primul câmp cu probleme.
+
+Formularul nu trimite nimic încă — afișează doar confirmarea. Locul unde legi
+serverul e marcat cu `// TODO` în `main.js`; acolo pui un `fetch` către
+endpoint-ul tău (sau `action` + `method` pe `<form>`, dacă preferi fără JS).
+
 ## De făcut mai departe
 
-`despre.html`, `alatura-te.html`, `contact.html` și `login.html` sunt deja
-legate, dar nu există încă.
+`despre.html`, `alatura-te.html` și `login.html` sunt deja legate, dar nu
+există încă.

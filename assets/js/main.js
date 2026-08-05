@@ -450,4 +450,107 @@
     updateProgress();
   }
 
+
+  /* ---------------------- 6. FORMULARUL DE CONTACT ---------------------- */
+  var contactForm = document.getElementById('contact-form');
+
+  if (contactForm) {
+    var successBox = document.getElementById('form-success');
+
+    // Telefon: acceptăm formatele uzuale din România și cele internaționale
+    // (cifre, spații, puncte, cratime, paranteze și prefixul +).
+    var phonePattern = /^\+?[\d\s.\-()]{9,20}$/;
+    var emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+    var rules = [
+      {
+        id: 'cf-name', error: 'err-name',
+        check: function (v) {
+          if (!v) return 'Te rugăm să îți scrii numele.';
+          if (v.length < 3) return 'Numele pare prea scurt.';
+          return '';
+        }
+      },
+      {
+        id: 'cf-email', error: 'err-email',
+        check: function (v) {
+          if (!v) return 'Avem nevoie de adresa ta de e-mail ca să îți răspundem.';
+          if (!emailPattern.test(v)) return 'Adresa de e-mail nu pare validă.';
+          return '';
+        }
+      },
+      {
+        id: 'cf-phone', error: 'err-phone',
+        check: function (v) {
+          // câmp opțional: validăm doar dacă a fost completat
+          if (v && !phonePattern.test(v)) return 'Numărul de telefon nu pare valid.';
+          return '';
+        }
+      },
+      {
+        id: 'cf-message', error: 'err-message',
+        check: function (v) {
+          if (!v) return 'Scrie-ne câteva rânduri despre ce e vorba.';
+          if (v.length < 10) return 'Mesajul e prea scurt — mai spune-ne câte ceva.';
+          return '';
+        }
+      }
+    ];
+
+    function showError(rule, message) {
+      var input = document.getElementById(rule.id);
+      var box   = document.getElementById(rule.error);
+      var field = input.closest('.field');
+
+      if (message) {
+        field.classList.add('has-error');
+        input.setAttribute('aria-invalid', 'true');
+        box.textContent = message;
+        box.hidden = false;
+      } else {
+        field.classList.remove('has-error');
+        input.removeAttribute('aria-invalid');
+        box.textContent = '';
+        box.hidden = true;
+      }
+      return !message;
+    }
+
+    function validate(rule) {
+      var input = document.getElementById(rule.id);
+      return showError(rule, rule.check(input.value.trim()));
+    }
+
+    rules.forEach(function (rule) {
+      var input = document.getElementById(rule.id);
+      if (!input) return;
+      // verificăm la ieșirea din câmp, apoi în timp real doar dacă e deja greșit
+      input.addEventListener('blur', function () { validate(rule); });
+      input.addEventListener('input', function () {
+        if (input.closest('.field').classList.contains('has-error')) validate(rule);
+      });
+    });
+
+    contactForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      if (successBox) successBox.hidden = true;
+
+      var firstBad = null;
+      rules.forEach(function (rule) {
+        if (!validate(rule) && !firstBad) firstBad = document.getElementById(rule.id);
+      });
+
+      if (firstBad) {
+        firstBad.focus();
+        toast('Mai sunt câmpuri de completat.');
+        return;
+      }
+
+      // TODO: aici se trimite mesajul către server (fetch POST către endpoint-ul tău).
+      contactForm.reset();
+      if (successBox) successBox.hidden = false;
+      toast('Mesajul a fost trimis.');
+    });
+  }
+
 })();
