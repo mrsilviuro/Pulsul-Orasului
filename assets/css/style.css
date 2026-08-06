@@ -830,22 +830,24 @@ main { padding-block: 46px 64px; }
 .event-box__item strong { font-size: 14px; font-weight: 700; line-height: 1.35; }
 
 /* corpul articolului */
-.post__body { margin-top: 32px; font-size: 17px; line-height: 1.78; }
-.post__body > p { margin-bottom: 20px; color: var(--text); }
-.post__body h2 { font-size: clamp(21px, 3.4vw, 26px); margin: 36px 0 12px; }
-.post__body h3 { font-size: clamp(18px, 2.8vw, 21px); margin: 28px 0 10px; }
-.post__body ul, .post__body ol { margin: 0 0 20px; padding-left: 24px; }
-.post__body ul { list-style: disc; }
-.post__body ol { list-style: decimal; }
-.post__body li { margin-bottom: 8px; }
-.post__body li::marker { color: var(--brand); font-weight: 700; }
-.post__body a:not(.tag) {
+/* Stilul de text lung. .prose e același lucru, folosit de paginile fără
+   antet de articol (Despre etc.), ca să nu duplicăm regulile. */
+.post__body, .prose { margin-top: 32px; font-size: 17px; line-height: 1.78; }
+.post__body > p, .prose > p { margin-bottom: 20px; color: var(--text); }
+.post__body h2, .prose h2 { font-size: clamp(21px, 3.4vw, 26px); margin: 36px 0 12px; }
+.post__body h3, .prose h3 { font-size: clamp(18px, 2.8vw, 21px); margin: 28px 0 10px; }
+.post__body ul, .post__body ol, .prose ul, .prose ol { margin: 0 0 20px; padding-left: 24px; }
+.post__body ul, .prose ul { list-style: disc; }
+.post__body ol, .prose ol { list-style: decimal; }
+.post__body li, .prose li { margin-bottom: 8px; }
+.post__body li::marker, .prose li::marker { color: var(--brand); font-weight: 700; }
+.post__body a:not(.tag), .prose a {
   color: var(--brand); font-weight: 600;
   text-decoration: underline; text-underline-offset: 3px;
   text-decoration-thickness: 1.5px;
 }
 
-.post__body blockquote {
+.post__body blockquote, .prose blockquote {
   margin: 28px 0;
   padding: 20px 24px;
   border-left: 3px solid var(--brand);
@@ -854,8 +856,8 @@ main { padding-block: 46px 64px; }
   font-size: 18px;
   line-height: 1.6;
 }
-.post__body blockquote p { margin-bottom: 10px; font-weight: 500; }
-.post__body blockquote cite {
+.post__body blockquote p, .prose blockquote p { margin-bottom: 10px; font-weight: 500; }
+.post__body blockquote cite, .prose blockquote cite {
   font-size: 13.5px; font-style: normal; font-weight: 700;
   color: var(--text-faint);
 }
@@ -1161,7 +1163,7 @@ main { padding-block: 46px 64px; }
 
 @media (max-width: 560px) {
   .event-box { grid-template-columns: 1fr; padding: 16px; }
-  .post__body { font-size: 16px; }
+  .post__body, .prose { font-size: 16px; }
   .rsvp { padding: 20px 16px; }
   .rsvp__btn { flex: 1 1 100%; justify-content: center; }
   .comment__replies { padding-left: 12px; }

@@ -153,6 +153,22 @@ Verificările din browser sunt doar pentru comoditatea utilizatorului —
 **validarea reală trebuie făcută pe server** (e-mail deja folosit, parolă
 corectă, vârstă minimă).
 
+## Pagina Despre (`despre.html`)
+
+Pagină simplă, doar text: antet de pagină, secțiuni cu titluri, o listă, un
+citat și o casetă de final către înregistrare și contact. Textul e scris ca
+punct de plecare — îl rescrii direct în HTML.
+
+Folosește clasa `.prose`, care e același stil de text lung ca `.post__body` de
+la articol. Dacă schimbi tipografia într-un loc, se schimbă în ambele.
+
+## Convenții
+
+**Nu ne bazăm pe aspectul nativ al controalelor de formular.** `select` și
+`input[type="date"]` primesc `appearance: none` și iconițe desenate de noi,
+pentru că fiecare browser le desenează altfel (vezi cazul câmpului de dată pe
+Android). Orice control nou adăugat în viitor trebuie tratat la fel.
+
 ## De făcut mai departe
 
-`despre.html` și `alatura-te.html` sunt deja legate, dar nu există încă.
+`alatura-te.html` e deja legată în meniu, dar nu există încă.
