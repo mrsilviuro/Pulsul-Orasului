@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/css/style.css?v=8">
+<link rel="stylesheet" href="assets/css/style.css?v=9">
 
 <!-- Setează tema ÎNAINTE de randare, ca să nu apară un flash alb pe dark mode -->
 <script>
@@ -28,7 +28,7 @@
 
 <!--
   data-logged-in="false" → butoanele de participare și formularele de comentariu
-  trimit spre login.html. Când implementezi autentificarea, pui "true" din server
+  trimit spre login.php. Când implementezi autentificarea, pui "true" din server
   (și, opțional, data-user-name / data-user-avatar pentru formularul de comentariu).
 -->
 <body data-logged-in="false"
@@ -72,7 +72,7 @@
           </a>
         </li>
         <li>
-          <a class="nav__link" href="login.html#inregistrare">
+          <a class="nav__link" href="login.php#inregistrare">
             <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
               <circle cx="9.5" cy="8.5" r="3.5"/><path d="M3 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/>
               <path d="M18.5 8v6"/><path d="M21.5 11h-6"/>
@@ -266,7 +266,7 @@
       <!-- =========================== PARTICIPARE ========================== -->
       <!--
         Butoanele au data-count = numărul din baza de date. Cât timp
-        body[data-logged-in="false"], click-ul trimite spre login.html.
+        body[data-logged-in="false"], click-ul trimite spre login.php.
       -->
       <section class="rsvp" id="rsvp" aria-labelledby="rsvp-title">
         <div class="rsvp__head">
@@ -727,7 +727,7 @@
         <ul>
           <li><a href="index.html">Acasă</a></li>
           <li><a href="despre.html">Despre</a></li>
-          <li><a href="login.html#inregistrare">Alătură-te și tu</a></li>
+          <li><a href="login.php#inregistrare">Alătură-te și tu</a></li>
           <li><a href="contact.html">Contact</a></li>
         </ul>
       </nav>
@@ -758,6 +758,6 @@
 <!-- notificare scurtă (toast) -->
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-<script src="assets/js/main.js?v=8"></script>
+<script src="assets/js/main.js?v=9"></script>
 </body>
 </html>

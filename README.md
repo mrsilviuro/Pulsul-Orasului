@@ -203,6 +203,137 @@ Selectorul de note din formular se generează în `[data-stars-input]`; are
 Trei casete: evenimente organizate, prezențe și „a confirmat, dar nu a venit".
 Numerele vin din HTML — le pune serverul.
 
+## Partea de server (PHP + MySQL)
+
+Din acest punct, site-ul are și cod care rulează pe server. `login.html` a
+devenit `login.php`.
+
+### Ce trebuie făcut o singură dată, în XAMPP
+
+1. Pune proiectul în `htdocs`, de exemplu `htdocs/pulsulorasului`.
+2. Creează baza rulând `sql/schema.sql` din phpMyAdmin (fila **Import**).
+3. Copiază setările și pune-ți datele de acces:
+
+   ```
+   copy inc\config.example.php inc\config.php
+   ```
+
+`inc/config.php` e trecut în `.gitignore` — datele reale de acces nu ajung
+niciodată pe GitHub.
+
+### Fișiere
+
+| Fișier | Rol |
+|---|---|
+| `login.php` | pagina cu cele două formulare |
+| `api/inregistrare.php` | primește formularul, verifică, salvează |
+| `confirma.php` | activează contul din linkul primit pe e-mail |
+| `inc/validare.php` | verificările, fără atingere de bază de date |
+| `inc/bootstrap.php` | setări, legătura cu baza, sesiune, token CSRF |
+| `sql/schema.sql` | structura bazei de date |
+
+### Cum ajung datele la server
+
+Formularul nu reîncarcă pagina: JavaScript trimite datele către
+`api/inregistrare.php`, iar la reușită formularul dispare și în locul lui apare
+mesajul „Verifică-ți e-mailul". Serverul răspunde cu JSON:
+
+```json
+{"ok": true,  "email": "ion@email.ro", "mesaj": "..."}
+{"ok": false, "erori": {"email": "Există deja un cont cu această adresă."}}
+```
+
+Erorile venite de la server se afișează sub câmpul potrivit, exact ca cele
+verificate în browser.
+
+### Verificările de pe server
+
+Verificările din browser sunt doar pentru confortul omului — pot fi ocolite cu
+un `curl`. Cele care contează sunt în `inc/validare.php`:
+
+- **Nume și prenume** — doar litere latine (cu diacritice românești, maghiare
+  sau germane), spații, cratime și apostrofuri. Fără cifre, simboluri, emoji
+  sau etichete HTML. Se salvează cu majusculă la fiecare cuvânt: `popescu` →
+  `Popescu`, `ana-maria` → `Ana-Maria`.
+- **Diacritice** — `ş` și `ţ` cu sedilă sunt aduse la `ș` și `ț` cu virgulă,
+  altfel „Şerban" și „Șerban" ar ajunge două persoane diferite în bază.
+- **E-mail** — validat și păstrat cu litere mici, ca `Ion@Email.ro` și
+  `ion@email.ro` să nu poată deveni două conturi.
+- **Data nașterii** — format `AAAA-LL-ZZ`, nu în viitor, cel puțin 13 ani,
+  cel mult 120. `2000-02-30` e respinsă (PHP altfel o mută singur pe 2 martie).
+- **Sex** — doar `M` sau `F`. A treia opțiune a fost scoasă din formular.
+- **Parolă** — minimum 8 caractere, maximum 72 de octeți, pentru că bcrypt
+  ignoră tăcut tot ce trece de atât.
+
+Rularea verificărilor: `php teste/test-validare.php` (58 de cazuri).
+
+### Unicitatea adresei de e-mail
+
+Se verifică în două locuri, și amândouă sunt necesare:
+
+1. o interogare înainte de salvare, pentru un mesaj de eroare frumos;
+2. un index `UNIQUE` în baza de date.
+
+Fără al doilea, două cereri trimise în aceeași clipă ar putea trece amândouă de
+verificare și ar crea două conturi cu aceeași adresă.
+
+### Adresa profilului (permalink)
+
+Fiecare membru primește un șir aleatoriu de 10 caractere:
+`pulsulorasului.ro/membru/5E6LyyWXyG`.
+
+Nu folosim numele (`membru/p.ionut`) din trei motive:
+
+1. **se repetă** — al doilea „P. Ionuț" ar avea nevoie de `p.ionut-2`, ceea ce
+   arată prost și spune tuturor al câtelea e;
+2. **profilurile ar putea fi ghicite** — cine vrea o listă de membri o obține
+   încercând nume obișnuite; numele îl scurtăm tocmai ca să protejăm persoana,
+   iar adresa l-ar da înapoi;
+3. **numele se poate schimba**, iar adresa ar rămâne greșită sau ar trebui
+   redirecționată.
+
+Alfabetul folosit sare peste `0/O` și `1/l/I`, ca adresa să poată fi dictată la
+telefon fără confuzii.
+
+### Parolele
+
+Se păstrează doar hash-ul, produs de `password_hash()` cu algoritmul implicit
+(bcrypt). Parola în clar nu ajunge niciodată în baza de date și nu poate fi
+recuperată — nici măcar de tine. La autentificare se folosește
+`password_verify()`.
+
+### Token-ul de confirmare
+
+În e-mail pleacă token-ul în clar; în baza de date se salvează doar hash-ul
+lui, exact ca la parole. Dacă baza ajunge pe mâini străine, linkurile nu pot fi
+folosite. Token-ul e valabil 48 de ore și se șterge la prima folosire.
+
+### Fără server de e-mail (XAMPP)
+
+Cât timp `dezvoltare` e `true` în `inc/config.php`:
+
+- linkul de confirmare apare direct în pagină, sub mesajul de succes;
+- se scrie și în `private/emailuri-trimise.log`.
+
+Fișierul conține token-uri valabile, deci stă în `private/`, unde `.htaccess`
+refuză accesul prin web, **și** se scrie doar în modul dezvoltare. Pe site-ul
+public, cu `dezvoltare` pe `false`, fișierul nici nu se creează.
+
+### Alte măsuri
+
+- **Token CSRF** la fiecare trimitere, ca alt site să nu poată trimite
+  formulare în numele vizitatorului.
+- **Cel mult 5 conturi pe oră** de la aceeași adresă IP.
+- **Interogări pregătite** peste tot, cu `ATTR_EMULATE_PREPARES` oprit, deci
+  datele nu ating niciodată textul interogării.
+- **`.htaccess`** care refuză accesul web la `inc/`, `sql/` și `private/`.
+
+### Ce nu e făcut încă
+
+- trimiterea propriu-zisă a e-mailului (marcat cu `TODO`);
+- formularul de autentificare, care încă nu vorbește cu serverul;
+- intrarea cu Google.
+
 ## Convenții
 
 ### Golirea cache-ului la actualizări

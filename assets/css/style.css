@@ -2010,3 +2010,53 @@ body { overscroll-behavior-y: none; }
   .review-form { gap: 10px; }
   .review-form .comment-form__avatar { width: 32px; height: 32px; }
 }
+
+/* =========================================================================
+   24. MESAJ DE ÎNCHEIERE (după înregistrare, după confirmare)
+   ========================================================================= */
+.done { text-align: center; padding: 8px 0 4px; }
+.done[hidden] { display: none; }
+.done:focus { outline: none; }
+
+.done__ico {
+  width: 54px; height: 54px;
+  display: grid; place-items: center;
+  margin: 0 auto 16px;
+  border-radius: 50%;
+  background: var(--brand-soft);
+  color: var(--brand);
+}
+.done__ico .ico { width: 26px; height: 26px; }
+.done--ok .done__ico   { background: rgba(22, 163, 74, .13); color: #16a34a; }
+.done--fail .done__ico { background: rgba(224, 57, 59, .12); color: #e0393b; }
+
+.done__title { font-size: 22px; margin-bottom: 8px; }
+.done__text {
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--text-soft);
+  max-width: 40ch;
+  margin: 0 auto 10px;
+}
+.done__hint { font-size: 13px; color: var(--text-faint); margin-bottom: 18px; }
+
+.done__actions {
+  display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;
+}
+
+/* caseta cu linkul de confirmare, vizibilă doar în modul dezvoltare */
+.done__dev {
+  display: block;
+  margin: 0 0 18px;
+  padding: 11px 14px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-soft);
+  font-size: 12.5px;
+  color: var(--text-faint);
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.done__dev[hidden] { display: none; }
+.done__dev span { display: block; font-weight: 700; margin-bottom: 3px; }
+.done__dev a { color: var(--brand); font-weight: 600; text-decoration: underline; }

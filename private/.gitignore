@@ -1,0 +1,4 @@
+# Fișierele scrise de aplicație nu se urcă pe GitHub.
+*
+!.htaccess
+!.gitignore

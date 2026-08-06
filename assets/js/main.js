@@ -224,7 +224,7 @@
   // Trimite spre login, păstrând pagina curentă ca destinație de întoarcere.
   function goToLogin() {
     var back = encodeURIComponent(window.location.pathname + window.location.search);
-    window.location.href = 'login.html?redirect=' + back;
+    window.location.href = 'login.php?redirect=' + back;
   }
 
   // Mesaj scurt jos, pe mijloc
@@ -566,7 +566,7 @@
   if (authTabs) {
 
     /* --- Deschide tabul corect din URL sau din butoanele de sub formular --- */
-    // login.html#inregistrare sau ?tab=inregistrare deschide direct înregistrarea.
+    // login.php#inregistrare sau ?tab=inregistrare deschide direct înregistrarea.
     var params = new URLSearchParams(window.location.search);
 
     function tabFromUrl() {
@@ -820,11 +820,106 @@
             return checked ? '' : 'Trebuie să accepți termenii ca să continui.';
           }
         }
-      ], function () {
-        // TODO: trimite datele către server (verifică acolo dacă e-mailul
-        // e deja folosit) și confirmă adresa prin e-mail.
-        afterAuth('Contul a fost creat. Bine ai venit!');
-      });
+      ], trimiteInregistrarea);
+
+      /* --- Trimiterea către server --- */
+
+      // Numele câmpurilor din răspunsul serverului → locul unde se afișează
+      // eroarea în pagină. Serverul poate găsi probleme pe care browserul
+      // nu le vede: e-mail deja folosit, dată nerealistă, sesiune expirată.
+      var campuriServer = {
+        nume:              ['rg-lastname',  'err-rg-lastname'],
+        prenume:           ['rg-firstname', 'err-rg-firstname'],
+        email:             ['rg-email',     'err-rg-email'],
+        data_nasterii:     ['rg-birthdate', 'err-rg-birthdate'],
+        sex:               ['rg-gender',    'err-rg-gender'],
+        parola:            ['rg-password',  'err-rg-password'],
+        parola_confirmare: ['rg-password2', 'err-rg-password2'],
+        termeni:           ['rg-terms',     'err-rg-terms']
+      };
+
+      function trimiteInregistrarea() {
+        var buton = registerForm.querySelector('button[type="submit"]');
+        var textInitial = buton ? buton.textContent : '';
+
+        if (buton) { buton.disabled = true; buton.textContent = 'Se creează…'; }
+
+        var date = {
+          csrf:              (registerForm.querySelector('[name="csrf"]') || {}).value || '',
+          nume:              document.getElementById('rg-lastname').value,
+          prenume:           document.getElementById('rg-firstname').value,
+          email:             document.getElementById('rg-email').value,
+          data_nasterii:     document.getElementById('rg-birthdate').value,
+          sex:               document.getElementById('rg-gender').value,
+          parola:            document.getElementById('rg-password').value,
+          parola_confirmare: document.getElementById('rg-password2').value,
+          termeni:           document.getElementById('rg-terms').checked ? '1' : ''
+        };
+
+        fetch('api/inregistrare.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify(date)
+        })
+        .then(function (r) {
+          return r.json().then(function (raspuns) { return { stare: r.status, corp: raspuns }; });
+        })
+        .then(function (rez) {
+          if (buton) { buton.disabled = false; buton.textContent = textInitial; }
+
+          if (rez.corp && rez.corp.ok) {
+            arataConfirmarea(rez.corp);
+            return;
+          }
+
+          // erori pe câmpuri
+          var erori = (rez.corp && rez.corp.erori) || null;
+          if (erori) {
+            var primul = null;
+            Object.keys(campuriServer).forEach(function (camp) {
+              var pereche = campuriServer[camp];
+              var mesaj = erori[camp] || '';
+              setError(pereche[0], pereche[1], mesaj);
+              if (mesaj && !primul) primul = document.getElementById(pereche[0]);
+            });
+            if (primul) primul.focus();
+            toast('Mai sunt câmpuri de corectat.');
+            return;
+          }
+
+          toast((rez.corp && rez.corp.mesaj) || 'Nu am putut crea contul. Încearcă din nou.');
+        })
+        .catch(function () {
+          if (buton) { buton.disabled = false; buton.textContent = textInitial; }
+          toast('Nu am putut lua legătura cu serverul. Verifică conexiunea.');
+        });
+      }
+
+      // Formularul dispare, mesajul de confirmare îi ia locul.
+      function arataConfirmarea(raspuns) {
+        var bloc  = document.getElementById('register-block');
+        var gata  = document.getElementById('register-done');
+        var unde  = document.getElementById('register-done-email');
+        if (!gata) return;
+
+        if (bloc) bloc.hidden = true;
+        if (unde && raspuns.email) unde.textContent = raspuns.email;
+
+        // în dezvoltare, serverul trimite înapoi și linkul de confirmare
+        var dev  = document.getElementById('register-done-dev');
+        var link = document.getElementById('register-done-link');
+        if (dev && link && raspuns.link_confirmare) {
+          link.href = raspuns.link_confirmare;
+          link.textContent = raspuns.link_confirmare;
+          dev.hidden = false;
+        }
+
+        gata.hidden = false;
+        gata.scrollIntoView({ block: 'nearest' });
+        gata.setAttribute('tabindex', '-1');
+        gata.focus();
+      }
 
       // Când schimbi parola, reverificăm și confirmarea, dacă era deja greșită.
       var pass2 = document.getElementById('rg-password2');

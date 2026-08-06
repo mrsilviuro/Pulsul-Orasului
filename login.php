@@ -1,3 +1,18 @@
+<?php
+declare(strict_types=1);
+
+/**
+ * PulsulOrasului.Ro — autentificare și înregistrare.
+ *
+ * Formularul de înregistrare e trimis din JavaScript către
+ * api/inregistrare.php, ca pagina să nu se reîncarce: la reușită,
+ * formularul dispare și în locul lui apare mesajul de confirmare.
+ */
+
+require_once __DIR__ . '/inc/bootstrap.php';
+
+$csrf = tokenCsrf();
+?>
 <!DOCTYPE html>
 <html lang="ro" data-theme="light">
 <head>
@@ -13,7 +28,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/css/style.css?v=8">
+<link rel="stylesheet" href="assets/css/style.css?v=9">
 
 <!-- Setează tema ÎNAINTE de randare, ca să nu apară un flash alb pe dark mode -->
 <script>
@@ -65,7 +80,7 @@
           </a>
         </li>
         <li>
-          <a class="nav__link is-active" href="login.html#inregistrare" aria-current="page">
+          <a class="nav__link is-active" href="login.php#inregistrare" aria-current="page">
             <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
               <circle cx="9.5" cy="8.5" r="3.5"/><path d="M3 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/>
               <path d="M18.5 8v6"/><path d="M21.5 11h-6"/>
@@ -202,6 +217,8 @@
         <!-- ========================= ÎNREGISTRARE ====================== -->
         <div class="auth-panel" id="panel-register" role="tabpanel" aria-labelledby="tab-register" tabindex="0" hidden>
 
+          <div id="register-block">
+
           <h2 class="auth__title">Creează-ți cont</h2>
           <p class="auth__lead">Durează un minut. După aceea poți publica evenimente în oraș.</p>
 
@@ -218,6 +235,8 @@
           <div class="auth__divider"><span>sau completează datele</span></div>
 
           <form class="form" id="register-form" novalidate>
+
+            <input type="hidden" name="csrf" value="<?= h($csrf) ?>">
 
             <div class="field-row">
               <div class="field">
@@ -254,9 +273,8 @@
                 <label for="rg-gender">Sex</label>
                 <select id="rg-gender" name="sex" required aria-describedby="err-rg-gender">
                   <option value="" selected disabled>Alege…</option>
-                  <option value="feminin">Feminin</option>
-                  <option value="masculin">Masculin</option>
-                  <option value="nespecificat">Prefer să nu spun</option>
+                  <option value="F">Feminin</option>
+                  <option value="M">Masculin</option>
                 </select>
                 <p class="field__error" id="err-rg-gender" hidden></p>
               </div>
@@ -326,6 +344,39 @@
               <button class="link-btn" type="button" data-go-tab="tab-login">Autentifică-te</button>
             </p>
           </form>
+          </div><!-- /#register-block -->
+
+          <!-- =================== DUPĂ ÎNREGISTRARE ====================
+            Apare în locul formularului, fără reîncărcarea paginii.
+          ======================================================== -->
+          <div class="done" id="register-done" hidden>
+            <span class="done__ico" aria-hidden="true">
+              <svg class="ico" viewBox="0 0 24 24">
+                <rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m3.8 7 8.2 5.6L20.2 7"/>
+              </svg>
+            </span>
+
+            <h2 class="done__title">Verifică-ți e-mailul</h2>
+            <p class="done__text">
+              Ți-am trimis un mesaj de confirmare la
+              <strong id="register-done-email">adresa ta</strong>.
+              Deschide-l și apasă pe link ca să îți activezi contul.
+            </p>
+            <p class="done__hint">
+              Nu găsești mesajul? Uită-te și în „Spam" sau „Promoții".
+            </p>
+
+            <!-- Doar în dezvoltare: linkul apare aici, fiindcă în XAMPP nu
+                 există server de e-mail. -->
+            <p class="done__dev" id="register-done-dev" hidden>
+              <span>Mod dezvoltare — linkul de confirmare:</span>
+              <a href="#" id="register-done-link">link</a>
+            </p>
+
+            <div class="done__actions">
+              <a class="btn btn--ghost" href="index.html">Mergi la prima pagină</a>
+            </div>
+          </div>
         </div>
 
       </div>
@@ -376,7 +427,7 @@
         <ul>
           <li><a href="index.html">Acasă</a></li>
           <li><a href="despre.html">Despre</a></li>
-          <li><a href="login.html#inregistrare">Alătură-te și tu</a></li>
+          <li><a href="login.php#inregistrare">Alătură-te și tu</a></li>
           <li><a href="contact.html">Contact</a></li>
         </ul>
       </nav>
@@ -406,6 +457,6 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-<script src="assets/js/main.js?v=8"></script>
+<script src="assets/js/main.js?v=9"></script>
 </body>
 </html>
