@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Contact — PulsulOrasului.Ro</title>
-<meta name="description" content="Scrie-ne: propuneri de evenimente, sesizări, colaborări sau orice altceva legat de PulsulOrasului.Ro.">
+<title>Despre — PulsulOrasului.Ro</title>
+<meta name="description" content="Cine suntem, ce publicăm și cum poți contribui la PulsulOrasului.Ro — locul unde afli ce se întâmplă în oraș.">
 <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0d1015" media="(prefers-color-scheme: dark)">
 
@@ -56,7 +56,7 @@
           </a>
         </li>
         <li>
-          <a class="nav__link" href="despre.html">
+          <a class="nav__link is-active" href="despre.html" aria-current="page">
             <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
               <circle cx="12" cy="12" r="9"/><path d="M12 11v5.5"/><path d="M12 7.6v.1"/>
             </svg>
@@ -73,7 +73,7 @@
           </a>
         </li>
         <li>
-          <a class="nav__link is-active" href="contact.html" aria-current="page">
+          <a class="nav__link" href="contact.html">
             <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
               <rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m3.8 7 8.2 5.6L20.2 7"/>
             </svg>
@@ -109,150 +109,102 @@
 
     <!-- ============================ ANTET ============================== -->
     <header class="page-head">
-      <p class="eyebrow"><span class="pulse-dot" aria-hidden="true"></span> Scrie-ne</p>
-      <h1 class="page-title">Contact</h1>
+      <p class="eyebrow"><span class="pulse-dot" aria-hidden="true"></span> Despre noi</p>
+      <h1 class="page-title">Pulsul orașului, scris de oamenii lui</h1>
       <p class="page-lead">
-        Ai un eveniment de propus, o sesizare sau vrei să colaborăm? Scrie-ne direct
-        aici — răspundem, de regulă, în aceeași zi lucrătoare.
+        Un loc simplu unde afli ce se întâmplă în oraș săptămâna asta — și unde poți
+        anunța tu ce organizezi, fără să depinzi de altcineva.
       </p>
     </header>
 
-    <div class="contact">
+    <!-- ============================= TEXT ============================== -->
+    <div class="prose">
 
-      <!-- ========================= FORMULARUL ========================== -->
-      <!--
-        Când legi backend-ul: pui action="/trimite-mesaj" și method="post",
-        sau interceptezi submit-ul din JS (locul e marcat cu TODO în main.js).
-      -->
-      <section class="contact__form-wrap" aria-labelledby="form-title">
-        <h2 class="contact__h2" id="form-title">Trimite-ne un mesaj</h2>
+      <p>
+        <strong>PulsulOrasului.Ro</strong> a pornit dintr-o nemulțumire simplă: informația
+        despre ce se întâmplă în oraș era împrăștiată peste tot. Un concert anunțat într-un
+        grup de Facebook, un maraton pe un site care nu se mai actualizase de doi ani, un
+        târg despre care aflai abia după ce se terminase.
+      </p>
 
-        <form class="form" id="contact-form" novalidate>
+      <p>
+        Ne-am propus să adunăm totul într-un singur loc, ordonat și ușor de citit — de pe
+        telefon, în două minute, cât aștepți autobuzul.
+      </p>
 
-          <div class="field">
-            <label for="cf-name">Nume și prenume <span class="req" aria-hidden="true">*</span></label>
-            <input type="text" id="cf-name" name="nume" autocomplete="name"
-                   placeholder="Ion Popescu" required
-                   aria-describedby="err-name">
-            <p class="field__error" id="err-name" hidden></p>
-          </div>
+      <h2>Ce publicăm</h2>
 
-          <div class="field-row">
-            <div class="field">
-              <label for="cf-email">Adresa de e-mail <span class="req" aria-hidden="true">*</span></label>
-              <input type="email" id="cf-email" name="email" autocomplete="email"
-                     placeholder="adresa@email.ro" required
-                     aria-describedby="err-email">
-              <p class="field__error" id="err-email" hidden></p>
-            </div>
+      <p>
+        Orice mișcă în oraș și îi poate interesa pe cei care locuiesc aici:
+      </p>
 
-            <div class="field">
-              <label for="cf-phone">Telefon <span class="req" aria-hidden="true">*</span></label>
-              <input type="tel" id="cf-phone" name="telefon" autocomplete="tel"
-                     placeholder="07xx xxx xxx" required
-                     aria-describedby="err-phone">
-              <p class="field__error" id="err-phone" hidden></p>
-            </div>
-          </div>
+      <ul>
+        <li><strong>Sport</strong> — curse, meciuri, competiții locale, trasee noi de alergat sau de mers cu bicicleta.</li>
+        <li><strong>Cultură</strong> — concerte, festivaluri, expoziții, spectacole, proiecții în aer liber.</li>
+        <li><strong>Comunitate</strong> — acțiuni de voluntariat, ședințe publice, lucrări care schimbă circulația, inițiative de cartier.</li>
+        <li><strong>Gastro</strong> — târguri, piețe de producători, locuri noi care merită încercate.</li>
+      </ul>
 
-          <div class="field">
-            <label for="cf-message">Mesajul tău <span class="req" aria-hidden="true">*</span></label>
-            <textarea id="cf-message" name="mesaj" rows="6"
-                      placeholder="Scrie aici despre ce e vorba…" required
-                      aria-describedby="err-message"></textarea>
-            <p class="field__error" id="err-message" hidden></p>
-          </div>
+      <p>
+        Fiecare anunț are data, ora, locul și, unde e cazul, prețul. Iar dacă te interesează
+        un eveniment, poți spune asta direct pe pagina lui — așa vezi cine mai vine și
+        organizatorii își fac o idee despre câți oameni să aștepte.
+      </p>
 
-          <div class="form__foot">
-            <p class="form__note">Câmpurile marcate cu <span class="req">*</span> sunt obligatorii.</p>
-            <button class="btn btn--primary" type="submit">
-              <span>Trimite mesajul</span>
-              <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M4 12h15"/><path d="m13 6 6 6-6 6"/>
-              </svg>
-            </button>
-          </div>
+      <h2>Cine scrie</h2>
 
-          <!-- confirmarea apare aici, după trimitere -->
-          <p class="form__success" id="form-success" role="status" hidden>
-            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
-              <circle cx="12" cy="12" r="9"/><path d="m8.2 12.3 2.6 2.6 5-5.2"/>
-            </svg>
-            <span>Mesajul a fost trimis. Îți mulțumim — revenim cu un răspuns în cel mai scurt timp.</span>
-          </p>
-        </form>
-      </section>
+      <p>
+        La început, câțiva oameni cărora le păsa. Acum, oricine vrea. Ideea de bază e că
+        cel care organizează ceva știe cel mai bine cum să povestească — și merită să poată
+        face asta singur, fără să roage un redactor.
+      </p>
 
-      <!-- ======================= DATE DE CONTACT ======================= -->
-      <aside class="contact__info" aria-labelledby="info-title">
-        <h2 class="contact__h2" id="info-title">Date de contact</h2>
+      <p>
+        Îți faci cont, scrii anunțul, adaugi o poză și îl publici. Durează câteva minute și
+        e gratuit. Verificăm doar ca lucrurile să fie reale și scrise cumsecade.
+      </p>
 
-        <ul class="info-list">
-          <li class="info-item">
-            <span class="info-item__ico" aria-hidden="true">
-              <svg class="ico" viewBox="0 0 24 24">
-                <rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m3.8 7 8.2 5.6L20.2 7"/>
-              </svg>
-            </span>
-            <div>
-              <span class="info-item__label">E-mail</span>
-              <a class="info-item__value" href="mailto:contact@pulsulorasului.ro">contact@pulsulorasului.ro</a>
-            </div>
-          </li>
+      <blockquote>
+        <p>
+          Un oraș e mai plăcut de locuit când știi ce se întâmplă în el. Atât ne-am propus.
+        </p>
+      </blockquote>
 
-          <li class="info-item">
-            <span class="info-item__ico" aria-hidden="true">
-              <svg class="ico" viewBox="0 0 24 24">
-                <path d="M6.5 3.5h3l1.5 4-2 1.4a12 12 0 0 0 6.1 6.1l1.4-2 4 1.5v3a2 2 0 0 1-2.2 2A16.8 16.8 0 0 1 4.5 5.7a2 2 0 0 1 2-2.2Z"/>
-              </svg>
-            </span>
-            <div>
-              <span class="info-item__label">Telefon</span>
-              <a class="info-item__value" href="tel:+40700000000">+40 700 000 000</a>
-            </div>
-          </li>
+      <h2>Ce nu facem</h2>
 
-          <li class="info-item">
-            <span class="info-item__ico" aria-hidden="true">
-              <svg class="ico" viewBox="0 0 24 24">
-                <path d="M12 21s7-5.6 7-11a7 7 0 1 0-14 0c0 5.4 7 11 7 11Z"/><circle cx="12" cy="10" r="2.6"/>
-              </svg>
-            </span>
-            <div>
-              <span class="info-item__label">Adresă</span>
-              <span class="info-item__value">Str. Exemplu nr. 10<br>Oraș, România</span>
-            </div>
-          </li>
+      <p>
+        Nu publicăm reclamă deghizată în articol, nu vindem primele poziții din pagină și nu
+        acceptăm atacuri la persoană în comentarii. Nu suntem un site de știri: nu ne ocupăm
+        de politică, de scandaluri sau de accidente. Rămânem la ce se poate face în oraș.
+      </p>
 
-          <li class="info-item">
-            <span class="info-item__ico" aria-hidden="true">
-              <svg class="ico" viewBox="0 0 24 24">
-                <circle cx="12" cy="12" r="9"/><path d="M12 7v5.2l3.4 2"/>
-              </svg>
-            </span>
-            <div>
-              <span class="info-item__label">Program</span>
-              <span class="info-item__value">Luni — Vineri, 09:00 — 18:00</span>
-            </div>
-          </li>
-        </ul>
+      <h2>Cum ne găsești</h2>
 
-        <div class="info-social">
-          <span class="info-item__label">Ne găsești și pe</span>
-          <div class="socials">
-            <a href="#" aria-label="Facebook"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 8.5V7a1.5 1.5 0 0 1 1.5-1.5H17V3h-2.2A3.8 3.8 0 0 0 11 6.8v1.7H9V11h2v10h3V11h2.2l.4-2.5H14Z" fill="currentColor" stroke="none"/></svg></a>
-            <a href="#" aria-label="Instagram"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17" cy="7" r="1.1" fill="currentColor" stroke="none"/></svg></a>
-            <a href="#" aria-label="YouTube"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="5.5" width="19" height="13" rx="4"/><path d="m10.5 9.5 5 2.5-5 2.5z"/></svg></a>
-          </div>
-        </div>
-
-        <div class="info-cta">
-          <p>Vrei să publici tu evenimente pe site?</p>
-          <a class="btn btn--ghost btn--sm" href="login.html#inregistrare">Alătură-te și tu</a>
-        </div>
-      </aside>
+      <p>
+        Dacă vrei să publici un eveniment, începe de la pagina
+        <a href="login.html#inregistrare">Alătură-te și tu</a>. Dacă ai o propunere, o corectură sau
+        vrei să colaborăm, scrie-ne prin <a href="contact.html">formularul de contact</a> —
+        răspundem, de regulă, în aceeași zi lucrătoare.
+      </p>
 
     </div>
+
+    <!-- ============================= FINAL ============================= -->
+    <section class="cta">
+      <div class="cta__glow" aria-hidden="true"></div>
+      <div class="cta__content">
+        <p class="eyebrow eyebrow--light">Hai cu noi</p>
+        <h2>Organizezi ceva în oraș?</h2>
+        <p class="cta__text">
+          Publică evenimentul tău pe PulsulOrasului.Ro. E gratuit și durează câteva minute.
+        </p>
+        <div class="cta__actions">
+          <a class="btn btn--primary" href="login.html#inregistrare">Alătură-te și tu</a>
+          <a class="btn btn--outline" href="contact.html">Scrie-ne</a>
+        </div>
+      </div>
+    </section>
+
   </div>
 </main>
 

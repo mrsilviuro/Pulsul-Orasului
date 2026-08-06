@@ -38,6 +38,7 @@
   /* sistem */
   --wrap:         1000px;
   --header-h:     58px;
+  --field-h:      48px;
   --radius:       14px;
   --radius-lg:    20px;
   --radius-pill:  999px;
@@ -609,7 +610,7 @@ main { padding-block: 46px 64px; }
   border-radius: var(--radius-pill);
   border: 1px solid var(--border);
   background: var(--surface);
-  font-size: 14px;
+  font-size: 16px;
   transition: border-color .18s var(--ease), box-shadow .18s var(--ease);
 }
 .news-form input::placeholder { color: var(--text-faint); }
@@ -829,22 +830,24 @@ main { padding-block: 46px 64px; }
 .event-box__item strong { font-size: 14px; font-weight: 700; line-height: 1.35; }
 
 /* corpul articolului */
-.post__body { margin-top: 32px; font-size: 17px; line-height: 1.78; }
-.post__body > p { margin-bottom: 20px; color: var(--text); }
-.post__body h2 { font-size: clamp(21px, 3.4vw, 26px); margin: 36px 0 12px; }
-.post__body h3 { font-size: clamp(18px, 2.8vw, 21px); margin: 28px 0 10px; }
-.post__body ul, .post__body ol { margin: 0 0 20px; padding-left: 24px; }
-.post__body ul { list-style: disc; }
-.post__body ol { list-style: decimal; }
-.post__body li { margin-bottom: 8px; }
-.post__body li::marker { color: var(--brand); font-weight: 700; }
-.post__body a:not(.tag) {
+/* Stilul de text lung. .prose e același lucru, folosit de paginile fără
+   antet de articol (Despre etc.), ca să nu duplicăm regulile. */
+.post__body, .prose { margin-top: 32px; font-size: 17px; line-height: 1.78; }
+.post__body > p, .prose > p { margin-bottom: 20px; color: var(--text); }
+.post__body h2, .prose h2 { font-size: clamp(21px, 3.4vw, 26px); margin: 36px 0 12px; }
+.post__body h3, .prose h3 { font-size: clamp(18px, 2.8vw, 21px); margin: 28px 0 10px; }
+.post__body ul, .post__body ol, .prose ul, .prose ol { margin: 0 0 20px; padding-left: 24px; }
+.post__body ul, .prose ul { list-style: disc; }
+.post__body ol, .prose ol { list-style: decimal; }
+.post__body li, .prose li { margin-bottom: 8px; }
+.post__body li::marker, .prose li::marker { color: var(--brand); font-weight: 700; }
+.post__body a:not(.tag), .prose a {
   color: var(--brand); font-weight: 600;
   text-decoration: underline; text-underline-offset: 3px;
   text-decoration-thickness: 1.5px;
 }
 
-.post__body blockquote {
+.post__body blockquote, .prose blockquote {
   margin: 28px 0;
   padding: 20px 24px;
   border-left: 3px solid var(--brand);
@@ -853,8 +856,8 @@ main { padding-block: 46px 64px; }
   font-size: 18px;
   line-height: 1.6;
 }
-.post__body blockquote p { margin-bottom: 10px; font-weight: 500; }
-.post__body blockquote cite {
+.post__body blockquote p, .prose blockquote p { margin-bottom: 10px; font-weight: 500; }
+.post__body blockquote cite, .prose blockquote cite {
   font-size: 13.5px; font-style: normal; font-weight: 700;
   color: var(--text-faint);
 }
@@ -995,7 +998,7 @@ main { padding-block: 46px 64px; }
   border-radius: var(--radius);
   border: 1px solid var(--border);
   background: var(--surface);
-  font-size: 14.5px;
+  font-size: 16px;
   line-height: 1.6;
   resize: vertical;
   transition: border-color .18s var(--ease), box-shadow .18s var(--ease);
@@ -1080,7 +1083,7 @@ main { padding-block: 46px 64px; }
   border-radius: 12px;
   border: 1px solid var(--border);
   background: var(--surface);
-  font-size: 14px; line-height: 1.55;
+  font-size: 16px; line-height: 1.55;
   resize: vertical;
   transition: border-color .18s var(--ease), box-shadow .18s var(--ease);
 }
@@ -1160,7 +1163,7 @@ main { padding-block: 46px 64px; }
 
 @media (max-width: 560px) {
   .event-box { grid-template-columns: 1fr; padding: 16px; }
-  .post__body { font-size: 16px; }
+  .post__body, .prose { font-size: 16px; }
   .rsvp { padding: 20px 16px; }
   .rsvp__btn { flex: 1 1 100%; justify-content: center; }
   .comment__replies { padding-left: 12px; }
@@ -1236,14 +1239,17 @@ main { padding-block: 46px 64px; }
   text-transform: lowercase;
 }
 
+/* Toate câmpurile au aceeași înălțime: input-urile de text ajung natural la
+   ~47px, dar select-ul și inputul de dată ies mai înalte, așa că le fixăm. */
 .field input,
 .field textarea {
   width: 100%;
+  min-height: var(--field-h);
   padding: 11px 14px;
   border-radius: var(--radius);
   border: 1px solid var(--border);
   background: var(--bg);
-  font-size: 15px;
+  font-size: 16px;
   line-height: 1.55;
   transition: border-color .18s var(--ease), box-shadow .18s var(--ease),
               background-color .18s var(--ease);
@@ -1516,11 +1522,12 @@ a.info-item__value:hover { color: var(--brand); }
 
 .field select {
   width: 100%;
-  padding: 11px 38px 11px 14px;
+  height: var(--field-h);
+  padding: 0 38px 0 14px;
   border-radius: var(--radius);
   border: 1px solid var(--border);
   background-color: var(--bg);
-  font-size: 15px;
+  font-size: 16px;
   cursor: pointer;
   appearance: none;
   /* săgeata, desenată inline ca să nu depindem de un fișier extern */
@@ -1538,11 +1545,41 @@ a.info-item__value:hover { color: var(--brand); }
 .field select:invalid { color: var(--text-faint); }
 .field.has-error select { border-color: #e0393b; }
 
-/* input de tip date — normalizăm aspectul între browsere */
-.field input[type="date"] { min-height: 47px; }
-.field input[type="date"]::-webkit-calendar-picker-indicator { cursor: pointer; opacity: .55; }
-.field input[type="date"]:hover::-webkit-calendar-picker-indicator { opacity: 1; }
-[data-theme="dark"] .field input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); }
+/* Input de tip dată.
+   Fiecare browser îl desenează altfel: Chrome pe desktop pune o iconiță de
+   calendar, Samsung Internet pe Android pune o săgeată mică lipită de margine,
+   iar Safari nu pune nimic. Ca să arate la fel peste tot, ascundem complet
+   decorul nativ și desenăm noi iconița, la fel ca săgeata de la select. */
+.field input[type="date"] {
+  appearance: none;
+  -webkit-appearance: none;
+  height: var(--field-h);
+  padding: 0 42px 0 14px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238b95a3' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3.5' y='5' width='17' height='16' rx='3'/%3E%3Cpath d='M8 3v4M16 3v4M3.5 10h17'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 18px;
+}
+
+/* Indicatorul nativ devine invizibil, dar rămâne clicabil peste iconița
+   noastră, ca atingerea din dreapta să deschidă tot calendarul browserului. */
+.field input[type="date"]::-webkit-calendar-picker-indicator {
+  opacity: 0;
+  width: 30px;
+  height: 30px;
+  margin: 0 -8px 0 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+/* Safari pe iPhone centrează valoarea; o aducem la stânga, ca în restul formularului. */
+.field input[type="date"]::-webkit-date-and-time-value { text-align: left; }
+
+/* Câmpul gol arată identic cu unul completat în unele browsere de Android,
+   așa că îi dăm iconiței puțin mai mult contrast la focus. */
+.field input[type="date"]:focus {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ff4d3d' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3.5' y='5' width='17' height='16' rx='3'/%3E%3Cpath d='M8 3v4M16 3v4M3.5 10h17'/%3E%3C/svg%3E");
+}
 
 /* parolă cu buton de afișare */
 .input-pass { position: relative; }
@@ -1571,11 +1608,15 @@ a.info-item__value:hover { color: var(--brand); }
   color: var(--text-soft);
   cursor: pointer;
 }
+/* Bifa e tot un <input>, deci moștenește lățimea și înălțimea de câmp din
+   regula .field input. Le anulăm aici, ca să rămână un pătrat de 18px. */
 .check input {
   appearance: none;
   width: 18px; height: 18px;
-  margin: 1px 0 0;
+  min-height: 0;
+  padding: 0;
   flex: none;
+  margin: 1px 0 0;
   border: 1.5px solid var(--border);
   border-radius: 6px;
   background: var(--bg);
@@ -1624,3 +1665,98 @@ a.info-item__value:hover { color: var(--brand); }
   .auth-panel { padding: 20px 16px 22px; }
   .auth__title { font-size: 21px; }
 }
+
+/* =========================================================================
+   19. NORMALIZARE ÎNTRE DISPOZITIVE
+
+   Scopul acestei secțiuni: aceeași pagină să arate la fel pe iPhone, pe
+   Android și pe desktop. Sunt adunate aici, într-un singur loc, diferențele
+   pe care browserele le introduc de la ele — mai ales Safari pe iOS.
+   ========================================================================= */
+
+/* --- 1. iOS nu mai mărește pagina la atingerea unui câmp ---------------- */
+/* Safari pe iPhone mărește automat pagina când focalizezi un câmp cu textul
+   sub 16px. Pe Android nu se întâmplă, deci ecranul „sare" doar pe iPhone.
+   Toate câmpurile sunt la 16px tocmai ca să nu apară diferența — dacă adaugi
+   un câmp nou, ține minte pragul ăsta. */
+input, textarea, select { font-size: 16px; }
+
+/* --- 2. Fără decor nativ pe controale ---------------------------------- */
+/* iOS desenează singur colțuri rotunjite, umbre interioare și gradient pe
+   inputuri și butoane. Le scoatem, ca aspectul să vină doar din CSS-ul nostru. */
+input, textarea, select, button {
+  appearance: none;
+  -webkit-appearance: none;
+  border-radius: 0;                 /* îl redau apoi regulile componentelor */
+  background-clip: padding-box;
+}
+input, textarea { -webkit-border-radius: 0; }
+
+/* Le punem la loc raza de colț, după ce am șters-o mai sus. */
+.field input, .field textarea, .field select,
+.news-form input, .comment-form textarea, .reply-form textarea {
+  border-radius: var(--radius);
+}
+.news-form input { border-radius: var(--radius-pill); }
+.reply-form textarea { border-radius: 12px; }
+.check input { border-radius: 6px; }
+.btn, .btn-google, .rsvp__btn, .chip, .tag { border-radius: var(--radius-pill); }
+.theme-toggle, .nav__burger, .icon-btn, .socials a { border-radius: 10px; }
+.input-pass__toggle { border-radius: 9px; }
+
+/* --- 3. Text de aceeași mărime la rotirea ecranului --------------------- */
+/* Fără asta, Safari pe iOS îngroașă textul când treci în modul peisaj. */
+html {
+  -webkit-text-size-adjust: 100%;
+  -moz-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* --- 4. Fără litere îngroșate artificial ------------------------------- */
+/* Dacă fontul nu s-a încărcat încă, unele browsere „îngroașă" ele literele,
+   iar rezultatul diferă de la un sistem la altul. Preferăm să nu o facă. */
+html { font-synthesis: none; -webkit-font-synthesis: none; }
+
+/* --- 5. Fără dreptunghiul gri la atingere ------------------------------ */
+/* Safari și Chrome pe Android desenează un fundal la atingere, cu culori
+   diferite. Îl scoatem; starea apăsat vine din :active, definit de noi. */
+html { -webkit-tap-highlight-color: transparent; }
+
+/* --- 6. Zona sigură de pe telefoanele cu decupaj ------------------------ */
+/* Pagina folosește viewport-fit=cover, deci conținutul ar putea intra sub
+   decupajul camerei sau sub bara de jos. Aici îi ținem la distanță. */
+.wrap, .nav {
+  padding-left: max(20px, env(safe-area-inset-left));
+  padding-right: max(20px, env(safe-area-inset-right));
+}
+.site-footer { padding-bottom: max(24px, env(safe-area-inset-bottom)); }
+.toast { bottom: max(26px, env(safe-area-inset-bottom)); }
+
+@media (max-width: 560px) {
+  .wrap, .nav, .nav__menu {
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+  }
+}
+
+/* --- 7. Aceeași înălțime de rând la butoane ---------------------------- */
+/* Safari ignoră line-height moștenit pe <button>, de unde diferențe de
+   câțiva pixeli față de Android. */
+button, input, select, textarea { line-height: normal; }
+.btn, .btn-google, .rsvp__btn, .chip, .tag, .auth-tab, .tab { line-height: 1.2; }
+textarea { line-height: 1.6; }
+
+/* --- 8. Câmpurile completate automat -------------------------------------
+   Chrome pune un fundal galben peste inputurile completate automat, care
+   strică tema întunecată. Îl înlocuim cu culorile noastre. */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--text);
+  -webkit-box-shadow: 0 0 0 100px var(--bg) inset;
+  caret-color: var(--text);
+}
+
+/* --- 9. Derulare fără efecte diferite ---------------------------------- */
+body { overscroll-behavior-y: none; }
+.tabs, .slideshow__track { -webkit-overflow-scrolling: touch; }

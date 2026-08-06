@@ -153,6 +153,62 @@ Verificările din browser sunt doar pentru comoditatea utilizatorului —
 **validarea reală trebuie făcută pe server** (e-mail deja folosit, parolă
 corectă, vârstă minimă).
 
+## Pagina Despre (`despre.html`)
+
+Pagină simplă, doar text: antet de pagină, secțiuni cu titluri, o listă, un
+citat și o casetă de final către înregistrare și contact. Textul e scris ca
+punct de plecare — îl rescrii direct în HTML.
+
+Folosește clasa `.prose`, care e același stil de text lung ca `.post__body` de
+la articol. Dacă schimbi tipografia într-un loc, se schimbă în ambele.
+
+## Convenții
+
+### Un singur CSS, un singur JS
+
+Tot site-ul folosește `assets/css/style.css` și `assets/js/main.js`. Nu există
+stiluri per pagină — nici `meniu-index`, nici `footer-contact`. Meniul, footerul,
+butoanele, câmpurile și cardurile sunt aceleași clase peste tot, iar paginile
+diferă doar prin conținutul dintre ele.
+
+Concret: dacă schimbi înălțimea barii de meniu, se schimbă pe toate paginile
+dintr-un singur loc. Când adaugi o pagină nouă, copiezi antetul și footerul din
+oricare pagină existentă și nu scrii CSS nou decât dacă apare o componentă care
+chiar nu există încă.
+
+Valorile comune stau în variabilele de la începutul fișierului: `--wrap`
+(lățimea conținutului), `--header-h`, `--field-h`, `--radius`, culorile.
+Schimbă acolo, nu în componente.
+
+### Nu ne bazăm pe aspectul nativ al controalelor
+
+`select`, `input[type="date"]`, bifele și butoanele primesc `appearance: none`
+și decor desenat de noi, pentru că fiecare browser le desenează altfel (vezi
+cazul câmpului de dată pe Android). Orice control nou trebuie tratat la fel.
+
+### Aceeași interfață pe iPhone și pe Android
+
+Secțiunea 19 din `style.css` adună, într-un singur loc, diferențele pe care le
+introduc browserele de la ele:
+
+- **Toate câmpurile au textul de 16px.** Sub acest prag, Safari pe iPhone
+  mărește automat pagina la atingerea unui câmp, iar pe Android nu — ecranul ar
+  „sări" doar pe iPhone. Dacă adaugi un câmp nou, respectă pragul.
+- **Fără decor nativ** pe inputuri și butoane (iOS pune singur colțuri rotunjite
+  și umbre interioare).
+- **`text-size-adjust: 100%`**, altfel Safari îngroașă textul la rotirea ecranului.
+- **`font-synthesis: none`**, ca literele îngroșate să nu fie simulate diferit
+  de la un sistem la altul cât timp fontul încă se încarcă.
+- **Fără dreptunghiul gri la atingere** (`-webkit-tap-highlight-color`).
+- **Zona sigură** pe telefoanele cu decupaj, prin `env(safe-area-inset-*)`.
+- **`line-height` fixat** pe butoane, pe care Safari altfel îl ignoră.
+- **Fundalul galben de la completarea automată** din Chrome, înlocuit cu
+  culorile temei.
+
+Ce nu se poate controla din CSS: formatul afișat în câmpul de dată
+(`zz.ll.aaaa` vs `mm/dd/yyyy`) depinde de limba dispozitivului.
+
 ## De făcut mai departe
 
-`despre.html` și `alatura-te.html` sunt deja legate, dar nu există încă.
+Nimic din meniu nu mai lipsește. Următorii pași firești: formularul de publicat
+un eveniment și paginile de categorie.

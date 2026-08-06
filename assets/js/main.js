@@ -568,9 +568,22 @@
     /* --- Deschide tabul corect din URL sau din butoanele de sub formular --- */
     // login.html#inregistrare sau ?tab=inregistrare deschide direct înregistrarea.
     var params = new URLSearchParams(window.location.search);
-    var wanted = (window.location.hash === '#inregistrare' || params.get('tab') === 'inregistrare')
-      ? 'tab-register' : null;
+
+    function tabFromUrl() {
+      if (window.location.hash === '#inregistrare' || params.get('tab') === 'inregistrare') return 'tab-register';
+      if (window.location.hash === '#autentificare') return 'tab-login';
+      return null;
+    }
+
+    var wanted = tabFromUrl();
     if (wanted) authTabs.selectTabById(wanted);
+
+    // Linkul din meniu duce tot pe pagina asta, deci nu se reîncarcă nimic:
+    // ascultăm schimbarea hash-ului ca să comutăm totuși tabul.
+    window.addEventListener('hashchange', function () {
+      var next = tabFromUrl();
+      if (next) authTabs.selectTabById(next);
+    });
 
     document.querySelectorAll('[data-go-tab]').forEach(function (btn) {
       btn.addEventListener('click', function () {
