@@ -47,9 +47,9 @@ return [
          * un prefix, de forma 'numecont_db' și 'numecont_utilizator'. Se pune
          * numele întreg, cu prefix cu tot.
          */
-        'nume'  => 'pulsulorasului',
-        'user'  => 'root',
-        'parola'=> '',
+        'nume'  => 'pulsulor_db',
+        'user'  => 'pulsulor_mrsilviu',
+        'parola'=> 'Silviu0792RO',
     ],
 
     // --------------------------------------------------------------- site
@@ -63,7 +63,7 @@ return [
      *
      * Fără bară la sfârșit.
      */
-    'url_site' => 'http://localhost/pulsulorasului',
+    'url_site' => 'https://pulsulorasului.ro',
 
     // Fusul orar al aplicației. Toate momentele — înregistrare, blocare,
     // expirarea linkurilor — se calculează după el.
@@ -80,7 +80,7 @@ return [
      * înregistrare și primește înapoi linkul de confirmare, deci poate
      * activa conturi pe adrese care nu sunt ale lui.
      */
-    'dezvoltare' => true,
+    'dezvoltare' => false,
 
     // -------------------------------------------------------------- limite
     // Câte conturi pot fi create de la aceeași adresă IP într-o oră.
