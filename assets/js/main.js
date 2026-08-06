@@ -243,6 +243,52 @@
     toastTimer = setTimeout(function () { toastEl.classList.remove('is-visible'); }, 2600);
   }
 
+  /* --- Vorbitul cu serverul ----------------------------------------------
+     Toate formularele trimit cu fetch și așteaptă JSON înapoi. Când primesc
+     altceva — o eroare de PHP, o pagină de la găzduire, un fișier de setări
+     lipsă — `r.json()` aruncă, iar codul ajungea în `.catch()`, care spunea
+     „verifică conexiunea".
+
+     Mesajul acela era greșit și trimitea omul să caute unde nu e: serverul
+     RĂSPUNSESE, doar că nu cu ce trebuie. De aceea citim întâi textul brut și
+     abia apoi încercăm să-l înțelegem, ca să putem spune care din cele trei
+     lucruri s-a întâmplat:
+
+       - JSON valid            → { corp: {...} }
+       - alt răspuns           → { corp: null, brut: "textul primit" }
+       - cererea n-a ajuns     → fetch respinge, deci se ajunge în .catch()
+  */
+  function citesteRaspuns(r) {
+    return r.text().then(function (text) {
+      try {
+        return { stare: r.status, corp: JSON.parse(text), brut: text };
+      } catch (e) {
+        return { stare: r.status, corp: null, brut: text };
+      }
+    });
+  }
+
+  /**
+   * Ce spunem când serverul a răspuns, dar nu cu JSON.
+   *
+   * Textul întreg se scrie în consolă: acolo se vede eroarea de PHP, singurul
+   * lucru care ajută la reparat. În pagină nu-l arătăm, pentru că poate
+   * conține căi de pe server sau nume de tabele.
+   */
+  function mesajRaspunsNeasteptat(rez) {
+    if (window.console && console.error) {
+      console.error('Răspuns neașteptat de la server (HTTP ' + rez.stare + '):\n' +
+                    (rez.brut || '(gol)'));
+    }
+    return 'Serverul a răspuns cu o eroare (HTTP ' + rez.stare +
+           '). Apasă F12 și uită-te în „Console" ca să vezi ce a spus.';
+  }
+
+  /** Când cererea nu a plecat deloc: internet căzut, adresă greșită. */
+  function mesajFaraLegatura() {
+    return 'Nu am putut lua legătura cu serverul. Verifică internetul și încearcă din nou.';
+  }
+
   /* --- Taburi (refolosibile: orice container cu data-tabs) --- */
   // Merge pe comentariile din articol și pe autentificare/înregistrare deopotrivă.
   document.querySelectorAll('[data-tabs]').forEach(function (tablist) {
@@ -749,12 +795,12 @@
           redirect:   backTo
         })
       })
-      .then(function (r) {
-        return r.json().then(function (corp) { return { stare: r.status, corp: corp }; });
-      })
+      .then(citesteRaspuns)
       .then(function (rez) {
         if (buton) { buton.disabled = false; buton.textContent = textInitial; }
-        var c = rez.corp || {};
+
+        if (!rez.corp) { toast(mesajRaspunsNeasteptat(rez)); return; }
+        var c = rez.corp;
 
         if (c.ok) {
           toast(c.mesaj || 'Bine ai revenit!');
@@ -793,7 +839,7 @@
       })
       .catch(function () {
         if (buton) { buton.disabled = false; buton.textContent = textInitial; }
-        toast('Nu am putut lua legătura cu serverul. Verifică conexiunea.');
+        toast(mesajFaraLegatura());
       });
     }
 
@@ -847,9 +893,17 @@
             email: emailNeconfirmat
           })
         })
-        .then(function (r) { return r.json(); })
-        .then(function (c) {
+        .then(citesteRaspuns)
+        .then(function (rez) {
           btnRetrimite.textContent = textInitial;
+
+          if (!rez.corp) {
+            btnRetrimite.disabled = false;
+            toast(mesajRaspunsNeasteptat(rez));
+            return;
+          }
+          var c = rez.corp;
+
           toast(c.mesaj || 'Gata.');
 
           if (c.ok) {
@@ -871,7 +925,7 @@
         .catch(function () {
           btnRetrimite.disabled = false;
           btnRetrimite.textContent = textInitial;
-          toast('Nu am putut lua legătura cu serverul.');
+          toast(mesajFaraLegatura());
         });
       });
     }
@@ -1045,13 +1099,13 @@
           credentials: 'same-origin',
           body: JSON.stringify(date)
         })
-        .then(function (r) {
-          return r.json().then(function (raspuns) { return { stare: r.status, corp: raspuns }; });
-        })
+        .then(citesteRaspuns)
         .then(function (rez) {
           if (buton) { buton.disabled = false; buton.textContent = textInitial; }
 
-          if (rez.corp && rez.corp.ok) {
+          if (!rez.corp) { toast(mesajRaspunsNeasteptat(rez)); return; }
+
+          if (rez.corp.ok) {
             arataConfirmarea(rez.corp);
             return;
           }
@@ -1075,7 +1129,7 @@
         })
         .catch(function () {
           if (buton) { buton.disabled = false; buton.textContent = textInitial; }
-          toast('Nu am putut lua legătura cu serverul. Verifică conexiunea.');
+          toast(mesajFaraLegatura());
         });
       }
 
@@ -1569,19 +1623,22 @@
         headers: { 'X-Requested-With': 'fetch' },
         credentials: 'same-origin'
       })
-      .then(function (r) { return r.json().then(function (c) { return { stare: r.status, c: c }; }); })
-      .then(function (raspuns) {
-        var c = raspuns.c || {};
-
-        if (!c.ok) {
-          spune(c.mesaj || 'Nu a mers. Mai încearcă o dată.', 'rau');
+      .then(citesteRaspuns)
+      .then(function (rez) {
+        if (!rez.corp) {
+          spune(mesajRaspunsNeasteptat(rez), 'rau');
           return;
         }
 
-        laBine(c);
+        if (!rez.corp.ok) {
+          spune(rez.corp.mesaj || 'Nu a mers. Mai încearcă o dată.', 'rau');
+          return;
+        }
+
+        laBine(rez.corp);
       })
       .catch(function () {
-        spune('Nu am putut lua legătura cu serverul. Verifică internetul și încearcă din nou.', 'rau');
+        spune(mesajFaraLegatura(), 'rau');
       })
       .then(function () {
         seTrimite = false;

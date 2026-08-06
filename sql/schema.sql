@@ -1,15 +1,29 @@
 -- =========================================================================
 --  PulsulOrasului.Ro — structura bazei de date
 --
---  Rulează o singură dată, din phpMyAdmin sau din consolă:
---      mysql -u root -p < sql/schema.sql
+--  Se rulează o singură dată, după ce baza de date există deja.
+--
+--  --- PE GĂZDUIREA REALĂ (cPanel, phpMyAdmin) --------------------------
+--  Baza se face din panoul găzduirii, nu de aici: utilizatorul tău de MySQL
+--  nu are (și nu trebuie să aibă) dreptul de a crea baze de date. Numele
+--  primește automat un prefix, de forma „numecont_db".
+--
+--  În phpMyAdmin: alegi întâi baza din stânga, apoi „Import" și fișierul
+--  ăsta. Fără pasul cu alegerea bazei, importul nu are unde să scrie.
+--
+--  --- ÎN XAMPP, LOCAL --------------------------------------------------
+--  Baza se face o singură dată, cu linia de mai jos (o dai în fila „SQL"
+--  din phpMyAdmin, sau din consolă):
+--
+--      CREATE DATABASE pulsulorasului
+--        CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+--
+--  Apoi alegi baza și rulezi fișierul ăsta.
+--
+--  De ce nu sunt „CREATE DATABASE" și „USE" chiar aici: ar merge în XAMPP,
+--  unde ești root, dar pe găzduire ar opri importul din prima linie, cu
+--  „access denied" — și, în plus, numele bazei e altul acolo.
 -- =========================================================================
-
-CREATE DATABASE IF NOT EXISTS pulsulorasului
-  CHARACTER SET utf8mb4
-  COLLATE utf8mb4_unicode_ci;
-
-USE pulsulorasului;
 
 -- -------------------------------------------------------------------------
 --  Membri
