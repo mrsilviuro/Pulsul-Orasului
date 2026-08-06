@@ -62,7 +62,8 @@ function membruCurent(): ?array
     $_SESSION['ultima_activitate'] = time();
 
     $q = db()->prepare(
-        'SELECT id, permalink, nume, prenume, email, sex, stare, creat_la
+        'SELECT id, permalink, nume, prenume, email, sex, data_nasterii,
+                localitate, poza, poza_actualizata_la, stare, creat_la
            FROM membri
           WHERE id = ?
           LIMIT 1'

@@ -51,6 +51,11 @@ CREATE TABLE IF NOT EXISTS membri (
   sex               ENUM('M','F')   NOT NULL,
   localitate        VARCHAR(80)         NULL DEFAULT NULL,
 
+  -- Poza de profil: doar partea aleatorie a numelui de fișier, fără cale și
+  -- fără extensie. Vezi explicația pe larg din sql/003-poza-profil.sql.
+  poza              VARCHAR(32)         NULL DEFAULT NULL,
+  poza_actualizata_la DATETIME          NULL DEFAULT NULL,
+
   stare             ENUM('neconfirmat','activ','suspendat')
                                     NOT NULL DEFAULT 'neconfirmat',
 

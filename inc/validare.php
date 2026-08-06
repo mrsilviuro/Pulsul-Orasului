@@ -283,3 +283,67 @@ function numeAfisat(string $nume, string $prenume): string
     $initiala = mb_substr($nume, 0, 1, 'UTF-8');
     return mb_strtoupper($initiala, 'UTF-8') . '. ' . $prenume;
 }
+
+/**
+ * Vârsta în ani împliniți, dintr-o dată de forma „1990-05-17".
+ *
+ * Întoarce null dacă data lipsește sau nu se înțelege — mai bine nu afișăm
+ * nimic decât o vârstă greșită.
+ */
+function varstaDin(?string $dataNasterii, ?DateTimeImmutable $azi = null): ?int
+{
+    if ($dataNasterii === null || $dataNasterii === '') {
+        return null;
+    }
+
+    try {
+        $nasterea = new DateTimeImmutable($dataNasterii);
+    } catch (Exception $e) {
+        return null;
+    }
+
+    $azi = $azi ?? new DateTimeImmutable('today');
+    $ani = (int) $azi->diff($nasterea)->y;
+
+    return ($ani >= 0 && $ani <= VARSTA_MAX) ? $ani : null;
+}
+
+/** „34 de ani", „21 de ani", „1 an" — cu regula românească a lui „de". */
+function aniInCuvinte(int $ani): string
+{
+    if ($ani === 1) {
+        return 'un an';
+    }
+
+    // În română, „de" apare de la 20 în sus, iar apoi din nou după 100, 101…
+    $rest = $ani % 100;
+    $are_de = ($rest === 0 || $rest >= 20);
+
+    return $ani . ($are_de ? ' de ani' : ' ani');
+}
+
+/**
+ * „mai 2024" — luna și anul, scrise cu literă mică, ca în text curent.
+ *
+ * Numele lunilor sunt scrise aici, nu luate de la sistem: pe un server fără
+ * pachetul de limbă românească instalat, strftime() ar da „May 2024".
+ */
+function lunaSiAnul(?string $data): string
+{
+    if ($data === null || $data === '') {
+        return '';
+    }
+
+    try {
+        $moment = new DateTimeImmutable($data);
+    } catch (Exception $e) {
+        return '';
+    }
+
+    $luni = [
+        1 => 'ianuarie', 'februarie', 'martie', 'aprilie', 'mai', 'iunie',
+        'iulie', 'august', 'septembrie', 'octombrie', 'noiembrie', 'decembrie',
+    ];
+
+    return $luni[(int) $moment->format('n')] . ' ' . $moment->format('Y');
+}
