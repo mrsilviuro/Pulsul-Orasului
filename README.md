@@ -456,9 +456,142 @@ trebuie ca să vedem un tipar de atacuri.
 Dacă preferi ca ștergerea să o facă baza de date singură, în `sql/002` e scris
 și evenimentul MySQL echivalent.
 
+## Intrarea cu Google
+
+Fișiere: `inc/google.php` (partea de OAuth), `google.php` (plecarea și
+întoarcerea), `finalizare.php` + `api/finalizare-google.php` (ultimul pas la
+înregistrare), `inc/buton-google.php` (butonul), `sql/005-google.sql`.
+
+### Ce ai de făcut la Google, pas cu pas
+
+Totul se face o singură dată, pe **console.cloud.google.com**, cu contul tău de
+Google. E gratuit pentru ce facem noi.
+
+**1. Fă un proiect.**
+Sus, lângă sigla Google Cloud, e un selector de proiect. *New project* → nume:
+`PulsulOrasului` → *Create*. Așteaptă câteva secunde și asigură-te că proiectul
+nou e cel selectat.
+
+**2. Completează ecranul de acceptare** (*APIs & Services → OAuth consent
+screen*). E ce vede omul când apasă butonul.
+
+- *User type*: **External**. „Internal" e doar pentru firme cu Google Workspace.
+- *App name*: `PulsulOrasului.Ro` — apare scris pe ecranul de acceptare, deci
+  scrie-l cum vrei să fie văzut.
+- *User support email*: adresa ta.
+- *App domain*: `https://pulsulorasului.ro`, plus linkurile către termeni și
+  confidențialitate dacă le ai (nu sunt obligatorii cât timp aplicația e în
+  „Testing").
+- *Authorized domains*: adaugă **`pulsulorasului.ro`** (doar domeniul, fără
+  `https://` și fără `www`).
+- *Developer contact information*: adresa ta.
+
+**3. Scopes** — apasă *Add or remove scopes* și bifează doar:
+`openid`, `.../auth/userinfo.email`, `.../auth/userinfo.profile`.
+
+Atât. Sunt „non-sensitive", adică **nu ai nevoie de verificare de la Google**.
+Dacă ceri mai mult (contacte, calendar, ce-o fi), intri într-un proces de
+verificare care durează săptămâni. Noi cerem strictul necesar: cine e și ce
+adresă are.
+
+**4. Fă datele de acces** (*APIs & Services → Credentials*):
+
+- *Create credentials* → **OAuth client ID**
+- *Application type*: **Web application**
+- *Name*: `PulsulOrasului web` (e doar pentru tine, nu se vede nicăieri)
+- *Authorized JavaScript origins*: `https://pulsulorasului.ro`
+- *Authorized redirect URIs*: **`https://pulsulorasului.ro/google.php`**
+
+Adresa de întoarcere trebuie scrisă **exact** așa: cu `https`, fără `www` dacă
+site-ul tău e fără `www`, fără bară la sfârșit. Google compară caracter cu
+caracter, iar cea mai frecventă eroare la început — `redirect_uri_mismatch` —
+de aici vine.
+
+Dacă folosești și `www.pulsulorasului.ro`, adaugă și
+`https://www.pulsulorasului.ro/google.php`.
+
+**5. Copiază** *Client ID* și *Client secret* în `inc/config.php`, la
+`google_client_id` și `google_client_secret`. Gata.
+
+**Secretul nu se pune niciodată în JavaScript sau în vreo pagină.** Stă doar în
+`inc/config.php`, care nu se vede din web. De aceea nici nu folosim varianta cu
+buton desenat de Google — acolo secretul n-ar avea unde să stea în siguranță.
+
+**6. Publică aplicația.** Cât timp e în *Testing*, pot intra doar adresele
+trecute manual la *Test users* (cel mult 100). Când ești gata, pe *OAuth consent
+screen* apeși *Publish app*. Pentru scopurile astea trei nu ți se cere nicio
+verificare — trece imediat.
+
+### Cum merge, în cuvinte simple
+
+1. Omul apasă butonul și e trimis pe google.com.
+2. Se autentifică **acolo, la ei**. Noi nu-i vedem niciodată parola — ăsta e tot
+   rostul.
+3. Google îl trimite înapoi la `google.php` cu un cod scurt, prin bara de adrese.
+4. Serverul nostru sună la Google, de la server la server, și schimbă codul pe
+   datele omului.
+
+Se cheamă *authorization code flow*. Butonul e o **legătură obișnuită**, nu un
+buton de JavaScript: merge și cu JS oprit, se poate deschide în filă nouă, și nu
+aducem niciun script străin în pagină.
+
+### De ce atâtea verificări
+
+Pasul 3 trece prin mâinile vizitatorului, deci acolo poate ajunge orice:
+
+- **`state`** — un șir aleatoriu ținut în sesiune și cerut înapoi la
+  întoarcere. Fără el, cineva ți-ar putea trimite un link care te conectează în
+  contul **lui** fără să-ți dai seama, iar tot ce faci apoi ajunge acolo.
+- **PKCE** — spre Google pleacă doar amprenta unui secret de unică folosință;
+  secretul întreg rămâne la noi. Dacă cineva fură codul din bara de adrese, nu-i
+  folosește la nimic.
+- **`state` e bun o singură dată** — se șterge din sesiune imediat ce a fost
+  verificat, deci același link nu poate fi refolosit.
+- **`aud`, `iss`, `exp`** — verificăm pentru cine e token-ul, cine l-a emis și
+  până când e valabil.
+
+Semnătura token-ului **nu** se verifică, și e în regulă: token-ul nu vine prin
+browser, ci direct de la Google, printr-o legătură HTTPS al cărei certificat
+tocmai l-am verificat. Google însuși scrie în documentație că pentru fluxul ăsta
+verificarea semnăturii nu mai e necesară.
+
+### `email_verified` — verificarea care contează cel mai mult
+
+Dacă adresa venită de la Google coincide cu a unui cont existent, cele două se
+leagă și omul intră în contul lui de la noi. Asta e în regulă **numai** pentru
+că Google ne spune că a verificat el adresa.
+
+Fără verificarea aia, oricine și-ar putea trece în contul lui de Google adresa
+altcuiva și ar intra peste el. De aceea, dacă `email_verified` lipsește sau e
+`false`, cererea e refuzată.
+
+### Ultimul pas la înregistrare
+
+Google ne dă numele și adresa, dar nu data nașterii și nu sexul — iar pe alea le
+arătăm pe pagina de profil. Așa că un om nou e trimis la `finalizare.php`, unde
+completează cele două date; **contul se creează abia atunci**. Dacă închide fila
+înainte, nu rămâne în urmă un cont pe jumătate.
+
+Contul e activ din prima, fără e-mail de confirmare: confirmarea există ca să
+dovedească faptul că omul chiar are cutia poștală aia, iar Google tocmai a
+dovedit-o.
+
+### Conturi fără parolă
+
+Cine intră doar cu Google are `parola_hash` **NULL** — nu-i punem un hash
+inventat, ca să se poată deosebi „nu are parolă" de „are una pe care n-o știe
+nimeni". Dacă vrea să poată intra și cu parolă, o pune prin „Ți-ai uitat parola".
+
+### Dacă nu e configurat
+
+Cât timp `google_client_id` e gol, butoanele și linia „sau cu e-mail" **nu se
+tipăresc deloc**, iar `google.php` spune că nu e pornit. Site-ul merge normal
+fără ele, deci poți urca tot codul înainte de a-ți face contul la Google.
+
 ### Ce nu e făcut încă
 
-- intrarea cu Google.
+Nimic din ce ai cerut. Rămân: formularul de publicat un eveniment și paginile de
+categorie.
 
 ## E-mailurile
 
@@ -702,19 +835,19 @@ Legăturile către CSS și JS au un număr de versiune, puse o singură dată î
 `inc/antet.php` și `inc/subsol.php`:
 
 ```html
-<link rel="stylesheet" href="assets/css/style.css?v=15">
-<script src="assets/js/main.js?v=15"></script>
+<link rel="stylesheet" href="assets/css/style.css?v=16">
+<script src="assets/js/main.js?v=16"></script>
 ```
 
 **De fiecare dată când modifici `style.css` sau `main.js`, crește numărul.**
 Altfel browserele păstrează versiunea veche din cache, iar paginile noi apar
 nestilate — HTML-ul e nou, dar CSS-ul rămâne cel vechi.
 
-Comandă rapidă (înlocuiește 16 cu versiunea nouă):
+Comandă rapidă (înlocuiește 17 cu versiunea nouă):
 
 ```bash
-sed -i 's/style\.css?v=[0-9]*/style.css?v=16/' inc/antet.php
-sed -i 's/main\.js?v=[0-9]*/main.js?v=16/'     inc/subsol.php
+sed -i 's/style\.css?v=[0-9]*/style.css?v=17/' inc/antet.php
+sed -i 's/main\.js?v=[0-9]*/main.js?v=17/'     inc/subsol.php
 ```
 
 ### Un singur CSS, un singur JS
@@ -802,6 +935,9 @@ Ce nu se poate controla din CSS: formatul afișat în câmpul de dată
 7. **Pui `'email_expeditor'` pe o adresă de pe domeniul tău.** Vezi secțiunea
    despre e-mailuri pentru ce contează la livrare.
 
+8. **Dacă vrei intrarea cu Google**, urmează pașii din secțiunea „Intrarea cu
+   Google". Până atunci butoanele nici nu se tipăresc, deci nu e grabă.
+
 ### Gazda bazei de date
 
 **`localhost`**, nu numele domeniului. Baza stă pe aceeași mașină cu site-ul,
@@ -848,5 +984,4 @@ server și nume de tabele.
 
 ## De făcut mai departe
 
-Intrarea cu Google, formularul de publicat un eveniment și paginile de
-categorie.
+Formularul de publicat un eveniment și paginile de categorie.

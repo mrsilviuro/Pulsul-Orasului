@@ -24,6 +24,25 @@ if (esteLogat()) {
 
 $tocmaiIesit = isset($_GET['iesit']);
 
+/**
+ * Unde vrea omul să ajungă după ce intră.
+ *
+ * Se ia din adresă și se dă mai departe butonului de Google, care pleacă de pe
+ * server, nu din JavaScript. Se acceptă doar căi de pe site-ul nostru — vezi
+ * aceeași regulă din api/autentificare.php.
+ */
+$inapoiLa = '';
+$cerut    = isset($_GET['redirect']) && is_string($_GET['redirect']) ? $_GET['redirect'] : '';
+
+if ($cerut !== '' && $cerut[0] === '/' && ($cerut[1] ?? '') !== '/') {
+    $inapoiLa = $cerut;
+}
+
+// Necazul lăsat de google.php, dacă întoarcerea de la Google n-a mers.
+pornesteSesiunea();
+$necazGoogle = (string) ($_SESSION['google_necaz'] ?? '');
+unset($_SESSION['google_necaz']);
+
 $titlu     = 'Cont — PulsulOrasului.Ro';
 $descriere = 'Intră în cont sau creează-ți unul, ca să publici evenimente și să participi la discuții.';
 $pagina    = 'cont';
@@ -40,6 +59,15 @@ require __DIR__ . '/inc/antet.php';
 <main id="main">
   <div class="wrap">
     <div class="auth">
+
+      <?php if ($necazGoogle !== ''): ?>
+      <p class="auth__notice auth__notice--rau">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5"/><path d="M12 16.4v.1"/>
+        </svg>
+        <span><?= h($necazGoogle) ?></span>
+      </p>
+      <?php endif; ?>
 
       <?php if ($tocmaiIesit): ?>
       <p class="auth__notice auth__notice--ok">
@@ -80,21 +108,12 @@ require __DIR__ . '/inc/antet.php';
           <h1 class="auth__title">Bine ai revenit</h1>
           <p class="auth__lead">Intră în cont ca să publici evenimente și să participi la discuții.</p>
 
-          <!--
-            Buton Google: când implementezi OAuth, pui aici href-ul către
-            /auth/google (sau apelezi SDK-ul Google Identity din JS).
-          -->
-          <button class="btn-google" type="button" data-google="login">
-            <svg class="btn-google__ico" viewBox="0 0 48 48" aria-hidden="true">
-              <path fill="#4285F4" d="M45.1 24.5c0-1.6-.1-3.2-.4-4.7H24v8.9h11.8c-.5 2.7-2 5-4.4 6.6v5.5h7.1c4.2-3.8 6.6-9.5 6.6-16.3z"/>
-              <path fill="#34A853" d="M24 46c6 0 11-2 14.6-5.3l-7.1-5.5c-2 1.3-4.5 2.1-7.5 2.1-5.8 0-10.7-3.9-12.4-9.1H4.3v5.7C7.9 41.1 15.4 46 24 46z"/>
-              <path fill="#FBBC05" d="M11.6 28.2c-.5-1.3-.7-2.7-.7-4.2s.3-2.9.7-4.2v-5.7H4.3A22 22 0 0 0 2 24c0 3.6.9 6.9 2.3 9.9l7.3-5.7z"/>
-              <path fill="#EA4335" d="M24 10.7c3.3 0 6.2 1.1 8.5 3.3l6.3-6.3C35 4.1 30 2 24 2 15.4 2 7.9 6.9 4.3 14.1l7.3 5.7c1.7-5.2 6.6-9.1 12.4-9.1z"/>
-            </svg>
-            <span>Continuă cu Google</span>
-          </button>
-
-          <div class="auth__divider"><span>sau cu e-mail</span></div>
+          <?php
+            $textButon       = 'Continuă cu Google';
+            $textDespartitor = 'sau cu e-mail';
+            $redirectDupa    = $inapoiLa;
+            require __DIR__ . '/inc/buton-google.php';
+          ?>
 
           <form class="form" id="login-form" novalidate>
 
@@ -209,17 +228,12 @@ require __DIR__ . '/inc/antet.php';
           <h2 class="auth__title">Creează-ți cont</h2>
           <p class="auth__lead">Durează un minut. După aceea poți publica evenimente în oraș.</p>
 
-          <button class="btn-google" type="button" data-google="register">
-            <svg class="btn-google__ico" viewBox="0 0 48 48" aria-hidden="true">
-              <path fill="#4285F4" d="M45.1 24.5c0-1.6-.1-3.2-.4-4.7H24v8.9h11.8c-.5 2.7-2 5-4.4 6.6v5.5h7.1c4.2-3.8 6.6-9.5 6.6-16.3z"/>
-              <path fill="#34A853" d="M24 46c6 0 11-2 14.6-5.3l-7.1-5.5c-2 1.3-4.5 2.1-7.5 2.1-5.8 0-10.7-3.9-12.4-9.1H4.3v5.7C7.9 41.1 15.4 46 24 46z"/>
-              <path fill="#FBBC05" d="M11.6 28.2c-.5-1.3-.7-2.7-.7-4.2s.3-2.9.7-4.2v-5.7H4.3A22 22 0 0 0 2 24c0 3.6.9 6.9 2.3 9.9l7.3-5.7z"/>
-              <path fill="#EA4335" d="M24 10.7c3.3 0 6.2 1.1 8.5 3.3l6.3-6.3C35 4.1 30 2 24 2 15.4 2 7.9 6.9 4.3 14.1l7.3 5.7c1.7-5.2 6.6-9.1 12.4-9.1z"/>
-            </svg>
-            <span>Înregistrează-te cu Google</span>
-          </button>
-
-          <div class="auth__divider"><span>sau completează datele</span></div>
+          <?php
+            $textButon       = 'Înregistrează-te cu Google';
+            $textDespartitor = 'sau completează datele';
+            $redirectDupa    = $inapoiLa;
+            require __DIR__ . '/inc/buton-google.php';
+          ?>
 
           <form class="form" id="register-form" novalidate>
 
