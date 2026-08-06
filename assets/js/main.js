@@ -210,21 +210,21 @@
 
   var body = document.body;
 
-  // Steagul de autentificare vine din <body data-logged-in="...">.
-  // Când implementezi login-ul, îl pui pe "true" din server.
-  function isLoggedIn() { return body.getAttribute('data-logged-in') === 'true'; }
+  // Starea de autentificare vine din sesiunea de pe server: inc/antet.php
+  // scrie data-logat pe <body> la fiecare încărcare de pagină.
+  function isLoggedIn() { return body.getAttribute('data-logat') === 'true'; }
 
   function currentUser() {
     return {
-      name:   body.getAttribute('data-user-name')   || 'Utilizator',
-      avatar: body.getAttribute('data-user-avatar') || 'assets/img/avatars/cristi.svg'
+      name:   body.getAttribute('data-user-nume') || 'Utilizator',
+      avatar: 'assets/img/avatars/cristi.svg'
     };
   }
 
   // Trimite spre login, păstrând pagina curentă ca destinație de întoarcere.
   function goToLogin() {
     var back = encodeURIComponent(window.location.pathname + window.location.search);
-    window.location.href = 'login.html?redirect=' + back;
+    window.location.href = 'login.php?redirect=' + back;
   }
 
   // Mesaj scurt jos, pe mijloc
@@ -566,7 +566,7 @@
   if (authTabs) {
 
     /* --- Deschide tabul corect din URL sau din butoanele de sub formular --- */
-    // login.html#inregistrare sau ?tab=inregistrare deschide direct înregistrarea.
+    // login.php#inregistrare sau ?tab=inregistrare deschide direct înregistrarea.
     var params = new URLSearchParams(window.location.search);
 
     function tabFromUrl() {
@@ -609,7 +609,7 @@
     function afterAuth(message) {
       toast(message);
       setTimeout(function () {
-        window.location.href = backTo || 'index.html';
+        window.location.href = backTo || 'index.php';
       }, 1000);
     }
 
@@ -709,11 +709,189 @@
           id: 'lg-password', error: 'err-lg-password',
           check: function (v) { return v ? '' : 'Scrie parola.'; }
         }
-      ], function () {
-        // TODO: trimite datele către server și tratează răspunsul
-        // (parolă greșită, cont inexistent etc.).
-        afterAuth('Bine ai revenit!');
+      ], trimiteAutentificarea);
+    }
+
+    /* --- Trimiterea formularului de autentificare --- */
+
+    function arataPanou(id) {
+      ['login-block', 'login-neconfirmat', 'login-blocat'].forEach(function (cheie) {
+        var el = document.getElementById(cheie);
+        if (el) el.hidden = (cheie !== id);
       });
+      var panou = document.getElementById(id);
+      if (panou && id !== 'login-block') {
+        panou.scrollIntoView({ block: 'nearest' });
+      }
+    }
+
+    function trimiteAutentificarea() {
+      var buton = loginForm.querySelector('button[type="submit"]');
+      var textInitial = buton ? buton.textContent : '';
+      if (buton) { buton.disabled = true; buton.textContent = 'Se verifică…'; }
+
+      var email = document.getElementById('lg-email').value;
+
+      fetch('api/autentificare.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          csrf:       (loginForm.querySelector('[name="csrf"]') || {}).value || '',
+          email:      email,
+          parola:     document.getElementById('lg-password').value,
+          tine_minte: document.getElementById('lg-remember').checked ? '1' : '',
+          redirect:   backTo
+        })
+      })
+      .then(function (r) {
+        return r.json().then(function (corp) { return { stare: r.status, corp: corp }; });
+      })
+      .then(function (rez) {
+        if (buton) { buton.disabled = false; buton.textContent = textInitial; }
+        var c = rez.corp || {};
+
+        if (c.ok) {
+          toast(c.mesaj || 'Bine ai revenit!');
+          setTimeout(function () { window.location.href = c.redirect || 'index.php'; }, 700);
+          return;
+        }
+
+        // contul există și parola e bună, dar adresa nu a fost confirmată
+        if (c.stare === 'neconfirmat') {
+          var unde = document.getElementById('neconfirmat-email');
+          if (unde) unde.textContent = c.email || email;
+          emailNeconfirmat = c.email || email;
+          arataPanou('login-neconfirmat');
+          return;
+        }
+
+        // prea multe greșeli: formularul se închide temporar
+        if (c.stare === 'blocat') {
+          pornesteNumaratoarea(c.secunde || 600);
+          arataPanou('login-blocat');
+          return;
+        }
+
+        if (c.erori) {
+          setError('lg-email',    'err-lg-email',    c.erori.email  || '');
+          setError('lg-password', 'err-lg-password', c.erori.parola || '');
+
+          if (c.erori.parola && typeof c.incercari_ramase === 'number') {
+            var n = c.incercari_ramase;
+            toast(n === 1 ? 'Mai ai o singură încercare.' : 'Mai ai ' + n + ' încercări.');
+          }
+          return;
+        }
+
+        toast(c.mesaj || 'Nu am putut verifica datele. Încearcă din nou.');
+      })
+      .catch(function () {
+        if (buton) { buton.disabled = false; buton.textContent = textInitial; }
+        toast('Nu am putut lua legătura cu serverul. Verifică conexiunea.');
+      });
+    }
+
+    /* --- Numărătoarea inversă de pe panoul de blocare --- */
+
+    var emailNeconfirmat = '';
+    var ceasBlocare = null;
+
+    function pornesteNumaratoarea(secunde) {
+      var afisaj = document.getElementById('blocat-timp');
+      if (!afisaj) return;
+
+      clearInterval(ceasBlocare);
+
+      var scrie = function () {
+        if (secunde <= 0) {
+          clearInterval(ceasBlocare);
+          afisaj.textContent = 'câteva clipe';
+          arataPanou('login-block');
+          toast('Poți încerca din nou.');
+          return;
+        }
+        var m = Math.floor(secunde / 60);
+        var s = secunde % 60;
+        afisaj.textContent = m > 0
+          ? m + ':' + (s < 10 ? '0' : '') + s + ' minute'
+          : s + ' secunde';
+        secunde--;
+      };
+
+      scrie();
+      ceasBlocare = setInterval(scrie, 1000);
+    }
+
+    /* --- Retrimiterea e-mailului de confirmare --- */
+
+    var btnRetrimite = document.getElementById('btn-retrimite');
+
+    if (btnRetrimite) {
+      btnRetrimite.addEventListener('click', function () {
+        var textInitial = btnRetrimite.textContent;
+        btnRetrimite.disabled = true;
+        btnRetrimite.textContent = 'Se trimite…';
+
+        fetch('api/retrimite-confirmare.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({
+            csrf:  (loginForm.querySelector('[name="csrf"]') || {}).value || '',
+            email: emailNeconfirmat
+          })
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (c) {
+          btnRetrimite.textContent = textInitial;
+          toast(c.mesaj || 'Gata.');
+
+          if (c.ok) {
+            // se poate cere din nou abia peste 10 minute
+            var dev  = document.getElementById('neconfirmat-dev');
+            var link = document.getElementById('neconfirmat-link');
+            if (dev && link && c.link_confirmare) {
+              link.href = c.link_confirmare;
+              link.textContent = c.link_confirmare;
+              dev.hidden = false;
+            }
+            asteaptaRetrimiterea(btnRetrimite, textInitial, 10 * 60);
+          } else if (c.secunde) {
+            asteaptaRetrimiterea(btnRetrimite, textInitial, c.secunde);
+          } else {
+            btnRetrimite.disabled = false;
+          }
+        })
+        .catch(function () {
+          btnRetrimite.disabled = false;
+          btnRetrimite.textContent = textInitial;
+          toast('Nu am putut lua legătura cu serverul.');
+        });
+      });
+    }
+
+    // Ține butonul închis până trece răgazul dintre două trimiteri.
+    function asteaptaRetrimiterea(buton, textInitial, secunde) {
+      buton.disabled = true;
+
+      var ceas = setInterval(function () {
+        if (secunde <= 0) {
+          clearInterval(ceas);
+          buton.disabled = false;
+          buton.textContent = textInitial;
+          return;
+        }
+        var m = Math.floor(secunde / 60);
+        var s = secunde % 60;
+        buton.textContent = 'Mai poți cere în ' + (m > 0 ? m + ':' + (s < 10 ? '0' : '') + s : s + 's');
+        secunde--;
+      }, 1000);
+    }
+
+    var btnInapoi = document.getElementById('btn-inapoi-login');
+    if (btnInapoi) {
+      btnInapoi.addEventListener('click', function () { arataPanou('login-block'); });
     }
 
     /* --- Puterea parolei --- */
@@ -820,11 +998,106 @@
             return checked ? '' : 'Trebuie să accepți termenii ca să continui.';
           }
         }
-      ], function () {
-        // TODO: trimite datele către server (verifică acolo dacă e-mailul
-        // e deja folosit) și confirmă adresa prin e-mail.
-        afterAuth('Contul a fost creat. Bine ai venit!');
-      });
+      ], trimiteInregistrarea);
+
+      /* --- Trimiterea către server --- */
+
+      // Numele câmpurilor din răspunsul serverului → locul unde se afișează
+      // eroarea în pagină. Serverul poate găsi probleme pe care browserul
+      // nu le vede: e-mail deja folosit, dată nerealistă, sesiune expirată.
+      var campuriServer = {
+        nume:              ['rg-lastname',  'err-rg-lastname'],
+        prenume:           ['rg-firstname', 'err-rg-firstname'],
+        email:             ['rg-email',     'err-rg-email'],
+        data_nasterii:     ['rg-birthdate', 'err-rg-birthdate'],
+        sex:               ['rg-gender',    'err-rg-gender'],
+        parola:            ['rg-password',  'err-rg-password'],
+        parola_confirmare: ['rg-password2', 'err-rg-password2'],
+        termeni:           ['rg-terms',     'err-rg-terms']
+      };
+
+      function trimiteInregistrarea() {
+        var buton = registerForm.querySelector('button[type="submit"]');
+        var textInitial = buton ? buton.textContent : '';
+
+        if (buton) { buton.disabled = true; buton.textContent = 'Se creează…'; }
+
+        var date = {
+          csrf:              (registerForm.querySelector('[name="csrf"]') || {}).value || '',
+          nume:              document.getElementById('rg-lastname').value,
+          prenume:           document.getElementById('rg-firstname').value,
+          email:             document.getElementById('rg-email').value,
+          data_nasterii:     document.getElementById('rg-birthdate').value,
+          sex:               document.getElementById('rg-gender').value,
+          parola:            document.getElementById('rg-password').value,
+          parola_confirmare: document.getElementById('rg-password2').value,
+          termeni:           document.getElementById('rg-terms').checked ? '1' : ''
+        };
+
+        fetch('api/inregistrare.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify(date)
+        })
+        .then(function (r) {
+          return r.json().then(function (raspuns) { return { stare: r.status, corp: raspuns }; });
+        })
+        .then(function (rez) {
+          if (buton) { buton.disabled = false; buton.textContent = textInitial; }
+
+          if (rez.corp && rez.corp.ok) {
+            arataConfirmarea(rez.corp);
+            return;
+          }
+
+          // erori pe câmpuri
+          var erori = (rez.corp && rez.corp.erori) || null;
+          if (erori) {
+            var primul = null;
+            Object.keys(campuriServer).forEach(function (camp) {
+              var pereche = campuriServer[camp];
+              var mesaj = erori[camp] || '';
+              setError(pereche[0], pereche[1], mesaj);
+              if (mesaj && !primul) primul = document.getElementById(pereche[0]);
+            });
+            if (primul) primul.focus();
+            toast('Mai sunt câmpuri de corectat.');
+            return;
+          }
+
+          toast((rez.corp && rez.corp.mesaj) || 'Nu am putut crea contul. Încearcă din nou.');
+        })
+        .catch(function () {
+          if (buton) { buton.disabled = false; buton.textContent = textInitial; }
+          toast('Nu am putut lua legătura cu serverul. Verifică conexiunea.');
+        });
+      }
+
+      // Formularul dispare, mesajul de confirmare îi ia locul.
+      function arataConfirmarea(raspuns) {
+        var bloc  = document.getElementById('register-block');
+        var gata  = document.getElementById('register-done');
+        var unde  = document.getElementById('register-done-email');
+        if (!gata) return;
+
+        if (bloc) bloc.hidden = true;
+        if (unde && raspuns.email) unde.textContent = raspuns.email;
+
+        // în dezvoltare, serverul trimite înapoi și linkul de confirmare
+        var dev  = document.getElementById('register-done-dev');
+        var link = document.getElementById('register-done-link');
+        if (dev && link && raspuns.link_confirmare) {
+          link.href = raspuns.link_confirmare;
+          link.textContent = raspuns.link_confirmare;
+          dev.hidden = false;
+        }
+
+        gata.hidden = false;
+        gata.scrollIntoView({ block: 'nearest' });
+        gata.setAttribute('tabindex', '-1');
+        gata.focus();
+      }
 
       // Când schimbi parola, reverificăm și confirmarea, dacă era deja greșită.
       var pass2 = document.getElementById('rg-password2');

@@ -1,0 +1,14 @@
+# Setările locale, cu datele reale de acces la baza de date.
+# Se creează copiind inc/config.example.php în inc/config.php
+inc/config.php
+
+# Fișiere scrise de aplicație (loguri, încărcări)
+private/*
+!private/.htaccess
+!private/.gitignore
+
+# Fișiere lăsate în urmă de editoare și de sistem
+.DS_Store
+Thumbs.db
+*.swp
+*~

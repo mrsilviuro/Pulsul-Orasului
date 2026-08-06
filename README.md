@@ -203,7 +203,240 @@ Selectorul de note din formular se generează în `[data-stars-input]`; are
 Trei casete: evenimente organizate, prezențe și „a confirmat, dar nu a venit".
 Numerele vin din HTML — le pune serverul.
 
+## Partea de server (PHP + MySQL)
+
+Din acest punct, site-ul are și cod care rulează pe server. `login.html` a
+devenit `login.php`.
+
+### Ce trebuie făcut o singură dată, în XAMPP
+
+1. Pune proiectul în `htdocs`, de exemplu `htdocs/pulsulorasului`.
+2. Creează baza rulând `sql/schema.sql` din phpMyAdmin (fila **Import**).
+3. Copiază setările și pune-ți datele de acces:
+
+   ```
+   copy inc\config.example.php inc\config.php
+   ```
+
+`inc/config.php` e trecut în `.gitignore` — datele reale de acces nu ajung
+niciodată pe GitHub.
+
+### Fișiere
+
+| Fișier | Rol |
+|---|---|
+| `login.php` | pagina cu cele două formulare |
+| `api/inregistrare.php` | primește formularul, verifică, salvează |
+| `confirma.php` | activează contul din linkul primit pe e-mail |
+| `inc/validare.php` | verificările, fără atingere de bază de date |
+| `inc/bootstrap.php` | setări, legătura cu baza, sesiune, token CSRF |
+| `sql/schema.sql` | structura bazei de date |
+
+### Cum ajung datele la server
+
+Formularul nu reîncarcă pagina: JavaScript trimite datele către
+`api/inregistrare.php`, iar la reușită formularul dispare și în locul lui apare
+mesajul „Verifică-ți e-mailul". Serverul răspunde cu JSON:
+
+```json
+{"ok": true,  "email": "ion@email.ro", "mesaj": "..."}
+{"ok": false, "erori": {"email": "Există deja un cont cu această adresă."}}
+```
+
+Erorile venite de la server se afișează sub câmpul potrivit, exact ca cele
+verificate în browser.
+
+### Verificările de pe server
+
+Verificările din browser sunt doar pentru confortul omului — pot fi ocolite cu
+un `curl`. Cele care contează sunt în `inc/validare.php`:
+
+- **Nume și prenume** — doar litere latine (cu diacritice românești, maghiare
+  sau germane), spații, cratime și apostrofuri. Fără cifre, simboluri, emoji
+  sau etichete HTML. Se salvează cu majusculă la fiecare cuvânt: `popescu` →
+  `Popescu`, `ana-maria` → `Ana-Maria`.
+- **Diacritice** — `ş` și `ţ` cu sedilă sunt aduse la `ș` și `ț` cu virgulă,
+  altfel „Şerban" și „Șerban" ar ajunge două persoane diferite în bază.
+- **E-mail** — validat și păstrat cu litere mici, ca `Ion@Email.ro` și
+  `ion@email.ro` să nu poată deveni două conturi.
+- **Data nașterii** — format `AAAA-LL-ZZ`, nu în viitor, cel puțin 13 ani,
+  cel mult 120. `2000-02-30` e respinsă (PHP altfel o mută singur pe 2 martie).
+- **Sex** — doar `M` sau `F`. A treia opțiune a fost scoasă din formular.
+- **Parolă** — minimum 8 caractere, maximum 72 de octeți, pentru că bcrypt
+  ignoră tăcut tot ce trece de atât.
+
+Rularea verificărilor: `php teste/test-validare.php` (58 de cazuri).
+
+### Unicitatea adresei de e-mail
+
+Se verifică în două locuri, și amândouă sunt necesare:
+
+1. o interogare înainte de salvare, pentru un mesaj de eroare frumos;
+2. un index `UNIQUE` în baza de date.
+
+Fără al doilea, două cereri trimise în aceeași clipă ar putea trece amândouă de
+verificare și ar crea două conturi cu aceeași adresă.
+
+### Adresa profilului (permalink)
+
+Fiecare membru primește un șir aleatoriu de 10 caractere:
+`pulsulorasului.ro/membru/5E6LyyWXyG`.
+
+Nu folosim numele (`membru/p.ionut`) din trei motive:
+
+1. **se repetă** — al doilea „P. Ionuț" ar avea nevoie de `p.ionut-2`, ceea ce
+   arată prost și spune tuturor al câtelea e;
+2. **profilurile ar putea fi ghicite** — cine vrea o listă de membri o obține
+   încercând nume obișnuite; numele îl scurtăm tocmai ca să protejăm persoana,
+   iar adresa l-ar da înapoi;
+3. **numele se poate schimba**, iar adresa ar rămâne greșită sau ar trebui
+   redirecționată.
+
+Alfabetul folosit sare peste `0/O` și `1/l/I`, ca adresa să poată fi dictată la
+telefon fără confuzii.
+
+### Parolele
+
+Se păstrează doar hash-ul, produs de `password_hash()` cu algoritmul implicit
+(bcrypt). Parola în clar nu ajunge niciodată în baza de date și nu poate fi
+recuperată — nici măcar de tine. La autentificare se folosește
+`password_verify()`.
+
+### Token-ul de confirmare
+
+În e-mail pleacă token-ul în clar; în baza de date se salvează doar hash-ul
+lui, exact ca la parole. Dacă baza ajunge pe mâini străine, linkurile nu pot fi
+folosite. Token-ul e valabil 48 de ore și se șterge la prima folosire.
+
+### Fără server de e-mail (XAMPP)
+
+Cât timp `dezvoltare` e `true` în `inc/config.php`:
+
+- linkul de confirmare apare direct în pagină, sub mesajul de succes;
+- se scrie și în `private/emailuri-trimise.log`.
+
+Fișierul conține token-uri valabile, deci stă în `private/`, unde `.htaccess`
+refuză accesul prin web, **și** se scrie doar în modul dezvoltare. Pe site-ul
+public, cu `dezvoltare` pe `false`, fișierul nici nu se creează.
+
+### Alte măsuri
+
+- **Token CSRF** la fiecare trimitere, ca alt site să nu poată trimite
+  formulare în numele vizitatorului.
+- **Cel mult 5 conturi pe oră** de la aceeași adresă IP.
+- **Interogări pregătite** peste tot, cu `ATTR_EMULATE_PREPARES` oprit, deci
+  datele nu ating niciodată textul interogării.
+- **`.htaccess`** care refuză accesul web la `inc/`, `sql/` și `private/`.
+
+## Autentificarea
+
+### Paginile sunt acum PHP
+
+Meniul trebuie să știe dacă ești conectat, deci nu mai poate fi HTML fix.
+Toate paginile s-au mutat pe `.php` și folosesc două fișiere comune:
+
+- `inc/antet.php` — `<head>`, bara de meniu, antetele de siguranță;
+- `inc/subsol.php` — footerul și scripturile.
+
+O pagină nouă arată așa:
+
+```php
+<?php
+$titlu  = 'Titlul paginii';
+$pagina = 'contact';            // ce element de meniu e marcat activ
+require __DIR__ . '/inc/antet.php';
+?>
+<main id="main"> … </main>
+<?php require __DIR__ . '/inc/subsol.php'; ?>
+```
+
+Meniul se schimbă acum într-un singur loc, în `inc/antet.php`.
+
+### Meniul, în funcție de starea de autentificare
+
+| Deslogat | Logat |
+|---|---|
+| Acasă, Despre, Contact, **Alătură-te și tu** | Acasă, Despre, Contact, **Deloghează-te** |
+
+„Alătură-te și tu" stă după „Contact" și are fundal colorat, ca invitație
+principală. Când ești conectat, dispare și în locul ei apare ieșirea din cont,
+scrisă discret. Lângă butonul de temă apare numele tău prescurtat.
+
+### Ce se întâmplă la autentificare
+
+- **Parolă greșită sau adresă inexistentă** — același mesaj, „E-mail sau parolă
+  greșite". Un mesaj diferit ar spune cine are cont pe site.
+- **Cont neconfirmat** — formularul e înlocuit cu un panou care explică
+  situația și are un buton de retrimitere a e-mailului, o dată la 10 minute.
+- **Trei greșeli** — formularul se închide 10 minute, cu o numărătoare inversă
+  și un buton „Mi-am uitat parola". (Pagina de recuperare urmează.)
+
+### De ce blocarea ține cont și de adresa IP
+
+Dacă am număra greșelile doar după adresa de e-mail, oricine ar putea închide
+contul altcuiva trimițând trei parole greșite. De aceea numărătoarea se face pe
+perechea (e-mail + IP), plus o limită mai largă de 15 greșeli pe oră de la
+aceeași adresă IP, pentru cine încearcă multe conturi de la același calculator.
+
+### Măsuri de siguranță
+
+- **Sesiunea se reface la intrare** (`session_regenerate_id`), ca un
+  identificator impus dinainte de un atacator să devină inutil.
+- **Verificarea parolei rulează întotdeauna**, chiar dacă adresa nu există.
+  Altfel, un răspuns instantaneu ar însemna „adresa nu există", iar unul
+  întârziat „adresa există" — adică o metodă simplă de a afla cine are cont.
+- **Starea contului se citește din baza de date la fiecare cerere**, nu din
+  sesiune: un cont suspendat e dat afară imediat, nu la următoarea intrare.
+- **Amprentă de browser** legată de sesiune, ca un cookie furat să fie mai
+  greu de folosit. Nu include adresa IP, care se schimbă firesc la trecerea
+  de pe Wi-Fi pe date mobile.
+- **Sesiunea expiră** după 2 ore de inactivitate; „ține-mă minte" o prelungește
+  la 30 de zile.
+- **Hash-ul parolei se reface** la intrare, dacă între timp s-a schimbat
+  algoritmul (`password_needs_rehash`).
+- **Ieșirea din cont cere token CSRF**, ca alt site să nu poată deconecta
+  vizitatorul cu o imagine ascunsă.
+- **Antete trimise la fiecare pagină:** `X-Frame-Options: DENY` (împotriva
+  clickjacking-ului), `X-Content-Type-Options: nosniff`, `Referrer-Policy`,
+  `Permissions-Policy`.
+- **Parola primită e limitată la 4096 de octeți**, ca nimeni să nu încarce
+  serverul trimițând parole uriașe doar ca să-l pună să calculeze hash-uri.
+
+### login.php cât timp ești conectat
+
+Cum ai cerut: accesarea paginii te deconectează și afișează „Ai ieșit din cont".
+
+De reținut: meniul nu mai duce acolo cât ești conectat, dar **un semn de carte
+sau o intrare veche din istoric te vor deconecta la simpla deschidere**, iar
+unele browsere preîncarcă linkurile pe care crede că le vei urma. Dacă vrei să
+eviți asta, alternativa obișnuită e o redirecționare spre prima pagină.
+
+### Ce nu e făcut încă
+
+- trimiterea propriu-zisă a e-mailului (marcat cu `TODO`);
+- pagina de recuperare a parolei, către care duce butonul din panoul de blocare;
+- intrarea cu Google.
+
 ## Convenții
+
+### Golirea cache-ului la actualizări
+
+Legăturile către CSS și JS au un număr de versiune:
+
+```html
+<link rel="stylesheet" href="assets/css/style.css?v=8">
+<script src="assets/js/main.js?v=8"></script>
+```
+
+**De fiecare dată când modifici `style.css` sau `main.js`, crește numărul în
+toate paginile.** Altfel browserele păstrează versiunea veche din cache, iar
+paginile noi apar nestilate — HTML-ul e nou, dar CSS-ul rămâne cel vechi.
+
+Comandă rapidă (înlocuiește 9 cu versiunea nouă):
+
+```bash
+sed -i 's/style\.css?v=[0-9]*/style.css?v=9/; s/main\.js?v=[0-9]*/main.js?v=9/' *.html
+```
 
 ### Un singur CSS, un singur JS
 

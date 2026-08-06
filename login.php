@@ -1,113 +1,53 @@
-<!DOCTYPE html>
-<html lang="ro" data-theme="light">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Cont — PulsulOrasului.Ro</title>
-<meta name="description" content="Intră în cont sau creează-ți unul, ca să publici evenimente și să participi la discuții pe PulsulOrasului.Ro.">
-<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0d1015" media="(prefers-color-scheme: dark)">
-<meta name="robots" content="noindex">
+<?php
+declare(strict_types=1);
 
-<link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/css/style.css">
+/**
+ * PulsulOrasului.Ro — autentificare și înregistrare.
+ *
+ * Ambele formulare sunt trimise din JavaScript către api/, ca pagina să nu se
+ * reîncarce.
+ */
 
-<!-- Setează tema ÎNAINTE de randare, ca să nu apară un flash alb pe dark mode -->
-<script>
-(function () {
-  try {
-    var saved = localStorage.getItem('po-theme');
-    var theme = saved || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-    document.documentElement.setAttribute('data-theme', theme);
-  } catch (e) {}
-})();
-</script>
-</head>
+require_once __DIR__ . '/inc/auth.php';
 
-<body>
-<a class="skip-link" href="#main">Sari la conținut</a>
+/**
+ * Cerință explicită: pagina nu trebuie să fie disponibilă cât timp cineva e
+ * conectat, iar accesarea ei îl deconectează.
+ *
+ * De reținut: browserele preîncarcă uneori linkurile pe care le vor urma.
+ * Meniul nu mai duce aici cât timp ești logat, dar un semn de carte sau o
+ * intrare veche din istoric TE VOR deconecta la simpla deschidere.
+ */
+$tocmaiIesit = false;
 
-<!-- ============================ BARA DE MENIU ============================ -->
-<header class="site-header">
-  <div class="nav">
+if (esteLogat()) {
+    deconecteaza();
+    $tocmaiIesit = true;
+}
 
-    <a class="logo" href="index.html" aria-label="PulsulOrasului.Ro — Acasă">
-      <span class="logo__mark" aria-hidden="true">
-        <svg viewBox="0 0 32 32" fill="none">
-          <path d="M2 16h6.2l2.6-7.4a1 1 0 0 1 1.9.05l4.1 14.2a1 1 0 0 0 1.9.04L21.4 16H30"
-                stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </span>
-      <span class="logo__text">
-        Pulsul<span class="logo__accent">Orasului</span><span class="logo__tld">.Ro</span>
-      </span>
-    </a>
+$titlu     = 'Cont — PulsulOrasului.Ro';
+$descriere = 'Intră în cont sau creează-ți unul, ca să publici evenimente și să participi la discuții.';
+$pagina    = 'cont';
+$noindex   = true;
 
-    <nav class="nav__menu" id="nav-menu" aria-label="Meniu principal">
-      <ul>
-        <li>
-          <a class="nav__link" href="index.html">
-            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M3 10.5 12 3l9 7.5"/><path d="M5.5 9.5V20h13V9.5"/><path d="M10 20v-5.5h4V20"/>
-            </svg>
-            <span>Acasă</span>
-          </a>
-        </li>
-        <li>
-          <a class="nav__link" href="despre.html">
-            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
-              <circle cx="12" cy="12" r="9"/><path d="M12 11v5.5"/><path d="M12 7.6v.1"/>
-            </svg>
-            <span>Despre</span>
-          </a>
-        </li>
-        <li>
-          <a class="nav__link is-active" href="login.html#inregistrare" aria-current="page">
-            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
-              <circle cx="9.5" cy="8.5" r="3.5"/><path d="M3 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/>
-              <path d="M18.5 8v6"/><path d="M21.5 11h-6"/>
-            </svg>
-            <span>Alătură-te și tu</span>
-          </a>
-        </li>
-        <li>
-          <a class="nav__link" href="contact.html">
-            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
-              <rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m3.8 7 8.2 5.6L20.2 7"/>
-            </svg>
-            <span>Contact</span>
-          </a>
-        </li>
-      </ul>
-    </nav>
+require __DIR__ . '/inc/antet.php';
 
-    <div class="nav__actions">
-      <button class="theme-toggle" id="theme-toggle" type="button"
-              aria-label="Schimbă tema" title="Schimbă tema (întuneric / luminos)">
-        <svg class="ico ico--sun" viewBox="0 0 24 24" aria-hidden="true">
-          <circle cx="12" cy="12" r="4.2"/>
-          <path d="M12 2.5v2.2M12 19.3v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/>
-        </svg>
-        <svg class="ico ico--moon" viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M20.5 14.3A8.6 8.6 0 0 1 9.7 3.5a8.6 8.6 0 1 0 10.8 10.8Z"/>
-        </svg>
-      </button>
+$csrf = tokenCsrf();
+?>
 
-      <button class="nav__burger" id="nav-burger" type="button"
-              aria-label="Deschide meniul" aria-expanded="false" aria-controls="nav-menu">
-        <span></span><span></span><span></span>
-      </button>
-    </div>
-
-  </div>
-</header>
 
 <main id="main">
   <div class="wrap">
     <div class="auth">
+
+      <?php if ($tocmaiIesit): ?>
+      <p class="auth__notice auth__notice--ok">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="9"/><path d="m8.2 12.3 2.6 2.6 5-5.2"/>
+        </svg>
+        <span>Ai ieșit din cont.</span>
+      </p>
+      <?php endif; ?>
 
       <!-- mesaj afișat când ai fost trimis aici de pe altă pagină -->
       <p class="auth__notice" id="auth-notice" hidden>
@@ -134,6 +74,8 @@
         <!-- ======================== AUTENTIFICARE ====================== -->
         <div class="auth-panel is-active" id="panel-login" role="tabpanel" aria-labelledby="tab-login" tabindex="0">
 
+          <div id="login-block">
+
           <h1 class="auth__title">Bine ai revenit</h1>
           <p class="auth__lead">Intră în cont ca să publici evenimente și să participi la discuții.</p>
 
@@ -154,6 +96,8 @@
           <div class="auth__divider"><span>sau cu e-mail</span></div>
 
           <form class="form" id="login-form" novalidate>
+
+            <input type="hidden" name="csrf" value="<?= h($csrf) ?>">
 
             <div class="field">
               <label for="lg-email">Adresa de e-mail</label>
@@ -197,10 +141,69 @@
               <button class="link-btn" type="button" data-go-tab="tab-register">Creează unul</button>
             </p>
           </form>
+          </div><!-- /#login-block -->
+
+          <!-- ================= CONTUL NU E ÎNCĂ ACTIVAT =================
+            Apare când parola e corectă, dar adresa nu a fost confirmată.
+          ======================================================== -->
+          <div class="done" id="login-neconfirmat" hidden>
+            <span class="done__ico" aria-hidden="true">
+              <svg class="ico" viewBox="0 0 24 24">
+                <rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m3.8 7 8.2 5.6L20.2 7"/>
+              </svg>
+            </span>
+
+            <h2 class="done__title">Contul nu e încă activat</h2>
+            <p class="done__text">
+              Ți-am trimis un e-mail de confirmare la
+              <strong id="neconfirmat-email">adresa ta</strong>.
+              Deschide-l și apasă pe link ca să îți activezi contul.
+            </p>
+            <p class="done__hint">Nu găsești mesajul? Uită-te și în „Spam" sau „Promoții".</p>
+
+            <p class="done__dev" id="neconfirmat-dev" hidden>
+              <span>Mod dezvoltare — linkul de confirmare:</span>
+              <a href="#" id="neconfirmat-link">link</a>
+            </p>
+
+            <div class="done__actions">
+              <button class="btn btn--primary" type="button" id="btn-retrimite">
+                Trimite din nou e-mailul
+              </button>
+              <button class="btn btn--ghost" type="button" id="btn-inapoi-login">
+                Înapoi la autentificare
+              </button>
+            </div>
+          </div>
+
+          <!-- ===================== FORMULAR BLOCAT =====================
+            Apare după prea multe încercări greșite.
+          ======================================================== -->
+          <div class="done done--fail" id="login-blocat" hidden>
+            <span class="done__ico" aria-hidden="true">
+              <svg class="ico" viewBox="0 0 24 24">
+                <rect x="4.5" y="10.5" width="15" height="10" rx="2.5"/>
+                <path d="M8 10.5V7.8a4 4 0 0 1 8 0v2.7"/>
+              </svg>
+            </span>
+
+            <h2 class="done__title">Prea multe încercări</h2>
+            <p class="done__text">
+              Din motive de siguranță, formularul e închis temporar.
+              Mai poți încerca peste <strong id="blocat-timp">10 minute</strong>.
+            </p>
+            <p class="done__hint">Ți-ai uitat parola? O poți schimba, ca să nu mai aștepți.</p>
+
+            <div class="done__actions">
+              <a class="btn btn--primary" href="#">Mi-am uitat parola</a>
+            </div>
+          </div>
         </div>
 
         <!-- ========================= ÎNREGISTRARE ====================== -->
         <div class="auth-panel" id="panel-register" role="tabpanel" aria-labelledby="tab-register" tabindex="0" hidden>
+
+          <div id="register-block">
 
           <h2 class="auth__title">Creează-ți cont</h2>
           <p class="auth__lead">Durează un minut. După aceea poți publica evenimente în oraș.</p>
@@ -218,6 +221,8 @@
           <div class="auth__divider"><span>sau completează datele</span></div>
 
           <form class="form" id="register-form" novalidate>
+
+            <input type="hidden" name="csrf" value="<?= h($csrf) ?>">
 
             <div class="field-row">
               <div class="field">
@@ -254,9 +259,8 @@
                 <label for="rg-gender">Sex</label>
                 <select id="rg-gender" name="sex" required aria-describedby="err-rg-gender">
                   <option value="" selected disabled>Alege…</option>
-                  <option value="feminin">Feminin</option>
-                  <option value="masculin">Masculin</option>
-                  <option value="nespecificat">Prefer să nu spun</option>
+                  <option value="F">Feminin</option>
+                  <option value="M">Masculin</option>
                 </select>
                 <p class="field__error" id="err-rg-gender" hidden></p>
               </div>
@@ -326,86 +330,48 @@
               <button class="link-btn" type="button" data-go-tab="tab-login">Autentifică-te</button>
             </p>
           </form>
+          </div><!-- /#register-block -->
+
+          <!-- =================== DUPĂ ÎNREGISTRARE ====================
+            Apare în locul formularului, fără reîncărcarea paginii.
+          ======================================================== -->
+          <div class="done" id="register-done" hidden>
+            <span class="done__ico" aria-hidden="true">
+              <svg class="ico" viewBox="0 0 24 24">
+                <rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m3.8 7 8.2 5.6L20.2 7"/>
+              </svg>
+            </span>
+
+            <h2 class="done__title">Verifică-ți e-mailul</h2>
+            <p class="done__text">
+              Ți-am trimis un mesaj de confirmare la
+              <strong id="register-done-email">adresa ta</strong>.
+              Deschide-l și apasă pe link ca să îți activezi contul.
+            </p>
+            <p class="done__hint">
+              Nu găsești mesajul? Uită-te și în „Spam" sau „Promoții".
+            </p>
+
+            <!-- Doar în dezvoltare: linkul apare aici, fiindcă în XAMPP nu
+                 există server de e-mail. -->
+            <p class="done__dev" id="register-done-dev" hidden>
+              <span>Mod dezvoltare — linkul de confirmare:</span>
+              <a href="#" id="register-done-link">link</a>
+            </p>
+
+            <div class="done__actions">
+              <a class="btn btn--ghost" href="index.php">Mergi la prima pagină</a>
+            </div>
+          </div>
         </div>
 
       </div>
 
       <p class="auth__foot">
-        Ai nevoie de ajutor? <a href="contact.html">Scrie-ne</a>.
+        Ai nevoie de ajutor? <a href="contact.php">Scrie-ne</a>.
       </p>
 
     </div>
   </div>
 </main>
-
-<!-- =============================== FOOTER =============================== -->
-<footer class="site-footer">
-  <div class="wrap">
-    <div class="footer__top">
-
-      <div class="footer__brand">
-        <a class="logo logo--footer" href="index.html">
-          <span class="logo__mark" aria-hidden="true">
-            <svg viewBox="0 0 32 32" fill="none">
-              <path d="M2 16h6.2l2.6-7.4a1 1 0 0 1 1.9.05l4.1 14.2a1 1 0 0 0 1.9.04L21.4 16H30"
-                    stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </span>
-          <span class="logo__text">Pulsul<span class="logo__accent">Orasului</span><span class="logo__tld">.Ro</span></span>
-        </a>
-        <p class="footer__tagline">Evenimente locale, sport, cultură și tot ce mișcă în oraș. Scris de comunitate.</p>
-        <div class="socials">
-          <a href="#" aria-label="Facebook"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 8.5V7a1.5 1.5 0 0 1 1.5-1.5H17V3h-2.2A3.8 3.8 0 0 0 11 6.8v1.7H9V11h2v10h3V11h2.2l.4-2.5H14Z" fill="currentColor" stroke="none"/></svg></a>
-          <a href="#" aria-label="Instagram"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17" cy="7" r="1.1" fill="currentColor" stroke="none"/></svg></a>
-          <a href="#" aria-label="YouTube"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="5.5" width="19" height="13" rx="4"/><path d="m10.5 9.5 5 2.5-5 2.5z"/></svg></a>
-        </div>
-      </div>
-
-      <nav class="footer__col" aria-label="Secțiuni">
-        <h3>Secțiuni</h3>
-        <ul>
-          <li><a href="#">Sport</a></li>
-          <li><a href="#">Cultură</a></li>
-          <li><a href="#">Comunitate</a></li>
-          <li><a href="#">Gastro</a></li>
-        </ul>
-      </nav>
-
-      <nav class="footer__col" aria-label="Site">
-        <h3>Site</h3>
-        <ul>
-          <li><a href="index.html">Acasă</a></li>
-          <li><a href="despre.html">Despre</a></li>
-          <li><a href="login.html#inregistrare">Alătură-te și tu</a></li>
-          <li><a href="contact.html">Contact</a></li>
-        </ul>
-      </nav>
-
-      <div class="footer__col footer__news">
-        <h3>Newsletter</h3>
-        <p>Un e-mail pe săptămână, cu ce merită văzut în oraș.</p>
-        <form class="news-form" action="#" method="post">
-          <label class="sr-only" for="news-email">Adresa ta de e-mail</label>
-          <input id="news-email" type="email" name="email" placeholder="adresa@email.ro" required>
-          <button class="btn btn--primary btn--sm" type="submit">Mă abonez</button>
-        </form>
-      </div>
-
-    </div>
-
-    <div class="footer__bottom">
-      <p>© <span id="year">2026</span> PulsulOrasului.Ro — Toate drepturile rezervate.</p>
-      <ul class="footer__legal">
-        <li><a href="#">Termeni</a></li>
-        <li><a href="#">Confidențialitate</a></li>
-        <li><a href="#">Cookies</a></li>
-      </ul>
-    </div>
-  </div>
-</footer>
-
-<div class="toast" id="toast" role="status" aria-live="polite"></div>
-
-<script src="assets/js/main.js"></script>
-</body>
-</html>
+<?php require __DIR__ . '/inc/subsol.php'; ?>

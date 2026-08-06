@@ -1,116 +1,12 @@
-<!DOCTYPE html>
-<html lang="ro" data-theme="light">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Maratonul orașului revine: peste 4.000 de alergători la start — PulsulOrasului.Ro</title>
-<meta name="description" content="Traseul trece anul acesta prin centrul vechi. Tot ce trebuie să știi despre restricții, puncte de hidratare și program.">
-<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0d1015" media="(prefers-color-scheme: dark)">
+<?php
+declare(strict_types=1);
 
-<link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/css/style.css">
+$titlu     = 'Maratonul orașului revine: peste 4.000 de alergători la start — PulsulOrasului.Ro';
+$descriere = 'Traseul trece anul acesta prin centrul vechi. Tot ce trebuie să știi despre restricții, puncte de hidratare și program.';
 
-<!-- Setează tema ÎNAINTE de randare, ca să nu apară un flash alb pe dark mode -->
-<script>
-(function () {
-  try {
-    var saved = localStorage.getItem('po-theme');
-    var theme = saved || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-    document.documentElement.setAttribute('data-theme', theme);
-  } catch (e) {}
-})();
-</script>
-</head>
+require __DIR__ . '/inc/antet.php';
+?>
 
-<!--
-  data-logged-in="false" → butoanele de participare și formularele de comentariu
-  trimit spre login.html. Când implementezi autentificarea, pui "true" din server
-  (și, opțional, data-user-name / data-user-avatar pentru formularul de comentariu).
--->
-<body data-logged-in="false"
-      data-user-name="Utilizator nou"
-      data-user-avatar="assets/img/avatars/cristi.svg">
-
-<a class="skip-link" href="#main">Sari la conținut</a>
-
-<!-- ============================ BARA DE MENIU ============================ -->
-<header class="site-header">
-  <div class="nav">
-
-    <a class="logo" href="index.html" aria-label="PulsulOrasului.Ro — Acasă">
-      <span class="logo__mark" aria-hidden="true">
-        <svg viewBox="0 0 32 32" fill="none">
-          <path d="M2 16h6.2l2.6-7.4a1 1 0 0 1 1.9.05l4.1 14.2a1 1 0 0 0 1.9.04L21.4 16H30"
-                stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </span>
-      <span class="logo__text">
-        Pulsul<span class="logo__accent">Orasului</span><span class="logo__tld">.Ro</span>
-      </span>
-    </a>
-
-    <nav class="nav__menu" id="nav-menu" aria-label="Meniu principal">
-      <ul>
-        <li>
-          <a class="nav__link" href="index.html">
-            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M3 10.5 12 3l9 7.5"/><path d="M5.5 9.5V20h13V9.5"/><path d="M10 20v-5.5h4V20"/>
-            </svg>
-            <span>Acasă</span>
-          </a>
-        </li>
-        <li>
-          <a class="nav__link" href="despre.html">
-            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
-              <circle cx="12" cy="12" r="9"/><path d="M12 11v5.5"/><path d="M12 7.6v.1"/>
-            </svg>
-            <span>Despre</span>
-          </a>
-        </li>
-        <li>
-          <a class="nav__link" href="login.html#inregistrare">
-            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
-              <circle cx="9.5" cy="8.5" r="3.5"/><path d="M3 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/>
-              <path d="M18.5 8v6"/><path d="M21.5 11h-6"/>
-            </svg>
-            <span>Alătură-te și tu</span>
-          </a>
-        </li>
-        <li>
-          <a class="nav__link" href="contact.html">
-            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
-              <rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m3.8 7 8.2 5.6L20.2 7"/>
-            </svg>
-            <span>Contact</span>
-          </a>
-        </li>
-      </ul>
-    </nav>
-
-    <div class="nav__actions">
-      <button class="theme-toggle" id="theme-toggle" type="button"
-              aria-label="Schimbă tema" title="Schimbă tema (întuneric / luminos)">
-        <svg class="ico ico--sun" viewBox="0 0 24 24" aria-hidden="true">
-          <circle cx="12" cy="12" r="4.2"/>
-          <path d="M12 2.5v2.2M12 19.3v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/>
-        </svg>
-        <svg class="ico ico--moon" viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M20.5 14.3A8.6 8.6 0 0 1 9.7 3.5a8.6 8.6 0 1 0 10.8 10.8Z"/>
-        </svg>
-      </button>
-
-      <button class="nav__burger" id="nav-burger" type="button"
-              aria-label="Deschide meniul" aria-expanded="false" aria-controls="nav-menu">
-        <span></span><span></span><span></span>
-      </button>
-    </div>
-
-  </div>
-</header>
 
 <!-- bara de progres a citirii -->
 <div class="read-progress" id="read-progress" aria-hidden="true"><span></span></div>
@@ -120,7 +16,7 @@
 
     <!-- Firimituri -->
     <nav class="crumbs" aria-label="Navigare">
-      <a href="index.html">Acasă</a>
+      <a href="index.php">Acasă</a>
       <span aria-hidden="true">/</span>
       <a href="#">Sport</a>
       <span aria-hidden="true">/</span>
@@ -142,7 +38,7 @@
         <div class="post__meta">
           <img class="post__avatar" src="assets/img/avatars/andrei.svg" alt="" width="96" height="96">
           <div class="post__by">
-            <a class="post__author" href="profil.html">Andrei Munteanu</a>
+            <a class="post__author" href="profil.php">Andrei Munteanu</a>
             <div class="post__sub">
               <time datetime="2026-08-04">4 august 2026</time>
               <span class="dot" aria-hidden="true"></span>
@@ -266,7 +162,7 @@
       <!-- =========================== PARTICIPARE ========================== -->
       <!--
         Butoanele au data-count = numărul din baza de date. Cât timp
-        body[data-logged-in="false"], click-ul trimite spre login.html.
+        body[], click-ul trimite spre login.php.
       -->
       <section class="rsvp" id="rsvp" aria-labelledby="rsvp-title">
         <div class="rsvp__head">
@@ -365,7 +261,7 @@
                 <img class="comment__avatar" src="assets/img/avatars/ioana.svg" alt="" width="96" height="96" loading="lazy">
                 <div class="comment__main">
                   <div class="comment__head">
-                    <a class="comment__author" href="profil.html">Ioana Rusu</a>
+                    <a class="comment__author" href="profil.php">Ioana Rusu</a>
                     <span class="badge">Organizator</span>
                     <span class="dot" aria-hidden="true"></span>
                     <time datetime="2026-08-04T10:12">acum 6 ore</time>
@@ -392,7 +288,7 @@
                         <img class="comment__avatar" src="assets/img/avatars/andrei.svg" alt="" width="96" height="96" loading="lazy">
                         <div class="comment__main">
                           <div class="comment__head">
-                            <a class="comment__author" href="profil.html">Andrei Munteanu</a>
+                            <a class="comment__author" href="profil.php">Andrei Munteanu</a>
                             <span class="badge badge--author">Autor</span>
                             <span class="dot" aria-hidden="true"></span>
                             <time datetime="2026-08-04T11:03">acum 5 ore</time>
@@ -417,7 +313,7 @@
                         <img class="comment__avatar" src="assets/img/avatars/elena.svg" alt="" width="96" height="96" loading="lazy">
                         <div class="comment__main">
                           <div class="comment__head">
-                            <a class="comment__author" href="profil.html">Elena Neagu</a>
+                            <a class="comment__author" href="profil.php">Elena Neagu</a>
                             <span class="dot" aria-hidden="true"></span>
                             <time datetime="2026-08-04T12:40">acum 3 ore</time>
                           </div>
@@ -445,7 +341,7 @@
                 <img class="comment__avatar" src="assets/img/avatars/mihai.svg" alt="" width="96" height="96" loading="lazy">
                 <div class="comment__main">
                   <div class="comment__head">
-                    <a class="comment__author" href="profil.html">Mihai Constantin</a>
+                    <a class="comment__author" href="profil.php">Mihai Constantin</a>
                     <span class="dot" aria-hidden="true"></span>
                     <time datetime="2026-08-04T09:20">acum 7 ore</time>
                   </div>
@@ -470,7 +366,7 @@
                         <img class="comment__avatar" src="assets/img/avatars/raluca.svg" alt="" width="96" height="96" loading="lazy">
                         <div class="comment__main">
                           <div class="comment__head">
-                            <a class="comment__author" href="profil.html">Raluca Grigore</a>
+                            <a class="comment__author" href="profil.php">Raluca Grigore</a>
                             <span class="dot" aria-hidden="true"></span>
                             <time datetime="2026-08-04T09:55">acum 6 ore</time>
                           </div>
@@ -498,7 +394,7 @@
                 <img class="comment__avatar" src="assets/img/avatars/vlad.svg" alt="" width="96" height="96" loading="lazy">
                 <div class="comment__main">
                   <div class="comment__head">
-                    <a class="comment__author" href="profil.html">Vlad Solomon</a>
+                    <a class="comment__author" href="profil.php">Vlad Solomon</a>
                     <span class="dot" aria-hidden="true"></span>
                     <time datetime="2026-08-03T18:05">ieri</time>
                   </div>
@@ -537,42 +433,42 @@
             <li class="person">
               <img class="person__avatar" src="assets/img/avatars/diana.svg" alt="" width="96" height="96" loading="lazy">
               <div class="person__info">
-                <a class="person__name" href="profil.html">Diana Popa</a>
+                <a class="person__name" href="profil.php">Diana Popa</a>
                 <span class="person__meta">Interesată acum 2 ore</span>
               </div>
             </li>
             <li class="person">
               <img class="person__avatar" src="assets/img/avatars/george.svg" alt="" width="96" height="96" loading="lazy">
               <div class="person__info">
-                <a class="person__name" href="profil.html">George Tudose</a>
+                <a class="person__name" href="profil.php">George Tudose</a>
                 <span class="person__meta">Interesat acum 4 ore</span>
               </div>
             </li>
             <li class="person">
               <img class="person__avatar" src="assets/img/avatars/simona.svg" alt="" width="96" height="96" loading="lazy">
               <div class="person__info">
-                <a class="person__name" href="profil.html">Simona Dobre</a>
+                <a class="person__name" href="profil.php">Simona Dobre</a>
                 <span class="person__meta">Interesată ieri</span>
               </div>
             </li>
             <li class="person">
               <img class="person__avatar" src="assets/img/avatars/tudor.svg" alt="" width="96" height="96" loading="lazy">
               <div class="person__info">
-                <a class="person__name" href="profil.html">Tudor Anghel</a>
+                <a class="person__name" href="profil.php">Tudor Anghel</a>
                 <span class="person__meta">Interesat ieri</span>
               </div>
             </li>
             <li class="person">
               <img class="person__avatar" src="assets/img/avatars/bianca.svg" alt="" width="96" height="96" loading="lazy">
               <div class="person__info">
-                <a class="person__name" href="profil.html">Bianca Filip</a>
+                <a class="person__name" href="profil.php">Bianca Filip</a>
                 <span class="person__meta">Interesată acum 2 zile</span>
               </div>
             </li>
             <li class="person">
               <img class="person__avatar" src="assets/img/avatars/cristi.svg" alt="" width="96" height="96" loading="lazy">
               <div class="person__info">
-                <a class="person__name" href="profil.html">Cristi Barbu</a>
+                <a class="person__name" href="profil.php">Cristi Barbu</a>
                 <span class="person__meta">Interesat acum 2 zile</span>
               </div>
             </li>
@@ -593,7 +489,7 @@
             <li class="person">
               <img class="person__avatar" src="assets/img/avatars/ioana.svg" alt="" width="96" height="96" loading="lazy">
               <div class="person__info">
-                <a class="person__name" href="profil.html">Ioana Rusu</a>
+                <a class="person__name" href="profil.php">Ioana Rusu</a>
                 <span class="person__meta">Aleargă la 10 km</span>
               </div>
               <span class="person__badge">Organizator</span>
@@ -601,35 +497,35 @@
             <li class="person">
               <img class="person__avatar" src="assets/img/avatars/vlad.svg" alt="" width="96" height="96" loading="lazy">
               <div class="person__info">
-                <a class="person__name" href="profil.html">Vlad Solomon</a>
+                <a class="person__name" href="profil.php">Vlad Solomon</a>
                 <span class="person__meta">Confirmat acum 3 ore</span>
               </div>
             </li>
             <li class="person">
               <img class="person__avatar" src="assets/img/avatars/mihai.svg" alt="" width="96" height="96" loading="lazy">
               <div class="person__info">
-                <a class="person__name" href="profil.html">Mihai Constantin</a>
+                <a class="person__name" href="profil.php">Mihai Constantin</a>
                 <span class="person__meta">Confirmat acum 5 ore</span>
               </div>
             </li>
             <li class="person">
               <img class="person__avatar" src="assets/img/avatars/raluca.svg" alt="" width="96" height="96" loading="lazy">
               <div class="person__info">
-                <a class="person__name" href="profil.html">Raluca Grigore</a>
+                <a class="person__name" href="profil.php">Raluca Grigore</a>
                 <span class="person__meta">Confirmat ieri</span>
               </div>
             </li>
             <li class="person">
               <img class="person__avatar" src="assets/img/avatars/elena.svg" alt="" width="96" height="96" loading="lazy">
               <div class="person__info">
-                <a class="person__name" href="profil.html">Elena Neagu</a>
+                <a class="person__name" href="profil.php">Elena Neagu</a>
                 <span class="person__meta">Confirmat ieri</span>
               </div>
             </li>
             <li class="person">
               <img class="person__avatar" src="assets/img/avatars/andrei.svg" alt="" width="96" height="96" loading="lazy">
               <div class="person__info">
-                <a class="person__name" href="profil.html">Andrei Munteanu</a>
+                <a class="person__name" href="profil.php">Andrei Munteanu</a>
                 <span class="person__meta">Confirmat acum 2 zile</span>
               </div>
               <span class="person__badge">Autor</span>
@@ -648,19 +544,19 @@
     <section class="related" aria-labelledby="related-title">
       <div class="section-head">
         <h2 class="section-title" id="related-title">Ar putea să te intereseze</h2>
-        <a class="link-more" href="index.html">Toate articolele
+        <a class="link-more" href="index.php">Toate articolele
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15"/><path d="m13 6 6 6-6 6"/></svg>
         </a>
       </div>
 
       <div class="grid">
         <article class="card">
-          <a class="card__media" href="articol.html">
+          <a class="card__media" href="articol.php">
             <img src="assets/img/posts/post-5.svg" alt="" width="1280" height="720" loading="lazy" decoding="async">
             <span class="card__tag">Sport</span>
           </a>
           <div class="card__body">
-            <h3 class="card__title"><a href="articol.html">Prima pistă de ciclism care leagă cele două maluri</a></h3>
+            <h3 class="card__title"><a href="articol.php">Prima pistă de ciclism care leagă cele două maluri</a></h3>
             <div class="card__meta">
               <time datetime="2026-07-30">30 iul 2026</time>
               <span class="dot" aria-hidden="true"></span>
@@ -670,12 +566,12 @@
         </article>
 
         <article class="card">
-          <a class="card__media" href="articol.html">
+          <a class="card__media" href="articol.php">
             <img src="assets/img/posts/post-2.svg" alt="" width="1280" height="720" loading="lazy" decoding="async">
             <span class="card__tag">Cultură</span>
           </a>
           <div class="card__body">
-            <h3 class="card__title"><a href="articol.html">Trei zile de festival în parcul central, cu intrare liberă</a></h3>
+            <h3 class="card__title"><a href="articol.php">Trei zile de festival în parcul central, cu intrare liberă</a></h3>
             <div class="card__meta">
               <time datetime="2026-08-03">3 aug 2026</time>
               <span class="dot" aria-hidden="true"></span>
@@ -688,76 +584,4 @@
 
   </div>
 </main>
-
-<!-- =============================== FOOTER =============================== -->
-<footer class="site-footer">
-  <div class="wrap">
-    <div class="footer__top">
-
-      <div class="footer__brand">
-        <a class="logo logo--footer" href="index.html">
-          <span class="logo__mark" aria-hidden="true">
-            <svg viewBox="0 0 32 32" fill="none">
-              <path d="M2 16h6.2l2.6-7.4a1 1 0 0 1 1.9.05l4.1 14.2a1 1 0 0 0 1.9.04L21.4 16H30"
-                    stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </span>
-          <span class="logo__text">Pulsul<span class="logo__accent">Orasului</span><span class="logo__tld">.Ro</span></span>
-        </a>
-        <p class="footer__tagline">Evenimente locale, sport, cultură și tot ce mișcă în oraș. Scris de comunitate.</p>
-        <div class="socials">
-          <a href="#" aria-label="Facebook"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 8.5V7a1.5 1.5 0 0 1 1.5-1.5H17V3h-2.2A3.8 3.8 0 0 0 11 6.8v1.7H9V11h2v10h3V11h2.2l.4-2.5H14Z" fill="currentColor" stroke="none"/></svg></a>
-          <a href="#" aria-label="Instagram"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17" cy="7" r="1.1" fill="currentColor" stroke="none"/></svg></a>
-          <a href="#" aria-label="YouTube"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="5.5" width="19" height="13" rx="4"/><path d="m10.5 9.5 5 2.5-5 2.5z"/></svg></a>
-        </div>
-      </div>
-
-      <nav class="footer__col" aria-label="Secțiuni">
-        <h3>Secțiuni</h3>
-        <ul>
-          <li><a href="#">Sport</a></li>
-          <li><a href="#">Cultură</a></li>
-          <li><a href="#">Comunitate</a></li>
-          <li><a href="#">Gastro</a></li>
-        </ul>
-      </nav>
-
-      <nav class="footer__col" aria-label="Site">
-        <h3>Site</h3>
-        <ul>
-          <li><a href="index.html">Acasă</a></li>
-          <li><a href="despre.html">Despre</a></li>
-          <li><a href="login.html#inregistrare">Alătură-te și tu</a></li>
-          <li><a href="contact.html">Contact</a></li>
-        </ul>
-      </nav>
-
-      <div class="footer__col footer__news">
-        <h3>Newsletter</h3>
-        <p>Un e-mail pe săptămână, cu ce merită văzut în oraș.</p>
-        <form class="news-form" action="#" method="post">
-          <label class="sr-only" for="news-email">Adresa ta de e-mail</label>
-          <input id="news-email" type="email" name="email" placeholder="adresa@email.ro" required>
-          <button class="btn btn--primary btn--sm" type="submit">Mă abonez</button>
-        </form>
-      </div>
-
-    </div>
-
-    <div class="footer__bottom">
-      <p>© <span id="year">2026</span> PulsulOrasului.Ro — Toate drepturile rezervate.</p>
-      <ul class="footer__legal">
-        <li><a href="#">Termeni</a></li>
-        <li><a href="#">Confidențialitate</a></li>
-        <li><a href="#">Cookies</a></li>
-      </ul>
-    </div>
-  </div>
-</footer>
-
-<!-- notificare scurtă (toast) -->
-<div class="toast" id="toast" role="status" aria-live="polite"></div>
-
-<script src="assets/js/main.js"></script>
-</body>
-</html>
+<?php require __DIR__ . '/inc/subsol.php'; ?>

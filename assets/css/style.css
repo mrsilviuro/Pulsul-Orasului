@@ -2010,3 +2010,119 @@ body { overscroll-behavior-y: none; }
   .review-form { gap: 10px; }
   .review-form .comment-form__avatar { width: 32px; height: 32px; }
 }
+
+/* =========================================================================
+   24. MESAJ DE ÎNCHEIERE (după înregistrare, după confirmare)
+   ========================================================================= */
+.done { text-align: center; padding: 8px 0 4px; }
+.done[hidden] { display: none; }
+.done:focus { outline: none; }
+
+.done__ico {
+  width: 54px; height: 54px;
+  display: grid; place-items: center;
+  margin: 0 auto 16px;
+  border-radius: 50%;
+  background: var(--brand-soft);
+  color: var(--brand);
+}
+.done__ico .ico { width: 26px; height: 26px; }
+.done--ok .done__ico   { background: rgba(22, 163, 74, .13); color: #16a34a; }
+.done--fail .done__ico { background: rgba(224, 57, 59, .12); color: #e0393b; }
+
+.done__title { font-size: 22px; margin-bottom: 8px; }
+.done__text {
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--text-soft);
+  max-width: 40ch;
+  margin: 0 auto 10px;
+}
+.done__hint { font-size: 13px; color: var(--text-faint); margin-bottom: 18px; }
+
+.done__actions {
+  display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;
+}
+
+/* caseta cu linkul de confirmare, vizibilă doar în modul dezvoltare */
+.done__dev {
+  display: block;
+  margin: 0 0 18px;
+  padding: 11px 14px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-soft);
+  font-size: 12.5px;
+  color: var(--text-faint);
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.done__dev[hidden] { display: none; }
+.done__dev span { display: block; font-weight: 700; margin-bottom: 3px; }
+.done__dev a { color: var(--brand); font-weight: 600; text-decoration: underline; }
+
+/* =========================================================================
+   25. MENIU: STAREA DE AUTENTIFICARE
+   ========================================================================= */
+
+/* „Alătură-te și tu" — invitația principală, deci se vede din prima */
+.nav__link--alatura {
+  background: var(--gradient);
+  color: #fff;
+  box-shadow: 0 4px 12px -5px rgba(255, 77, 61, .8);
+}
+.nav__link--alatura:hover {
+  color: #fff;
+  background: var(--gradient);
+  transform: translateY(-1px);
+  box-shadow: 0 7px 16px -6px rgba(255, 77, 61, .9);
+}
+.nav__link--alatura .ico { opacity: 1; }
+/* pe pagina proprie, fundalul rămâne cel colorat, nu cel palid de „activ" */
+.nav__link--alatura.is-active { background: var(--gradient); color: #fff; }
+
+/* „Deloghează-te" — acțiune secundară, deci discretă */
+.nav__link--iesire { color: var(--text-faint); }
+.nav__link--iesire:hover { color: #d32f31; background: rgba(224, 57, 59, .09); }
+[data-theme="dark"] .nav__link--iesire:hover { color: #ff8a86; }
+
+/* Numele celui conectat, lângă butonul de temă */
+.nav__eu {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 5px 4px 12px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text-soft);
+  transition: border-color .18s var(--ease), color .18s var(--ease);
+}
+.nav__eu:hover { color: var(--text); border-color: var(--text-faint); }
+.nav__eu-nume { white-space: nowrap; }
+.nav__eu-avatar {
+  width: 26px; height: 26px;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  background: var(--gradient);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+/* mesajul verde de pe pagina de cont */
+.auth__notice--ok {
+  border-color: rgba(22, 163, 74, .35);
+  background: rgba(22, 163, 74, .1);
+  color: #15803d;
+}
+[data-theme="dark"] .auth__notice--ok { color: #6ee7a0; }
+.auth__notice--ok .ico { color: #16a34a; }
+
+@media (max-width: 800px) {
+  /* în meniul mobil, invitația rămâne colorată, dar pe toată lățimea */
+  .nav__link--alatura { justify-content: center; margin-top: 6px; }
+  .nav__eu-nume { display: none; }
+  .nav__eu { padding: 3px; border: 0; }
+}
