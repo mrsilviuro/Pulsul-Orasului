@@ -16,12 +16,30 @@ require_once __DIR__ . '/validare.php';
 $caleConfig = __DIR__ . '/config.php';
 
 if (!is_file($caleConfig)) {
+    /**
+     * Cea mai des întâlnită problemă imediat după mutarea pe o găzduire nouă.
+     *
+     * config.php e trecut în .gitignore, tocmai ca parolele să nu ajungă pe
+     * GitHub — dar asta înseamnă și că nu se copiază odată cu restul codului.
+     * Se face de mână pe server.
+     *
+     * Răspunsul pleacă în JSON când cererea vine din formulare, ca mesajul să
+     * ajungă în pagină. Altfel utilizatorul vedea „verifică conexiunea", iar
+     * adevărata explicație rămânea ascunsă.
+     */
+    $mesaj = 'Lipsește fișierul inc/config.php de pe server. '
+           . 'Copiază inc/config.example.php cu numele inc/config.php '
+           . 'și pune acolo datele de acces la baza de date.';
+
     http_response_code(500);
-    exit(
-        "Lipsește fișierul inc/config.php.\n\n" .
-        "Copiază inc/config.example.php cu numele inc/config.php " .
-        "și pune acolo datele tale de acces la baza de date."
-    );
+
+    if (str_contains($_SERVER['SCRIPT_NAME'] ?? '', '/api/')) {
+        header('Content-Type: application/json; charset=utf-8');
+        exit(json_encode(['ok' => false, 'mesaj' => $mesaj], JSON_UNESCAPED_UNICODE));
+    }
+
+    header('Content-Type: text/plain; charset=utf-8');
+    exit($mesaj);
 }
 
 /** @var array $config */
@@ -82,10 +100,34 @@ function db(): PDO
 
     $dsn = sprintf(
         'mysql:host=%s;port=%d;dbname=%s;charset=utf8mb4',
-        $d['host'], $d['port'], $d['nume']
+        $d['host'] ?? 'localhost',
+        (int) ($d['port'] ?? 3306),
+        $d['nume'] ?? ''
     );
 
-    $pdo = new PDO($dsn, $d['user'], $d['parola'], [
+    try {
+        $pdo = deschidePdo($dsn, $d);
+    } catch (PDOException $e) {
+        /**
+         * Mesajul original ajunge doar în logul serverului. Vizitatorului nu i
+         * se spune nici numele bazei, nici al utilizatorului, nici dacă parola
+         * a fost greșită — toate astea ajută pe cineva care încearcă să intre.
+         */
+        error_log('PulsulOrasului: nu s-a putut deschide baza de date — ' . $e->getMessage());
+
+        throw new RuntimeException(
+            'Nu am putut deschide baza de date. Verifică datele din inc/config.php.',
+            0,
+            $e
+        );
+    }
+
+    return $pdo;
+}
+
+function deschidePdo(string $dsn, array $d): PDO
+{
+    return new PDO($dsn, $d['user'] ?? '', $d['parola'] ?? '', [
         // Orice problemă devine excepție, ca să nu treacă neobservată.
         PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
@@ -94,9 +136,46 @@ function db(): PDO
         // injecțiilor depinde de setarea corectă a codificării.
         PDO::ATTR_EMULATE_PREPARES   => false,
     ]);
-
-    return $pdo;
 }
+
+/* ---------------------- CÂND CEVA CHIAR SE STRICĂ --------------------- */
+
+/**
+ * Ultima plasă de siguranță: o eroare neprinsă nu mai lasă pagina goală.
+ *
+ * Fără ea, o problemă de bază de date întoarce un răspuns gol cu codul 500.
+ * Pagina cere JSON, primește nimic, și îi spune omului „verifică conexiunea"
+ * — cel mai nepotrivit sfat cu putință, fiindcă internetul lui e în regulă.
+ *
+ * Acum răspunsul e tot timpul JSON pentru cererile către api/, ca partea din
+ * browser să aibă ce citi și ce arăta.
+ */
+set_exception_handler(function (Throwable $e): void {
+    global $config;
+
+    error_log('PulsulOrasului: ' . $e->getMessage() . ' (' . $e->getFile() . ':' . $e->getLine() . ')');
+
+    if (headers_sent()) {
+        return;
+    }
+
+    // În dezvoltare se vede tot; pe site-ul public, doar atât cât ajută.
+    $detaliu = !empty($config['dezvoltare'])
+        ? $e->getMessage()
+        : 'A apărut o problemă pe server. Detaliile sunt în logul de erori.';
+
+    $esteApi = str_contains($_SERVER['SCRIPT_NAME'] ?? '', '/api/');
+
+    if ($esteApi) {
+        raspunsJson(['ok' => false, 'mesaj' => $detaliu], 500);
+    }
+
+    http_response_code(500);
+    header('Content-Type: text/html; charset=utf-8');
+    echo '<!doctype html><meta charset="utf-8"><title>Eroare</title>'
+       . '<p style="font:16px/1.6 system-ui,sans-serif;max-width:40em;margin:3em auto;padding:0 1em">'
+       . h($detaliu) . '</p>';
+});
 
 /* ------------------------------- SESIUNE ------------------------------ */
 

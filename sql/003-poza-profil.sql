@@ -7,7 +7,8 @@
 --  Dacă pornești de la zero, schema.sql conține deja tot ce e aici.
 -- =========================================================================
 
-USE pulsulorasului;
+-- Alege întâi baza de date (în phpMyAdmin, din lista din stânga).
+-- Nu punem „USE" aici: numele bazei e altul pe găzduire decât în XAMPP.
 
 -- -------------------------------------------------------------------------
 --  poza — numele fișierului, fără cale și fără extensie

@@ -580,19 +580,19 @@ Legăturile către CSS și JS au un număr de versiune, puse o singură dată î
 `inc/antet.php` și `inc/subsol.php`:
 
 ```html
-<link rel="stylesheet" href="assets/css/style.css?v=13">
-<script src="assets/js/main.js?v=13"></script>
+<link rel="stylesheet" href="assets/css/style.css?v=14">
+<script src="assets/js/main.js?v=14"></script>
 ```
 
 **De fiecare dată când modifici `style.css` sau `main.js`, crește numărul.**
 Altfel browserele păstrează versiunea veche din cache, iar paginile noi apar
 nestilate — HTML-ul e nou, dar CSS-ul rămâne cel vechi.
 
-Comandă rapidă (înlocuiește 14 cu versiunea nouă):
+Comandă rapidă (înlocuiește 15 cu versiunea nouă):
 
 ```bash
-sed -i 's/style\.css?v=[0-9]*/style.css?v=14/' inc/antet.php
-sed -i 's/main\.js?v=[0-9]*/main.js?v=14/'     inc/subsol.php
+sed -i 's/style\.css?v=[0-9]*/style.css?v=15/' inc/antet.php
+sed -i 's/main\.js?v=[0-9]*/main.js?v=15/'     inc/subsol.php
 ```
 
 ### Un singur CSS, un singur JS
@@ -639,7 +639,94 @@ introduc browserele de la ele:
 Ce nu se poate controla din CSS: formatul afișat în câmpul de dată
 (`zz.ll.aaaa` vs `mm/dd/yyyy`) depinde de limba dispozitivului.
 
+## Mutarea pe găzduire
+
+### Pașii, în ordine
+
+1. **Urci fișierele pe FTP.**
+
+   **Pornește întâi afișarea fișierelor ascunse în programul de FTP.** Fișierele
+   care încep cu punct — `.htaccess` — sunt ascunse implicit în FileZilla,
+   Total Commander și în majoritatea celorlalte. Dacă nu se urcă, dosarul `inc/`
+   rămâne deschis, iar `inc/config.php` se poate descărca de oricine, cu parola
+   bazei de date în el. În FileZilla: *Server → Force showing hidden files*.
+
+2. **Faci baza de date din panoul găzduirii** (cPanel → MySQL Databases), apoi
+   un utilizator, apoi **îl legi de bază** — „Add User To Database", cu toate
+   drepturile bifate. Legarea e un pas separat și se uită des; fără ea, PHP
+   primește „Access denied ... to database".
+
+   Numele bazei și al utilizatorului primesc automat un prefix, de forma
+   `numecont_db`. Se folosesc întregi, cu prefix cu tot.
+
+3. **Importi `sql/schema.sql`** în phpMyAdmin: alegi întâi baza din lista din
+   stânga, abia apoi „Import". Fără pasul cu alegerea bazei, importul nu are
+   unde să scrie.
+
+4. **Faci `inc/config.php` pe server**, pornind de la `inc/config.example.php`.
+
+   Fișierul e trecut în `.gitignore` tocmai ca parolele să nu ajungă pe GitHub —
+   ceea ce înseamnă și că **nu se copiază odată cu restul codului**. E cauza cea
+   mai frecventă a mesajului „nu am putut lua legătura cu serverul" imediat după
+   mutare.
+
+5. **Pui `'dezvoltare' => false`.** Cât timp e `true`, oricine cere o
+   înregistrare primește înapoi linkul de confirmare, deci poate activa conturi
+   pe adrese care nu sunt ale lui.
+
+6. **Pui `'url_site' => 'https://domeniul-tau.ro'`**, fără bară la sfârșit. Din
+   el se construiesc linkurile de confirmare.
+
+### Gazda bazei de date
+
+**`localhost`**, nu numele domeniului. Baza stă pe aceeași mașină cu site-ul,
+deci se ajunge la ea din interior. Cu domeniul, PHP iese în internet și se
+întoarce la server din afară — lucru pe care aproape toate găzduirile îl
+blochează, tocmai din motive de siguranță. Se vede ca „Connection timed out"
+sau „Connection refused".
+
+Portul e 3306 și nu se schimbă decât dacă găzduirea spune explicit altul.
+
+### Când ceva nu merge: `verifica.php`
+
+Urci `verifica.php`, pui în `inc/config.php` o cheie lungă la
+`'cheie_diagnostic'` și deschizi:
+
+```
+https://domeniul-tau.ro/verifica.php?cheie=CHEIA_PUSĂ
+```
+
+Îți spune, pe rând: versiunea PHP și extensiile, dacă setările sunt citite,
+dacă baza răspunde (și **ce anume** e greșit, tradus din eroarea MySQL), dacă
+tabelele există și au toate coloanele, dacă se poate scrie în dosare, dacă
+`inc/` chiar e închis din web.
+
+**Șterge fișierul de pe server după ce ai terminat.** Fără cheie nu spune
+nimic, dar un instrument de diagnostic n-are de ce să stea permanent la vedere.
+
+### Ce se vede când serverul e stricat
+
+Toate formularele trimit cu `fetch` și așteaptă JSON. Când primesc altceva —
+o eroare de PHP, o pagină de la găzduire, setări lipsă — `citesteRaspuns()` din
+`main.js` deosebește trei cazuri:
+
+| ce s-a întâmplat | ce vede omul |
+|---|---|
+| serverul a răspuns cu JSON | mesajul din JSON |
+| serverul a răspuns cu altceva | „Serverul a răspuns cu o eroare (HTTP 500)…", iar textul întreg în consolă |
+| cererea n-a plecat deloc | „Verifică internetul…" |
+
+Distincția contează: până acum, orice răspuns care nu era JSON primea
+„verifică conexiunea" — un sfat greșit, care trimitea căutarea unde nu e.
+Textul brut se scrie doar în consolă, nu în pagină: poate conține căi de pe
+server și nume de tabele.
+
 ## De făcut mai departe
 
-Nimic din meniu nu mai lipsește. Următorii pași firești: formularul de publicat
-un eveniment și paginile de categorie.
+**Trimiterea e-mailurilor nu e făcută încă** (`TODO` în `api/inregistrare.php`
+și `api/retrimite-confirmare.php`). Pe site-ul public asta înseamnă că
+înregistrarea merge, dar **nimeni nu-și poate activa contul**, fiindcă nu
+primește linkul de confirmare. E primul lucru de făcut după mutare.
+
+Apoi: pagina de recuperare a parolei, intrarea cu Google, formularul de
+publicat un eveniment și paginile de categorie.
