@@ -205,6 +205,25 @@ Numerele vin din HTML — le pune serverul.
 
 ## Convenții
 
+### Golirea cache-ului la actualizări
+
+Legăturile către CSS și JS au un număr de versiune:
+
+```html
+<link rel="stylesheet" href="assets/css/style.css?v=8">
+<script src="assets/js/main.js?v=8"></script>
+```
+
+**De fiecare dată când modifici `style.css` sau `main.js`, crește numărul în
+toate paginile.** Altfel browserele păstrează versiunea veche din cache, iar
+paginile noi apar nestilate — HTML-ul e nou, dar CSS-ul rămâne cel vechi.
+
+Comandă rapidă (înlocuiește 9 cu versiunea nouă):
+
+```bash
+sed -i 's/style\.css?v=[0-9]*/style.css?v=9/; s/main\.js?v=[0-9]*/main.js?v=9/' *.html
+```
+
 ### Un singur CSS, un singur JS
 
 Tot site-ul folosește `assets/css/style.css` și `assets/js/main.js`. Nu există
