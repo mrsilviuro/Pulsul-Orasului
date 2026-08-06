@@ -162,6 +162,47 @@ punct de plecare — îl rescrii direct în HTML.
 Folosește clasa `.prose`, care e același stil de text lung ca `.post__body` de
 la articol. Dacă schimbi tipografia într-un loc, se schimbă în ambele.
 
+## Pagina de profil (`profil.html`)
+
+Antetul profilului (poză, nume, date scurte, nota medie), trei casete cu
+activitatea și secțiunea de evaluări.
+
+### Numele
+
+Se afișează prescurtat: inițiala numelui de familie, punct, prenumele întreg —
+„Popescu Ionuț" devine **„P. Ionuț"**. Prescurtarea o face serverul, iar numele
+complet nu se trimite deloc în pagină, ca să nu poată fi citit din sursă.
+
+### Sexul
+
+Doar simbolul, fără cuvinte: `fact--m` pentru Marte, `fact--f` pentru Venus.
+Simbolurile sunt desenate de noi în SVG — caracterele ♂ și ♀ arată altfel de la
+un font la altul, uneori chiar ca emoji colorat. Pentru „nespecificat" se scoate
+tot elementul `<li>`.
+
+### Stele
+
+Orice element cu `data-stars` devine un grup de cinci stele. Valoarea poate fi
+zecimală (`4.6`), fiindcă rândul de stele pline stă peste cel gol și e tăiat pe
+lățime — așa se văd și jumătățile de stea.
+
+```html
+<div class="rating__stars" data-stars="4.6" data-stars-count="23"></div>
+<div class="rating__stars rating__stars--sm" data-stars="5"></div>
+```
+
+`data-stars="0"` (sau lipsa notelor) → cinci stele goale, cifra se ascunde și
+apare textul **„Fără rating"**. Pentru asta, stelele trebuie să fie într-un
+container `.rating` care conține `[data-stars-value]` și `[data-stars-label]`.
+
+Selectorul de note din formular se generează în `[data-stars-input]`; are
+`getChosen()` și `reset()`.
+
+### Activitate
+
+Trei casete: evenimente organizate, prezențe și „a confirmat, dar nu a venit".
+Numerele vin din HTML — le pune serverul.
+
 ## Convenții
 
 ### Un singur CSS, un singur JS

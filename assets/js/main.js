@@ -839,4 +839,151 @@
     }
   }
 
+
+  /* -------------------- 8. STELE ȘI PAGINA DE PROFIL -------------------- */
+
+  var STAR_PATH = 'M12 2.6l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.4 6.2 20.5l1.1-6.5L2.6 9.4l6.5-.9L12 2.6z';
+
+  function starSvg() {
+    return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="' + STAR_PATH +
+           '" stroke-linejoin="round"/></svg>';
+  }
+
+  function starRow(cls) {
+    var html = '';
+    for (var i = 0; i < 5; i++) html += starSvg();
+    return '<div class="stars__row ' + cls + '">' + html + '</div>';
+  }
+
+  // Scrie numărul cu virgulă, cum se folosește în română (4.6 → „4,6").
+  function roNumber(value) {
+    return (Math.round(value * 10) / 10).toString().replace('.', ',');
+  }
+
+  /* --- Stelele de afișare: <div data-stars="4.6" data-stars-count="23"> --- */
+  document.querySelectorAll('[data-stars]').forEach(function (el) {
+    var value = parseFloat(el.getAttribute('data-stars'));
+    if (isNaN(value) || value < 0) value = 0;
+    if (value > 5) value = 5;
+
+    var count = parseInt(el.getAttribute('data-stars-count'), 10);
+    var hasCount = !isNaN(count);
+
+    el.classList.add('stars');
+    el.innerHTML = starRow('stars__row--empty') + starRow('stars__row--full');
+    el.querySelector('.stars__row--full').style.width = (value / 5 * 100) + '%';
+
+    el.setAttribute('role', 'img');
+    el.setAttribute('aria-label', value > 0
+      ? roNumber(value) + ' din 5 stele' + (hasCount ? ', din ' + count + ' evaluări' : '')
+      : 'Fără rating');
+
+    // Textul de lângă stele, dacă pagina a pregătit un loc pentru el.
+    var box = el.closest('.rating');
+    if (!box) return;
+
+    var label = box.querySelector('[data-stars-label]');
+    var score = box.querySelector('[data-stars-value]');
+
+    if (value > 0) {
+      box.classList.remove('is-empty');
+      if (score) score.textContent = roNumber(value);
+      if (label) label.textContent = hasCount
+        ? (count === 1 ? 'dintr-o evaluare' : 'din ' + count + ' evaluări')
+        : '';
+    } else {
+      // fără nicio notă primită: stele goale și un text explicit
+      box.classList.add('is-empty');
+      if (label) label.textContent = 'Fără rating';
+    }
+  });
+
+  /* --- Selectorul de stele din formularul de evaluare --- */
+  document.querySelectorAll('[data-stars-input]').forEach(function (el) {
+    var chosen = 0;
+    var names = ['', 'Foarte slab', 'Slab', 'Acceptabil', 'Bun', 'Foarte bun'];
+    var output = document.getElementById(el.getAttribute('aria-describedby') || 'review-chosen');
+    var buttons = [];
+
+    el.setAttribute('role', 'radiogroup');
+    el.setAttribute('aria-label', 'Alege o notă de la 1 la 5 stele');
+
+    function paint(upTo) {
+      buttons.forEach(function (b, i) { b.classList.toggle('is-on', i < upTo); });
+    }
+
+    for (var i = 1; i <= 5; i++) {
+      (function (value) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.innerHTML = starSvg();
+        b.setAttribute('role', 'radio');
+        b.setAttribute('aria-checked', 'false');
+        b.setAttribute('aria-label', value + (value === 1 ? ' stea' : ' stele'));
+
+        b.addEventListener('mouseenter', function () { paint(value); });
+        b.addEventListener('focus', function () { paint(value); });
+        b.addEventListener('click', function () {
+          chosen = value;
+          el.setAttribute('data-chosen', String(value));
+          buttons.forEach(function (other, i) {
+            other.setAttribute('aria-checked', String(i + 1 === value));
+          });
+          paint(value);
+          if (output) output.textContent = value + ' din 5 — ' + names[value];
+        });
+
+        el.appendChild(b);
+        buttons.push(b);
+      })(i);
+    }
+
+    // la ieșirea cu mouse-ul revenim la nota aleasă, nu la cea survolată
+    el.addEventListener('mouseleave', function () { paint(chosen); });
+    el.addEventListener('focusout', function () {
+      if (!el.contains(document.activeElement)) paint(chosen);
+    });
+
+    el.getChosen = function () { return chosen; };
+    el.reset = function () {
+      chosen = 0;
+      el.removeAttribute('data-chosen');
+      buttons.forEach(function (b) { b.setAttribute('aria-checked', 'false'); });
+      paint(0);
+      if (output) output.textContent = 'Nicio notă aleasă';
+    };
+  });
+
+  /* --- Trimiterea unei evaluări --- */
+  var reviewForm = document.getElementById('review-form');
+
+  if (reviewForm) {
+    var starsInput = document.getElementById('review-stars');
+    var reviewText = document.getElementById('review-text');
+
+    reviewForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+
+      if (!isLoggedIn()) {
+        toast('Intră în cont ca să lași o evaluare.');
+        setTimeout(goToLogin, 900);
+        return;
+      }
+      if (!starsInput || !starsInput.getChosen()) {
+        toast('Alege mai întâi o notă, de la 1 la 5 stele.');
+        return;
+      }
+      if (!reviewText.value.trim()) {
+        toast('Scrie și câteva cuvinte despre cum a fost.');
+        reviewText.focus();
+        return;
+      }
+
+      // TODO: trimite nota și comentariul către server, apoi recalculează media.
+      reviewText.value = '';
+      starsInput.reset();
+      toast('Evaluarea ta a fost trimisă.');
+    });
+  }
+
 })();
