@@ -38,6 +38,7 @@
   /* sistem */
   --wrap:         1000px;
   --header-h:     58px;
+  --field-h:      48px;
   --radius:       14px;
   --radius-lg:    20px;
   --radius-pill:  999px;
@@ -1236,9 +1237,12 @@ main { padding-block: 46px 64px; }
   text-transform: lowercase;
 }
 
+/* Toate câmpurile au aceeași înălțime: input-urile de text ajung natural la
+   ~47px, dar select-ul și inputul de dată ies mai înalte, așa că le fixăm. */
 .field input,
 .field textarea {
   width: 100%;
+  min-height: var(--field-h);
   padding: 11px 14px;
   border-radius: var(--radius);
   border: 1px solid var(--border);
@@ -1516,7 +1520,8 @@ a.info-item__value:hover { color: var(--brand); }
 
 .field select {
   width: 100%;
-  padding: 11px 38px 11px 14px;
+  height: var(--field-h);
+  padding: 0 38px 0 14px;
   border-radius: var(--radius);
   border: 1px solid var(--border);
   background-color: var(--bg);
@@ -1538,11 +1543,41 @@ a.info-item__value:hover { color: var(--brand); }
 .field select:invalid { color: var(--text-faint); }
 .field.has-error select { border-color: #e0393b; }
 
-/* input de tip date — normalizăm aspectul între browsere */
-.field input[type="date"] { min-height: 47px; }
-.field input[type="date"]::-webkit-calendar-picker-indicator { cursor: pointer; opacity: .55; }
-.field input[type="date"]:hover::-webkit-calendar-picker-indicator { opacity: 1; }
-[data-theme="dark"] .field input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); }
+/* Input de tip dată.
+   Fiecare browser îl desenează altfel: Chrome pe desktop pune o iconiță de
+   calendar, Samsung Internet pe Android pune o săgeată mică lipită de margine,
+   iar Safari nu pune nimic. Ca să arate la fel peste tot, ascundem complet
+   decorul nativ și desenăm noi iconița, la fel ca săgeata de la select. */
+.field input[type="date"] {
+  appearance: none;
+  -webkit-appearance: none;
+  height: var(--field-h);
+  padding: 0 42px 0 14px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238b95a3' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3.5' y='5' width='17' height='16' rx='3'/%3E%3Cpath d='M8 3v4M16 3v4M3.5 10h17'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 18px;
+}
+
+/* Indicatorul nativ devine invizibil, dar rămâne clicabil peste iconița
+   noastră, ca atingerea din dreapta să deschidă tot calendarul browserului. */
+.field input[type="date"]::-webkit-calendar-picker-indicator {
+  opacity: 0;
+  width: 30px;
+  height: 30px;
+  margin: 0 -8px 0 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+/* Safari pe iPhone centrează valoarea; o aducem la stânga, ca în restul formularului. */
+.field input[type="date"]::-webkit-date-and-time-value { text-align: left; }
+
+/* Câmpul gol arată identic cu unul completat în unele browsere de Android,
+   așa că îi dăm iconiței puțin mai mult contrast la focus. */
+.field input[type="date"]:focus {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ff4d3d' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3.5' y='5' width='17' height='16' rx='3'/%3E%3Cpath d='M8 3v4M16 3v4M3.5 10h17'/%3E%3C/svg%3E");
+}
 
 /* parolă cu buton de afișare */
 .input-pass { position: relative; }
