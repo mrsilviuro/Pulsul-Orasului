@@ -157,8 +157,8 @@ if (password_needs_rehash($membru['parola_hash'], PASSWORD_DEFAULT)) {
     }
 }
 
-$u = db()->prepare('UPDATE membri SET autentificat_la = NOW() WHERE id = ?');
-$u->execute([$membru['id']]);
+$u = db()->prepare('UPDATE membri SET autentificat_la = ? WHERE id = ?');
+$u->execute([acum(), $membru['id']]);
 
 scrieIncercare($email, true);
 

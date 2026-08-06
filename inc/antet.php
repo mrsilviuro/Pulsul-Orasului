@@ -18,6 +18,7 @@ declare(strict_types=1);
  */
 
 require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/imagini.php';
 
 $titlu     = $titlu     ?? 'PulsulOrasului.Ro';
 $descriere = $descriere ?? 'Evenimente locale, sport, cultură și tot ce mișcă în oraș.';
@@ -100,7 +101,7 @@ if ($logat) {
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/css/style.css?v=10">
+<link rel="stylesheet" href="assets/css/style.css?v=13">
 
 <!-- Setează tema ÎNAINTE de randare, ca să nu apară un flash alb pe dark mode -->
 <script>
@@ -160,7 +161,14 @@ if ($logat) {
       <?php if ($logat): ?>
       <a class="nav__eu" href="profil.php" title="Profilul tău">
         <span class="nav__eu-nume"><?= h(numeAfisat($membru['nume'], $membru['prenume'])) ?></span>
-        <span class="nav__eu-avatar" aria-hidden="true"><?= h(mb_substr($membru['prenume'], 0, 1, 'UTF-8')) ?></span>
+        <!-- Cine are poză o vede aici; ceilalți văd inițiala prenumelui. -->
+        <span class="nav__eu-avatar" aria-hidden="true"><?php
+          if (estePozaValida($membru['poza'] ?? null)):
+            ?><img src="<?= h(urlPoza($membru['poza'], true)) ?>" alt="" width="26" height="26"><?php
+          else:
+            echo h(mb_substr($membru['prenume'], 0, 1, 'UTF-8'));
+          endif;
+        ?></span>
       </a>
       <?php endif; ?>
 

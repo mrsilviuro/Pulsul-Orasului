@@ -31,6 +31,10 @@ return [
     // 'http://localhost/pulsulorasului'.
     'url_site' => 'http://localhost/pulsulorasului',
 
+    // Fusul orar al aplicației. Toate momentele — înregistrare, blocare,
+    // expirarea linkurilor — se calculează după el.
+    'fus_orar' => 'Europe/Bucharest',
+
     // ----------------------------------------------------------- dezvoltare
     // Cât timp e true:
     //   - erorile PHP se văd în pagină, nu doar în log;

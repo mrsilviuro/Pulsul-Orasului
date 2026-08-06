@@ -4,6 +4,11 @@
    2. Meniu mobil
    3. Slideshow
    4. Diverse
+   5. Pagina de articol (taburi, participare, comentarii)
+   6. Formularul de contact
+   7. Autentificare / înregistrare
+   8. Stele și pagina de profil
+   9. Poza de profil
    ========================================================================= */
 (function () {
   'use strict';
@@ -1257,6 +1262,432 @@
       starsInput.reset();
       toast('Evaluarea ta a fost trimisă.');
     });
+  }
+
+
+  /* --------------------- 9. POZA DE PROFIL (poza.php) -------------------- */
+  /*
+    Decuparea se face aici doar ca să vadă omul ce alege. Poza tăiată nu se
+    trimite: trimitem fișierul original plus cele trei numere ale decupajului
+    (colțul din stânga-sus și latura), iar serverul taie el.
+
+    De ce așa: orice ar veni din pagină poate fi măsluit. Dacă am trimite
+    imaginea gata tăiată de JavaScript, ne-am baza pe ea — și am primi ce
+    vrea cel de la tastatură, nu ce am cerut noi. Așa, tot ce poate face
+    cineva stricând numerele e să-și decupeze prost propria poză.
+  */
+  var pozaDrop = document.getElementById('poza-drop');
+
+  if (pozaDrop) {
+    var fisierInput = document.getElementById('poza-fisier');
+    var crop        = document.getElementById('crop');
+    var stage       = document.getElementById('crop-stage');
+    var cropImg     = document.getElementById('crop-img');
+    var zoomInput   = document.getElementById('crop-zoom');
+    var btnSalvez   = document.getElementById('poza-salveaza');
+    var btnSterg    = document.getElementById('poza-sterge');
+    var csrfPoza    = document.getElementById('poza-csrf');
+    var mesajBox    = document.getElementById('poza-mesaj');
+    var mesajText   = document.getElementById('poza-mesaj-text');
+    var mesajIco    = document.getElementById('poza-mesaj-ico');
+    var acumImg     = document.getElementById('poza-acum-img');
+    var acumTitlu   = document.getElementById('poza-acum-titlu');
+    var acumSub     = document.getElementById('poza-acum-sub');
+
+    // Aceleași limite ca pe server. Aici sunt doar ca să nu pornească o
+    // încărcare de câteva megaocteți care oricum ar fi refuzată; adevărul
+    // rămâne cel din inc/imagini.php.
+    var OCTETI_MAX = 6 * 1024 * 1024;
+    var SURSA_MIN  = 200;
+    var TIPURI     = ['image/jpeg', 'image/png', 'image/webp'];
+
+    var fisierAles = null;   // File
+    var adresaTemp = null;   // URL-ul creat pentru previzualizare
+    var nW = 0, nH = 0;      // dimensiunile reale ale pozei
+    var stageL = 0;          // latura ramei, în pixeli de ecran
+    var baseScale = 1, zoom = 1, pozX = 0, pozY = 0;
+    var seTrimite = false;
+
+    /* ---------------------------- mesaje ------------------------------- */
+    var ICO_INFO = '<circle cx="12" cy="12" r="9"/><path d="M12 11v5.5"/><path d="M12 7.6v.1"/>';
+    var ICO_BINE = '<circle cx="12" cy="12" r="9"/><path d="m8.2 12.3 2.6 2.6 5-5.2"/>';
+
+    function spune(text, fel) {
+      if (!mesajBox) return;
+      mesajText.textContent = text;
+      mesajBox.classList.toggle('poza-mesaj--rau', fel === 'rau');
+      mesajBox.classList.toggle('poza-mesaj--bun', fel === 'bun');
+      mesajIco.innerHTML = fel === 'bun' ? ICO_BINE : ICO_INFO;
+      mesajBox.hidden = false;
+    }
+
+    function taci() { if (mesajBox) mesajBox.hidden = true; }
+
+    /* ------------------------ alegerea fișierului ---------------------- */
+    function preiaFisier(file) {
+      taci();
+
+      if (!file) return;
+
+      if (TIPURI.indexOf(file.type) === -1) {
+        spune('Acceptăm poze JPG, PNG sau WEBP.', 'rau');
+        return;
+      }
+
+      if (file.size > OCTETI_MAX) {
+        spune('Poza are ' + (file.size / 1024 / 1024).toFixed(1) +
+              ' MB, iar limita e de ' + (OCTETI_MAX / 1024 / 1024) + ' MB.', 'rau');
+        return;
+      }
+
+      if (adresaTemp) URL.revokeObjectURL(adresaTemp);
+      adresaTemp = URL.createObjectURL(file);
+
+      cropImg.onload = function () {
+        nW = cropImg.naturalWidth;
+        nH = cropImg.naturalHeight;
+
+        if (Math.min(nW, nH) < SURSA_MIN) {
+          ascundeDecuparea();
+          spune('Poza e prea mică. Avem nevoie de cel puțin ' +
+                SURSA_MIN + '×' + SURSA_MIN + ' pixeli.', 'rau');
+          return;
+        }
+
+        fisierAles = file;
+        crop.hidden = false;
+        porneste();
+        btnSalvez.disabled = false;
+
+        // Pe telefon, rama apare sub marginea ecranului: fără rândul ăsta,
+        // omul alege poza și pare că nu s-a întâmplat nimic.
+        crop.scrollIntoView({ block: 'center' });
+      };
+
+      cropImg.onerror = function () {
+        ascundeDecuparea();
+        spune('Nu am putut deschide fișierul. Încearcă altul.', 'rau');
+      };
+
+      cropImg.src = adresaTemp;
+    }
+
+    function ascundeDecuparea() {
+      fisierAles = null;
+      crop.hidden = true;
+      btnSalvez.disabled = true;
+      if (fisierInput) fisierInput.value = '';
+    }
+
+    /* ------------------------- așezarea în ramă ------------------------ */
+    function porneste() {
+      stageL = stage.clientWidth;
+      baseScale = Math.max(stageL / nW, stageL / nH);   // acoperă rama întreagă
+      zoom = 1;
+      if (zoomInput) zoomInput.value = '1';
+
+      // pornim din mijlocul pozei
+      pozX = (stageL - nW * baseScale) / 2;
+      pozY = (stageL - nH * baseScale) / 2;
+
+      deseneaza();
+    }
+
+    function scaraCurenta() { return baseScale * zoom; }
+
+    /** Poza nu are voie să lase colțuri goale în ramă. */
+    function tine() {
+      var s = scaraCurenta();
+      var latimeDesen = nW * s;
+      var inaltimeDesen = nH * s;
+
+      pozX = Math.min(0, Math.max(stageL - latimeDesen, pozX));
+      pozY = Math.min(0, Math.max(stageL - inaltimeDesen, pozY));
+    }
+
+    function deseneaza() {
+      tine();
+      var s = scaraCurenta();
+      cropImg.style.width  = (nW * s) + 'px';
+      cropImg.style.height = (nH * s) + 'px';
+      cropImg.style.transform = 'translate(' + pozX + 'px, ' + pozY + 'px)';
+    }
+
+    /** Mărește sau micșorează păstrând sub deget același punct din poză. */
+    function schimbaZoom(nou, focX, focY) {
+      nou = Math.min(4, Math.max(1, nou));
+      if (nou === zoom) return;
+
+      var vechi = scaraCurenta();
+      zoom = nou;
+      var acum = scaraCurenta();
+
+      if (focX === undefined) { focX = stageL / 2; focY = stageL / 2; }
+
+      pozX = focX - (focX - pozX) * (acum / vechi);
+      pozY = focY - (focY - pozY) * (acum / vechi);
+
+      if (zoomInput) zoomInput.value = String(zoom);
+      deseneaza();
+    }
+
+    /* ---------------------- mutarea cu degetul / mausul ---------------- */
+    var degete = {};          // pointerId → ultima poziție
+    var pinchStart = 0;       // distanța dintre degete la începutul apropierii
+    var pinchZoom = 1;
+
+    function pozitiaIn(e) {
+      var r = stage.getBoundingClientRect();
+      return { x: e.clientX - r.left, y: e.clientY - r.top };
+    }
+
+    stage.addEventListener('pointerdown', function (e) {
+      if (crop.hidden) return;
+      stage.setPointerCapture(e.pointerId);
+      degete[e.pointerId] = pozitiaIn(e);
+      stage.classList.add('is-dragging');
+
+      var chei = Object.keys(degete);
+      if (chei.length === 2) {
+        pinchStart = distanta(degete[chei[0]], degete[chei[1]]);
+        pinchZoom = zoom;
+      }
+    });
+
+    stage.addEventListener('pointermove', function (e) {
+      if (!degete[e.pointerId]) return;
+      e.preventDefault();
+
+      var acum = pozitiaIn(e);
+      var chei = Object.keys(degete);
+
+      if (chei.length >= 2) {
+        // două degete: cât se depărtează unul de altul, atât se mărește poza
+        degete[e.pointerId] = acum;
+
+        var a = degete[chei[0]], b = degete[chei[1]];
+        var d = distanta(a, b);
+
+        if (pinchStart > 0) {
+          schimbaZoom(pinchZoom * (d / pinchStart), (a.x + b.x) / 2, (a.y + b.y) / 2);
+        }
+        return;
+      }
+
+      var vechi = degete[e.pointerId];
+      pozX += acum.x - vechi.x;
+      pozY += acum.y - vechi.y;
+      degete[e.pointerId] = acum;
+      deseneaza();
+    });
+
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (nume) {
+      stage.addEventListener(nume, function (e) {
+        delete degete[e.pointerId];
+        if (!Object.keys(degete).length) {
+          stage.classList.remove('is-dragging');
+          pinchStart = 0;
+        }
+      });
+    });
+
+    function distanta(a, b) {
+      return Math.sqrt((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y));
+    }
+
+    // rotița mausului, pe calculator
+    stage.addEventListener('wheel', function (e) {
+      if (crop.hidden) return;
+      e.preventDefault();
+      var p = pozitiaIn(e);
+      schimbaZoom(zoom * (e.deltaY < 0 ? 1.12 : 1 / 1.12), p.x, p.y);
+    }, { passive: false });
+
+    if (zoomInput) {
+      zoomInput.addEventListener('input', function () {
+        schimbaZoom(parseFloat(zoomInput.value));
+      });
+    }
+
+    // La rotirea telefonului rama își schimbă lățimea, deci refacem socoteala.
+    window.addEventListener('resize', function () {
+      if (crop.hidden || !nW) return;
+      var vechi = stageL || 1;
+      stageL = stage.clientWidth;
+      var raport = stageL / vechi;
+      baseScale = Math.max(stageL / nW, stageL / nH);
+      pozX *= raport;
+      pozY *= raport;
+      deseneaza();
+    });
+
+    /* ------------------ alegerea: buton, tragere, lipire --------------- */
+    if (fisierInput) {
+      fisierInput.addEventListener('change', function () {
+        preiaFisier(fisierInput.files && fisierInput.files[0]);
+      });
+    }
+
+    ['dragenter', 'dragover'].forEach(function (nume) {
+      pozaDrop.addEventListener(nume, function (e) {
+        e.preventDefault();
+        pozaDrop.classList.add('is-over');
+      });
+    });
+
+    ['dragleave', 'drop'].forEach(function (nume) {
+      pozaDrop.addEventListener(nume, function (e) {
+        e.preventDefault();
+        pozaDrop.classList.remove('is-over');
+      });
+    });
+
+    pozaDrop.addEventListener('drop', function (e) {
+      var dt = e.dataTransfer;
+      if (dt && dt.files && dt.files.length) preiaFisier(dt.files[0]);
+    });
+
+    /* ------------------------- trimiterea ------------------------------ */
+    function decupajulCerut() {
+      var s = scaraCurenta();
+      return {
+        x: Math.max(0, Math.round(-pozX / s)),
+        y: Math.max(0, Math.round(-pozY / s)),
+        l: Math.round(stageL / s)
+      };
+    }
+
+    function cere(date, laBine) {
+      if (seTrimite) return;
+      seTrimite = true;
+      btnSalvez.disabled = true;
+      blocheazaStergerea(true);
+
+      fetch('api/poza-profil.php', {
+        method: 'POST',
+        body: date,
+        headers: { 'X-Requested-With': 'fetch' },
+        credentials: 'same-origin'
+      })
+      .then(function (r) { return r.json().then(function (c) { return { stare: r.status, c: c }; }); })
+      .then(function (raspuns) {
+        var c = raspuns.c || {};
+
+        if (!c.ok) {
+          spune(c.mesaj || 'Nu a mers. Mai încearcă o dată.', 'rau');
+          return;
+        }
+
+        laBine(c);
+      })
+      .catch(function () {
+        spune('Nu am putut lua legătura cu serverul. Verifică internetul și încearcă din nou.', 'rau');
+      })
+      .then(function () {
+        seTrimite = false;
+        btnSalvez.disabled = !fisierAles;
+        blocheazaStergerea(false);
+      });
+    }
+
+    function blocheazaStergerea(da) {
+      [btnSterg, document.getElementById('poza-sterge-da')].forEach(function (b) {
+        if (b) b.disabled = da;
+      });
+    }
+
+    btnSalvez.addEventListener('click', function () {
+      if (!fisierAles) return;
+      taci();
+
+      var t = decupajulCerut();
+      var date = new FormData();
+      date.append('csrf', csrfPoza.value);
+      date.append('actiune', 'salveaza');
+      date.append('poza', fisierAles);
+      date.append('x', String(t.x));
+      date.append('y', String(t.y));
+      date.append('l', String(t.l));
+
+      spune('Se încarcă…', '');
+
+      cere(date, function (c) {
+        // Numele fișierului e nou de fiecare dată, deci ce se vede acum e
+        // sigur poza proaspătă, nu una ținută minte de browser.
+        actualizeazaPeste(c.poza, c.poza_mica);
+        ascundeDecuparea();
+        spune(c.mesaj || 'Poza a fost schimbată.', 'bun');
+        toast('Poza de profil a fost schimbată.');
+      });
+    });
+
+    /* Ștergerea: întâi întrebarea, apoi fapta. Confirmarea e desenată de noi,
+       nu de browser — vezi explicația din poza.php. */
+    var cutiaSigur = document.getElementById('poza-sigur');
+    var btnSigurDa = document.getElementById('poza-sterge-da');
+    var btnSigurNu = document.getElementById('poza-sterge-nu');
+
+    function intreaba(pornit) {
+      if (!cutiaSigur || !btnSterg) return;
+      cutiaSigur.hidden = !pornit;
+      btnSterg.hidden = pornit;
+      if (pornit && btnSigurNu) btnSigurNu.focus();
+    }
+
+    if (btnSterg && cutiaSigur) {
+      btnSterg.addEventListener('click', function () { taci(); intreaba(true); });
+      btnSigurNu.addEventListener('click', function () { intreaba(false); btnSterg.focus(); });
+
+      btnSigurDa.addEventListener('click', function () {
+        intreaba(false);
+        taci();
+
+        var date = new FormData();
+        date.append('csrf', csrfPoza.value);
+        date.append('actiune', 'sterge');
+
+        cere(date, function (c) {
+          actualizeazaPeste(c.poza, c.poza_mica);
+          spune(c.mesaj || 'Am șters poza.', 'bun');
+          toast('Poza de profil a fost ștearsă.');
+        });
+      });
+    }
+
+    /** Pune noua poză peste tot unde se vede în pagina asta. */
+    function actualizeazaPeste(mare, mica) {
+      var arePoza = mare && mare.indexOf('/membri/') !== -1;
+
+      if (acumImg) acumImg.src = mare;
+      if (acumTitlu) acumTitlu.textContent = arePoza ? 'Poza de acum' : 'Nu ai încă nicio poză';
+      if (acumSub) {
+        acumSub.textContent = arePoza
+          ? 'Poți să o înlocuiești sau să o ștergi.'
+          : 'Până alegi una, se vede silueta asta.';
+      }
+      if (cutiaSigur) cutiaSigur.hidden = true;
+      if (btnSterg) btnSterg.hidden = !arePoza;
+
+      // și cercul din bara de meniu, ca schimbarea să se vadă imediat
+      var inBara = document.querySelector('.nav__eu-avatar');
+      if (inBara) {
+        var pozaBara = inBara.querySelector('img');
+        if (arePoza) {
+          if (!pozaBara) {
+            pozaBara = document.createElement('img');
+            pozaBara.width = 26;
+            pozaBara.height = 26;
+            pozaBara.alt = '';
+            inBara.textContent = '';
+            inBara.appendChild(pozaBara);
+          }
+          pozaBara.src = mica;
+        } else if (pozaBara) {
+          // fără poză se întoarce inițiala prenumelui
+          inBara.textContent = (body.getAttribute('data-user-initiala') || '').trim();
+        }
+      }
+    }
   }
 
 })();

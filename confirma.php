@@ -46,12 +46,12 @@ if (preg_match('/^[a-f0-9]{64}$/', $token)) {
         $u = db()->prepare(
             'UPDATE membri
                 SET stare = \'activ\',
-                    confirmat_la = NOW(),
+                    confirmat_la = ?,
                     token_confirmare = NULL,
                     token_expira = NULL
               WHERE id = ?'
         );
-        $u->execute([$membru['id']]);
+        $u->execute([acum(), $membru['id']]);
 
         $titlu  = 'Contul tău e gata';
         $mesaj  = 'Adresa de e-mail a fost confirmată. Acum te poți autentifica.';

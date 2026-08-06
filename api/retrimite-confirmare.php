@@ -89,10 +89,10 @@ $expira    = (new DateTimeImmutable("+{$oreValid} hours"))->format('Y-m-d H:i:s'
 // Token-ul vechi este înlocuit, deci un link mai vechi nu mai funcționează.
 $u = db()->prepare(
     'UPDATE membri
-        SET token_confirmare = ?, token_expira = ?, token_trimis_la = NOW()
+        SET token_confirmare = ?, token_expira = ?, token_trimis_la = ?
       WHERE id = ?'
 );
-$u->execute([$tokenHash, $expira, $membru['id']]);
+$u->execute([$tokenHash, $expira, acum(), $membru['id']]);
 
 $linkConfirmare = rtrim((string) $config['url_site'], '/')
                 . '/confirma.php?token=' . $token;

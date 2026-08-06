@@ -1,8 +1,28 @@
 <?php
 declare(strict_types=1);
 
-$titlu     = 'P. Ionuț — Profil membru — PulsulOrasului.Ro';
-$descriere = 'Profilul membrului P. Ionuț pe PulsulOrasului.Ro: evenimente organizate, participări și evaluări primite.';
+require_once __DIR__ . '/inc/auth.php';
+require_once __DIR__ . '/inc/imagini.php';
+
+/**
+ * Deocamdată pagina arată profilul celui conectat. Când vor exista adrese de
+ * forma /membru/<permalink>, aici se va căuta în bază membrul cerut, iar
+ * $eProfilulMeu va fi „membrul găsit e chiar cel conectat".
+ */
+$eu           = membruCurent();
+$eProfilulMeu = $eu !== null;
+
+// Datele scurte din antet vin din bază atunci când avem pe cine arăta.
+// Restul paginii — activitatea și evaluările — e încă exemplu de așezare.
+$numeProfil = $eu ? numeAfisat($eu['nume'], $eu['prenume']) : 'P. Ionuț';
+$pozaProfil = $eu['poza'] ?? null;
+$varsta     = $eu ? varstaDin($eu['data_nasterii'] ?? null) : 34;
+$localitate = $eu ? ($eu['localitate'] ?? null) : 'Brașov';
+$sex        = $eu['sex'] ?? 'M';
+$membruDin  = $eu ? lunaSiAnul($eu['creat_la'] ?? null) : 'mai 2024';
+
+$titlu     = $numeProfil . ' — Profil membru — PulsulOrasului.Ro';
+$descriere = 'Profilul membrului ' . $numeProfil . ' pe PulsulOrasului.Ro: evenimente organizate, participări și evaluări primite.';
 
 require __DIR__ . '/inc/antet.php';
 ?>
@@ -16,7 +36,7 @@ require __DIR__ . '/inc/antet.php';
       <span aria-hidden="true">/</span>
       <a href="#">Membri</a>
       <span aria-hidden="true">/</span>
-      <span class="crumbs__current">P. Ionuț</span>
+      <span class="crumbs__current"><?= h($numeProfil) ?></span>
     </nav>
 
     <!-- ========================= ANTETUL PROFILULUI =====================
@@ -26,32 +46,54 @@ require __DIR__ . '/inc/antet.php';
     ================================================================== -->
     <header class="profile">
       <div class="profile__id">
-        <img class="profile__avatar" src="assets/img/avatars/andrei.svg" alt="" width="96" height="96">
+
+        <!--
+          Poza, cu creionul de schimbare peste colțul de jos.
+          Creionul se tipărește doar pe profilul propriu: nu e ascuns din CSS,
+          ci pur și simplu nu ajunge în pagină pentru ceilalți.
+        -->
+        <div class="profile__poza">
+          <img class="profile__avatar" id="profil-avatar"
+               src="<?= h(urlPoza($pozaProfil)) ?>" alt="" width="96" height="96">
+
+          <?php if ($eProfilulMeu): ?>
+          <a class="profile__poza-edit" href="poza.php"
+             title="Schimbă poza de profil" aria-label="Schimbă poza de profil">
+            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 20h4l10-10a2.4 2.4 0 0 0-3.4-3.4L4.6 16.6z"/>
+              <path d="m14.2 7.4 2.4 2.4"/>
+            </svg>
+          </a>
+          <?php endif; ?>
+        </div>
 
         <div class="profile__head">
-          <h1 class="profile__name">P. Ionuț</h1>
+          <h1 class="profile__name"><?= h($numeProfil) ?></h1>
 
           <ul class="facts">
+            <?php if ($varsta !== null): ?>
             <li class="fact">
               <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
                 <rect x="3.5" y="5" width="17" height="16" rx="3"/><path d="M8 3v4M16 3v4M3.5 10h17"/>
               </svg>
-              <span>34 de ani</span>
+              <span><?= h(aniInCuvinte($varsta)) ?></span>
             </li>
+            <?php endif; ?>
 
+            <?php if (!empty($localitate)): ?>
             <li class="fact">
               <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M12 21s7-5.6 7-11a7 7 0 1 0-14 0c0 5.4 7 11 7 11Z"/><circle cx="12" cy="10" r="2.6"/>
               </svg>
-              <span>Brașov</span>
+              <span><?= h($localitate) ?></span>
             </li>
+            <?php endif; ?>
 
             <!--
               Sexul: doar simbolul, desenat de noi.
-              Masculin  → clasa fact--m  și simbolul Marte
-              Feminin   → clasa fact--f  și simbolul Venus
-              Nespecificat → se scoate tot elementul <li>
+              Masculin → simbolul Marte, feminin → simbolul Venus.
             -->
+            <?php if ($sex === 'M'): ?>
             <li class="fact fact--m" title="Masculin">
               <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
                 <circle cx="10" cy="14.2" r="5.8"/>
@@ -60,13 +102,25 @@ require __DIR__ . '/inc/antet.php';
               </svg>
               <span class="sr-only">Masculin</span>
             </li>
+            <?php elseif ($sex === 'F'): ?>
+            <li class="fact fact--f" title="Feminin">
+              <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="9.2" r="5.8"/>
+                <path d="M12 15v6"/>
+                <path d="M9 18.2h6"/>
+              </svg>
+              <span class="sr-only">Feminin</span>
+            </li>
+            <?php endif; ?>
 
+            <?php if ($membruDin !== ''): ?>
             <li class="fact fact--muted">
               <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
                 <circle cx="12" cy="12" r="9"/><path d="M12 7v5.2l3.4 2"/>
               </svg>
-              <span>Membru din mai 2024</span>
+              <span>Membru din <?= h($membruDin) ?></span>
             </li>
+            <?php endif; ?>
           </ul>
         </div>
       </div>
@@ -154,7 +208,7 @@ require __DIR__ . '/inc/antet.php';
 
       <!-- Formular: notă + comentariu -->
       <form class="review-form" id="review-form" novalidate>
-        <img class="comment-form__avatar" src="assets/img/avatars/cristi.svg" alt="" width="96" height="96">
+        <img class="comment-form__avatar" src="<?= h(urlPoza($eu['poza'] ?? null, true)) ?>" alt="" width="96" height="96">
 
         <div class="comment-form__main">
           <div class="review-form__stars">

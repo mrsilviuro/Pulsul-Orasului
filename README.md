@@ -203,6 +203,14 @@ Selectorul de note din formular se generează în `[data-stars-input]`; are
 Trei casete: evenimente organizate, prezențe și „a confirmat, dar nu a venit".
 Numerele vin din HTML — le pune serverul.
 
+### Poza de profil
+
+Sub poză, spre colțul din dreapta-jos, stă un creion mic. **Se tipărește doar
+pe profilul propriu** — nu e ascuns din CSS, pur și simplu nu ajunge în pagină
+pentru ceilalți. Duce spre `poza.php`.
+
+Vezi mai jos secțiunea „Poza de profil" pentru cum funcționează încărcarea.
+
 ## Partea de server (PHP + MySQL)
 
 Din acest punct, site-ul are și cod care rulează pe server. `login.html` a
@@ -378,6 +386,27 @@ contul altcuiva trimițând trei parole greșite. De aceea numărătoarea se fac
 perechea (e-mail + IP), plus o limită mai largă de 15 greșeli pe oră de la
 aceeași adresă IP, pentru cine încearcă multe conturi de la același calculator.
 
+### Un singur ceas în toată aplicația
+
+Toate momentele — înregistrare, încercări de autentificare, expirarea
+linkurilor — se calculează **în PHP** și se trimit către baza de date ca
+parametri obișnuiți. Nicio interogare nu mai folosește `NOW()`.
+
+Motivul e o problemă reală, pe care am avut-o: dacă un moment se scrie cu
+`NOW()` (ceasul serverului de baze de date) și se compară apoi cu `time()`
+(ceasul PHP), iar cele două au fusuri orare diferite — ceea ce în XAMPP e
+obișnuit — toate socotelile de tipul „mai ai 10 minute" ies greșite exact cu
+diferența dintre fusuri. La o diferență de o oră, cele 10 minute deveneau 70.
+
+Fusul orar se stabilește o singură dată, în `inc/config.php`:
+
+```php
+'fus_orar' => 'Europe/Bucharest',
+```
+
+**Dacă ai deja un `inc/config.php`, adaugă linia asta.** Fără ea se folosește
+tot `Europe/Bucharest`, dar e mai bine să fie scrisă explicit.
+
 ### Măsuri de siguranță
 
 - **Sesiunea se reface la intrare** (`session_regenerate_id`), ca un
@@ -404,12 +433,28 @@ aceeași adresă IP, pentru cine încearcă multe conturi de la același calcula
 
 ### login.php cât timp ești conectat
 
-Cum ai cerut: accesarea paginii te deconectează și afișează „Ai ieșit din cont".
+Pagina redirecționează spre prima pagină. Deconectarea se face doar apăsând
+„Deloghează-te", care duce la `iesire.php` și cere token CSRF.
 
-De reținut: meniul nu mai duce acolo cât ești conectat, dar **un semn de carte
-sau o intrare veche din istoric te vor deconecta la simpla deschidere**, iar
-unele browsere preîncarcă linkurile pe care crede că le vei urma. Dacă vrei să
-eviți asta, alternativa obișnuită e o redirecționare spre prima pagină.
+Așa, un semn de carte, o intrare veche din istoric sau o preîncărcare făcută de
+browser nu mai pot da omul afară fără ca el să fi cerut-o.
+
+### Ce se întâmplă cu încercările de autentificare
+
+Rândurile din `incercari_autentificare` **nu rămân definitiv**. Blocarea se uită
+doar la ultimele 10 minute, deci cele vechi nu mai folosesc la nimic.
+
+`curataIncercariVechi()` șterge tot ce e mai vechi de **30 de zile**. Se
+declanșează din PHP, la aproximativ una din 50 de scrieri — destul de rar cât să
+nu încarce nimic, destul de des cât să nu se adune. Nu e nevoie de o sarcină
+programată separat, care în XAMPP ar trebui oricum pornită de mână.
+
+Cele 30 de zile sunt și o chestiune de date personale: tabelul ține adrese de
+e-mail și adrese IP, pe care nu avem motiv să le păstrăm mai mult decât ne
+trebuie ca să vedem un tipar de atacuri.
+
+Dacă preferi ca ștergerea să o facă baza de date singură, în `sql/002` e scris
+și evenimentul MySQL echivalent.
 
 ### Ce nu e făcut încă
 
@@ -417,25 +462,137 @@ eviți asta, alternativa obișnuită e o redirecționare spre prima pagină.
 - pagina de recuperare a parolei, către care duce butonul din panoul de blocare;
 - intrarea cu Google.
 
+## Poza de profil
+
+Fișiere: `poza.php` (pagina), `api/poza-profil.php` (primirea),
+`inc/imagini.php` (toate verificările și prelucrarea),
+`assets/img/membri/` (unde ajung pozele), `sql/003-poza-profil.sql`.
+
+### Principiul de bază
+
+**Fișierul primit nu e salvat niciodată așa cum a venit.** Îl citim, îl
+desenăm din nou pixel cu pixel și scriem un JPEG nou, făcut de noi.
+
+De aici vin, dintr-o singură mișcare, aproape toate protecțiile:
+
+- un fișier care se dă drept poză, dar are cod PHP lipit la coadă, își pierde
+  acel cod — noi copiem doar pixelii;
+- **datele EXIF dispar**, inclusiv coordonatele GPS pe care telefoanele le pun
+  în fotografii. Altfel ar fi fost publicate odată cu poza, fără ca cineva să
+  bănuiască;
+- numele și extensia alese de utilizator nu ajung niciodată pe disc.
+
+### Ce se acceptă
+
+**JPG, PNG și WEBP**, nu doar JPG. Extensia nu contează, pentru că oricum n-o
+folosim: singura întrebare e „putem citi corect pixelii?". Iar dacă răspunsul e
+da, a trimite omul înapoi să-și convertească un PNG (cum sunt toate capturile
+de ecran de pe Android și Windows) ar fi o piedică fără niciun câștig.
+
+GIF-ul lipsește intenționat: e animat și cu paletă de 256 de culori.
+
+### Verificările, în ordine
+
+1. codul de eroare al încărcării (inclusiv „prea mare pentru `post_max_size`",
+   caz în care `$_POST` ajunge gol și token-ul CSRF pare că lipsește — e tratat
+   separat, altfel omul ar primi „sesiunea a expirat" pentru o poză prea mare);
+2. `is_uploaded_file()` — fișierul chiar a venit prin formular, nu e o cale de
+   pe server strecurată în cerere;
+3. mărimea: cel mult 6 MB;
+4. `getimagesize()` — se uită la primii octeți, nu la extensie;
+5. `finfo` — a doua părere, de la altă bibliotecă;
+6. numărul de pixeli: cel mult 40 de megapixeli și nicio latură peste 12000.
+   **Nu mărimea fișierului e problema, ci pixelii**: un PNG de doi kilobiți
+   poate declara 30000×30000 și ar cere peste 3 GB de memorie la desenare;
+7. cel puțin 200×200, altfel ar ieși o poză neclară;
+8. cât mai e liber din `memory_limit`.
+
+### Mărimile salvate
+
+Din fiecare poză ies două fișiere pătrate:
+
+| fișier          | latura  | unde se folosește           |
+|-----------------|---------|-----------------------------|
+| `<nume>.jpg`     | 512 px  | pagina de profil            |
+| `<nume>-mic.jpg` | 128 px  | bara de meniu, comentarii   |
+
+Calitate JPEG 82 și mod progresiv. Ies în jur de 20–40 kB pentru cea mare.
+Nu mărim niciodată peste ce a dat omul: dintr-un decupaj de 300 px iese o poză
+de 300 px, nu una de 512 întinsă și moale.
+
+### Numele fișierului
+
+32 de caractere hexazecimale, aleatorii, fără nicio legătură cu membrul. În
+baza de date se ține doar partea asta; căile se construiesc în `urlPoza()`.
+
+Trei motive: nu poate fi ghicit (cu id-ul în nume, oricine ar putea cere pe
+rând toate pozele de pe site), se schimbă la fiecare încărcare (deci browserul
+nu mai servește poza veche din cache), iar numele ales de utilizator nu ajunge
+niciodată pe disc — acolo poate fi orice, inclusiv `..\..\index.php`.
+
+### Decuparea
+
+Utilizatorul își potrivește singur poza: o trage cu degetul sau cu mausul, o
+mărește din bară, din rotița mausului sau apropiind două degete. Cercul arată
+exact cât va intra în poza finală.
+
+**Poza tăiată nu se trimite.** Se trimite fișierul original plus trei numere:
+colțul din stânga-sus și latura pătratului. Serverul taie el. Dacă am trimite
+imaginea gata tăiată din JavaScript, ne-am baza pe ea — și am primi ce vrea cel
+de la tastatură, nu ce am cerut noi.
+
+Numerele primite sunt potrivite, nu crezute: `potrivesteDecupajul()` le aduce
+în limitele imaginii. Fără ele (sau fără JavaScript) se decupează din mijloc.
+
+### Dosarul cu poze
+
+`assets/img/membri/` are un `.htaccess` care:
+
+- oprește interpretarea codului, în ambele feluri în care poate rula PHP
+  (`php_flag engine off` pentru mod_php, `RemoveHandler` pentru CGI și FPM);
+- servește **doar** fișierele cu numele dat de noi — 32 de caractere hex,
+  eventual `-mic`, apoi `.jpg`. Orice altceva e refuzat;
+- trimite `X-Content-Type-Options: nosniff` și cache de un an (numele fiind
+  nou de fiecare dată, poza veche nu mai e cerută niciodată).
+
+Pozele nu intră în depozitul de cod: `.gitignore` din dosar le lasă afară.
+
+### Alte măsuri
+
+- se schimbă **doar poza contului conectat**; nu există niciun parametru prin
+  care să se spună al cui profil se modifică;
+- token CSRF la fiecare cerere;
+- cel mult o schimbare la 15 secunde — redimensionarea costă timp de procesor;
+- poza veche se șterge **după** ce cea nouă e sigur în bază. În ordine inversă,
+  o eroare la scriere ar lăsa omul fără nicio poză;
+- dacă scrierea în bază dă greș, fișierele proaspăt create se șterg, ca să nu
+  rămână gunoi pe disc;
+- transparența devine albă înainte de a fi scrisă ca JPEG, care nu știe de ea
+  (altfel fundalul ar ieși negru);
+- confirmarea la ștergere e desenată de noi, nu `window.confirm()` — vezi
+  regula despre aspectul nativ, mai jos.
+
 ## Convenții
 
 ### Golirea cache-ului la actualizări
 
-Legăturile către CSS și JS au un număr de versiune:
+Legăturile către CSS și JS au un număr de versiune, puse o singură dată în
+`inc/antet.php` și `inc/subsol.php`:
 
 ```html
-<link rel="stylesheet" href="assets/css/style.css?v=8">
-<script src="assets/js/main.js?v=8"></script>
+<link rel="stylesheet" href="assets/css/style.css?v=13">
+<script src="assets/js/main.js?v=13"></script>
 ```
 
-**De fiecare dată când modifici `style.css` sau `main.js`, crește numărul în
-toate paginile.** Altfel browserele păstrează versiunea veche din cache, iar
-paginile noi apar nestilate — HTML-ul e nou, dar CSS-ul rămâne cel vechi.
+**De fiecare dată când modifici `style.css` sau `main.js`, crește numărul.**
+Altfel browserele păstrează versiunea veche din cache, iar paginile noi apar
+nestilate — HTML-ul e nou, dar CSS-ul rămâne cel vechi.
 
-Comandă rapidă (înlocuiește 9 cu versiunea nouă):
+Comandă rapidă (înlocuiește 14 cu versiunea nouă):
 
 ```bash
-sed -i 's/style\.css?v=[0-9]*/style.css?v=9/; s/main\.js?v=[0-9]*/main.js?v=9/' *.html
+sed -i 's/style\.css?v=[0-9]*/style.css?v=14/' inc/antet.php
+sed -i 's/main\.js?v=[0-9]*/main.js?v=14/'     inc/subsol.php
 ```
 
 ### Un singur CSS, un singur JS

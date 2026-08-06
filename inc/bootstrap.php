@@ -27,6 +27,33 @@ if (!is_file($caleConfig)) {
 /** @var array $config */
 $config = require $caleConfig;
 
+/* ------------------------------ TIMPUL -------------------------------- */
+
+/**
+ * Un singur ceas în toată aplicația: cel al PHP-ului.
+ *
+ * Motivul, învățat pe pielea noastră: dacă unele momente se scriu cu NOW()
+ * (ceasul serverului de baze de date) și se compară apoi cu time() (ceasul
+ * PHP), iar cele două servere au fusuri orare diferite, toate socotelile de
+ * genul „mai ai 10 minute" ies greșite exact cu diferența dintre fusuri.
+ *
+ * De aceea nicio interogare din aplicație nu mai folosește NOW(): momentele
+ * se calculează aici și se trimit ca parametri obișnuiți.
+ */
+date_default_timezone_set($config['fus_orar'] ?? 'Europe/Bucharest');
+
+/** Momentul de acum, în formatul cu care lucrează coloanele DATETIME. */
+function acum(): string
+{
+    return date('Y-m-d H:i:s');
+}
+
+/** Un moment din trecut: acumMinus(10) = „acum 10 minute". */
+function acumMinus(int $minute): string
+{
+    return date('Y-m-d H:i:s', time() - $minute * 60);
+}
+
 /* --------------------------- AFIȘAREA ERORILOR ------------------------ */
 
 // În dezvoltare vrem să vedem tot. În producție, utilizatorul nu trebuie să
@@ -76,6 +103,13 @@ function db(): PDO
 function pornesteSesiunea(): void
 {
     if (session_status() === PHP_SESSION_ACTIVE) {
+        return;
+    }
+
+    // O sesiune nu mai poate fi pornită după ce pagina a început să se
+    // tipărească — cookie-ul se trimite printre antetele HTTP, iar acelea au
+    // plecat deja. Fără verificarea asta, PHP ar umple pagina cu avertismente.
+    if (headers_sent()) {
         return;
     }
 

@@ -1,0 +1,4 @@
+# Pozele încărcate de membri stau doar pe server, nu în depozitul de cod.
+*
+!.gitignore
+!.htaccess

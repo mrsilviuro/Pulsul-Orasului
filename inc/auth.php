@@ -16,6 +16,7 @@ const INCERCARI_MAXIME_IP    = 15;   // limită mai largă, pe adresă IP
 const MINUTE_INTRE_RETRIMITERI = 10; // între două e-mailuri de confirmare
 const MINUTE_INACTIVITATE    = 120;  // sesiunea expiră după atâta liniște
 const ZILE_TINE_MINTE        = 30;   // cât ține „ține-mă minte"
+const ZILE_PASTRARE_INCERCARI = 30;  // cât timp păstrăm încercările vechi
 
 /* ======================= CINE E CONECTAT ============================== */
 
@@ -61,7 +62,8 @@ function membruCurent(): ?array
     $_SESSION['ultima_activitate'] = time();
 
     $q = db()->prepare(
-        'SELECT id, permalink, nume, prenume, email, sex, stare, creat_la
+        'SELECT id, permalink, nume, prenume, email, sex, data_nasterii,
+                localitate, poza, poza_actualizata_la, stare, creat_la
            FROM membri
           WHERE id = ?
           LIMIT 1'
@@ -164,10 +166,43 @@ function deconecteaza(): void
 
 function scrieIncercare(string $email, bool $reusita): void
 {
+    // Momentul e scris de PHP, nu lăsat pe seama bazei de date: vezi
+    // explicația despre ceasuri din inc/bootstrap.php.
     $q = db()->prepare(
-        'INSERT INTO incercari_autentificare (email, ip, reusita) VALUES (?, ?, ?)'
+        'INSERT INTO incercari_autentificare (email, ip, reusita, creat_la)
+         VALUES (?, ?, ?, ?)'
     );
-    $q->execute([mb_substr($email, 0, 190), ipBinar(), $reusita ? 1 : 0]);
+    $q->execute([mb_substr($email, 0, 190), ipBinar(), $reusita ? 1 : 0, acum()]);
+
+    curataIncercariVechi();
+}
+
+/**
+ * Șterge încercările mai vechi de 30 de zile.
+ *
+ * Blocarea se uită doar la ultimele 10 minute, deci rândurile vechi nu mai
+ * folosesc la nimic. Le păstrăm o lună doar cât să se poată vedea un tipar
+ * de atacuri, apoi dispar — atât ca tabelul să nu crească la nesfârșit, cât
+ * și pentru că sunt date personale (adresă de e-mail plus adresă IP) pe care
+ * nu avem motiv să le ținem mai mult.
+ *
+ * Curățarea se face din când în când, la aproximativ una din 50 de scrieri,
+ * nu la fiecare: e o ștergere ieftină, dar n-are rost făcută de fiecare dată.
+ * Așa nu e nevoie nici de o sarcină programată separat, care în XAMPP oricum
+ * ar trebui pornită de mână.
+ */
+function curataIncercariVechi(): void
+{
+    if (random_int(1, 50) !== 1) {
+        return;
+    }
+
+    try {
+        $q = db()->prepare('DELETE FROM incercari_autentificare WHERE creat_la < ?');
+        $q->execute([acumMinus(ZILE_PASTRARE_INCERCARI * 24 * 60)]);
+    } catch (PDOException $e) {
+        // Curățenia nu e esențială: dacă dă greș, autentificarea continuă.
+    }
 }
 
 /**
@@ -180,6 +215,8 @@ function secundeBlocare(string $email): int
 {
     $ip = ipBinar();
 
+    $de_cand = acumMinus(MINUTE_BLOCARE);
+
     // 1. greșeli pentru această adresă, de la acest calculator
     $q = db()->prepare(
         'SELECT COUNT(*) AS greseli, MAX(creat_la) AS ultima
@@ -187,13 +224,13 @@ function secundeBlocare(string $email): int
           WHERE email = ?
             AND ip <=> ?
             AND reusita = 0
-            AND creat_la > (NOW() - INTERVAL ' . MINUTE_BLOCARE . ' MINUTE)
+            AND creat_la > ?
             AND creat_la > COALESCE(
                   (SELECT MAX(creat_la) FROM incercari_autentificare
                     WHERE email = ? AND ip <=> ? AND reusita = 1),
                   \'1970-01-01\')'
     );
-    $q->execute([$email, $ip, $email, $ip]);
+    $q->execute([$email, $ip, $de_cand, $email, $ip]);
     $r = $q->fetch();
 
     if ((int) $r['greseli'] >= INCERCARI_MAXIME) {
@@ -206,9 +243,9 @@ function secundeBlocare(string $email): int
             'SELECT COUNT(*) AS greseli, MAX(creat_la) AS ultima
                FROM incercari_autentificare
               WHERE ip = ? AND reusita = 0
-                AND creat_la > (NOW() - INTERVAL ' . MINUTE_BLOCARE . ' MINUTE)'
+                AND creat_la > ?'
         );
-        $q->execute([$ip]);
+        $q->execute([$ip, $de_cand]);
         $r = $q->fetch();
 
         if ((int) $r['greseli'] >= INCERCARI_MAXIME_IP) {
@@ -242,13 +279,13 @@ function incercariRamase(string $email): int
     $q = db()->prepare(
         'SELECT COUNT(*) FROM incercari_autentificare
           WHERE email = ? AND ip <=> ? AND reusita = 0
-            AND creat_la > (NOW() - INTERVAL ' . MINUTE_BLOCARE . ' MINUTE)
+            AND creat_la > ?
             AND creat_la > COALESCE(
                   (SELECT MAX(creat_la) FROM incercari_autentificare
                     WHERE email = ? AND ip <=> ? AND reusita = 1),
                   \'1970-01-01\')'
     );
-    $q->execute([$email, $ip, $email, $ip]);
+    $q->execute([$email, $ip, acumMinus(MINUTE_BLOCARE), $email, $ip]);
 
     return max(0, INCERCARI_MAXIME - (int) $q->fetchColumn());
 }
