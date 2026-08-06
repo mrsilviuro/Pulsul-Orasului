@@ -30,11 +30,19 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
  * din senin. Fără rândurile astea, omul ar primi „sesiunea a expirat" pentru
  * o poză prea mare — cel mai derutant mesaj cu putință.
  */
-if ($_POST === [] && $_FILES === [] && (int) ($_SERVER['CONTENT_LENGTH'] ?? 0) > 0) {
+$primite = (int) ($_SERVER['CONTENT_LENGTH'] ?? 0);
+$limitaPhp = octetiDinSetare((string) ini_get('post_max_size'));
+
+// Condiția cere și ca trimiterea să fi trecut chiar de limita serverului.
+// Fără partea asta, orice cerere care nu e un formular obișnuit — o probă
+// trimisă cu JSON, de pildă — ar primi „fișierul e prea mare", ceea ce ar
+// trimite căutarea în direcția greșită.
+if ($_POST === [] && $_FILES === [] && $primite > 0
+    && $limitaPhp > 0 && $primite > $limitaPhp) {
     raspunsJson([
         'ok'    => false,
         'mesaj' => 'Fișierul e prea mare. Alege o poză de cel mult '
-                 . (int) (POZA_OCTETI_MAX / 1024 / 1024) . ' MB.',
+                 . (int) (min(POZA_OCTETI_MAX, $limitaPhp) / 1024 / 1024) . ' MB.',
     ], 413);
 }
 
@@ -57,6 +65,11 @@ if ($membru === null) {
         'mesaj' => 'Trebuie să fii conectat ca să îți schimbi poza.',
     ], 401);
 }
+
+// Cine a intrat cu parola temporară nu face nimic altceva până nu-și pune una
+// nouă. Paginile obișnuite sunt oprite din inc/antet.php; api/ nu trece pe
+// acolo, deci verificarea se cheamă aici.
+opresteDacaTrebuieParolaNoua(true);
 
 $actiune = is_string($_POST['actiune'] ?? null) ? $_POST['actiune'] : 'salveaza';
 

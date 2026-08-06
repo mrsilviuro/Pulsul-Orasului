@@ -97,5 +97,22 @@ echo "\n=== NUME AFIȘAT ===\n";
 verifica('Popescu Ionuț -> P. Ionuț', 'P. Ionuț', numeAfisat('Popescu','Ionuț'));
 verifica('ștefan -> Ș. ...', 'Ș. Ana', numeAfisat('ștefan','Ana'));
 
+echo "\n=== PAROLA TEMPORARĂ ===\n";
+$pt = parolaTemporaraNoua();
+verifica('6 caractere', 6, strlen($pt));
+verifica('doar cifre și litere mari', 1, preg_match('/^[A-Z0-9]{6}$/', $pt));
+verifica('fără caractere confundabile (0, O, 1, I)', 0, preg_match('/[0O1I]/', $pt));
+
+// Se generează multe și se verifică două lucruri deodată: că nu se repetă și
+// că se folosește tot alfabetul, nu doar câteva litere.
+$multe = []; $litere = [];
+for ($i = 0; $i < 5000; $i++) {
+    $x = parolaTemporaraNoua();
+    $multe[$x] = 1;
+    foreach (str_split($x) as $c) $litere[$c] = 1;
+}
+verifica('5000 generate, aproape toate diferite', true, count($multe) > 4990);
+verifica('folosește toate cele 32 de caractere', 32, count($litere));
+
 printf("\n%s\nTOTAL: %d trecute, %d picate\n", str_repeat('=',60), $treceri, $picaturi);
 exit($picaturi > 0 ? 1 : 0);

@@ -79,6 +79,6 @@ $logat = isset($logat) ? $logat : esteLogat();
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-<script src="assets/js/main.js?v=14"></script>
+<script src="assets/js/main.js?v=15"></script>
 </body>
 </html>

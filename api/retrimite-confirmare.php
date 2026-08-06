@@ -9,6 +9,7 @@ declare(strict_types=1);
  */
 
 require_once __DIR__ . '/../inc/auth.php';
+require_once __DIR__ . '/../inc/email.php';
 
 if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
     raspunsJson(['ok' => false, 'mesaj' => 'Metodă nepermisă.'], 405);
@@ -48,7 +49,7 @@ $raspunsNeutru = [
 ];
 
 $q = db()->prepare(
-    'SELECT id, email, stare, token_trimis_la
+    'SELECT id, email, prenume, stare, token_trimis_la
        FROM membri
       WHERE email = ?
       LIMIT 1'
@@ -97,21 +98,7 @@ $u->execute([$tokenHash, $expira, acum(), $membru['id']]);
 $linkConfirmare = rtrim((string) $config['url_site'], '/')
                 . '/confirma.php?token=' . $token;
 
-// TODO: trimiterea propriu-zisă a e-mailului.
-// Vezi explicația din api/inregistrare.php: fișierul conține token-uri
-// valabile, deci se scrie doar în dezvoltare și doar în private/.
-if (!empty($config['dezvoltare'])) {
-    @file_put_contents(
-        __DIR__ . '/../private/emailuri-trimise.log',
-        sprintf(
-            "[%s] către: %s\nsubiect: Confirmă-ți contul (retrimitere)\nlink: %s\n\n",
-            date('Y-m-d H:i:s'),
-            $membru['email'],
-            $linkConfirmare
-        ),
-        FILE_APPEND
-    );
-}
+emailConfirmare($membru['email'], (string) $membru['prenume'], $linkConfirmare, true);
 
 $raspuns = $raspunsNeutru;
 

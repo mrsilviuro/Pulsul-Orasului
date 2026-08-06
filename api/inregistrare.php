@@ -14,6 +14,7 @@ declare(strict_types=1);
  */
 
 require_once __DIR__ . '/../inc/bootstrap.php';
+require_once __DIR__ . '/../inc/email.php';
 
 /* ------------------------- 1. Doar prin POST -------------------------- */
 
@@ -171,25 +172,23 @@ if (!$reusit) {
 $linkConfirmare = rtrim((string) $config['url_site'], '/')
                 . '/confirma.php?token=' . $token;
 
-// TODO: trimiterea propriu-zisă a e-mailului.
-//
-// În XAMPP nu există server de mail, așa că deocamdată scriem linkul într-un
-// fișier. Două precauții, pentru că fișierul conține token-uri valabile —
-// cine le citește poate activa contul altcuiva:
-//   1. stă în private/, unde .htaccess refuză accesul prin web;
-//   2. se scrie DOAR în modul dezvoltare, deci pe site-ul public nici nu apare.
-if (!empty($config['dezvoltare'])) {
-    @file_put_contents(
-        __DIR__ . '/../private/emailuri-trimise.log',
-        sprintf(
-            "[%s] către: %s\nsubiect: Confirmă-ți contul pe PulsulOrasului.Ro\nlink: %s\n\n",
-            date('Y-m-d H:i:s'),
-            $curat['email'],
-            $linkConfirmare
-        ),
-        FILE_APPEND
-    );
+/**
+ * Contul e deja creat, deci un e-mail care nu pleacă nu mai poate anula nimic.
+ *
+ * De aceea nu oprim aici cu eroare: îi spunem omului că mesajul a plecat și
+ * lăsăm în log ce s-a întâmplat. Are oricum butonul de retrimitere, iar dacă
+ * i-am spune „nu s-a putut crea contul" ar încerca din nou și ar da peste
+ * „adresa e deja folosită" — adică peste propriul lui cont.
+ */
+$trimis = emailConfirmare($curat['email'], $curat['prenume'], $linkConfirmare);
+
+if (!$trimis) {
+    error_log('PulsulOrasului: e-mailul de confirmare nu a plecat pentru un cont nou.');
 }
+
+// Momentul trimiterii ține răgazul dintre două retrimiteri.
+$u = db()->prepare('UPDATE membri SET token_trimis_la = ? WHERE email = ?');
+$u->execute([acum(), $curat['email']]);
 
 /* ---------------------------- 9. Răspunsul ---------------------------- */
 

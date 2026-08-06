@@ -248,6 +248,30 @@ function h(?string $text): string
     return htmlspecialchars($text ?? '', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
 
+/**
+ * Traduce o setare de PHP scrisă pe scurt („8M", „2G") în octeți.
+ *
+ * Întoarce 0 pentru „fără limită" (-1) și pentru valorile pe care nu le
+ * înțelege, ca cel care o folosește să poată trata cazul.
+ */
+function octetiDinSetare(string $valoare): int
+{
+    $valoare = trim($valoare);
+
+    if ($valoare === '' || (int) $valoare === -1) {
+        return 0;
+    }
+
+    $unitate = strtolower(substr($valoare, -1));
+    $numar   = (int) $valoare;
+
+    if ($unitate === 'g') return $numar * 1024 * 1024 * 1024;
+    if ($unitate === 'm') return $numar * 1024 * 1024;
+    if ($unitate === 'k') return $numar * 1024;
+
+    return $numar;
+}
+
 /** Adresa IP a vizitatorului, în formă binară, pentru coloana VARBINARY(16). */
 function ipBinar(): ?string
 {

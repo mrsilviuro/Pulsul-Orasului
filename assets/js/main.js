@@ -7,6 +7,7 @@
    5. Pagina de articol (taburi, participare, comentarii)
    6. Formularul de contact
    7. Autentificare / înregistrare
+   7b. Parola uitată și parola nouă
    8. Stele și pagina de profil
    9. Poza de profil
    ========================================================================= */
@@ -287,6 +288,80 @@
   /** Când cererea nu a plecat deloc: internet căzut, adresă greșită. */
   function mesajFaraLegatura() {
     return 'Nu am putut lua legătura cu serverul. Verifică internetul și încearcă din nou.';
+  }
+
+  /* --- Formulare: bucățile folosite de mai multe pagini -------------------
+     Stau aici, în afara oricărei pagini anume, pentru că le folosesc și
+     autentificarea, și înregistrarea, și cele două pagini de parolă. Aceeași
+     regulă ca la CSS: un singur loc, nu câte o copie pentru fiecare pagină. */
+
+  var tiparEmail = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+  function campul(id) {
+    var input = document.getElementById(id);
+    return input ? input.closest('.field') : null;
+  }
+
+  /** Pune sau șterge mesajul de eroare al unui câmp. Întoarce true dacă e bun. */
+  function setError(id, errorId, message) {
+    var input = document.getElementById(id);
+    var boxEl = document.getElementById(errorId);
+    var field = campul(id);
+    if (!input || !boxEl || !field) return !message;
+
+    if (message) {
+      field.classList.add('has-error');
+      input.setAttribute('aria-invalid', 'true');
+      boxEl.textContent = message;
+      boxEl.hidden = false;
+    } else {
+      field.classList.remove('has-error');
+      input.removeAttribute('aria-invalid');
+      boxEl.textContent = '';
+      boxEl.hidden = true;
+    }
+    return !message;
+  }
+
+  /** Butonul cu ochiul, care arată parola. Merge pe orice pagină. */
+  document.querySelectorAll('[data-toggle-pass]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var input = document.getElementById(btn.getAttribute('data-toggle-pass'));
+      if (!input) return;
+      var shown = input.type === 'text';
+      input.type = shown ? 'password' : 'text';
+      btn.setAttribute('aria-pressed', String(!shown));
+      btn.setAttribute('aria-label', shown ? 'Arată parola' : 'Ascunde parola');
+    });
+  });
+
+  /** Punctaj simplu, orientativ: lungime plus varietate de caractere. */
+  function putereParolei(value) {
+    if (!value) return 0;
+    var score = 0;
+    if (value.length >= 8)  score++;
+    if (value.length >= 12) score++;
+    if (/[a-z]/.test(value) && /[A-Z]/.test(value)) score++;
+    if (/\d/.test(value) && /[^\w\s]/.test(value)) score++;
+    return Math.min(score, 4);
+  }
+
+  /** Leagă indicatorul de putere de un câmp de parolă. */
+  function legIndicatorulDeParola(idInput, idMetru, idText) {
+    var input = document.getElementById(idInput);
+    var metru = document.getElementById(idMetru);
+    var text  = document.getElementById(idText);
+    if (!input || !metru) return;
+
+    var etichete = ['', 'Slabă', 'Acceptabilă', 'Bună', 'Puternică'];
+
+    input.addEventListener('input', function () {
+      if (!input.value) { metru.hidden = true; return; }
+      var scor = putereParolei(input.value);
+      metru.hidden = false;
+      metru.setAttribute('data-score', String(scor));
+      if (text) text.textContent = etichete[scor];
+    });
   }
 
   /* --- Taburi (refolosibile: orice container cu data-tabs) --- */
@@ -664,18 +739,6 @@
       }, 1000);
     }
 
-    /* --- Butonul de afișare a parolei --- */
-    document.querySelectorAll('[data-toggle-pass]').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        var input = document.getElementById(btn.getAttribute('data-toggle-pass'));
-        if (!input) return;
-        var shown = input.type === 'text';
-        input.type = shown ? 'password' : 'text';
-        btn.setAttribute('aria-pressed', String(!shown));
-        btn.setAttribute('aria-label', shown ? 'Arată parola' : 'Ascunde parola');
-      });
-    });
-
     /* --- Butoanele Google --- */
     document.querySelectorAll('[data-google]').forEach(function (btn) {
       btn.addEventListener('click', function () {
@@ -685,29 +748,11 @@
       });
     });
 
-    /* --- Verificări comune --- */
-    var emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-
-    function fieldOf(id) { return document.getElementById(id).closest('.field'); }
-
-    function setError(id, errorId, message) {
-      var input = document.getElementById(id);
-      var boxEl = document.getElementById(errorId);
-      var field = fieldOf(id);
-
-      if (message) {
-        field.classList.add('has-error');
-        input.setAttribute('aria-invalid', 'true');
-        boxEl.textContent = message;
-        boxEl.hidden = false;
-      } else {
-        field.classList.remove('has-error');
-        input.removeAttribute('aria-invalid');
-        boxEl.textContent = '';
-        boxEl.hidden = true;
-      }
-      return !message;
-    }
+    /* --- Verificări comune ---
+       tiparEmail, campul() și setError() vin de mai sus, din partea folosită
+       de toate paginile. */
+    var emailPattern = tiparEmail;
+    var fieldOf = campul;
 
     // Leagă un set de reguli la un formular: validare la blur, recontrol în
     // timp real după prima eroare, iar la submit focus pe primul câmp greșit.
@@ -954,32 +999,8 @@
     }
 
     /* --- Puterea parolei --- */
-    // Punctaj simplu, orientativ: lungime + varietate de caractere.
-    function passwordScore(value) {
-      if (!value) return 0;
-      var score = 0;
-      if (value.length >= 8)  score++;
-      if (value.length >= 12) score++;
-      if (/[a-z]/.test(value) && /[A-Z]/.test(value)) score++;
-      if (/\d/.test(value) && /[^\w\s]/.test(value)) score++;
-      return Math.min(score, 4);
-    }
-
+    legIndicatorulDeParola('rg-password', 'pass-meter', 'pass-hint');
     var passInput = document.getElementById('rg-password');
-    var passMeter = document.getElementById('pass-meter');
-    var passHint  = document.getElementById('pass-hint');
-    var labels    = ['', 'Slabă', 'Acceptabilă', 'Bună', 'Puternică'];
-
-    if (passInput && passMeter) {
-      passInput.addEventListener('input', function () {
-        var value = passInput.value;
-        if (!value) { passMeter.hidden = true; return; }
-        var score = passwordScore(value);
-        passMeter.hidden = false;
-        passMeter.setAttribute('data-score', String(score));
-        passHint.textContent = labels[score];
-      });
-    }
 
     /* --- Formularul de înregistrare --- */
     var registerForm = document.getElementById('register-form');
@@ -1039,7 +1060,7 @@
           check: function (v) {
             if (!v) return 'Alege o parolă.';
             if (v.length < 8) return 'Parola trebuie să aibă minimum 8 caractere.';
-            if (passwordScore(v) < 2) return 'Parola e prea simplă — adaugă cifre sau litere mari.';
+            if (putereParolei(v) < 2) return 'Parola e prea simplă — adaugă cifre sau litere mari.';
             return '';
           }
         },
@@ -1169,6 +1190,211 @@
         });
       }
     }
+  }
+
+
+  /* ------------- 7b. PAROLA UITATĂ ȘI PAROLA NOUĂ ----------------------- */
+
+  /* --- „Mi-am uitat parola": cererea unei parole temporare --- */
+  var uitataForm = document.getElementById('uitata-form');
+
+  if (uitataForm) {
+    var uitataButon = uitataForm.querySelector('button[type=submit]');
+
+    uitataForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+
+      var camp  = document.getElementById('uit-email');
+      var email = camp.value.trim();
+
+      if (!email) {
+        setError('uit-email', 'err-uit-email', 'Scrie adresa de e-mail.');
+        camp.focus();
+        return;
+      }
+      if (!tiparEmail.test(email)) {
+        setError('uit-email', 'err-uit-email', 'Adresa de e-mail nu pare validă.');
+        camp.focus();
+        return;
+      }
+      setError('uit-email', 'err-uit-email', '');
+
+      var textInitial = uitataButon.textContent;
+      uitataButon.disabled = true;
+      uitataButon.textContent = 'Se trimite…';
+
+      fetch('api/parola-uitata.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          csrf:  (uitataForm.querySelector('[name="csrf"]') || {}).value || '',
+          email: email
+        })
+      })
+      .then(citesteRaspuns)
+      .then(function (rez) {
+        uitataButon.disabled = false;
+        uitataButon.textContent = textInitial;
+
+        if (!rez.corp) { toast(mesajRaspunsNeasteptat(rez)); return; }
+        var c = rez.corp;
+
+        if (c.erori && c.erori.email) {
+          setError('uit-email', 'err-uit-email', c.erori.email);
+          camp.focus();
+          return;
+        }
+
+        if (!c.ok) { toast(c.mesaj || 'Nu a mers. Mai încearcă o dată.'); return; }
+
+        var unde = document.getElementById('uitata-email');
+        if (unde) unde.textContent = email;
+
+        // Doar în dezvoltare, unde nu pleacă e-mailuri.
+        if (c.parola_dezvoltare) {
+          var cutie = document.getElementById('uitata-dev');
+          var text  = document.getElementById('uitata-parola');
+          if (cutie && text) { text.textContent = c.parola_dezvoltare; cutie.hidden = false; }
+        }
+
+        document.getElementById('uitata-block').hidden = true;
+        var gata = document.getElementById('uitata-done');
+        gata.hidden = false;
+        gata.setAttribute('tabindex', '-1');
+        gata.focus();
+      })
+      .catch(function () {
+        uitataButon.disabled = false;
+        uitataButon.textContent = textInitial;
+        toast(mesajFaraLegatura());
+      });
+    });
+  }
+
+  /* --- Alegerea unei parole noi --- */
+  var parolaForm = document.getElementById('parola-form');
+
+  if (parolaForm) {
+    legIndicatorulDeParola('pn-noua', 'pn-meter', 'pn-hint');
+
+    // Când e cerută și parola veche, câmpul ei există; altfel, nu.
+    var areVeche = document.getElementById('pn-veche') !== null;
+
+    var reguliParola = [];
+
+    if (areVeche) {
+      reguliParola.push({
+        id: 'pn-veche', error: 'err-pn-veche',
+        check: function (v) { return v ? '' : 'Scrie parola de acum.'; }
+      });
+    }
+
+    reguliParola.push({
+      id: 'pn-noua', error: 'err-pn-noua',
+      check: function (v) {
+        if (!v) return 'Alege o parolă.';
+        if (v.length < 8) return 'Parola trebuie să aibă cel puțin 8 caractere.';
+        if (putereParolei(v) < 2) return 'Parola e prea simplă — adaugă cifre sau litere mari.';
+        return '';
+      }
+    });
+
+    reguliParola.push({
+      id: 'pn-noua2', error: 'err-pn-noua2',
+      check: function (v) {
+        var noua = document.getElementById('pn-noua').value;
+        if (!v) return 'Repetă parola.';
+        if (v !== noua) return 'Cele două parole nu coincid.';
+        return '';
+      }
+    });
+
+    reguliParola.forEach(function (regula) {
+      var input = document.getElementById(regula.id);
+      if (!input) return;
+      input.addEventListener('blur', function () {
+        setError(regula.id, regula.error, regula.check(input.value.trim()));
+      });
+      input.addEventListener('input', function () {
+        var f = campul(regula.id);
+        if (f && f.classList.contains('has-error')) {
+          setError(regula.id, regula.error, regula.check(input.value.trim()));
+        }
+      });
+    });
+
+    parolaForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+
+      var primulGresit = null;
+      reguliParola.forEach(function (regula) {
+        var input = document.getElementById(regula.id);
+        var bun = setError(regula.id, regula.error, regula.check(input.value.trim()));
+        if (!bun && !primulGresit) primulGresit = input;
+      });
+
+      if (primulGresit) {
+        primulGresit.focus();
+        toast('Mai sunt câmpuri de corectat.');
+        return;
+      }
+
+      var buton = parolaForm.querySelector('button[type=submit]');
+      var textInitial = buton.textContent;
+      buton.disabled = true;
+      buton.textContent = 'Se salvează…';
+
+      var trimitem = {
+        csrf: (parolaForm.querySelector('[name="csrf"]') || {}).value || '',
+        parola: document.getElementById('pn-noua').value,
+        parola_confirmare: document.getElementById('pn-noua2').value
+      };
+      if (areVeche) trimitem.parola_veche = document.getElementById('pn-veche').value;
+
+      fetch('api/parola-noua.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify(trimitem)
+      })
+      .then(citesteRaspuns)
+      .then(function (rez) {
+        buton.disabled = false;
+        buton.textContent = textInitial;
+
+        if (!rez.corp) { toast(mesajRaspunsNeasteptat(rez)); return; }
+        var c = rez.corp;
+
+        if (c.erori) {
+          var primul = null;
+          [['parola_veche', 'pn-veche', 'err-pn-veche'],
+           ['parola', 'pn-noua', 'err-pn-noua'],
+           ['parola_confirmare', 'pn-noua2', 'err-pn-noua2']].forEach(function (p) {
+            var mesaj = c.erori[p[0]] || '';
+            setError(p[1], p[2], mesaj);
+            if (mesaj && !primul) primul = document.getElementById(p[1]);
+          });
+          if (primul) primul.focus();
+          toast('Mai sunt câmpuri de corectat.');
+          return;
+        }
+
+        if (!c.ok) { toast(c.mesaj || 'Nu am putut schimba parola.'); return; }
+
+        document.getElementById('parola-block').hidden = true;
+        var gata = document.getElementById('parola-done');
+        gata.hidden = false;
+        gata.setAttribute('tabindex', '-1');
+        gata.focus();
+        toast(c.mesaj || 'Parola a fost schimbată.');
+      })
+      .catch(function () {
+        buton.disabled = false;
+        buton.textContent = textInitial;
+        toast(mesajFaraLegatura());
+      });
+    });
   }
 
 

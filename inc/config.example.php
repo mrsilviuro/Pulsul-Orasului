@@ -89,6 +89,33 @@ return [
     // Câte ore e valabil linkul de confirmare.
     'ore_valabilitate_token' => 48,
 
+    // ------------------------------------------------------------ e-mail
+    /**
+     * De pe ce adresă pleacă mesajele.
+     *
+     * Trebuie să fie pe domeniul tău. Dacă pui aici o adresă de gmail.com,
+     * mesajele ajung aproape sigur în „Spam": serverul care le trimite nu are
+     * voie să trimită în numele Gmail, iar verificarea SPF observă asta.
+     */
+    'email_expeditor' => 'noreply@pulsulorasului.ro',
+    'email_nume'      => 'PulsulOrasului.Ro',
+
+    // Unde ajung răspunsurile, dacă cineva apasă „Reply".
+    'email_raspuns'   => 'contact@pulsulorasului.ro',
+
+    /**
+     * Cum pleacă mesajele:
+     *
+     *   'auto'    — mail() pe site-ul public, fișier în dezvoltare (implicit)
+     *   'mail'    — mereu prin funcția mail() a serverului
+     *   'fisier'  — nu se trimite nimic; mesajele se scriu în
+     *               private/emailuri-trimise.log, iar ultimul și în
+     *               private/ultimul-email.html, ca să-i poți vedea aspectul
+     *
+     * În XAMPP nu există server de e-mail, de aceea 'auto' scrie în fișier.
+     */
+    'email_metoda' => 'auto',
+
     // ---------------------------------------------------------- diagnostic
     /**
      * Cheia pentru verifica.php, pagina care spune ce nu merge pe server.

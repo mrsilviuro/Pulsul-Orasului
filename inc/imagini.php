@@ -185,19 +185,12 @@ function tipuriPozeAcceptate(): array
  */
 function incapeInMemorie(int $latime, int $inaltime): bool
 {
-    $limita = ini_get('memory_limit');
+    $octeti = octetiDinSetare((string) ini_get('memory_limit'));
 
-    // -1 înseamnă „fără limită".
-    if ($limita === false || (int) $limita === -1) {
+    // 0 înseamnă „fără limită".
+    if ($octeti === 0) {
         return true;
     }
-
-    $unitate = strtolower(substr(trim((string) $limita), -1));
-    $octeti  = (int) $limita;
-
-    if ($unitate === 'g')      $octeti *= 1024 * 1024 * 1024;
-    elseif ($unitate === 'm')  $octeti *= 1024 * 1024;
-    elseif ($unitate === 'k')  $octeti *= 1024;
 
     $nevoie = $latime * $inaltime * 4 * 1.25;
 

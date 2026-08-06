@@ -110,7 +110,7 @@ require __DIR__ . '/inc/antet.php';
             <div class="field">
               <div class="field__head">
                 <label for="lg-password">Parola</label>
-                <a class="field__link" href="#">Ai uitat parola?</a>
+                <a class="field__link" href="parola-uitata.php">Ai uitat parola?</a>
               </div>
               <div class="input-pass">
                 <input type="password" id="lg-password" name="parola" autocomplete="current-password"
@@ -196,7 +196,7 @@ require __DIR__ . '/inc/antet.php';
             <p class="done__hint">Ți-ai uitat parola? O poți schimba, ca să nu mai aștepți.</p>
 
             <div class="done__actions">
-              <a class="btn btn--primary" href="#">Mi-am uitat parola</a>
+              <a class="btn btn--primary" href="parola-uitata.php">Mi-am uitat parola</a>
             </div>
           </div>
         </div>
