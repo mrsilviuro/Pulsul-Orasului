@@ -1760,3 +1760,253 @@ input:-webkit-autofill:focus {
 /* --- 9. Derulare fără efecte diferite ---------------------------------- */
 body { overscroll-behavior-y: none; }
 .tabs, .slideshow__track { -webkit-overflow-scrolling: touch; }
+
+/* =========================================================================
+   PAGINA DE PROFIL
+   20. Antetul profilului și datele scurte
+   21. Stele (afișare și alegere)
+   22. Activitate
+   23. Evaluări
+   ========================================================================= */
+
+/* ---------------------- 20. ANTETUL PROFILULUI -------------------------- */
+.profile {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 24px;
+  padding: 24px 26px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.profile__id { display: flex; align-items: center; gap: 18px; min-width: 0; }
+
+.profile__avatar {
+  width: 86px; height: 86px;
+  border-radius: 50%;
+  flex: none;
+  box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px var(--brand-soft);
+}
+
+.profile__name {
+  font-size: clamp(23px, 4vw, 30px);
+  letter-spacing: -.03em;
+  margin-bottom: 10px;
+}
+
+/* datele scurte: vârstă, localitate, sex, vechime */
+.facts { display: flex; flex-wrap: wrap; gap: 7px; }
+
+.fact {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 11px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+  font-size: 13px; font-weight: 600;
+  color: var(--text-soft);
+}
+.fact .ico { width: 14px; height: 14px; color: var(--text-faint); }
+.fact--muted { color: var(--text-faint); font-weight: 500; }
+
+/* Simbolurile de sex: desenate de noi, ca să arate identic pe orice
+   dispozitiv. Caracterele ♂ ♀ se randează diferit de la un font la altul,
+   uneori chiar ca emoji colorat, de aceea nu le folosim. */
+.fact--m { background: rgba(59, 130, 246, .12); }
+.fact--m .ico { color: #3b82f6; width: 15px; height: 15px; }
+.fact--f { background: rgba(236, 72, 153, .12); }
+.fact--f .ico { color: #ec4899; width: 15px; height: 15px; }
+
+/* caseta cu nota medie, în dreapta antetului */
+.rating {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 14px 22px;
+  border-radius: var(--radius);
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  min-width: 168px;
+}
+.rating__score { display: flex; align-items: baseline; gap: 3px; }
+.rating__value { font-size: 27px; font-weight: 800; letter-spacing: -.02em; }
+.rating__max { font-size: 13px; font-weight: 700; color: var(--text-faint); }
+.rating__meta { font-size: 12.5px; color: var(--text-faint); text-align: center; }
+
+/* când nu există nicio notă, ascundem cifra și lăsăm doar stelele goale */
+.rating.is-empty .rating__score { display: none; }
+.rating.is-empty .rating__meta { font-weight: 700; color: var(--text-soft); }
+
+/* ------------------------- 21. STELE ------------------------------------ */
+/* Stelele se desenează din JS. Rândul plin stă peste cel gol și e tăiat pe
+   lățime, ca să putem afișa și jumătăți de stea (4,6 din 5). */
+.stars {
+  position: relative;
+  display: inline-block;
+  line-height: 0;
+  flex: none;
+}
+.stars__row { display: flex; gap: 2px; white-space: nowrap; }
+.stars__row--full {
+  position: absolute;
+  top: 0; left: 0;
+  overflow: hidden;
+  width: 0;
+}
+.stars svg {
+  width: var(--star-size, 18px);
+  height: var(--star-size, 18px);
+  flex: none;
+}
+.stars__row--empty svg { fill: var(--surface-2); stroke: var(--border); stroke-width: 1; }
+.stars__row--full svg  { fill: #f5a623; stroke: #f5a623; stroke-width: 1; }
+
+.rating__stars--sm { --star-size: 14px; }
+
+/* selectorul de stele din formular */
+.stars-input { display: inline-flex; gap: 3px; }
+.stars-input button {
+  padding: 2px;
+  line-height: 0;
+  border-radius: 5px;
+  transition: transform .15s var(--ease);
+}
+.stars-input svg { width: 24px; height: 24px; fill: var(--surface-2); stroke: var(--border); stroke-width: 1; }
+.stars-input button:hover { transform: scale(1.14); }
+.stars-input button.is-on svg { fill: #f5a623; stroke: #f5a623; }
+
+/* --------------------------- 22. ACTIVITATE ----------------------------- */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  padding: 18px 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  transition: transform .2s var(--ease), box-shadow .2s var(--ease);
+}
+.stat:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+
+.stat__ico {
+  width: 34px; height: 34px;
+  display: grid; place-items: center;
+  border-radius: 10px;
+  margin-bottom: 7px;
+}
+.stat__ico .ico { width: 18px; height: 18px; }
+.stat__ico--brand { background: var(--brand-soft); color: var(--brand); }
+.stat__ico--ok    { background: rgba(22, 163, 74, .13); color: #16a34a; }
+.stat__ico--warn  { background: rgba(240, 160, 40, .15); color: #d68a10; }
+[data-theme="dark"] .stat__ico--warn { color: #f0a028; }
+
+.stat__value { font-size: 27px; font-weight: 800; letter-spacing: -.02em; line-height: 1.1; }
+.stat__label { font-size: 13px; color: var(--text-soft); line-height: 1.35; }
+
+/* --------------------------- 23. EVALUĂRI ------------------------------- */
+.feedback { margin-top: 46px; }
+.feedback .section-head { margin-bottom: 20px; }
+
+.rating-summary {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  flex-wrap: wrap;
+  padding: 22px 26px;
+  margin-bottom: 28px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-soft);
+}
+.rating-summary__score {
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  flex: none;
+}
+.rating-summary__value { font-size: 40px; font-weight: 800; letter-spacing: -.03em; line-height: 1; }
+.rating-summary__count { font-size: 12.5px; color: var(--text-faint); }
+
+.rating-bars { flex: 1; min-width: 200px; display: grid; gap: 6px; }
+.rating-bars li {
+  display: grid;
+  grid-template-columns: 12px 1fr 24px;
+  align-items: center;
+  gap: 10px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-faint);
+}
+.rating-bars li span:last-child { text-align: right; }
+.rating-bar {
+  height: 7px;
+  border-radius: 4px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.rating-bar i { display: block; height: 100%; border-radius: 4px; background: #f5a623; }
+
+/* formularul de evaluare */
+.review-form { display: flex; gap: 12px; margin-bottom: 30px; }
+.review-form__stars {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 10px;
+  margin-bottom: 11px;
+}
+.review-form__ask { font-size: 14px; font-weight: 700; }
+.review-form__chosen { font-size: 13px; color: var(--text-faint); }
+
+.review-form textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 16px;
+  line-height: 1.6;
+  resize: vertical;
+  transition: border-color .18s var(--ease), box-shadow .18s var(--ease);
+}
+.review-form textarea::placeholder { color: var(--text-faint); }
+.review-form textarea:focus {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px var(--brand-soft);
+}
+
+.comment__author--system { color: var(--text-soft); }
+
+/* evaluările folosesc structura de comentarii, cu stelele deasupra textului */
+.comment__main .rating__stars { margin-bottom: 5px; }
+
+/* ------------------- responsive pagina de profil ------------------------ */
+@media (max-width: 800px) {
+  .stats { grid-template-columns: 1fr; }
+  .stat { flex-direction: row; align-items: center; gap: 14px; }
+  .stat__ico { margin-bottom: 0; }
+  .stat__value { font-size: 23px; }
+  .stat__label { flex: 1; }
+}
+
+@media (max-width: 640px) {
+  .profile { flex-direction: column; align-items: stretch; padding: 20px; }
+  .profile__id { flex-direction: column; align-items: center; text-align: center; }
+  .facts { justify-content: center; }
+  .rating { width: 100%; }
+  .rating-summary { gap: 20px; justify-content: center; }
+}
+
+@media (max-width: 560px) {
+  .profile__avatar { width: 74px; height: 74px; }
+  .review-form { gap: 10px; }
+  .review-form .comment-form__avatar { width: 32px; height: 32px; }
+}
