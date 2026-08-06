@@ -72,25 +72,6 @@ require __DIR__ . '/inc/antet.php';
     <!-- Grilă articole -->
     <div class="grid">
 
-      <article class="card card--wide">
-        <a class="card__media" href="articol.php">
-          <img src="assets/img/posts/post-1.svg" alt="" width="1280" height="720" loading="lazy" decoding="async">
-          <span class="card__tag">Sport</span>
-        </a>
-        <div class="card__body">
-          <h2 class="card__title"><a href="articol.php">Maratonul orașului revine: peste 4.000 de alergători la start</a></h2>
-          <p class="card__excerpt">Traseul trece anul acesta prin centrul vechi, iar înscrierile pentru cursa de 10 km s-au închis în mai puțin de 48 de ore. Tot ce trebuie să știi despre restricții, puncte de hidratare și program.</p>
-          <div class="card__meta">
-            <span class="avatar" aria-hidden="true">AM</span>
-            <span class="card__author">Andrei M.</span>
-            <span class="dot" aria-hidden="true"></span>
-            <time datetime="2026-08-04">4 aug 2026</time>
-            <span class="dot" aria-hidden="true"></span>
-            <span>5 min citire</span>
-          </div>
-        </div>
-      </article>
-
       <article class="card">
         <a class="card__media" href="articol.php">
           <img src="assets/img/posts/post-2.svg" alt="" width="1280" height="720" loading="lazy" decoding="async">
