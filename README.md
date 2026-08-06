@@ -378,6 +378,27 @@ contul altcuiva trimițând trei parole greșite. De aceea numărătoarea se fac
 perechea (e-mail + IP), plus o limită mai largă de 15 greșeli pe oră de la
 aceeași adresă IP, pentru cine încearcă multe conturi de la același calculator.
 
+### Un singur ceas în toată aplicația
+
+Toate momentele — înregistrare, încercări de autentificare, expirarea
+linkurilor — se calculează **în PHP** și se trimit către baza de date ca
+parametri obișnuiți. Nicio interogare nu mai folosește `NOW()`.
+
+Motivul e o problemă reală, pe care am avut-o: dacă un moment se scrie cu
+`NOW()` (ceasul serverului de baze de date) și se compară apoi cu `time()`
+(ceasul PHP), iar cele două au fusuri orare diferite — ceea ce în XAMPP e
+obișnuit — toate socotelile de tipul „mai ai 10 minute" ies greșite exact cu
+diferența dintre fusuri. La o diferență de o oră, cele 10 minute deveneau 70.
+
+Fusul orar se stabilește o singură dată, în `inc/config.php`:
+
+```php
+'fus_orar' => 'Europe/Bucharest',
+```
+
+**Dacă ai deja un `inc/config.php`, adaugă linia asta.** Fără ea se folosește
+tot `Europe/Bucharest`, dar e mai bine să fie scrisă explicit.
+
 ### Măsuri de siguranță
 
 - **Sesiunea se reface la intrare** (`session_regenerate_id`), ca un

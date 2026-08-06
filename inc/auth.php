@@ -164,10 +164,13 @@ function deconecteaza(): void
 
 function scrieIncercare(string $email, bool $reusita): void
 {
+    // Momentul e scris de PHP, nu lăsat pe seama bazei de date: vezi
+    // explicația despre ceasuri din inc/bootstrap.php.
     $q = db()->prepare(
-        'INSERT INTO incercari_autentificare (email, ip, reusita) VALUES (?, ?, ?)'
+        'INSERT INTO incercari_autentificare (email, ip, reusita, creat_la)
+         VALUES (?, ?, ?, ?)'
     );
-    $q->execute([mb_substr($email, 0, 190), ipBinar(), $reusita ? 1 : 0]);
+    $q->execute([mb_substr($email, 0, 190), ipBinar(), $reusita ? 1 : 0, acum()]);
 }
 
 /**
@@ -180,6 +183,8 @@ function secundeBlocare(string $email): int
 {
     $ip = ipBinar();
 
+    $de_cand = acumMinus(MINUTE_BLOCARE);
+
     // 1. greșeli pentru această adresă, de la acest calculator
     $q = db()->prepare(
         'SELECT COUNT(*) AS greseli, MAX(creat_la) AS ultima
@@ -187,13 +192,13 @@ function secundeBlocare(string $email): int
           WHERE email = ?
             AND ip <=> ?
             AND reusita = 0
-            AND creat_la > (NOW() - INTERVAL ' . MINUTE_BLOCARE . ' MINUTE)
+            AND creat_la > ?
             AND creat_la > COALESCE(
                   (SELECT MAX(creat_la) FROM incercari_autentificare
                     WHERE email = ? AND ip <=> ? AND reusita = 1),
                   \'1970-01-01\')'
     );
-    $q->execute([$email, $ip, $email, $ip]);
+    $q->execute([$email, $ip, $de_cand, $email, $ip]);
     $r = $q->fetch();
 
     if ((int) $r['greseli'] >= INCERCARI_MAXIME) {
@@ -206,9 +211,9 @@ function secundeBlocare(string $email): int
             'SELECT COUNT(*) AS greseli, MAX(creat_la) AS ultima
                FROM incercari_autentificare
               WHERE ip = ? AND reusita = 0
-                AND creat_la > (NOW() - INTERVAL ' . MINUTE_BLOCARE . ' MINUTE)'
+                AND creat_la > ?'
         );
-        $q->execute([$ip]);
+        $q->execute([$ip, $de_cand]);
         $r = $q->fetch();
 
         if ((int) $r['greseli'] >= INCERCARI_MAXIME_IP) {
@@ -242,13 +247,13 @@ function incercariRamase(string $email): int
     $q = db()->prepare(
         'SELECT COUNT(*) FROM incercari_autentificare
           WHERE email = ? AND ip <=> ? AND reusita = 0
-            AND creat_la > (NOW() - INTERVAL ' . MINUTE_BLOCARE . ' MINUTE)
+            AND creat_la > ?
             AND creat_la > COALESCE(
                   (SELECT MAX(creat_la) FROM incercari_autentificare
                     WHERE email = ? AND ip <=> ? AND reusita = 1),
                   \'1970-01-01\')'
     );
-    $q->execute([$email, $ip, $email, $ip]);
+    $q->execute([$email, $ip, acumMinus(MINUTE_BLOCARE), $email, $ip]);
 
     return max(0, INCERCARI_MAXIME - (int) $q->fetchColumn());
 }

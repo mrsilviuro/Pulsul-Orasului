@@ -64,9 +64,9 @@ if ($ip !== null) {
     $q = db()->prepare(
         'SELECT COUNT(*) FROM membri
           WHERE ip_inregistrare = ?
-            AND creat_la > (NOW() - INTERVAL 1 HOUR)'
+            AND creat_la > ?'
     );
-    $q->execute([$ip]);
+    $q->execute([$ip, acumMinus(60)]);
 
     if ((int) $q->fetchColumn() >= $limita) {
         raspunsJson([
@@ -109,9 +109,9 @@ if ($parolaHash === false) {
 
 $sql = 'INSERT INTO membri
           (permalink, nume, prenume, email, parola_hash, data_nasterii, sex,
-           stare, token_confirmare, token_expira, ip_inregistrare)
+           stare, token_confirmare, token_expira, ip_inregistrare, creat_la)
         VALUES
-          (?, ?, ?, ?, ?, ?, ?, \'neconfirmat\', ?, ?, ?)';
+          (?, ?, ?, ?, ?, ?, ?, \'neconfirmat\', ?, ?, ?, ?)';
 
 $permalink = '';
 $reusit    = false;
@@ -134,6 +134,7 @@ for ($incercare = 1; $incercare <= 5 && !$reusit; $incercare++) {
             $tokenHash,
             $tokenExpira,
             $ip,
+            acum(),
         ]);
         $reusit = true;
 
