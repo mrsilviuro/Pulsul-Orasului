@@ -106,6 +106,13 @@ function pornesteSesiunea(): void
         return;
     }
 
+    // O sesiune nu mai poate fi pornită după ce pagina a început să se
+    // tipărească — cookie-ul se trimite printre antetele HTTP, iar acelea au
+    // plecat deja. Fără verificarea asta, PHP ar umple pagina cu avertismente.
+    if (headers_sent()) {
+        return;
+    }
+
     session_set_cookie_params([
         'httponly' => true,                     // JavaScript nu vede cookie-ul
         'samesite' => 'Lax',                    // nu pleacă la cereri de pe alt site

@@ -44,3 +44,20 @@ CREATE TABLE IF NOT EXISTS incercari_autentificare (
 ) ENGINE=InnoDB
   DEFAULT CHARSET=utf8mb4
   COLLATE=utf8mb4_unicode_ci;
+
+-- -------------------------------------------------------------------------
+--  Curățarea încercărilor vechi
+--
+--  Se face automat din PHP (vezi curataIncercariVechi() din inc/auth.php),
+--  la aproximativ una din 50 de scrieri. Nu e nevoie de nimic în plus.
+--
+--  Dacă preferi să o facă baza de date singură, pe o găzduire unde
+--  planificatorul de evenimente e pornit, poți folosi în schimb:
+--
+--  SET GLOBAL event_scheduler = ON;
+--
+--  CREATE EVENT IF NOT EXISTS curata_incercari
+--    ON SCHEDULE EVERY 1 DAY
+--    DO DELETE FROM incercari_autentificare
+--        WHERE creat_la < (NOW() - INTERVAL 30 DAY);
+-- -------------------------------------------------------------------------

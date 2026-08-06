@@ -425,12 +425,28 @@ tot `Europe/Bucharest`, dar e mai bine să fie scrisă explicit.
 
 ### login.php cât timp ești conectat
 
-Cum ai cerut: accesarea paginii te deconectează și afișează „Ai ieșit din cont".
+Pagina redirecționează spre prima pagină. Deconectarea se face doar apăsând
+„Deloghează-te", care duce la `iesire.php` și cere token CSRF.
 
-De reținut: meniul nu mai duce acolo cât ești conectat, dar **un semn de carte
-sau o intrare veche din istoric te vor deconecta la simpla deschidere**, iar
-unele browsere preîncarcă linkurile pe care crede că le vei urma. Dacă vrei să
-eviți asta, alternativa obișnuită e o redirecționare spre prima pagină.
+Așa, un semn de carte, o intrare veche din istoric sau o preîncărcare făcută de
+browser nu mai pot da omul afară fără ca el să fi cerut-o.
+
+### Ce se întâmplă cu încercările de autentificare
+
+Rândurile din `incercari_autentificare` **nu rămân definitiv**. Blocarea se uită
+doar la ultimele 10 minute, deci cele vechi nu mai folosesc la nimic.
+
+`curataIncercariVechi()` șterge tot ce e mai vechi de **30 de zile**. Se
+declanșează din PHP, la aproximativ una din 50 de scrieri — destul de rar cât să
+nu încarce nimic, destul de des cât să nu se adune. Nu e nevoie de o sarcină
+programată separat, care în XAMPP ar trebui oricum pornită de mână.
+
+Cele 30 de zile sunt și o chestiune de date personale: tabelul ține adrese de
+e-mail și adrese IP, pe care nu avem motiv să le păstrăm mai mult decât ne
+trebuie ca să vedem un tipar de atacuri.
+
+Dacă preferi ca ștergerea să o facă baza de date singură, în `sql/002` e scris
+și evenimentul MySQL echivalent.
 
 ### Ce nu e făcut încă
 

@@ -16,6 +16,7 @@ const INCERCARI_MAXIME_IP    = 15;   // limită mai largă, pe adresă IP
 const MINUTE_INTRE_RETRIMITERI = 10; // între două e-mailuri de confirmare
 const MINUTE_INACTIVITATE    = 120;  // sesiunea expiră după atâta liniște
 const ZILE_TINE_MINTE        = 30;   // cât ține „ține-mă minte"
+const ZILE_PASTRARE_INCERCARI = 30;  // cât timp păstrăm încercările vechi
 
 /* ======================= CINE E CONECTAT ============================== */
 
@@ -171,6 +172,36 @@ function scrieIncercare(string $email, bool $reusita): void
          VALUES (?, ?, ?, ?)'
     );
     $q->execute([mb_substr($email, 0, 190), ipBinar(), $reusita ? 1 : 0, acum()]);
+
+    curataIncercariVechi();
+}
+
+/**
+ * Șterge încercările mai vechi de 30 de zile.
+ *
+ * Blocarea se uită doar la ultimele 10 minute, deci rândurile vechi nu mai
+ * folosesc la nimic. Le păstrăm o lună doar cât să se poată vedea un tipar
+ * de atacuri, apoi dispar — atât ca tabelul să nu crească la nesfârșit, cât
+ * și pentru că sunt date personale (adresă de e-mail plus adresă IP) pe care
+ * nu avem motiv să le ținem mai mult.
+ *
+ * Curățarea se face din când în când, la aproximativ una din 50 de scrieri,
+ * nu la fiecare: e o ștergere ieftină, dar n-are rost făcută de fiecare dată.
+ * Așa nu e nevoie nici de o sarcină programată separat, care în XAMPP oricum
+ * ar trebui pornită de mână.
+ */
+function curataIncercariVechi(): void
+{
+    if (random_int(1, 50) !== 1) {
+        return;
+    }
+
+    try {
+        $q = db()->prepare('DELETE FROM incercari_autentificare WHERE creat_la < ?');
+        $q->execute([acumMinus(ZILE_PASTRARE_INCERCARI * 24 * 60)]);
+    } catch (PDOException $e) {
+        // Curățenia nu e esențială: dacă dă greș, autentificarea continuă.
+    }
 }
 
 /**

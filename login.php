@@ -11,28 +11,29 @@ declare(strict_types=1);
 require_once __DIR__ . '/inc/auth.php';
 
 /**
- * Cerință explicită: pagina nu trebuie să fie disponibilă cât timp cineva e
- * conectat, iar accesarea ei îl deconectează.
+ * Pagina nu are ce căuta în fața cuiva deja conectat, așa că îl trimitem
+ * acasă. Deconectarea se face doar din iesire.php, apăsând pe „Deloghează-te".
  *
- * De reținut: browserele preîncarcă uneori linkurile pe care le vor urma.
- * Meniul nu mai duce aici cât timp ești logat, dar un semn de carte sau o
- * intrare veche din istoric TE VOR deconecta la simpla deschidere.
+ * De ce nu deconectăm aici: un semn de carte, o intrare veche din istoric sau
+ * o preîncărcare făcută de browser ar da omul afară fără ca el să fi cerut-o.
  */
-$tocmaiIesit = false;
-
 if (esteLogat()) {
-    deconecteaza();
-    $tocmaiIesit = true;
+    header('Location: index.php');
+    exit;
 }
+
+$tocmaiIesit = isset($_GET['iesit']);
 
 $titlu     = 'Cont — PulsulOrasului.Ro';
 $descriere = 'Intră în cont sau creează-ți unul, ca să publici evenimente și să participi la discuții.';
 $pagina    = 'cont';
 $noindex   = true;
 
-require __DIR__ . '/inc/antet.php';
-
+// Token-ul se cere înaintea antetului: odată ce a început tipărirea paginii,
+// sesiunea nu mai poate fi pornită, iar PHP ar da avertismente.
 $csrf = tokenCsrf();
+
+require __DIR__ . '/inc/antet.php';
 ?>
 
 
