@@ -610,7 +610,7 @@ main { padding-block: 46px 64px; }
   border-radius: var(--radius-pill);
   border: 1px solid var(--border);
   background: var(--surface);
-  font-size: 14px;
+  font-size: 16px;
   transition: border-color .18s var(--ease), box-shadow .18s var(--ease);
 }
 .news-form input::placeholder { color: var(--text-faint); }
@@ -998,7 +998,7 @@ main { padding-block: 46px 64px; }
   border-radius: var(--radius);
   border: 1px solid var(--border);
   background: var(--surface);
-  font-size: 14.5px;
+  font-size: 16px;
   line-height: 1.6;
   resize: vertical;
   transition: border-color .18s var(--ease), box-shadow .18s var(--ease);
@@ -1083,7 +1083,7 @@ main { padding-block: 46px 64px; }
   border-radius: 12px;
   border: 1px solid var(--border);
   background: var(--surface);
-  font-size: 14px; line-height: 1.55;
+  font-size: 16px; line-height: 1.55;
   resize: vertical;
   transition: border-color .18s var(--ease), box-shadow .18s var(--ease);
 }
@@ -1249,7 +1249,7 @@ main { padding-block: 46px 64px; }
   border-radius: var(--radius);
   border: 1px solid var(--border);
   background: var(--bg);
-  font-size: 15px;
+  font-size: 16px;
   line-height: 1.55;
   transition: border-color .18s var(--ease), box-shadow .18s var(--ease),
               background-color .18s var(--ease);
@@ -1527,7 +1527,7 @@ a.info-item__value:hover { color: var(--brand); }
   border-radius: var(--radius);
   border: 1px solid var(--border);
   background-color: var(--bg);
-  font-size: 15px;
+  font-size: 16px;
   cursor: pointer;
   appearance: none;
   /* săgeata, desenată inline ca să nu depindem de un fișier extern */
@@ -1608,11 +1608,15 @@ a.info-item__value:hover { color: var(--brand); }
   color: var(--text-soft);
   cursor: pointer;
 }
+/* Bifa e tot un <input>, deci moștenește lățimea și înălțimea de câmp din
+   regula .field input. Le anulăm aici, ca să rămână un pătrat de 18px. */
 .check input {
   appearance: none;
   width: 18px; height: 18px;
-  margin: 1px 0 0;
+  min-height: 0;
+  padding: 0;
   flex: none;
+  margin: 1px 0 0;
   border: 1.5px solid var(--border);
   border-radius: 6px;
   background: var(--bg);
@@ -1661,3 +1665,98 @@ a.info-item__value:hover { color: var(--brand); }
   .auth-panel { padding: 20px 16px 22px; }
   .auth__title { font-size: 21px; }
 }
+
+/* =========================================================================
+   19. NORMALIZARE ÎNTRE DISPOZITIVE
+
+   Scopul acestei secțiuni: aceeași pagină să arate la fel pe iPhone, pe
+   Android și pe desktop. Sunt adunate aici, într-un singur loc, diferențele
+   pe care browserele le introduc de la ele — mai ales Safari pe iOS.
+   ========================================================================= */
+
+/* --- 1. iOS nu mai mărește pagina la atingerea unui câmp ---------------- */
+/* Safari pe iPhone mărește automat pagina când focalizezi un câmp cu textul
+   sub 16px. Pe Android nu se întâmplă, deci ecranul „sare" doar pe iPhone.
+   Toate câmpurile sunt la 16px tocmai ca să nu apară diferența — dacă adaugi
+   un câmp nou, ține minte pragul ăsta. */
+input, textarea, select { font-size: 16px; }
+
+/* --- 2. Fără decor nativ pe controale ---------------------------------- */
+/* iOS desenează singur colțuri rotunjite, umbre interioare și gradient pe
+   inputuri și butoane. Le scoatem, ca aspectul să vină doar din CSS-ul nostru. */
+input, textarea, select, button {
+  appearance: none;
+  -webkit-appearance: none;
+  border-radius: 0;                 /* îl redau apoi regulile componentelor */
+  background-clip: padding-box;
+}
+input, textarea { -webkit-border-radius: 0; }
+
+/* Le punem la loc raza de colț, după ce am șters-o mai sus. */
+.field input, .field textarea, .field select,
+.news-form input, .comment-form textarea, .reply-form textarea {
+  border-radius: var(--radius);
+}
+.news-form input { border-radius: var(--radius-pill); }
+.reply-form textarea { border-radius: 12px; }
+.check input { border-radius: 6px; }
+.btn, .btn-google, .rsvp__btn, .chip, .tag { border-radius: var(--radius-pill); }
+.theme-toggle, .nav__burger, .icon-btn, .socials a { border-radius: 10px; }
+.input-pass__toggle { border-radius: 9px; }
+
+/* --- 3. Text de aceeași mărime la rotirea ecranului --------------------- */
+/* Fără asta, Safari pe iOS îngroașă textul când treci în modul peisaj. */
+html {
+  -webkit-text-size-adjust: 100%;
+  -moz-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* --- 4. Fără litere îngroșate artificial ------------------------------- */
+/* Dacă fontul nu s-a încărcat încă, unele browsere „îngroașă" ele literele,
+   iar rezultatul diferă de la un sistem la altul. Preferăm să nu o facă. */
+html { font-synthesis: none; -webkit-font-synthesis: none; }
+
+/* --- 5. Fără dreptunghiul gri la atingere ------------------------------ */
+/* Safari și Chrome pe Android desenează un fundal la atingere, cu culori
+   diferite. Îl scoatem; starea apăsat vine din :active, definit de noi. */
+html { -webkit-tap-highlight-color: transparent; }
+
+/* --- 6. Zona sigură de pe telefoanele cu decupaj ------------------------ */
+/* Pagina folosește viewport-fit=cover, deci conținutul ar putea intra sub
+   decupajul camerei sau sub bara de jos. Aici îi ținem la distanță. */
+.wrap, .nav {
+  padding-left: max(20px, env(safe-area-inset-left));
+  padding-right: max(20px, env(safe-area-inset-right));
+}
+.site-footer { padding-bottom: max(24px, env(safe-area-inset-bottom)); }
+.toast { bottom: max(26px, env(safe-area-inset-bottom)); }
+
+@media (max-width: 560px) {
+  .wrap, .nav, .nav__menu {
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+  }
+}
+
+/* --- 7. Aceeași înălțime de rând la butoane ---------------------------- */
+/* Safari ignoră line-height moștenit pe <button>, de unde diferențe de
+   câțiva pixeli față de Android. */
+button, input, select, textarea { line-height: normal; }
+.btn, .btn-google, .rsvp__btn, .chip, .tag, .auth-tab, .tab { line-height: 1.2; }
+textarea { line-height: 1.6; }
+
+/* --- 8. Câmpurile completate automat -------------------------------------
+   Chrome pune un fundal galben peste inputurile completate automat, care
+   strică tema întunecată. Îl înlocuim cu culorile noastre. */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--text);
+  -webkit-box-shadow: 0 0 0 100px var(--bg) inset;
+  caret-color: var(--text);
+}
+
+/* --- 9. Derulare fără efecte diferite ---------------------------------- */
+body { overscroll-behavior-y: none; }
+.tabs, .slideshow__track { -webkit-overflow-scrolling: touch; }
