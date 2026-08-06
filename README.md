@@ -328,10 +328,93 @@ public, cu `dezvoltare` pe `false`, fișierul nici nu se creează.
   datele nu ating niciodată textul interogării.
 - **`.htaccess`** care refuză accesul web la `inc/`, `sql/` și `private/`.
 
+## Autentificarea
+
+### Paginile sunt acum PHP
+
+Meniul trebuie să știe dacă ești conectat, deci nu mai poate fi HTML fix.
+Toate paginile s-au mutat pe `.php` și folosesc două fișiere comune:
+
+- `inc/antet.php` — `<head>`, bara de meniu, antetele de siguranță;
+- `inc/subsol.php` — footerul și scripturile.
+
+O pagină nouă arată așa:
+
+```php
+<?php
+$titlu  = 'Titlul paginii';
+$pagina = 'contact';            // ce element de meniu e marcat activ
+require __DIR__ . '/inc/antet.php';
+?>
+<main id="main"> … </main>
+<?php require __DIR__ . '/inc/subsol.php'; ?>
+```
+
+Meniul se schimbă acum într-un singur loc, în `inc/antet.php`.
+
+### Meniul, în funcție de starea de autentificare
+
+| Deslogat | Logat |
+|---|---|
+| Acasă, Despre, Contact, **Alătură-te și tu** | Acasă, Despre, Contact, **Deloghează-te** |
+
+„Alătură-te și tu" stă după „Contact" și are fundal colorat, ca invitație
+principală. Când ești conectat, dispare și în locul ei apare ieșirea din cont,
+scrisă discret. Lângă butonul de temă apare numele tău prescurtat.
+
+### Ce se întâmplă la autentificare
+
+- **Parolă greșită sau adresă inexistentă** — același mesaj, „E-mail sau parolă
+  greșite". Un mesaj diferit ar spune cine are cont pe site.
+- **Cont neconfirmat** — formularul e înlocuit cu un panou care explică
+  situația și are un buton de retrimitere a e-mailului, o dată la 10 minute.
+- **Trei greșeli** — formularul se închide 10 minute, cu o numărătoare inversă
+  și un buton „Mi-am uitat parola". (Pagina de recuperare urmează.)
+
+### De ce blocarea ține cont și de adresa IP
+
+Dacă am număra greșelile doar după adresa de e-mail, oricine ar putea închide
+contul altcuiva trimițând trei parole greșite. De aceea numărătoarea se face pe
+perechea (e-mail + IP), plus o limită mai largă de 15 greșeli pe oră de la
+aceeași adresă IP, pentru cine încearcă multe conturi de la același calculator.
+
+### Măsuri de siguranță
+
+- **Sesiunea se reface la intrare** (`session_regenerate_id`), ca un
+  identificator impus dinainte de un atacator să devină inutil.
+- **Verificarea parolei rulează întotdeauna**, chiar dacă adresa nu există.
+  Altfel, un răspuns instantaneu ar însemna „adresa nu există", iar unul
+  întârziat „adresa există" — adică o metodă simplă de a afla cine are cont.
+- **Starea contului se citește din baza de date la fiecare cerere**, nu din
+  sesiune: un cont suspendat e dat afară imediat, nu la următoarea intrare.
+- **Amprentă de browser** legată de sesiune, ca un cookie furat să fie mai
+  greu de folosit. Nu include adresa IP, care se schimbă firesc la trecerea
+  de pe Wi-Fi pe date mobile.
+- **Sesiunea expiră** după 2 ore de inactivitate; „ține-mă minte" o prelungește
+  la 30 de zile.
+- **Hash-ul parolei se reface** la intrare, dacă între timp s-a schimbat
+  algoritmul (`password_needs_rehash`).
+- **Ieșirea din cont cere token CSRF**, ca alt site să nu poată deconecta
+  vizitatorul cu o imagine ascunsă.
+- **Antete trimise la fiecare pagină:** `X-Frame-Options: DENY` (împotriva
+  clickjacking-ului), `X-Content-Type-Options: nosniff`, `Referrer-Policy`,
+  `Permissions-Policy`.
+- **Parola primită e limitată la 4096 de octeți**, ca nimeni să nu încarce
+  serverul trimițând parole uriașe doar ca să-l pună să calculeze hash-uri.
+
+### login.php cât timp ești conectat
+
+Cum ai cerut: accesarea paginii te deconectează și afișează „Ai ieșit din cont".
+
+De reținut: meniul nu mai duce acolo cât ești conectat, dar **un semn de carte
+sau o intrare veche din istoric te vor deconecta la simpla deschidere**, iar
+unele browsere preîncarcă linkurile pe care crede că le vei urma. Dacă vrei să
+eviți asta, alternativa obișnuită e o redirecționare spre prima pagină.
+
 ### Ce nu e făcut încă
 
 - trimiterea propriu-zisă a e-mailului (marcat cu `TODO`);
-- formularul de autentificare, care încă nu vorbește cu serverul;
+- pagina de recuperare a parolei, către care duce butonul din panoul de blocare;
 - intrarea cu Google.
 
 ## Convenții

@@ -56,7 +56,9 @@ CREATE TABLE IF NOT EXISTS membri (
 
   token_confirmare  CHAR(64)            NULL DEFAULT NULL,
   token_expira      DATETIME            NULL DEFAULT NULL,
+  token_trimis_la   DATETIME            NULL DEFAULT NULL,
   confirmat_la      DATETIME            NULL DEFAULT NULL,
+  autentificat_la   DATETIME            NULL DEFAULT NULL,
 
   ip_inregistrare   VARBINARY(16)       NULL DEFAULT NULL,
 
@@ -74,6 +76,31 @@ CREATE TABLE IF NOT EXISTS membri (
 
   KEY idx_membri_token (token_confirmare),
   KEY idx_membri_ip    (ip_inregistrare, creat_la)
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci;
+
+-- -------------------------------------------------------------------------
+--  Încercările de autentificare
+--
+--  Un rând la fiecare încercare, reușită sau nu. De aici se numără eșecurile
+--  recente, ca să blocăm formularul temporar.
+--
+--  Se numără pe perechea (e-mail + IP), nu doar pe e-mail: altfel oricine ar
+--  putea închide contul altcuiva trimițând trei parole greșite. Există și o
+--  limită separată pe IP, pentru cine încearcă multe adrese de la același loc.
+-- -------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS incercari_autentificare (
+  id        BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  email     VARCHAR(190)    NOT NULL,
+  ip        VARBINARY(16)       NULL DEFAULT NULL,
+  reusita   TINYINT(1)      NOT NULL DEFAULT 0,
+  creat_la  DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+  PRIMARY KEY (id),
+  KEY idx_incercari_email_ip (email, ip, creat_la),
+  KEY idx_incercari_ip       (ip, creat_la),
+  KEY idx_incercari_data     (creat_la)
 ) ENGINE=InnoDB
   DEFAULT CHARSET=utf8mb4
   COLLATE=utf8mb4_unicode_ci;
