@@ -458,9 +458,131 @@ Dacă preferi ca ștergerea să o facă baza de date singură, în `sql/002` e s
 
 ### Ce nu e făcut încă
 
-- trimiterea propriu-zisă a e-mailului (marcat cu `TODO`);
-- pagina de recuperare a parolei, către care duce butonul din panoul de blocare;
 - intrarea cu Google.
+
+## E-mailurile
+
+Fișier: `inc/email.php` — un singur șablon pentru toate mesajele, exact ca la
+CSS: dacă se schimbă culoarea sau subsolul, se schimbă peste tot dintr-un loc.
+
+Se trimit patru feluri de mesaje: confirmarea adresei (la înregistrare și la
+retrimitere), parola temporară și înștiințarea că parola a fost schimbată.
+
+### De ce e-mailul se scrie altfel decât o pagină
+
+Programele de e-mail sunt cu douăzeci de ani în urma browserelor, iar fiecare
+taie altceva din HTML. De aici regulile care în orice altă parte a proiectului
+ar fi greșeli:
+
+- **așezarea se face cu `<table>`**, nu cu flexbox sau grid — Outlook pe Windows
+  randează prin motorul lui Word, care nu știe nici măcar `float`;
+- **stilurile se scriu în atributul `style`** al fiecărui element, fiindcă Gmail
+  taie din `<style>` tot ce nu-i place;
+- **lățime maximă 600px**, cât încape în panoul de previzualizare;
+- **fonturi de sistem** — unul descărcat nu se încarcă nicăieri.
+
+**Fără nicio imagine**, cum ai cerut — și e alegerea bună oricum: aproape toți
+furnizorii blochează imaginile până când omul apasă „afișează imaginile", iar un
+mesaj construit din imagini ajunge atunci un dreptunghi gol. Aici tot ce se vede
+e text și chenare colorate.
+
+Mesajul pleacă în **două variante deodată** (`multipart/alternative`): text
+simplu și HTML. Varianta text nu e o formalitate — o citesc ceasurile
+inteligente și cititoarele de ecran, iar lipsa ei e unul dintre semnele după
+care filtrele de spam pun mesajele deoparte.
+
+Se declară și `color-scheme: light`, ca Apple Mail și Outlook să nu răstoarne
+singure culorile pe tema întunecată și să iasă negru pe negru.
+
+### Ca să nu ajungă în „Spam"
+
+- `email_expeditor` din `config.php` **trebuie să fie pe domeniul tău**. Cu o
+  adresă de gmail.com, mesajele ajung aproape sigur la spam: serverul care le
+  trimite nu are voie să trimită în numele Gmail, iar verificarea SPF observă.
+- Al cincilea parametru al lui `mail()` (`-f`) pune adresa și în „plicul"
+  mesajului, nu doar în antetul `From`. Fără el, serverul trimite de pe adresa
+  contului de găzduire, iar nepotrivirea aia e fix ce caută SPF.
+- În panoul găzduirii, verifică să existe **SPF** și **DKIM** pentru domeniu.
+  De obicei se pun singure când adaugi domeniul; dacă nu, e o setare din zona
+  de e-mail sau de DNS.
+
+### Injecția în anteturi
+
+Anteturile unui e-mail se despart prin rânduri noi, deci o adresă care conține
+un rând nou poate adăuga anteturi inventate — de pildă un `Bcc:` către altcineva.
+Așa un site devine, fără să știe, unealtă de trimis spam.
+
+`esteAdresaSigura()` respinge orice adresă cu `\r`, `\n`, tab sau caractere de
+control, iar textele care ajung în anteturi trec prin `mimeNume()`. Testat cu
+trei feluri de adrese otrăvite: niciuna nu produce vreun mesaj.
+
+### În XAMPP, unde nu există server de e-mail
+
+`'email_metoda' => 'auto'` (implicit) scrie mesajele în
+`private/emailuri-trimise.log`, iar ultimul și în `private/ultimul-email.html`,
+ca să-i poți deschide aspectul în browser. Nimic nu pleacă nicăieri.
+
+## Parola uitată
+
+Fișiere: `parola-uitata.php`, `parola-noua.php`, `api/parola-uitata.php`,
+`api/parola-noua.php`, `sql/004-parola-uitata.sql`.
+
+### Cum merge
+
+1. Omul scrie adresa pe `parola-uitata.php`.
+2. Primește pe e-mail o parolă de **șase caractere**, valabilă **60 de minute**
+   și bună **o singură dată**.
+3. Intră cu ea pe `login.php`, ca și cum ar fi parola obișnuită.
+4. E dus direct la `parola-noua.php` și **nu poate face nimic altceva** până nu
+   își alege o parolă nouă.
+
+Parola veche rămâne bună tot timpul ăsta: cea temporară e o intrare în plus, nu
+un înlocuitor. Abia la pasul 4 se schimbă ceva.
+
+### De ce e obligatorie schimbarea
+
+Fără ea, omul ar rămâne în cont cu parola veche — cea uitată — tot acolo, și
+data viitoare ar fi din nou pe dinafară. În plus, o parolă trimisă prin e-mail a
+trecut prin prea multe mâini ca să rămână singura cheie a contului.
+
+Oprirea se face din `inc/antet.php`, deci acoperă toate paginile dintr-un
+singur loc și nu poate fi uitată la una nouă. Punctele din `api/` nu trec pe
+acolo, așa că își cheamă singure `opresteDacaTrebuieParolaNoua(true)`. Rămân
+deschise doar `parola-noua.php` și `iesire.php` — fără ele omul ar fi blocat.
+
+### Alfabetul parolei
+
+`ABCDEFGHJKLMNPQRSTUVWXYZ23456789` — 32 de caractere. Lipsesc **0 și O, 1 și I**:
+parola se citește dintr-un e-mail și se tastează de mână, iar alea sunt
+perechile care se confundă. Aceeași regulă ca la permalink.
+
+32⁶ înseamnă peste un miliard de combinații.
+
+### Ce o apără, în afară de cele 60 de minute
+
+Timpul singur nu spune nimic despre cât de repede poate cineva să încerce. De
+aceea există și un **contor de greșeli**: la a cincea încercare ratată, parola
+temporară se șterge singură din bază. Ghicitul devine imposibil, indiferent câte
+calculatoare are cel care încearcă.
+
+Peste asta se adaugă:
+
+- se ține **hashuită**, ca parola adevărată. Dacă baza ajunge pe mâini străine,
+  o coloană cu parole în clar ar însemna intrare imediată în toate conturile
+  care au cerut recuperare în ultima oră;
+- **o cerere la 10 minute** per cont, ca nimeni să nu poată umple cutia poștală
+  a altcuiva;
+- **cel mult 10 cereri pe oră de la același IP** — limita asta se verifică
+  *înainte* de a căuta adresa în bază, altfel cine încearcă o mie de adrese
+  străine n-ar fi oprit de nimic;
+- răspunsul e **același pentru orice adresă**, existentă sau nu, ca butonul să
+  nu devină o unealtă de aflat cine e înscris pe site;
+- un cont **neconfirmat** nu primește parolă temporară — întâi își confirmă
+  adresa;
+- „ține-mă minte" e ignorat la intrarea cu parolă temporară: sesiunea aia
+  trebuie să dureze cât îi ia omului să-și pună o parolă nouă, nu o lună;
+- la schimbarea parolei se face `session_regenerate_id()` și pleacă un e-mail de
+  înștiințare — așa afli dacă altcineva ți-a luat contul.
 
 ## Poza de profil
 
@@ -580,19 +702,19 @@ Legăturile către CSS și JS au un număr de versiune, puse o singură dată î
 `inc/antet.php` și `inc/subsol.php`:
 
 ```html
-<link rel="stylesheet" href="assets/css/style.css?v=14">
-<script src="assets/js/main.js?v=14"></script>
+<link rel="stylesheet" href="assets/css/style.css?v=15">
+<script src="assets/js/main.js?v=15"></script>
 ```
 
 **De fiecare dată când modifici `style.css` sau `main.js`, crește numărul.**
 Altfel browserele păstrează versiunea veche din cache, iar paginile noi apar
 nestilate — HTML-ul e nou, dar CSS-ul rămâne cel vechi.
 
-Comandă rapidă (înlocuiește 15 cu versiunea nouă):
+Comandă rapidă (înlocuiește 16 cu versiunea nouă):
 
 ```bash
-sed -i 's/style\.css?v=[0-9]*/style.css?v=15/' inc/antet.php
-sed -i 's/main\.js?v=[0-9]*/main.js?v=15/'     inc/subsol.php
+sed -i 's/style\.css?v=[0-9]*/style.css?v=16/' inc/antet.php
+sed -i 's/main\.js?v=[0-9]*/main.js?v=16/'     inc/subsol.php
 ```
 
 ### Un singur CSS, un singur JS
@@ -677,6 +799,9 @@ Ce nu se poate controla din CSS: formatul afișat în câmpul de dată
 6. **Pui `'url_site' => 'https://domeniul-tau.ro'`**, fără bară la sfârșit. Din
    el se construiesc linkurile de confirmare.
 
+7. **Pui `'email_expeditor'` pe o adresă de pe domeniul tău.** Vezi secțiunea
+   despre e-mailuri pentru ce contează la livrare.
+
 ### Gazda bazei de date
 
 **`localhost`**, nu numele domeniului. Baza stă pe aceeași mașină cu site-ul,
@@ -723,10 +848,5 @@ server și nume de tabele.
 
 ## De făcut mai departe
 
-**Trimiterea e-mailurilor nu e făcută încă** (`TODO` în `api/inregistrare.php`
-și `api/retrimite-confirmare.php`). Pe site-ul public asta înseamnă că
-înregistrarea merge, dar **nimeni nu-și poate activa contul**, fiindcă nu
-primește linkul de confirmare. E primul lucru de făcut după mutare.
-
-Apoi: pagina de recuperare a parolei, intrarea cu Google, formularul de
-publicat un eveniment și paginile de categorie.
+Intrarea cu Google, formularul de publicat un eveniment și paginile de
+categorie.

@@ -61,6 +61,15 @@ CREATE TABLE IF NOT EXISTS membri (
   prenume           VARCHAR(60)     NOT NULL,
   email             VARCHAR(190)    NOT NULL,
   parola_hash       VARCHAR(255)    NOT NULL,
+
+  -- Parola temporară, pentru cine și-a uitat parola. Se ține hashuită, exact
+  -- ca cea adevărată. Vezi explicațiile din sql/004-parola-uitata.sql.
+  parola_temporara_hash      VARCHAR(255)     NULL DEFAULT NULL,
+  parola_temporara_expira    DATETIME         NULL DEFAULT NULL,
+  parola_temporara_ceruta_la DATETIME         NULL DEFAULT NULL,
+  parola_temporara_incercari TINYINT UNSIGNED NOT NULL DEFAULT 0,
+  parola_schimbata_la        DATETIME         NULL DEFAULT NULL,
+
   data_nasterii     DATE            NOT NULL,
   sex               ENUM('M','F')   NOT NULL,
   localitate        VARCHAR(80)         NULL DEFAULT NULL,

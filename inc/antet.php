@@ -29,6 +29,11 @@ $bodyAttr  = $bodyAttr  ?? '';
 $membru = membruCurent();
 $logat  = $membru !== null;
 
+// Cine a intrat cu parola temporară e trimis să-și aleagă una nouă, oriunde
+// ar încerca să meargă. Verificarea stă aici, în antetul comun, ca să nu fie
+// nevoie să fie repetată în fiecare pagină — și ca să nu poată fi uitată.
+opresteDacaTrebuieParolaNoua();
+
 /* ------------------------- Antete de siguranță ------------------------ */
 
 // Pagina nu poate fi încărcată într-un cadru pe alt site (clickjacking).
@@ -101,7 +106,7 @@ if ($logat) {
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/css/style.css?v=14">
+<link rel="stylesheet" href="assets/css/style.css?v=15">
 
 <!-- Setează tema ÎNAINTE de randare, ca să nu apară un flash alb pe dark mode -->
 <script>

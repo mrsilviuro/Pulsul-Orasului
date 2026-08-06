@@ -18,6 +18,11 @@ const MINUTE_INACTIVITATE    = 120;  // sesiunea expiră după atâta liniște
 const ZILE_TINE_MINTE        = 30;   // cât ține „ține-mă minte"
 const ZILE_PASTRARE_INCERCARI = 30;  // cât timp păstrăm încercările vechi
 
+/* Parola temporară, pentru cine și-a uitat parola */
+const MINUTE_PAROLA_TEMPORARA   = 60; // cât e valabilă
+const MINUTE_INTRE_CERERI_PAROLA = 10; // între două cereri de recuperare
+const INCERCARI_PAROLA_TEMPORARA = 5;  // greșeli după care se stinge singură
+
 /* ======================= CINE E CONECTAT ============================== */
 
 /**
@@ -63,7 +68,8 @@ function membruCurent(): ?array
 
     $q = db()->prepare(
         'SELECT id, permalink, nume, prenume, email, sex, data_nasterii,
-                localitate, poza, poza_actualizata_la, stare, creat_la
+                localitate, poza, poza_actualizata_la, stare, creat_la,
+                parola_schimbata_la
            FROM membri
           WHERE id = ?
           LIMIT 1'
@@ -101,7 +107,7 @@ function amprentaBrowser(): string
 /**
  * Deschide sesiunea pentru un membru.
  */
-function autentifica(array $membru, bool $tineMinte = false): void
+function autentifica(array $membru, bool $tineMinte = false, bool $cuParolaTemporara = false): void
 {
     pornesteSesiunea();
 
@@ -113,6 +119,15 @@ function autentifica(array $membru, bool $tineMinte = false): void
     $_SESSION['amprenta']         = amprentaBrowser();
     $_SESSION['ultima_activitate'] = time();
     $_SESSION['autentificat_la']  = time();
+
+    /**
+     * Cine intră cu parola temporară nu poate face nimic până nu-și alege una
+     * nouă. E singurul final cu sens pentru recuperare: altfel omul ar rămâne
+     * în cont cu parola veche, cea uitată, tot acolo — și data viitoare ar fi
+     * din nou pe dinafară. În plus, o parolă trimisă prin e-mail a trecut prin
+     * prea multe mâini ca să rămână singura cheie a contului.
+     */
+    $_SESSION['trebuie_parola_noua'] = $cuParolaTemporara;
 
     // Token nou după schimbarea sesiunii.
     unset($_SESSION['csrf']);
@@ -160,6 +175,130 @@ function deconecteaza(): void
     // De acum, pentru restul cererii, nu mai e nimeni conectat.
     $poMembruCache = null;
     $poMembruCitit = true;
+}
+
+/* ======================== PAROLA TEMPORARĂ =========================== */
+
+/**
+ * Se potrivește ce a tastat omul cu parola temporară trimisă pe e-mail?
+ *
+ * Funcția face și curățenia: parola temporară e bună o singură dată, deci se
+ * șterge fie când e folosită, fie când se termină cele cinci încercări.
+ *
+ * $membru poate fi null (adresă inexistentă). Chiar și atunci se face o
+ * verificare pe un hash inventat, ca durata răspunsului să fie aceeași — vezi
+ * explicația despre enumerarea conturilor din api/autentificare.php.
+ */
+function incearcaParolaTemporara(?array $membru, string $parola): bool
+{
+    $hashFals = '$2y$12$usesomesillystringfoeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
+
+    $areTemporara = $membru !== null && !empty($membru['parola_temporara_hash']);
+
+    $expirata = $areTemporara
+        && (empty($membru['parola_temporara_expira'])
+            || strtotime((string) $membru['parola_temporara_expira']) <= time());
+
+    $prea_multe = $areTemporara
+        && (int) ($membru['parola_temporara_incercari'] ?? 0) >= INCERCARI_PAROLA_TEMPORARA;
+
+    // Verificarea se face oricum, chiar și pe un hash care nu e al nimănui.
+    $potrivire = password_verify(
+        $parola,
+        ($areTemporara && !$expirata && !$prea_multe)
+            ? (string) $membru['parola_temporara_hash']
+            : $hashFals
+    );
+
+    if (!$areTemporara) {
+        return false;
+    }
+
+    // O parolă expirată sau consumată nu mai are ce căuta în bază.
+    if ($expirata || $prea_multe) {
+        stergeParolaTemporara((int) $membru['id']);
+        return false;
+    }
+
+    if ($potrivire) {
+        stergeParolaTemporara((int) $membru['id']);
+        return true;
+    }
+
+    // Greșeală: crește contorul. La a cincea, parola se stinge singură.
+    $q = db()->prepare(
+        'UPDATE membri SET parola_temporara_incercari = parola_temporara_incercari + 1
+          WHERE id = ?'
+    );
+    $q->execute([(int) $membru['id']]);
+
+    if ((int) ($membru['parola_temporara_incercari'] ?? 0) + 1 >= INCERCARI_PAROLA_TEMPORARA) {
+        stergeParolaTemporara((int) $membru['id']);
+    }
+
+    return false;
+}
+
+function stergeParolaTemporara(int $idMembru): void
+{
+    $q = db()->prepare(
+        'UPDATE membri
+            SET parola_temporara_hash = NULL, parola_temporara_expira = NULL,
+                parola_temporara_incercari = 0
+          WHERE id = ?'
+    );
+    $q->execute([$idMembru]);
+}
+
+/* ===================== PAROLA CARE TREBUIE SCHIMBATĂ ================= */
+
+/** A intrat cu parola temporară și încă nu și-a ales una nouă? */
+function trebuieParolaNoua(): bool
+{
+    pornesteSesiunea();
+    return !empty($_SESSION['trebuie_parola_noua']);
+}
+
+/** Se cheamă după ce omul și-a pus parola nouă. */
+function gataCuParolaTemporara(): void
+{
+    pornesteSesiunea();
+    $_SESSION['trebuie_parola_noua'] = false;
+}
+
+/**
+ * Oprește orice altceva până când parola e schimbată.
+ *
+ * Se cheamă din inc/antet.php, deci acoperă toate paginile dintr-un singur
+ * loc, și din punctele de intrare din api/, care nu trec pe acolo.
+ *
+ * Paginile lăsate deschise sunt doar cele fără de care omul ar rămâne blocat:
+ * cea de schimbat parola și ieșirea din cont.
+ */
+function opresteDacaTrebuieParolaNoua(bool $esteApi = false): void
+{
+    if (!trebuieParolaNoua()) {
+        return;
+    }
+
+    $pagina = basename($_SERVER['SCRIPT_NAME'] ?? '');
+
+    if (in_array($pagina, ['parola-noua.php', 'iesire.php'], true)) {
+        return;
+    }
+
+    if ($esteApi) {
+        raspunsJson([
+            'ok'       => false,
+            'mesaj'    => 'Alege-ți întâi o parolă nouă.',
+            'redirect' => 'parola-noua.php',
+        ], 403);
+    }
+
+    if (!headers_sent()) {
+        header('Location: parola-noua.php');
+        exit;
+    }
 }
 
 /* ==================== ÎNCERCĂRILE DE AUTENTIFICARE =================== */

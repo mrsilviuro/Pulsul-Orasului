@@ -347,3 +347,27 @@ function lunaSiAnul(?string $data): string
 
     return $luni[(int) $moment->format('n')] . ' ' . $moment->format('Y');
 }
+
+/**
+ * O parolă temporară, pentru cine și-a uitat parola.
+ *
+ * Șase caractere, cifre și litere mari. Fără 0 și O, fără 1 și I: parola asta
+ * se citește dintr-un e-mail și se tastează de mână, iar perechile alea sunt
+ * cele care se confundă. Rămân 32 de caractere, adică peste un miliard de
+ * combinații — destule, mai ales că parola se stinge după cinci greșeli.
+ *
+ * random_int() ia numerele de la sursa criptografică a sistemului, nu de la
+ * rand(), ale cărui rezultate se pot prezice după ce vezi câteva.
+ */
+function parolaTemporaraNoua(int $lungime = 6): string
+{
+    $alfabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    $maxim   = strlen($alfabet) - 1;
+    $rezultat = '';
+
+    for ($i = 0; $i < $lungime; $i++) {
+        $rezultat .= $alfabet[random_int(0, $maxim)];
+    }
+
+    return $rezultat;
+}

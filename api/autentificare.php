@@ -80,7 +80,8 @@ if ($blocat > 0) {
 /* -------------------------- Căutarea contului ------------------------- */
 
 $q = db()->prepare(
-    'SELECT id, permalink, nume, prenume, email, parola_hash, stare
+    'SELECT id, permalink, nume, prenume, email, parola_hash, stare,
+            parola_temporara_hash, parola_temporara_expira, parola_temporara_incercari
        FROM membri
       WHERE email = ?
       LIMIT 1'
@@ -97,6 +98,18 @@ $membru = $q->fetch();
  */
 $hashFals = '$2y$12$usesomesillystringfoeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
 $parolaCorecta = password_verify($parola, $membru['parola_hash'] ?? $hashFals);
+
+/**
+ * Dacă parola obișnuită nu e bună, poate fi cea temporară, cerută prin
+ * „mi-am uitat parola". Se încearcă și pentru adresele care nu există, tot
+ * din motivul de mai sus: durata răspunsului nu trebuie să difere.
+ */
+$cuParolaTemporara = false;
+
+if (!$parolaCorecta) {
+    $cuParolaTemporara = incearcaParolaTemporara($membru ?: null, $parola);
+    $parolaCorecta = $cuParolaTemporara;
+}
 
 if (!$membru || !$parolaCorecta) {
     scrieIncercare($email, false);
@@ -147,9 +160,9 @@ if ($membru['stare'] !== 'activ') {
 
 /* ---------------------------- Totul e bun ----------------------------- */
 
-// Dacă între timp a apărut un algoritm de hash mai bun, sau am schimbat
-// „costul", refacem hash-ul acum, cât timp avem parola în clar.
-if (password_needs_rehash($membru['parola_hash'], PASSWORD_DEFAULT)) {
+// Refacerea hash-ului are sens doar când s-a intrat cu parola adevărată: cu
+// cea temporară am scrie peste parola bună un hash al unei parole de o oră.
+if (!$cuParolaTemporara && password_needs_rehash($membru['parola_hash'], PASSWORD_DEFAULT)) {
     $nou = password_hash($parola, PASSWORD_DEFAULT);
     if ($nou !== false) {
         $u = db()->prepare('UPDATE membri SET parola_hash = ? WHERE id = ?');
@@ -163,7 +176,10 @@ $u->execute([acum(), $membru['id']]);
 scrieIncercare($email, true);
 
 $tineMinte = !empty($date['tine_minte']);
-autentifica($membru, $tineMinte);
+
+// „Ține-mă minte" nu are ce căuta la o intrare cu parolă temporară: sesiunea
+// aia trebuie să dureze cât îi ia omului să-și pună o parolă nouă, nu o lună.
+autentifica($membru, $tineMinte && !$cuParolaTemporara, $cuParolaTemporara);
 
 /**
  * Unde trimitem utilizatorul după intrare.
@@ -177,6 +193,17 @@ $cerut    = is_string($date['redirect'] ?? null) ? $date['redirect'] : '';
 
 if ($cerut !== '' && $cerut[0] === '/' && ($cerut[1] ?? '') !== '/') {
     $redirect = $cerut;
+}
+
+// Cine a intrat cu parola temporară merge direct la schimbarea ei, oriunde ar
+// fi vrut să ajungă.
+if ($cuParolaTemporara) {
+    raspunsJson([
+        'ok'       => true,
+        'redirect' => 'parola-noua.php',
+        'temporara' => true,
+        'mesaj'    => 'Ai intrat cu parola temporară. Alege-ți acum una nouă.',
+    ]);
 }
 
 raspunsJson([
