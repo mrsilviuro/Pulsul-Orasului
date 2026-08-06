@@ -244,6 +244,12 @@
     toastTimer = setTimeout(function () { toastEl.classList.remove('is-visible'); }, 2600);
   }
 
+  // Mesajul lăsat de server pentru pagina asta (vezi inc/subsol.php).
+  if (toastEl && toastEl.getAttribute('data-mesaj')) {
+    toast(toastEl.getAttribute('data-mesaj'));
+    toastEl.removeAttribute('data-mesaj');
+  }
+
   /* --- Vorbitul cu serverul ----------------------------------------------
      Toate formularele trimit cu fetch și așteaptă JSON înapoi. Când primesc
      altceva — o eroare de PHP, o pagină de la găzduire, un fișier de setări
@@ -344,6 +350,33 @@
     if (/[a-z]/.test(value) && /[A-Z]/.test(value)) score++;
     if (/\d/.test(value) && /[^\w\s]/.test(value)) score++;
     return Math.min(score, 4);
+  }
+
+  /**
+   * Verifică o dată a nașterii. Întoarce '' dacă e bună, altfel mesajul.
+   *
+   * Folosită și la înregistrarea obișnuită, și la finalizarea celei cu Google.
+   * Rămâne doar o comoditate pentru cel care completează — adevărata verificare
+   * se face pe server, în verificaDataNasterii().
+   */
+  var VARSTA_MINIMA = 13;
+
+  function verificaDataNasteriiInPagina(v) {
+    if (!v) return 'Alege data nașterii.';
+
+    var born = new Date(v + 'T00:00:00');
+    if (isNaN(born.getTime())) return 'Data nu pare validă.';
+
+    var today = new Date();
+    if (born > today) return 'Data nașterii nu poate fi în viitor.';
+    if (born.getFullYear() < 1900) return 'Data nu pare validă.';
+
+    var age = today.getFullYear() - born.getFullYear();
+    var m = today.getMonth() - born.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < born.getDate())) age--;
+    if (age < VARSTA_MINIMA) return 'Trebuie să ai cel puțin ' + VARSTA_MINIMA + ' ani.';
+
+    return '';
   }
 
   /** Leagă indicatorul de putere de un câmp de parolă. */
@@ -739,14 +772,9 @@
       }, 1000);
     }
 
-    /* --- Butoanele Google --- */
-    document.querySelectorAll('[data-google]').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        // TODO: aici pornești fluxul OAuth (redirect spre /auth/google
-        // sau apel către SDK-ul Google Identity Services).
-        toast('Autentificarea cu Google se leagă la implementarea serverului.');
-      });
-    });
+    /* Butonul „Continuă cu Google" nu are nevoie de JavaScript: e o legătură
+       obișnuită spre google.php, care face tot restul pe server.
+       Vezi inc/buton-google.php. */
 
     /* --- Verificări comune ---
        tiparEmail, campul() și setError() vin de mai sus, din partea folosită
@@ -1006,8 +1034,6 @@
     var registerForm = document.getElementById('register-form');
 
     if (registerForm) {
-      var minAge = 13;
-
       wireForm(registerForm, [
         {
           id: 'rg-lastname', error: 'err-rg-lastname',
@@ -1035,21 +1061,7 @@
         },
         {
           id: 'rg-birthdate', error: 'err-rg-birthdate',
-          check: function (v) {
-            if (!v) return 'Alege data nașterii.';
-            var born = new Date(v + 'T00:00:00');
-            if (isNaN(born.getTime())) return 'Data nu pare validă.';
-
-            var today = new Date();
-            if (born > today) return 'Data nașterii nu poate fi în viitor.';
-            if (born.getFullYear() < 1900) return 'Data nu pare validă.';
-
-            var age = today.getFullYear() - born.getFullYear();
-            var m = today.getMonth() - born.getMonth();
-            if (m < 0 || (m === 0 && today.getDate() < born.getDate())) age--;
-            if (age < minAge) return 'Trebuie să ai cel puțin ' + minAge + ' ani.';
-            return '';
-          }
+          check: verificaDataNasteriiInPagina
         },
         {
           id: 'rg-gender', error: 'err-rg-gender',
@@ -1388,6 +1400,132 @@
         gata.setAttribute('tabindex', '-1');
         gata.focus();
         toast(c.mesaj || 'Parola a fost schimbată.');
+      })
+      .catch(function () {
+        buton.disabled = false;
+        buton.textContent = textInitial;
+        toast(mesajFaraLegatura());
+      });
+    });
+  }
+
+
+  /* ---------- 7c. ULTIMUL PAS LA ÎNREGISTRAREA CU GOOGLE ---------------- */
+
+  var finalForm = document.getElementById('final-form');
+
+  if (finalForm) {
+    var reguliFinal = [
+      {
+        id: 'fn-lastname', error: 'err-fn-lastname',
+        check: function (v) {
+          if (!v) return 'Scrie numele.';
+          if (v.length < 2) return 'Numele pare prea scurt.';
+          return '';
+        }
+      },
+      {
+        id: 'fn-firstname', error: 'err-fn-firstname',
+        check: function (v) {
+          if (!v) return 'Scrie prenumele.';
+          if (v.length < 2) return 'Prenumele pare prea scurt.';
+          return '';
+        }
+      },
+      { id: 'fn-birthdate', error: 'err-fn-birthdate', check: verificaDataNasteriiInPagina },
+      { id: 'fn-gender', error: 'err-fn-gender',
+        check: function (v) { return v ? '' : 'Alege o opțiune.'; } },
+      { id: 'fn-terms', error: 'err-fn-terms',
+        check: function (v) { return v ? '' : 'Trebuie să accepți termenii.'; } }
+    ];
+
+    function valoareaLui(input) {
+      return input.type === 'checkbox' ? input.checked : input.value.trim();
+    }
+
+    reguliFinal.forEach(function (regula) {
+      var input = document.getElementById(regula.id);
+      if (!input) return;
+      var eveniment = (input.type === 'checkbox' || input.tagName === 'SELECT') ? 'change' : 'blur';
+      input.addEventListener(eveniment, function () {
+        setError(regula.id, regula.error, regula.check(valoareaLui(input)));
+      });
+      input.addEventListener('input', function () {
+        var f = campul(regula.id);
+        if (f && f.classList.contains('has-error')) {
+          setError(regula.id, regula.error, regula.check(valoareaLui(input)));
+        }
+      });
+    });
+
+    finalForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+
+      var primulGresit = null;
+      reguliFinal.forEach(function (regula) {
+        var input = document.getElementById(regula.id);
+        if (!setError(regula.id, regula.error, regula.check(valoareaLui(input))) && !primulGresit) {
+          primulGresit = input;
+        }
+      });
+
+      if (primulGresit) {
+        primulGresit.focus();
+        toast('Mai sunt câmpuri de completat.');
+        return;
+      }
+
+      var buton = finalForm.querySelector('button[type=submit]');
+      var textInitial = buton.textContent;
+      buton.disabled = true;
+      buton.textContent = 'Se creează…';
+
+      fetch('api/finalizare-google.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          csrf:          (finalForm.querySelector('[name="csrf"]') || {}).value || '',
+          nume:          document.getElementById('fn-lastname').value,
+          prenume:       document.getElementById('fn-firstname').value,
+          data_nasterii: document.getElementById('fn-birthdate').value,
+          sex:           document.getElementById('fn-gender').value,
+          termeni:       document.getElementById('fn-terms').checked ? '1' : ''
+        })
+      })
+      .then(citesteRaspuns)
+      .then(function (rez) {
+        buton.disabled = false;
+        buton.textContent = textInitial;
+
+        if (!rez.corp) { toast(mesajRaspunsNeasteptat(rez)); return; }
+        var c = rez.corp;
+
+        if (c.erori) {
+          var primul = null;
+          [['nume', 'fn-lastname', 'err-fn-lastname'],
+           ['prenume', 'fn-firstname', 'err-fn-firstname'],
+           ['data_nasterii', 'fn-birthdate', 'err-fn-birthdate'],
+           ['sex', 'fn-gender', 'err-fn-gender'],
+           ['termeni', 'fn-terms', 'err-fn-terms']].forEach(function (p) {
+            var mesaj = c.erori[p[0]] || '';
+            setError(p[1], p[2], mesaj);
+            if (mesaj && !primul) primul = document.getElementById(p[1]);
+          });
+          if (primul) primul.focus();
+          toast('Mai sunt câmpuri de corectat.');
+          return;
+        }
+
+        if (!c.ok) {
+          toast(c.mesaj || 'Nu am putut crea contul.');
+          // Când sesiunea a expirat, singurul drum e de la capăt.
+          if (c.redirect) setTimeout(function () { window.location.href = c.redirect; }, 1600);
+          return;
+        }
+
+        toast(c.mesaj || 'Contul e gata.');
+        setTimeout(function () { window.location.href = c.redirect || 'index.php'; }, 900);
       })
       .catch(function () {
         buton.disabled = false;

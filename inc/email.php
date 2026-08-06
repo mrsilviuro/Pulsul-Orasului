@@ -515,6 +515,32 @@ function emailParolaTemporara(string $catre, string $prenume, string $parola, in
     ]);
 }
 
+/**
+ * „Bine ai venit", pentru cine s-a înscris cu Google.
+ *
+ * Nu are link de confirmat: Google ne-a spus deja că adresa e a lui. Mesajul
+ * are totuși rost — e urma scrisă că s-a deschis un cont pe adresa asta, deci
+ * omul află dacă altcineva i-a folosit contul de Google.
+ */
+function emailBunVenit(string $catre, string $prenume): bool
+{
+    global $config;
+    $site = rtrim((string) ($config['url_site'] ?? ''), '/');
+
+    return trimiteEmail($catre, 'Bine ai venit pe PulsulOrasului.Ro', [
+        'salut'     => 'Bună, ' . $prenume . '!',
+        'paragrafe' => [
+            'Contul tău e gata și activ. L-ai deschis cu Google, deci nu ai de ținut '
+            . 'minte nicio parolă nouă.',
+            'De acum poți publica evenimente, te poți înscrie la cele ale altora și '
+            . 'poți lăsa comentarii.',
+        ],
+        'buton'     => ['text' => 'Vezi ce se întâmplă în oraș', 'href' => $site . '/index.php'],
+        'incheiere' => 'Dacă vrei să intri și cu parolă, nu doar cu Google, o poți pune '
+                     . 'oricând din „Ți-ai uitat parola".',
+    ]);
+}
+
 /** Înștiințarea că parola a fost schimbată. */
 function emailParolaSchimbata(string $catre, string $prenume): bool
 {

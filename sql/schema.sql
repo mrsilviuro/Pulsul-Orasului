@@ -60,7 +60,13 @@ CREATE TABLE IF NOT EXISTS membri (
   nume              VARCHAR(60)     NOT NULL,
   prenume           VARCHAR(60)     NOT NULL,
   email             VARCHAR(190)    NOT NULL,
-  parola_hash       VARCHAR(255)    NOT NULL,
+
+  -- Cine e omul după Google („sub"-ul lor). NULL pentru cine nu folosește
+  -- Google. Vezi explicația din sql/005-google.sql.
+  google_id         VARCHAR(32)         NULL DEFAULT NULL,
+
+  -- NULL pentru cine intră doar cu Google: nu are parolă la noi.
+  parola_hash       VARCHAR(255)        NULL DEFAULT NULL,
 
   -- Parola temporară, pentru cine și-a uitat parola. Se ține hashuită, exact
   -- ca cea adevărată. Vezi explicațiile din sql/004-parola-uitata.sql.
@@ -101,6 +107,9 @@ CREATE TABLE IF NOT EXISTS membri (
   -- doar una poate trece de index.
   UNIQUE KEY uk_membri_email     (email),
   UNIQUE KEY uk_membri_permalink (permalink),
+  -- Un cont de Google se leagă la un singur membru. MySQL nu numără valorile
+  -- NULL într-un index unic, deci ceilalți membri nu se încurcă între ei.
+  UNIQUE KEY uk_membri_google    (google_id),
 
   KEY idx_membri_token (token_confirmare),
   KEY idx_membri_ip    (ip_inregistrare, creat_la)

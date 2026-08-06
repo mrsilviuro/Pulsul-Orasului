@@ -116,6 +116,36 @@ return [
      */
     'email_metoda' => 'auto',
 
+    // ------------------------------------------------------------ Google
+    /**
+     * Datele aplicației din Google Cloud Console.
+     *
+     * Cât timp sunt goale, butoanele „Continuă cu Google" nici nu se
+     * tipăresc în pagină, iar site-ul merge normal fără ele.
+     *
+     * Pașii de urmat la Google sunt scriși pe larg în README, la secțiunea
+     * „Intrarea cu Google". Pe scurt: faci un proiect, completezi ecranul de
+     * acceptare, ceri „OAuth client ID" de tip „Web application" și treci la
+     * „Authorized redirect URIs" exact adresa:
+     *
+     *     https://pulsulorasului.ro/google.php
+     *
+     * SECRETUL NU SE PUNE NICIODATĂ ÎN JAVASCRIPT sau în vreo pagină. Stă
+     * doar aici, iar fișierul ăsta nu se vede din web.
+     */
+    'google_client_id'     => '',
+    'google_client_secret' => '',
+
+    /**
+     * Adresele Google. NU LE SCHIMBA.
+     *
+     * Sunt aici doar ca fluxul să poată fi verificat automat, cu un server
+     * care ține locul lui Google. Lăsate goale, se folosesc cele adevărate,
+     * scrise în inc/google.php.
+     */
+    // 'google_url_autorizare' => 'https://accounts.google.com/o/oauth2/v2/auth',
+    // 'google_url_token'      => 'https://oauth2.googleapis.com/token',
+
     // ---------------------------------------------------------- diagnostic
     /**
      * Cheia pentru verifica.php, pagina care spune ce nu merge pe server.

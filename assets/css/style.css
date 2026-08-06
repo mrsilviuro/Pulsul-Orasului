@@ -2143,6 +2143,15 @@ body { overscroll-behavior-y: none; }
 [data-theme="dark"] .auth__notice--ok { color: #6ee7a0; }
 .auth__notice--ok .ico { color: #16a34a; }
 
+/* mesajul roșu: ceva n-a mers (întoarcerea de la Google, de pildă) */
+.auth__notice--rau {
+  border-color: rgba(224, 57, 59, .35);
+  background: rgba(224, 57, 59, .09);
+  color: #c22b2d;
+}
+[data-theme="dark"] .auth__notice--rau { color: #ff9b97; }
+.auth__notice--rau .ico { color: #e0393b; }
+
 /* Numele scris în bară dispare devreme: unele nume sunt lungi, iar cercul cu
    inițiala e de ajuns ca scurtătură spre profil. */
 @media (max-width: 1000px) {

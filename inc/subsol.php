@@ -6,6 +6,20 @@ declare(strict_types=1);
  */
 
 $logat = isset($logat) ? $logat : esteLogat();
+
+/**
+ * Mesajul lăsat în sesiune de o pagină care a făcut o redirecționare.
+ *
+ * Se citește o singură dată și se șterge imediat: dacă ar rămâne, ar reapărea
+ * la fiecare reîncărcare a paginii. E felul în care „Bine ai revenit!" ajunge
+ * pe ecran după intrarea cu Google, care trece prin trei adrese diferite.
+ */
+$mesajTrecator = '';
+
+if (session_status() === PHP_SESSION_ACTIVE && !empty($_SESSION['mesaj_bun'])) {
+    $mesajTrecator = (string) $_SESSION['mesaj_bun'];
+    unset($_SESSION['mesaj_bun']);
+}
 ?>
 <!-- =============================== FOOTER =============================== -->
 <footer class="site-footer">
@@ -77,8 +91,9 @@ $logat = isset($logat) ? $logat : esteLogat();
   </div>
 </footer>
 
-<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"
+     data-mesaj="<?= h($mesajTrecator) ?>"></div>
 
-<script src="assets/js/main.js?v=15"></script>
+<script src="assets/js/main.js?v=16"></script>
 </body>
 </html>
