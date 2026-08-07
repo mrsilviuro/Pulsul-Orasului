@@ -1,0 +1,9 @@
+# Scripturile de aici se rulează din cron, nu din browser.
+# Verificarea adevărată e în PHP (PHP_SAPI !== 'cli'); asta e a doua încuietoare.
+<IfModule mod_authz_core.c>
+  Require all denied
+</IfModule>
+<IfModule !mod_authz_core.c>
+  Order allow,deny
+  Deny from all
+</IfModule>

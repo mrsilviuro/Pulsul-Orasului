@@ -114,5 +114,42 @@ for ($i = 0; $i < 5000; $i++) {
 verifica('5000 generate, aproape toate diferite', true, count($multe) > 4990);
 verifica('folosește toate cele 32 de caractere', 32, count($litere));
 
+echo "\n=== TELEFON ===\n";
+
+// Perechi, nu chei: PHP ar preface „40722334455" în număr întreg.
+foreach ([
+    ['0722334455',      '0722334455'],
+    ['0722 33 44 55',   '0722334455'],
+    ['0722-334-455',    '0722334455'],
+    ['(0722) 334.455',  '0722334455'],
+    ['+40 722 334 455', '0722334455'],
+    ['0040722334455',   '0722334455'],
+    ['40722334455',     '0722334455'],
+    ['0212223344',      '0212223344'],
+    ['0312223344',      '0312223344'],
+    ['  0722334455  ',  '0722334455'],
+] as [$scris, $asteptat]) {
+    verifica('"' . trim($scris) . '" -> ' . $asteptat, $asteptat, verificaTelefon($scris)['curat']);
+}
+
+verifica('gol e bun (câmpul e opțional)', true, verificaTelefon('')['ok']);
+verifica('doar spații e tot gol', '', verificaTelefon('   ')['curat']);
+
+foreach ([
+  'prea scurt'        => '0722334',
+  'prea lung'         => '07223344556',
+  'prefix inexistent' => '0522334455',
+  'nu începe cu 0'    => '722334455',
+  'litere'            => '07abcdefgh',
+  'etichetă HTML'     => '<b>0722334455</b>',
+  'injecție SQL'      => "0722334455'; DROP TABLE membri;--",
+  'număr francez'     => '+33612345678',
+  'plus la mijloc'    => '0722+334455',
+  'doar plus'         => '+',
+  'emoji'             => '0722334455😀',
+] as $ce => $valoare) {
+    verifica('respins: ' . $ce, false, verificaTelefon($valoare)['ok']);
+}
+
 printf("\n%s\nTOTAL: %d trecute, %d picate\n", str_repeat('=',60), $treceri, $picaturi);
 exit($picaturi > 0 ? 1 : 0);

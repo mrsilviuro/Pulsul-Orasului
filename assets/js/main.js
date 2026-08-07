@@ -10,6 +10,7 @@
    7b. Parola uitată și parola nouă
    8. Stele și pagina de profil
    9. Poza de profil
+   10. Setările contului
    ========================================================================= */
 (function () {
   'use strict';
@@ -1288,7 +1289,7 @@
   var parolaForm = document.getElementById('parola-form');
 
   if (parolaForm) {
-    legIndicatorulDeParola('pn-noua', 'pn-meter', 'pn-hint');
+    legIndicatorulDeParola('pn-noua', 'pn-noua-meter', 'pn-noua-hint');
 
     // Când e cerută și parola veche, câmpul ei există; altfel, nu.
     var areVeche = document.getElementById('pn-veche') !== null;
@@ -2109,6 +2110,165 @@
         }
       }
     }
+  }
+
+  /* ---------------------- 10. SETĂRILE CONTULUI ------------------------- */
+  /* Parola e luată de bucata 7b de mai sus: pagina de setări folosește exact
+     aceleași id-uri ca parola-noua.php, deci n-are nevoie de cod propriu. */
+
+  function trimiteSetare(form, buton, date, laReusita) {
+    var textInitial = buton.textContent;
+    buton.disabled = true;
+    buton.textContent = 'Se salvează…';
+
+    date.csrf = (form.querySelector('[name="csrf"]') || {}).value || '';
+
+    fetch('api/setari.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify(date)
+    })
+    .then(citesteRaspuns)
+    .then(function (rez) {
+      buton.disabled = false;
+      buton.textContent = textInitial;
+
+      if (!rez.corp) { toast(mesajRaspunsNeasteptat(rez)); return; }
+      laReusita(rez.corp);
+    })
+    .catch(function () {
+      buton.disabled = false;
+      buton.textContent = textInitial;
+      toast(mesajFaraLegatura());
+    });
+  }
+
+  /* --- Telefonul --- */
+  var telefonForm = document.getElementById('telefon-form');
+
+  if (telefonForm) {
+    telefonForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+
+      var camp = document.getElementById('st-telefon');
+
+      trimiteSetare(telefonForm, telefonForm.querySelector('button[type=submit]'),
+        { sectiune: 'telefon', telefon: camp.value },
+        function (c) {
+          if (c.erori) {
+            setError('st-telefon', 'err-st-telefon', c.erori.telefon || '');
+            camp.focus();
+            return;
+          }
+          if (!c.ok) { toast(c.mesaj || 'Nu am putut salva numărul.'); return; }
+
+          // Serverul întoarce numărul adus la forma lui: îl arătăm pe acela,
+          // ca omul să vadă exact ce s-a salvat.
+          setError('st-telefon', 'err-st-telefon', '');
+          camp.value = c.telefon || '';
+          toast(c.mesaj || 'Salvat.');
+        });
+    });
+  }
+
+  /* --- Newsletterul --- */
+  var newsForm = document.getElementById('newsletter-form');
+
+  if (newsForm) {
+    newsForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+
+      var bifa = document.getElementById('st-newsletter');
+
+      trimiteSetare(newsForm, newsForm.querySelector('button[type=submit]'),
+        { sectiune: 'newsletter', newsletter: bifa.checked ? '1' : '' },
+        function (c) {
+          if (!c.ok) { toast(c.mesaj || 'Nu am putut salva preferința.'); return; }
+          toast(c.mesaj || 'Salvat.');
+        });
+    });
+  }
+
+  /* --- Ștergerea contului --- */
+  var stergStart  = document.getElementById('stergere-start');
+  var stergForm   = document.getElementById('stergere-form');
+  var stergRenunt = document.getElementById('stergere-renunt');
+
+  if (stergStart && stergForm) {
+    stergStart.addEventListener('click', function () {
+      stergStart.hidden = true;
+      stergForm.hidden = false;
+
+      var parola = document.getElementById('st-parola');
+      if (parola) parola.focus();
+    });
+
+    if (stergRenunt) {
+      stergRenunt.addEventListener('click', function () {
+        stergForm.hidden = true;
+        stergStart.hidden = false;
+        var parola = document.getElementById('st-parola');
+        if (parola) { parola.value = ''; setError('st-parola', 'err-st-parola', ''); }
+        stergStart.focus();
+      });
+    }
+
+    stergForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+
+      var parola = document.getElementById('st-parola');
+
+      if (parola && !parola.value) {
+        setError('st-parola', 'err-st-parola', 'Scrie-ți parola.');
+        parola.focus();
+        return;
+      }
+
+      var buton = stergForm.querySelector('button[type=submit]');
+      var textInitial = buton.textContent;
+      buton.disabled = true;
+      buton.textContent = 'Se trimite…';
+
+      var trimitem = { csrf: (stergForm.querySelector('[name="csrf"]') || {}).value || '' };
+      if (parola) trimitem.parola = parola.value;
+
+      fetch('api/stergere-cere.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify(trimitem)
+      })
+      .then(citesteRaspuns)
+      .then(function (rez) {
+        buton.disabled = false;
+        buton.textContent = textInitial;
+
+        if (!rez.corp) { toast(mesajRaspunsNeasteptat(rez)); return; }
+        var c = rez.corp;
+
+        if (c.erori) {
+          setError('st-parola', 'err-st-parola', c.erori.parola || '');
+          if (parola) parola.focus();
+          return;
+        }
+
+        if (!c.ok) { toast(c.mesaj || 'Nu am putut trimite e-mailul.'); return; }
+
+        document.getElementById('stergere-block').hidden = true;
+        var gata = document.getElementById('stergere-done');
+        var text = document.getElementById('stergere-done-text');
+        if (text && c.mesaj) text.textContent = c.mesaj;
+        gata.hidden = false;
+        gata.setAttribute('tabindex', '-1');
+        gata.focus();
+      })
+      .catch(function () {
+        buton.disabled = false;
+        buton.textContent = textInitial;
+        toast(mesajFaraLegatura());
+      });
+    });
   }
 
 })();

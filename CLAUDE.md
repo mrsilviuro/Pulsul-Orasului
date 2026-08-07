@@ -56,7 +56,12 @@ Site live: https://pulsulorasului.ro
    niciodată în clar. Verifică `inc/email.php` / `inc/validare.php` pentru pattern-uri
    existente înainte de a inventa altele noi.
 
-7. **Poze de profil: niciodată nu se salvează fișierul primit așa cum a venit.**
+7. **Contul șters se anonimizează, nu se șterge cu DELETE.** Rândul din `membri`
+   rămâne pentru totdeauna: de el atârnă evenimentele organizate și participările.
+   Se golește omul din el (`inc/stergere.php`), nu rândul. Ștergerea are răgaz de
+   30 de zile, iar simpla intrare în cont o anulează — vezi `autentifica()`.
+
+8. **Poze de profil: niciodată nu se salvează fișierul primit așa cum a venit.**
    Se redesenează pixel cu pixel (`inc/imagini.php`), EXIF dispare, nume random hex.
    Orice funcționalitate nouă de upload trebuie să respecte acest pattern.
 
@@ -64,8 +69,8 @@ Site live: https://pulsulorasului.ro
 
 ```
 index.php, articol.php, contact.php, despre.php, login.php,
-profil.php, poza.php, parola-uitata.php, parola-noua.php,
-google.php, finalizare.php, confirma.php, iesire.php, verifica.php
+profil.php, poza.php, setari.php, parola-uitata.php, parola-noua.php,
+google.php, finalizare.php, confirma.php, stergere.php, iesire.php, verifica.php
 
 inc/
   antet.php        → head + meniu + antete siguranță (folosit de toate paginile)
@@ -76,12 +81,16 @@ inc/
   email.php         → șablon unic pentru toate email-urile (table-based, inline style)
   google.php        → OAuth Google (authorization code flow + PKCE)
   buton-google.php  → butonul de login Google
+  stergere.php      → ștergerea contului cu răgaz + anonimizarea
+  camp-parola.php   → un câmp de parolă cu ochi (folosit de toate paginile)
 
 api/                → endpoint-uri JSON apelate din JS (fetch)
+cron/               → scripturi rulate din cron (doar CLI, .htaccess le blochează)
 sql/                → schema.sql + migrări numerotate (002, 003, 004, 005-google,
-                      006-tine-minte.sql)
+                      006-tine-minte, 007-setari.sql)
 teste/              → test-validare.php (verificările din inc/validare.php)
-                      test-tine-minte.php (cere serverul pornit — vezi antetul lui)
+                      test-tine-minte.php, test-setari.php
+                      (ultimele două cer serverul pornit — vezi antetul lor)
 private/            → loguri (emailuri-trimise.log), protejat prin .htaccess
 assets/css/style.css, assets/js/main.js, assets/img/
 ```

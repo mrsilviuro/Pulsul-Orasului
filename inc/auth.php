@@ -408,6 +408,8 @@ function autentifica(
     unset($_SESSION['csrf']);
     tokenCsrf();
 
+    anuleazaStergereaLaIntrare((int) $membru['id']);
+
     if ($tineMinte) {
         /**
          * Două cookie-uri, două treburi diferite.
@@ -432,6 +434,36 @@ function autentifica(
 
         $_SESSION['tine_minte'] = true;
         tineMinteAcest((int) $membru['id'], $amintire);
+    }
+}
+
+/**
+ * Intrarea în cont oprește ștergerea cerută mai devreme.
+ *
+ * Stă aici, în autentifica(), fiindcă prin ea trec toate drumurile de intrare
+ * — parolă, Google, ultimul pas al înregistrării cu Google. Un singur loc,
+ * deci nu poate fi uitat la vreunul dintre ele.
+ *
+ * Nu are buton și nu întreabă nimic: omului i s-a scris în e-mail că e destul
+ * să intre. Scrierea se face doar dacă chiar era ceva de anulat, iar
+ * rowCount() ne spune asta fără o citire în plus.
+ */
+function anuleazaStergereaLaIntrare(int $membruId): void
+{
+    try {
+        $u = db()->prepare(
+            'UPDATE membri
+                SET cerere_stergere = NULL, token_stergere = NULL, token_stergere_expira = NULL
+              WHERE id = ? AND cerere_stergere IS NOT NULL'
+        );
+        $u->execute([$membruId]);
+
+        if ($u->rowCount() > 0) {
+            $_SESSION['mesaj_bun'] = 'Bine ai revenit! Ștergerea contului a fost anulată — '
+                                   . 'contul tău rămâne activ, cu toate datele lui.';
+        }
+    } catch (PDOException $e) {
+        // Migrarea 007 nu e rulată încă. Intrarea în cont nu are de suferit.
     }
 }
 

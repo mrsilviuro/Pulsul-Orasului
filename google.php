@@ -164,7 +164,9 @@ if ($membru) {
      */
     autentifica($membru, true);
 
-    $_SESSION['mesaj_bun'] = 'Bine ai revenit, ' . $membru['prenume'] . '!';
+    // „??=", nu „=": dacă intrarea tocmai a oprit o ștergere de cont,
+    // autentifica() a lăsat acolo un mesaj mai important decât salutul.
+    $_SESSION['mesaj_bun'] ??= 'Bine ai revenit, ' . $membru['prenume'] . '!';
 
     header('Location: ' . ($inapoiLa !== '' ? $inapoiLa : 'index.php'));
     exit;
