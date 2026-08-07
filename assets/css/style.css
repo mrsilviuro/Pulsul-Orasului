@@ -2063,7 +2063,22 @@ body { overscroll-behavior-y: none; }
 
 @media (max-width: 640px) {
   .profile { flex-direction: column; align-items: stretch; padding: 20px; }
-  .profile__id { flex-direction: column; align-items: center; text-align: center; }
+  /**
+   * „flex: none" anulează aici basis-ul de 260px pus mai sus.
+   *
+   * De sus în jos, .profile e coloană, iar într-o coloană flex-basis nu mai
+   * înseamnă lățime, ci ÎNĂLȚIME. Lăsat așa, blocul cu numele s-ar întinde pe
+   * 260px pe verticală și ar rămâne un gol mare între pastile și notă.
+   *
+   * Cei 260px își fac treaba doar cât timp rândul e orizontal — adică exact
+   * până la pragul ăsta, unde nu mai avem nimic de rupt.
+   */
+  .profile__id {
+    flex: none;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
   .facts { justify-content: center; }
   .rating { width: 100%; }
   .rating-summary { gap: 20px; justify-content: center; }
