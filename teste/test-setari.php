@@ -423,6 +423,41 @@ exec('php ' . escapeshellarg(dirname(__DIR__) . '/cron/anonimizeaza-conturi.php'
 verifica('a doua rulare nu mai găsește nimic', true,
     str_contains(implode("\n", $iesire), '0 anonimizate'));
 
+echo "\n=== ȘABLONUL DE E-MAIL: CUTIA CU VALOARE ===\n";
+
+/**
+ * Cutia a fost făcută pentru o parolă de șase caractere: mare, rărită,
+ * monospațiată. Aceleași reguli aplicate unei date de 17 caractere făceau
+ * mesajul să pară scris după alt tipar. Mărimea se ia acum după lungime.
+ */
+$paragraf = ['Un rând de text obișnuit, ca să avem cu ce compara.'];
+
+$codScurt = sablonEmail('Parolă', [
+    'paragrafe' => $paragraf,
+    'cod' => ['eticheta' => 'Parola', 'valoare' => 'A7K2M9'],
+])['html'];
+
+$codLung = sablonEmail('Data', [
+    'paragrafe' => $paragraf,
+    'cod' => ['eticheta' => 'Data', 'valoare' => '6 septembrie 2026'],
+])['html'];
+
+verifica('parola scurtă rămâne mare (32px)', true, str_contains($codScurt, 'font-size:32px'));
+verifica('și monospațiată, ca să se tasteze fără greșeală', true,
+    str_contains($codScurt, 'Consolas'));
+
+verifica('data lungă NU mai e la 32px', false, str_contains($codLung, 'font-size:32px'));
+verifica('ci la mărimea obișnuită (22px)', true, str_contains($codLung, 'font-size:22px'));
+verifica('fără rărirea de 7px între litere', false, str_contains($codLung, 'letter-spacing:7px'));
+verifica('și fără font monospațiat', false,
+    str_contains(substr($codLung, strpos($codLung, 'Data') ?: 0), 'Consolas'));
+
+// Restul șablonului trebuie să rămână la fel în amândouă.
+foreach (['font-size:16px', 'font-size:25px', 'max-width:600px'] as $bucata) {
+    verifica('ambele păstrează ' . $bucata, true,
+        str_contains($codScurt, $bucata) && str_contains($codLung, $bucata));
+}
+
 echo "\n=== CRONUL NU SE DESCHIDE DIN BROWSER ===\n";
 
 $oricine = [];

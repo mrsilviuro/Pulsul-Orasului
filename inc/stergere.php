@@ -229,15 +229,5 @@ function anonimizeazaConturileExpirate(?int $acumSecunde = null): array
  */
 function scrieInLogulStergerii(string $rand): void
 {
-    $dosar = dirname(__DIR__) . '/private';
-
-    if (!is_dir($dosar) && !@mkdir($dosar, 0755, true) && !is_dir($dosar)) {
-        return;
-    }
-
-    @file_put_contents(
-        $dosar . '/conturi-anonimizate.log',
-        '[' . date('Y-m-d H:i:s') . '] ' . $rand . "\n",
-        FILE_APPEND
-    );
+    scrieInLog('conturi-anonimizate.log', $rand);
 }

@@ -283,6 +283,7 @@ contului și cron (86 de cazuri).
 php -S 127.0.0.1:8126 -t . &
 php teste/test-tine-minte.php http://127.0.0.1:8126
 php teste/test-setari.php     http://127.0.0.1:8126
+php teste/test-contact.php    http://127.0.0.1:8126
 ```
 
 ### Unicitatea adresei de e-mail
@@ -776,6 +777,74 @@ Ce s-a făcut se scrie în `private/conturi-anonimizate.log`. **Adresa nu se scr
 târziu. Rândul de încheiere se scrie doar când chiar a fost ceva de făcut —
 altfel un cron zilnic ar umple fișierul cu 365 de rânduri pe an care spun
 „n-am avut ce face".
+
+
+## Formularul de contact
+
+Până acum nu trimitea nimic nicăieri — era marcat cu `TODO`. Acum mesajul se
+scrie în `mesaje_contact` **și** pleacă pe e-mail la adresa din
+`email_raspuns`. Un e-mail se poate pierde în „Spam", iar un rând în bază nu
+sună când ajunge; fiecare acoperă slăbiciunea celuilalt.
+
+Vizitatorii fără cont au voie să scrie — e o pagină de contact, nu una de
+membri. De aceea are nevoie de apărare.
+
+### Pentru cine e conectat
+
+Numele, adresa și telefonul vin din cont și sunt blocate în pagină. Blocarea e
+doar comoditate: **pe server datele se iau din baza de date**, nu din ce a venit
+în formular. Altfel oricine ar putea trimite cererea de-a dreptul și și-ar semna
+mesajul cu numele altui membru.
+
+Membrul care n-are telefon în cont îl scrie acum — și îi e cerut, ca oricui: la
+un mesaj de contact vrem să putem suna înapoi. **Numărul rămâne doar pe mesaj**,
+nu intră în cont: datele din cont se schimbă dintr-un singur loc, din setări,
+unde omul le vede pe toate. Un formular care schimbă pe furiș altceva decât
+spune e exact felul de surpriză pe care nu-l vrem.
+
+Invitația „Alătură-te și tu" din coloana din dreapta se tipărește doar pentru
+vizitatori: unui membru deja înscris i-ar spune să facă ceva ce a făcut demult.
+
+Formularul are un singur câmp „Nume și prenume", dar în bază stau două coloane.
+Pentru vizitatori se desparte la primul spațiu, în ordinea de la înregistrare:
+numele de familie întâi.
+
+### Capcana pentru roboți
+
+Un câmp în plus, `website`, pe care niciun om nu-l vede. Ascuns prin scoaterea
+din ecran, **nu prin `display: none`**: mulți roboți sar peste câmpurile ascunse
+așa, tocmai fiindcă e cel mai des folosit truc.
+
+Dacă vine completat, răspunsul e **„ok"**, nu o eroare. Dacă i-am spune că l-am
+prins, cine scrie robotul ar afla din prima încercare că există capcana și ar
+ocoli-o mâine. Așa, robotul pleacă mulțumit și mesajul nu ajunge nicăieri.
+Încercarea se scrie în `private/spam-contact.log`.
+
+Capcana are `aria-hidden` și `tabindex="-1"`, deci nu stă în drumul cititoarelor
+de ecran sau al tastaturii: un om orb nu trebuie să pățească nimic din cauza ei.
+
+### Cât de des se poate scrie
+
+- **Vizitatori:** cel mult **5 mesaje pe oră** de la aceeași adresă IP.
+- **Membri:** cel mult **unul la 5 minute** — mai larg, fiindcă știm cine sunt.
+
+Limita **nu folosește un sistem nou**. Numără chiar rândurile din
+`mesaje_contact`, la fel cum limita de conturi noi numără rândurile din `membri`.
+Nu apare o a doua socoteală de ținut, iar limita nu poate rămâne nepotrivită cu
+realitatea: dacă rândul există, a fost numărat.
+
+`incercari_autentificare` are și el o limită pe IP, dar nu l-am atins: acolo se
+numără greșeli de parolă și se ajunge la blocarea intrării în cont. Cine scrie
+de multe ori pe pagina de contact n-are de ce să rămână pe dinafara contului.
+
+Fără reCAPTCHA sau alt serviciu străin — capcana și limitele sunt de ajuns
+deocamdată, și nu intră cod din afară în pagină.
+
+### Ce nu e făcut
+
+Nu există încă niciun loc unde să citești mesajele din site. Se citesc din
+`mesaje_contact` sau din e-mail, până facem panoul de administrare. Coloana
+`citit_la` e pregătită pentru atunci.
 
 
 ## E-mailurile

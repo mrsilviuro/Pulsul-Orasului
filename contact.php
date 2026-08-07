@@ -5,6 +5,34 @@ $titlu     = 'Contact — PulsulOrasului.Ro';
 $descriere = 'Scrie-ne: propuneri de evenimente, sesizări, colaborări sau orice altceva legat de PulsulOrasului.Ro.';
 $pagina    = 'contact';
 
+require_once __DIR__ . '/inc/auth.php';
+require_once __DIR__ . '/inc/validare.php';   // MESAJ_MAX
+
+/**
+ * Pentru cine e conectat, câmpurile vin din cont.
+ *
+ * Sunt și blocate în pagină, dar asta e doar comoditate: verificarea adevărată
+ * e pe server, unde datele membrului se iau din baza de date, nu din ce a venit
+ * în formular (vezi api/contact.php).
+ */
+$eu = membruCurent();
+
+$euNume = $euEmail = $euTelefon = '';
+
+if ($eu !== null) {
+    $q = db()->prepare('SELECT nume, prenume, email, telefon FROM membri WHERE id = ? LIMIT 1');
+    $q->execute([(int) $eu['id']]);
+    $contul = $q->fetch() ?: [];
+
+    $euNume    = trim(($contul['nume'] ?? '') . ' ' . ($contul['prenume'] ?? ''));
+    $euEmail   = (string) ($contul['email'] ?? '');
+    $euTelefon = (string) ($contul['telefon'] ?? '');
+}
+
+// Token-ul se cere înaintea antetului: după ce pagina începe să se tipărească,
+// sesiunea nu mai poate fi pornită.
+$csrf = tokenCsrf();
+
 require __DIR__ . '/inc/antet.php';
 ?>
 
@@ -25,19 +53,31 @@ require __DIR__ . '/inc/antet.php';
     <div class="contact">
 
       <!-- ========================= FORMULARUL ========================== -->
-      <!--
-        Când legi backend-ul: pui action="/trimite-mesaj" și method="post",
-        sau interceptezi submit-ul din JS (locul e marcat cu TODO în main.js).
-      -->
       <section class="contact__form-wrap" aria-labelledby="form-title">
         <h2 class="contact__h2" id="form-title">Trimite-ne un mesaj</h2>
 
-        <form class="form" id="contact-form" novalidate>
+        <form class="form" id="contact-form" novalidate
+              data-logat="<?= $eu !== null ? 'true' : 'false' ?>">
+
+          <input type="hidden" name="csrf" value="<?= h($csrf) ?>">
+
+          <!--
+            Capcana pentru roboți.
+            Ascunsă prin scoaterea din ecran, NU prin display:none: mulți roboți
+            sar peste câmpurile ascunse așa, dar îl completează pe acesta. Un om
+            nu-l vede și nu ajunge la el nici cu tastatura (tabindex="-1").
+            Numele „website" e ales dinadins: e printre cele mai râvnite de roboți.
+          -->
+          <div class="capcana" aria-hidden="true">
+            <label for="cf-website">Nu completa acest câmp</label>
+            <input type="text" id="cf-website" name="website" tabindex="-1" autocomplete="off">
+          </div>
 
           <div class="field">
             <label for="cf-name">Nume și prenume <span class="req" aria-hidden="true">*</span></label>
             <input type="text" id="cf-name" name="nume" autocomplete="name"
-                   placeholder="Ion Popescu" required
+                   placeholder="Popescu Ion" required
+                   value="<?= h($euNume) ?>"<?= $eu !== null ? ' readonly' : '' ?>
                    aria-describedby="err-name">
             <p class="field__error" id="err-name" hidden></p>
           </div>
@@ -47,14 +87,20 @@ require __DIR__ . '/inc/antet.php';
               <label for="cf-email">Adresa de e-mail <span class="req" aria-hidden="true">*</span></label>
               <input type="email" id="cf-email" name="email" autocomplete="email"
                      placeholder="adresa@email.ro" required
+                     value="<?= h($euEmail) ?>"<?= $eu !== null ? ' readonly' : '' ?>
                      aria-describedby="err-email">
               <p class="field__error" id="err-email" hidden></p>
             </div>
 
             <div class="field">
               <label for="cf-phone">Telefon <span class="req" aria-hidden="true">*</span></label>
+              <!-- Membrul care n-are telefon în cont îl scrie acum, și tot
+                   obligatoriu: la un mesaj de contact vrem să putem suna înapoi.
+                   Numărul rămâne doar pe mesaj — în cont și-l pune singur, din
+                   setări, dacă vrea. -->
               <input type="tel" id="cf-phone" name="telefon" autocomplete="tel"
-                     placeholder="07xx xxx xxx" required
+                     inputmode="tel" placeholder="0722 334 455" maxlength="40" required
+                     value="<?= h($euTelefon) ?>"<?= $euTelefon !== '' ? ' readonly' : '' ?>
                      aria-describedby="err-phone">
               <p class="field__error" id="err-phone" hidden></p>
             </div>
@@ -62,7 +108,7 @@ require __DIR__ . '/inc/antet.php';
 
           <div class="field">
             <label for="cf-message">Mesajul tău <span class="req" aria-hidden="true">*</span></label>
-            <textarea id="cf-message" name="mesaj" rows="6"
+            <textarea id="cf-message" name="mesaj" rows="6" maxlength="<?= MESAJ_MAX ?>"
                       placeholder="Scrie aici despre ce e vorba…" required
                       aria-describedby="err-message"></textarea>
             <p class="field__error" id="err-message" hidden></p>
@@ -151,10 +197,14 @@ require __DIR__ . '/inc/antet.php';
           </div>
         </div>
 
+        <?php if ($eu === null): ?>
+        <!-- Invitația la înscriere e doar pentru cine n-are cont. Unui membru
+             deja înscris i-ar spune să facă ceva ce a făcut demult. -->
         <div class="info-cta">
           <p>Vrei să publici tu evenimente pe site?</p>
           <a class="btn btn--ghost btn--sm" href="login.php#inregistrare">Alătură-te și tu</a>
         </div>
+        <?php endif; ?>
       </aside>
 
     </div>

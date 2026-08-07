@@ -235,6 +235,9 @@ function scrieEmailInFisier(string $catre, string $subiect, string $anteturi, ar
  *   'buton'      — ['text' => ..., 'href' => ...]
  *   'link_gol'   — adresa scrisă și ca text, sub buton
  *   'cod'        — ['valoare' => 'A7K2M9', 'eticheta' => 'Parola ta temporară']
+ *                  Cutia își ia mărimea după lungimea valorii: un cod scurt
+ *                  rămâne mare și rărit, ca să poată fi tastat; ceva mai lung
+ *                  (o dată, de pildă) se scrie ca restul mesajului.
  *   'atentie'    — text pus într-o casetă gălbuie
  *   'incheiere'  — ultimul paragraf, mai mic
  */
@@ -349,11 +352,33 @@ function sablonEmail(string $titlu, array $blocuri): array
                  . 'margin-bottom:10px;">' . h($blocuri['cod']['eticheta']) . '</div>';
         }
 
-        // Font cu lățime fixă: la o parolă tastată de mână, e important să nu
-        // se confunde literele între ele.
-        $h[] = '<div style="font-family:Consolas,Menlo,Monaco,\'Courier New\',monospace;'
-             . 'font-size:32px;font-weight:bold;letter-spacing:7px;color:' . $text . ';'
-             . 'line-height:1.2;">' . h($blocuri['cod']['valoare']) . '</div>';
+        /**
+         * Cutia asta a fost făcută pentru o parolă temporară: șase caractere,
+         * mari, rărite, cu lățime fixă, ca să poată fi tastate fără greșeală.
+         *
+         * La un șir scurt e exact ce trebuie. La unul lung — o dată, de pildă
+         * „6 septembrie 2026" — aceleași 32px cu 7px între litere ocupă
+         * aproape toată lățimea mesajului, iar rezultatul nu mai seamănă cu
+         * restul e-mailurilor: pare scris după alte reguli.
+         *
+         * Deci mărimea se ia după cât de lung e ce avem de arătat. Un cod
+         * rămâne cum era; ceva de citit, nu de tastat, primește o mărime
+         * obișnuită și litere lipite normal.
+         */
+        $valoare  = (string) $blocuri['cod']['valoare'];
+        $eSirScurt = mb_strlen($valoare, 'UTF-8') <= 8;
+
+        $marime  = $eSirScurt ? '32px' : '22px';
+        $rarire  = $eSirScurt ? '7px'  : '0.5px';
+
+        // Lățimea fixă a literelor are rost la ce se tastează de mână, ca „0"
+        // și „O" să nu se confunde. La un text de citit n-aduce nimic, deci
+        // rămâne fontul obișnuit al mesajului.
+        $fontCod = $eSirScurt ? 'Consolas,Menlo,Monaco,\'Courier New\',monospace' : $font;
+
+        $h[] = '<div style="font-family:' . $fontCod . ';'
+             . 'font-size:' . $marime . ';font-weight:bold;letter-spacing:' . $rarire . ';'
+             . 'color:' . $text . ';line-height:1.3;">' . h($valoare) . '</div>';
 
         $h[] = '</td></tr></table>';
     }
@@ -610,5 +635,56 @@ function emailStergereConfirmata(string $catre, string $prenume, string $cand, i
         'incheiere' => 'După ' . $cand . ', numele, adresa de e-mail și telefonul dispar '
                      . 'pentru totdeauna. Evenimentele la care ai fost rămân în istoricul '
                      . 'site-ului, dar fără numele tău.',
+    ]);
+}
+
+/**
+ * Mesajul din formularul de contact, trimis mai departe către noi.
+ *
+ * Pleacă la adresa de răspuns din config — cea la care oricum ar scrie omul
+ * dacă apăsa „Reply". Mesajul e deja în baza de date când ajunge aici, deci
+ * dacă e-mailul nu pleacă nu s-a pierdut nimic.
+ */
+function emailMesajDeContact(array $mesaj, ?int $membruId): bool
+{
+    global $config;
+
+    $catre = (string) ($config['email_raspuns'] ?? $config['email_expeditor'] ?? '');
+
+    /**
+     * Fără adresă în config n-avem unde trimite.
+     *
+     * Nu e o piedică pentru omul care a scris — mesajul lui e deja în baza de
+     * date. Dar e o piedică pentru noi, care n-am afla de el, așa că rămâne
+     * scrisă undeva în loc să se piardă în tăcere.
+     */
+    if ($catre === '') {
+        scrieInLog('spam-contact.log',
+            'ATENȚIE: mesaj primit, dar nu l-am putut trimite pe e-mail — '
+            . 'lipsesc email_raspuns și email_expeditor din inc/config.php');
+        return false;
+    }
+
+    $cine = $membruId === null
+        ? 'Vizitator fără cont.'
+        : 'Membrul #' . $membruId . ' — datele sunt luate din contul lui.';
+
+    /**
+     * Mesajul omului intră ca paragraf obișnuit, deci trece prin aceeași
+     * ieșire ca restul textelor din șablon (vezi sablonEmail): în varianta
+     * HTML e scăpat cu htmlspecialchars, deci nimeni nu ne poate strecura
+     * etichete în mesajul pe care îl citim noi.
+     */
+    return trimiteEmail($catre, 'Mesaj nou de la ' . $mesaj['prenume'] . ' ' . $mesaj['nume'], [
+        'salut'     => 'Mesaj nou din formularul de contact',
+        'paragrafe' => [
+            $cine,
+            'De la: ' . $mesaj['prenume'] . ' ' . $mesaj['nume'],
+            'E-mail: ' . $mesaj['email'],
+            'Telefon: ' . $mesaj['telefon'],
+            '— — —',
+            $mesaj['mesaj'],
+        ],
+        'incheiere' => 'Mesajul e salvat și în baza de date, în tabelul mesaje_contact.',
     ]);
 }
