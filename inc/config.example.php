@@ -47,9 +47,9 @@ return [
          * un prefix, de forma 'numecont_db' și 'numecont_utilizator'. Se pune
          * numele întreg, cu prefix cu tot.
          */
-        'nume'  => 'pulsulor_db',
-        'user'  => 'pulsulor_mrsilviu',
-        'parola'=> 'Silviu0792RO',
+        'nume'  => 'pulsulorasului',
+        'user'  => 'root',
+        'parola'=> '',
     ],
 
     // --------------------------------------------------------------- site
@@ -63,7 +63,7 @@ return [
      *
      * Fără bară la sfârșit.
      */
-    'url_site' => 'https://pulsulorasului.ro',
+    'url_site' => 'http://localhost/pulsulorasului',
 
     // Fusul orar al aplicației. Toate momentele — înregistrare, blocare,
     // expirarea linkurilor — se calculează după el.
@@ -80,7 +80,7 @@ return [
      * înregistrare și primește înapoi linkul de confirmare, deci poate
      * activa conturi pe adrese care nu sunt ale lui.
      */
-    'dezvoltare' => false,
+    'dezvoltare' => true,
 
     // -------------------------------------------------------------- limite
     // Câte conturi pot fi create de la aceeași adresă IP într-o oră.
@@ -133,8 +133,8 @@ return [
      * SECRETUL NU SE PUNE NICIODATĂ ÎN JAVASCRIPT sau în vreo pagină. Stă
      * doar aici, iar fișierul ăsta nu se vede din web.
      */
-    'google_client_id'     => '473507701416-kr6q79fpid6pfgjojf4pmfnaoiv5v08k.apps.googleusercontent.com',
-    'google_client_secret' => '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',
+    'google_client_id'     => '',
+    'google_client_secret' => '',
 
     /**
      * Adresele Google. NU LE SCHIMBA.
