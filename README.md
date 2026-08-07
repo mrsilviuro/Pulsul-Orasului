@@ -378,6 +378,20 @@ Meniul se schimbă acum într-un singur loc, în `inc/antet.php`.
 principală. Când ești conectat, dispare și în locul ei apare ieșirea din cont,
 scrisă discret. Lângă butonul de temă apare numele tău prescurtat.
 
+Tot pentru cei conectați, între nume și butonul de temă stă o rotiță care duce
+la `setari.php`. Nu e ascunsă din CSS, ci pur și simplu nu ajunge în pagină
+pentru vizitatori — ca și creionul de pe poza de profil.
+
+Rotița și butonul de temă poartă amândouă clasa `.nav__btn`, care ține pătratul
+de 34px, chenarul, colțul și starea de hover. Un singur loc de schimbat, ca
+cele două să nu se despartă niciodată la aspect. `.theme-toggle` a rămas doar
+cu ce e al ei: schimbul dintre soare și lună.
+
+Cu rotița, bara are în dreapta patru lucruri pentru un membru conectat — cerc,
+rotiță, temă, hamburger — adică 158px. Sub **360px** nu mai încap și ele, și
+numele scris al site-ului, așa că acolo rămâne doar semnul din logo, tot ca
+legătură spre prima pagină.
+
 ### Ce se întâmplă la autentificare
 
 - **Parolă greșită sau adresă inexistentă** — același mesaj, „E-mail sau parolă
