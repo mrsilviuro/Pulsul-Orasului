@@ -3,6 +3,24 @@
 Blog/platformă de evenimente locale. PHP + MySQL pe server, fără framework, fără build step.
 Site live: https://pulsulorasului.ro
 
+## Cum se lucrează cu git
+
+- **Se comite direct pe branch-ul implicit al repo-ului.** Fără branch-uri noi,
+  fără Pull Request-uri pentru fiecare task. Dacă din motive tehnice chiar e
+  nevoie de un branch temporar, se spune explicit înainte și se face merge
+  imediat ce modificarea e confirmată — nu se lasă branch-uri deschise.
+- **`inc/config.php` NU trebuie să ajungă niciodată urmărit de git.** S-a
+  întâmplat o dată, la o încărcare prin interfața GitHub care a redenumit
+  `config.example.php` în `config.php`: din acel moment `.gitignore` n-a mai
+  avut niciun efect, fiindcă el ține deoparte doar fișierele încă neurmărite.
+  Datele reale de acces au ajuns pe un repo public. Înainte de orice commit
+  care atinge `inc/`, verifică:
+  ```
+  git ls-files --error-unmatch inc/config.php && echo "PERICOL: e urmărit"
+  ```
+- Când urci fișiere prin interfața web a GitHub, ai grijă ce nume le dai:
+  o redenumire acolo intră direct în repo, fără să treacă pe lângă `.gitignore`.
+
 ## Reguli de editare — CRITICE
 
 - **NICIODATĂ nu rescrie un fișier întreg** pentru o modificare punctuală (ex: schimbare
