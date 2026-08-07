@@ -148,7 +148,21 @@ if ($membru) {
     $u->execute([acum(), (int) $membru['id']]);
 
     scrieIncercare((string) $membru['email'], true);
-    autentifica($membru);
+
+    /**
+     * „Ține-mă minte" e pornit din start la intrarea cu Google.
+     *
+     * La intrarea clasică bifa are rost: omul își știe parola, deci poate
+     * alege să nu rămână conectat, iar data viitoare o tastează din nou.
+     * Aici n-avem unde pune bifa — drumul trece prin Google și se întoarce
+     * singur — și nici n-ar avea ce alege: fără parolă la noi, singura cale
+     * înapoi în cont e tot pe la Google. A-l scoate afară la fiecare
+     * închidere de browser ar fi doar o plimbare în plus, fără niciun câștig.
+     *
+     * Folosim exact mecanismul de la login-ul clasic, al doilea parametru al
+     * lui autentifica(), ca să nu ținem două feluri de „ține minte" în casă.
+     */
+    autentifica($membru, true);
 
     $_SESSION['mesaj_bun'] = 'Bine ai revenit, ' . $membru['prenume'] . '!';
 

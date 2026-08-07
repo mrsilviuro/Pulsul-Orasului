@@ -99,7 +99,8 @@ if ($existent = $q->fetch()) {
         raspunsJson(['ok' => false, 'mesaj' => 'Contul există deja, dar nu e activ.'], 409);
     }
 
-    autentifica($existent);
+    // Aceeași persistență ca pe drumul obișnuit cu Google — vezi google.php.
+    autentifica($existent, true);
     raspunsJson(['ok' => true, 'redirect' => 'index.php', 'mesaj' => 'Contul exista deja. Te-am conectat.']);
 }
 
@@ -170,7 +171,9 @@ $membru = $q->fetch();
 $inapoiLa = (string) ($nou['inapoi_la'] ?? '');
 unset($_SESSION['google_nou']);
 
-autentifica($membru);
+// Contul e nou-nouț, dar tot pe Google se sprijină: rămâne conectat, ca la
+// orice altă intrare cu Google.
+autentifica($membru, true);
 
 // Un „bine ai venit", fără link de confirmat: nu mai e nimic de confirmat.
 emailBunVenit((string) $membru['email'], (string) $membru['prenume']);
