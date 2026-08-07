@@ -235,6 +235,9 @@ function scrieEmailInFisier(string $catre, string $subiect, string $anteturi, ar
  *   'buton'      — ['text' => ..., 'href' => ...]
  *   'link_gol'   — adresa scrisă și ca text, sub buton
  *   'cod'        — ['valoare' => 'A7K2M9', 'eticheta' => 'Parola ta temporară']
+ *                  Cutia își ia mărimea după lungimea valorii: un cod scurt
+ *                  rămâne mare și rărit, ca să poată fi tastat; ceva mai lung
+ *                  (o dată, de pildă) se scrie ca restul mesajului.
  *   'atentie'    — text pus într-o casetă gălbuie
  *   'incheiere'  — ultimul paragraf, mai mic
  */
@@ -349,11 +352,33 @@ function sablonEmail(string $titlu, array $blocuri): array
                  . 'margin-bottom:10px;">' . h($blocuri['cod']['eticheta']) . '</div>';
         }
 
-        // Font cu lățime fixă: la o parolă tastată de mână, e important să nu
-        // se confunde literele între ele.
-        $h[] = '<div style="font-family:Consolas,Menlo,Monaco,\'Courier New\',monospace;'
-             . 'font-size:32px;font-weight:bold;letter-spacing:7px;color:' . $text . ';'
-             . 'line-height:1.2;">' . h($blocuri['cod']['valoare']) . '</div>';
+        /**
+         * Cutia asta a fost făcută pentru o parolă temporară: șase caractere,
+         * mari, rărite, cu lățime fixă, ca să poată fi tastate fără greșeală.
+         *
+         * La un șir scurt e exact ce trebuie. La unul lung — o dată, de pildă
+         * „6 septembrie 2026" — aceleași 32px cu 7px între litere ocupă
+         * aproape toată lățimea mesajului, iar rezultatul nu mai seamănă cu
+         * restul e-mailurilor: pare scris după alte reguli.
+         *
+         * Deci mărimea se ia după cât de lung e ce avem de arătat. Un cod
+         * rămâne cum era; ceva de citit, nu de tastat, primește o mărime
+         * obișnuită și litere lipite normal.
+         */
+        $valoare  = (string) $blocuri['cod']['valoare'];
+        $eSirScurt = mb_strlen($valoare, 'UTF-8') <= 8;
+
+        $marime  = $eSirScurt ? '32px' : '22px';
+        $rarire  = $eSirScurt ? '7px'  : '0.5px';
+
+        // Lățimea fixă a literelor are rost la ce se tastează de mână, ca „0"
+        // și „O" să nu se confunde. La un text de citit n-aduce nimic, deci
+        // rămâne fontul obișnuit al mesajului.
+        $fontCod = $eSirScurt ? 'Consolas,Menlo,Monaco,\'Courier New\',monospace' : $font;
+
+        $h[] = '<div style="font-family:' . $fontCod . ';'
+             . 'font-size:' . $marime . ';font-weight:bold;letter-spacing:' . $rarire . ';'
+             . 'color:' . $text . ';line-height:1.3;">' . h($valoare) . '</div>';
 
         $h[] = '</td></tr></table>';
     }
