@@ -847,6 +847,57 @@ Nu există încă niciun loc unde să citești mesajele din site. Se citesc din
 `citit_la` e pregătită pentru atunci.
 
 
+## Evenimentele — deocamdată doar tabelele
+
+`sql/009-evenimente.sql` aduce `categorii` și `evenimente`. Formularul de
+publicare și încărcarea copertei vin separat.
+
+Categoriile erau până acum scrise de mână în trei locuri: filtrele din
+`index.php`, eticheta de pe fiecare articol și lista din `despre.php`. De acum
+au un singur loc. Sunt cinci: Sport, Cultură, Comunitate, Gastro, Muzică —
+ultima apărea doar ca etichetă pe un articol, fără să fie în filtre.
+
+Coloana `ordine` există fiindcă ordinea din bara de filtre e o alegere, nu o
+urmare a alfabetului: Sport stă primul pentru că așa a fost gândită pagina.
+
+### Câteva alegeri, explicate
+
+**`cost` e `DECIMAL`, nu `FLOAT`.** În virgulă mobilă binară, 0,10 lei nu se
+poate scrie exact, iar greșelile se adună la fiecare adunare. Bani în `FLOAT`
+înseamnă, mai devreme sau mai târziu, o factură care nu iese.
+
+**`cost = NULL` înseamnă gratuit, `0.00` înseamnă „am scris eu zero".** Sunt
+lucruri diferite la afișare.
+
+**`varsta_minima` e număr, nu `ENUM`.** Se poate compara și sorta
+(`WHERE varsta_minima <= 16`), iar dacă mâine apare 21 nu e nevoie de un
+`ALTER TABLE`. Ca text, „18" ar fi mai mic decât „6".
+
+**Data și ora stau despărțit.** Se caută mult după zi („ce e sâmbătă?"), iar un
+index pe `DATE` e mai simplu decât unul pe `DATETIME` din care trebuie tăiată
+ora la fiecare comparație.
+
+**`coperta` ține doar numele aleatoriu**, nu calea — ca la pozele de profil.
+Fișierul va trece prin `inc/imagini.php`, deci se redesenează pixel cu pixel și
+primește nume random. `imagine_default` de la categorii e altceva: acelea se
+urcă de mână, deci numele lor rămâne citibil.
+
+**Ștergerile sunt oprite (`ON DELETE RESTRICT`)** și pentru organizator, și
+pentru categorie. Un eveniment care a avut loc rămâne parte din istoricul celor
+care au fost la el. Nu e o piedică: contul șters se anonimizează, nu dispare,
+deci rândul e mereu acolo.
+
+**Slugul are o coadă întâmplătoare.** Două evenimente pot avea același titlu
+(„Târg de Crăciun") în ani diferiți, iar adresa trebuie să rămână unică.
+
+### Butonul de pe prima pagină
+
+În locul linkului „Toate articolele" e acum **„+ Eveniment nou"**. Se vede și
+fără cont: cine nu e înscris trebuie să afle că poate publica, nu să descopere
+după ce se înregistrează. Fără cont duce la `login.php?redirect=…`, deci după
+autentificare omul pică direct pe formular, nu pe prima pagină.
+
+
 ## E-mailurile
 
 Fișier: `inc/email.php` — un singur șablon pentru toate mesajele, exact ca la

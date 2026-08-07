@@ -105,7 +105,8 @@ inc/
 api/                → endpoint-uri JSON apelate din JS (fetch)
 cron/               → scripturi rulate din cron (doar CLI, .htaccess le blochează)
 sql/                → schema.sql + migrări numerotate (002, 003, 004, 005-google,
-                      006-tine-minte, 007-setari, 008-mesaje-contact.sql)
+                      006-tine-minte, 007-setari, 008-mesaje-contact,
+                      009-evenimente.sql)
 teste/              → test-validare.php (verificările din inc/validare.php)
                       test-tine-minte.php, test-setari.php, test-contact.php
                       (ultimele trei cer serverul pornit — vezi antetul lor)
@@ -152,8 +153,11 @@ assets/css/style.css, assets/js/main.js, assets/img/
 
 ## Ce e neterminat (roadmap)
 
-- Formularul de publicat un eveniment
-- Paginile de categorie
+- Formularul de publicat un eveniment (`adauga_eveniment.php` — butonul de pe
+  prima pagină duce deja acolo; tabelele `evenimente` și `categorii` există)
+- Încărcarea copertei (trece prin `inc/imagini.php`, ca poza de profil)
+- Moderarea: fiecare eveniment intră cu `stare_moderare = 'in_asteptare'`
+- Paginile de categorie (slugurile sunt în tabelul `categorii`)
 
 ## Workflow recomandat cu Claude Code
 

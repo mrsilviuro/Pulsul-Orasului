@@ -55,8 +55,21 @@ require __DIR__ . '/inc/antet.php';
         <p class="eyebrow"><span class="pulse-dot" aria-hidden="true"></span> Live din oraș</p>
         <h1 class="section-title">Ce se întâmplă acum</h1>
       </div>
-      <a class="link-more" href="#">Toate articolele
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15"/><path d="m13 6 6 6-6 6"/></svg>
+      <!--
+        Butonul se vede și fără cont: cine nu e înscris trebuie să afle că
+        poate publica, nu să descopere după ce se înregistrează.
+
+        Cine nu e conectat ajunge la pagina de intrare, dar cu drumul de
+        întoarcere în adresă — după autentificare pică direct pe formular, nu
+        pe prima pagină, de unde ar trebui să caute butonul din nou.
+      -->
+      <a class="btn btn--primary btn--sm" href="<?= $logat
+            ? 'adauga_eveniment.php'
+            : 'login.php?redirect=' . h(urlencode('/adauga_eveniment.php')) ?>">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 5v14"/><path d="M5 12h14"/>
+        </svg>
+        <span>Eveniment nou</span>
       </a>
     </div>
 
