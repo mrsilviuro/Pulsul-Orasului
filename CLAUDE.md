@@ -78,8 +78,10 @@ inc/
   buton-google.php  → butonul de login Google
 
 api/                → endpoint-uri JSON apelate din JS (fetch)
-sql/                → schema.sql + migrări numerotate (002, 003, 004, 005-google.sql)
-teste/              → test-validare.php (58 cazuri de test pentru inc/validare.php)
+sql/                → schema.sql + migrări numerotate (002, 003, 004, 005-google,
+                      006-tine-minte.sql)
+teste/              → test-validare.php (verificările din inc/validare.php)
+                      test-tine-minte.php (cere serverul pornit — vezi antetul lui)
 private/            → loguri (emailuri-trimise.log), protejat prin .htaccess
 assets/css/style.css, assets/js/main.js, assets/img/
 ```
@@ -102,6 +104,11 @@ assets/css/style.css, assets/js/main.js, assets/img/
 - CSRF token la orice acțiune care schimbă starea (inclusiv logout)
 - Amprentă browser legată de sesiune (fără IP — se schimbă legit pe mobil)
 - Stare cont (suspendat etc.) se citește din DB la fiecare cerere, nu din sesiune
+- „Ține-mă minte" = rând în `sesiuni_amintite`, nu un cookie de sesiune lung.
+  Cookie-ul are forma `selector:secret`, în DB stă doar sha256 al secretului,
+  se rotește la fiecare folosire, e legat de amprenta browserului, iar
+  reapariția unui secret vechi stinge toate amintirile membrului.
+  Intrarea cu Google îl pornește din start (n-are unde sta bifa).
 
 ## Convenții de nume/date
 

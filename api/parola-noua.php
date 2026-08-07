@@ -114,6 +114,24 @@ $u = db()->prepare(
 );
 $u->execute([$hash, acum(), (int) $membru['id']]);
 
+/**
+ * Parolă nouă = toate dispozitivele ținute minte sunt date afară.
+ *
+ * Cine își schimbă parola o face de multe ori tocmai fiindcă bănuiește că
+ * altcineva i-a intrat în cont. Dacă am lăsa amintirile vechi în picioare,
+ * intrusul ar rămâne conectat treizeci de zile, fără să aibă nevoie de parola
+ * cea nouă.
+ *
+ * Dispozitivul de pe care se schimbă parola e ținut minte din nou, curat, ca
+ * omul să nu se trezească dat afară de propria lui grijă.
+ */
+$tineaMinte = !empty($_SESSION['tine_minte']);
+uitaToateAle((int) $membru['id']);
+
+if ($tineaMinte) {
+    tineMinteAcest((int) $membru['id']);
+}
+
 gataCuParolaTemporara();
 
 /**

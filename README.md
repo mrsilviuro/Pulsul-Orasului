@@ -273,7 +273,15 @@ un `curl`. Cele care contează sunt în `inc/validare.php`:
 - **Parolă** — minimum 8 caractere, maximum 72 de octeți, pentru că bcrypt
   ignoră tăcut tot ce trece de atât.
 
-Rularea verificărilor: `php teste/test-validare.php` (58 de cazuri).
+Rularea verificărilor: `php teste/test-validare.php` (63 de cazuri).
+
+Pentru „ține-mă minte" există o suită separată, care vorbește cu site-ul prin
+HTTP, cu cookie-uri adevărate (35 de cazuri). Cere serverul pornit:
+
+```
+php -S 127.0.0.1:8126 -t . &
+php teste/test-tine-minte.php http://127.0.0.1:8126
+```
 
 ### Unicitatea adresei de e-mail
 
@@ -419,8 +427,9 @@ tot `Europe/Bucharest`, dar e mai bine să fie scrisă explicit.
 - **Amprentă de browser** legată de sesiune, ca un cookie furat să fie mai
   greu de folosit. Nu include adresa IP, care se schimbă firesc la trecerea
   de pe Wi-Fi pe date mobile.
-- **Sesiunea expiră** după 2 ore de inactivitate; „ține-mă minte" o prelungește
-  la 30 de zile.
+- **Sesiunea expiră** după 2 ore de inactivitate. Cine a bifat „ține-mă minte"
+  nu simte nimic: sesiunea moare, dar e ridicată imediat la loc din amintire
+  (mai jos), până la 30 de zile.
 - **Hash-ul parolei se reface** la intrare, dacă între timp s-a schimbat
   algoritmul (`password_needs_rehash`).
 - **Ieșirea din cont cere token CSRF**, ca alt site să nu poată deconecta
@@ -430,6 +439,60 @@ tot `Europe/Bucharest`, dar e mai bine să fie scrisă explicit.
   `Permissions-Policy`.
 - **Parola primită e limitată la 4096 de octeți**, ca nimeni să nu încarce
   serverul trimițând parole uriașe doar ca să-l pună să calculeze hash-uri.
+
+### „Ține-mă minte" — 30 de zile care chiar țin 30 de zile
+
+Prima încercare a fost cea care pare evidentă: cookie-ul de sesiune primește
+dată de expirare peste o lună. Nu ajunge, și merită înțeles de ce.
+
+Cookie-ul spune doar cât timp îl **păstrează browserul**. Conținutul sesiunii
+stă pe server, într-un fișier, iar acela e șters de PHP după
+`session.gc_maxlifetime` — implicit **24 de minute** de liniște. Pe deasupra,
+pe găzduirile partajate fișierele stau într-un dosar comun, unde mătură și
+vecinii, după setările lor. Un cookie de 30 de zile care arată spre un fișier
+șters de acum trei săptămâni nu conectează pe nimeni.
+
+Deci ce trebuie să dureze 30 de zile nu e sesiunea, ci **dovada că omul s-a
+autentificat cândva de pe dispozitivul ăsta**. Dovada stă în tabelul
+`sesiuni_amintite` (`sql/006-tine-minte.sql`), iar sesiunea se ridică din ea
+ori de câte ori e nevoie. Un rând = un dispozitiv.
+
+**Cookie-ul are două părți, `selector:secret`.** Selectorul spune care rând,
+secretul dovedește că e al tău. În baza de date intră doar `sha256` al
+secretului — dacă baza ajunge pe mâini străine, rândurile nu deschid nimic,
+exact ca la parole și la token-urile de confirmare.
+
+**Se rotește la fiecare folosire.** Secretul se schimbă, selectorul rămâne.
+Așa un cookie citit de pe fir sau rămas pe un calculator împrumutat e bun o
+singură dată.
+
+**Iar rotația e și un detector de furt.** Dacă apare un cookie cu selector bun
+și secret vechi, înseamnă ori un cookie uitat, ori unul furat — nu putem ști
+care. Atunci cad **toate** amintirile omului: în cel mai rău caz dăm afară
+hoțul, iar stăpânul contului mai tastează o dată parola.
+
+Restul apărărilor:
+
+- **Legat de amprenta browserului**, ca și sesiunea. Cookie-ul mutat pe alt
+  browser nu mai e bun de nimic.
+- **Cele 30 de zile curg de la autentificare**, nu de la ultima vizită. Cine
+  intră zilnic e întrebat de parolă tot o dată pe lună.
+- **Ieșirea din cont șterge rândul**, nu doar cookie-ul.
+- **Parola nouă dă afară toate dispozitivele.** Cine își schimbă parola o face
+  adesea tocmai fiindcă bănuiește pe cineva în cont; altfel intrusul ar rămâne
+  conectat 30 de zile fără parola cea nouă. Dispozitivul de pe care se schimbă
+  parola e ținut minte din nou, curat.
+- **Parola temporară nu primește amintire.** Sesiunea aia trebuie să țină cât
+  îi ia omului să-și pună o parolă nouă, nu o lună.
+- **Rândurile expirate** se mătură din PHP, la aproximativ una din 50 de
+  scrieri, ca și încercările de autentificare.
+
+**La intrarea cu Google e pornit din start.** N-are unde sta bifa — drumul
+pleacă spre Google și se întoarce singur — și n-ar avea nici ce alege: conturile
+Google n-au parolă la noi, deci singura cale înapoi tot pe la Google trece.
+
+Dacă tabelul lipsește (ai urcat fișierele dar n-ai rulat `sql/006`), site-ul
+merge normal: se intră în cont ca înainte, doar că nu se ține minte.
 
 ### login.php cât timp ești conectat
 

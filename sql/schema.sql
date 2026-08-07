@@ -141,3 +141,40 @@ CREATE TABLE IF NOT EXISTS incercari_autentificare (
 ) ENGINE=InnoDB
   DEFAULT CHARSET=utf8mb4
   COLLATE=utf8mb4_unicode_ci;
+
+-- -------------------------------------------------------------------------
+--  Sesiuni amintite („ține-mă minte")
+--
+--  Cookie-ul de sesiune spune doar cât timp îl păstrează BROWSERUL. Datele
+--  sesiunii stau pe server și sunt șterse după session.gc_maxlifetime — pe
+--  majoritatea găzduirilor, douăzeci și patru de minute. Deci ceea ce trebuie
+--  să dureze treizeci de zile nu e sesiunea, ci dovada că omul s-a
+--  autentificat cândva de pe dispozitivul ăsta. Dovada stă aici, iar sesiunea
+--  se ridică din ea ori de câte ori e nevoie.
+--
+--  Cookie-ul are forma „selector:secret": selectorul spune care rând,
+--  secretul dovedește că e al tău. În tabel intră doar sha256 al secretului.
+--  Explicația pe larg, în sql/006-tine-minte.sql.
+--
+--  Un rând = un dispozitiv.
+-- -------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS sesiuni_amintite (
+  id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  membru_id   INT UNSIGNED    NOT NULL,
+  selector    CHAR(32)        NOT NULL,
+  token_hash  CHAR(64)        NOT NULL,
+  amprenta    CHAR(64)        NOT NULL,
+  expira      DATETIME        NOT NULL,
+  creat_la    DATETIME        NOT NULL,
+  folosit_la  DATETIME        NOT NULL,
+
+  PRIMARY KEY (id),
+  UNIQUE KEY uk_amintite_selector (selector),
+  KEY idx_amintite_membru (membru_id),
+  KEY idx_amintite_expira (expira),
+
+  CONSTRAINT fk_amintite_membru
+    FOREIGN KEY (membru_id) REFERENCES membri (id) ON DELETE CASCADE
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci;
