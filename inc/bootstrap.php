@@ -72,6 +72,36 @@ function acumMinus(int $minute): string
     return date('Y-m-d H:i:s', time() - $minute * 60);
 }
 
+/**
+ * Un rând într-un fișier din private/, cu data în față.
+ *
+ * Dosarul private/ e închis din .htaccess, deci nimic de aici nu se vede din
+ * web. Se folosește la e-mailurile trimise, la conturile anonimizate și la
+ * încercările de spam — toate aveau, până acum, propria copie a acelorași
+ * cinci rânduri.
+ *
+ * Nu aruncă niciodată: un log care nu se poate scrie nu trebuie să oprească
+ * treaba pentru care s-a scris logul.
+ */
+function scrieInLog(string $fisier, string $rand): void
+{
+    $dosar = __DIR__ . '/../private';
+
+    if (!is_dir($dosar) && !@mkdir($dosar, 0755, true) && !is_dir($dosar)) {
+        return;
+    }
+
+    // Numele fișierului vine din cod, nu de la vizitator, dar tăiem oricum
+    // orice ar putea ieși din dosar.
+    $fisier = basename($fisier);
+
+    @file_put_contents(
+        $dosar . '/' . $fisier,
+        '[' . date('Y-m-d H:i:s') . '] ' . $rand . "\n",
+        FILE_APPEND
+    );
+}
+
 /* --------------------------- AFIȘAREA ERORILOR ------------------------ */
 
 // În dezvoltare vrem să vedem tot. În producție, utilizatorul nu trebuie să

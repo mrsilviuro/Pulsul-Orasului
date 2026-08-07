@@ -623,17 +623,21 @@
   if (contactForm) {
     var successBox = document.getElementById('form-success');
 
-    // Telefon: acceptăm formatele uzuale din România și cele internaționale
-    // (cifre, spații, puncte, cratime, paranteze și prefixul +).
-    var phonePattern = /^\+?[\d\s.\-()]{9,20}$/;
-    var emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+    // Un membru conectat are numele, adresa și (poate) telefonul luate din
+    // cont, blocate în pagină. Pe acelea nu le mai verificăm aici.
+    var eLogat = contactForm.getAttribute('data-logat') === 'true';
 
-    var rules = [
+    function blocat(id) {
+      var el = document.getElementById(id);
+      return !el || el.readOnly;
+    }
+
+    var toateReguli = [
       {
         id: 'cf-name', error: 'err-name',
         check: function (v) {
-          if (!v) return 'Te rugăm să îți scrii numele.';
-          if (v.length < 3) return 'Numele pare prea scurt.';
+          if (!v) return 'Scrie-ți numele și prenumele.';
+          if (v.indexOf(' ') < 0) return 'Scrie și numele, și prenumele.';
           return '';
         }
       },
@@ -641,15 +645,23 @@
         id: 'cf-email', error: 'err-email',
         check: function (v) {
           if (!v) return 'Avem nevoie de adresa ta de e-mail ca să îți răspundem.';
-          if (!emailPattern.test(v)) return 'Adresa de e-mail nu pare validă.';
+          if (!tiparEmail.test(v)) return 'Adresa de e-mail nu pare validă.';
           return '';
         }
       },
       {
         id: 'cf-phone', error: 'err-phone',
         check: function (v) {
-          if (!v) return 'Te rugăm să ne lași un număr de telefon.';
-          if (!phonePattern.test(v)) return 'Numărul de telefon nu pare valid.';
+          if (!v) return 'Scrie un număr de telefon.';
+          // Aceeași regulă ca pe server (verificaTelefon din inc/validare.php):
+          // prefixele +40 / 0040 se aduc la 0, apoi zece cifre, 07, 02 sau 03.
+          var cifre = v.replace(/[\s.\-()\/]+/g, '');
+          if (/^\+40/.test(cifre))      cifre = '0' + cifre.slice(3);
+          else if (/^0040/.test(cifre)) cifre = '0' + cifre.slice(4);
+          else if (/^40/.test(cifre) && cifre.length === 11) cifre = '0' + cifre.slice(2);
+          if (!/^0[237]\d{8}$/.test(cifre)) {
+            return 'Numărul nu pare românesc. Zece cifre, începând cu 07, 02 sau 03.';
+          }
           return '';
         }
       },
@@ -663,28 +675,14 @@
       }
     ];
 
-    function showError(rule, message) {
-      var input = document.getElementById(rule.id);
-      var box   = document.getElementById(rule.error);
-      var field = input.closest('.field');
+    var rules = toateReguli.filter(function (r) { return !blocat(r.id); });
 
-      if (message) {
-        field.classList.add('has-error');
-        input.setAttribute('aria-invalid', 'true');
-        box.textContent = message;
-        box.hidden = false;
-      } else {
-        field.classList.remove('has-error');
-        input.removeAttribute('aria-invalid');
-        box.textContent = '';
-        box.hidden = true;
-      }
-      return !message;
-    }
-
+    // setError e cel folosit de toate celelalte formulare de pe site (vezi mai
+    // sus). Formularul ăsta avea o copie a lui, scrisă înainte să existe cea
+    // comună; acum o folosește pe aceea.
     function validate(rule) {
       var input = document.getElementById(rule.id);
-      return showError(rule, rule.check(input.value.trim()));
+      return setError(rule.id, rule.error, rule.check(input.value.trim()));
     }
 
     rules.forEach(function (rule) {
@@ -712,10 +710,74 @@
         return;
       }
 
-      // TODO: aici se trimite mesajul către server (fetch POST către endpoint-ul tău).
-      contactForm.reset();
-      if (successBox) successBox.hidden = false;
-      toast('Mesajul a fost trimis.');
+      var buton = contactForm.querySelector('button[type=submit]');
+      var eticheta = buton.querySelector('span');
+      var textInitial = eticheta ? eticheta.textContent : buton.textContent;
+      buton.disabled = true;
+      if (eticheta) eticheta.textContent = 'Se trimite…';
+
+      function gata() {
+        buton.disabled = false;
+        if (eticheta) eticheta.textContent = textInitial;
+      }
+
+      fetch('api/contact.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          csrf: (contactForm.querySelector('[name="csrf"]') || {}).value || '',
+          nume: document.getElementById('cf-name').value,
+          email: document.getElementById('cf-email').value,
+          telefon: document.getElementById('cf-phone').value,
+          mesaj: document.getElementById('cf-message').value,
+          // Capcana pleacă goală de la un om. De la un robot, nu.
+          website: (document.getElementById('cf-website') || {}).value || ''
+        })
+      })
+      .then(citesteRaspuns)
+      .then(function (rez) {
+        gata();
+
+        if (!rez.corp) { toast(mesajRaspunsNeasteptat(rez)); return; }
+        var c = rez.corp;
+
+        if (c.erori) {
+          var primul = null;
+          [['nume', 'cf-name', 'err-name'],
+           ['email', 'cf-email', 'err-email'],
+           ['telefon', 'cf-phone', 'err-phone'],
+           ['mesaj', 'cf-message', 'err-message']].forEach(function (p) {
+            var mesaj = c.erori[p[0]] || '';
+            setError(p[1], p[2], mesaj);
+            if (mesaj && !primul) primul = document.getElementById(p[1]);
+          });
+          if (primul) primul.focus();
+          toast('Mai sunt câmpuri de corectat.');
+          return;
+        }
+
+        if (!c.ok) { toast(c.mesaj || 'Nu am putut trimite mesajul.'); return; }
+
+        // Câmpurile luate din cont rămân pe loc: omul le are tot acolo.
+        document.getElementById('cf-message').value = '';
+        if (!eLogat) {
+          document.getElementById('cf-name').value = '';
+          document.getElementById('cf-email').value = '';
+        }
+        if (!blocat('cf-phone') && eLogat) {
+          // Telefonul tocmai s-a salvat în cont; îl lăsăm scris.
+        } else if (!eLogat) {
+          document.getElementById('cf-phone').value = '';
+        }
+
+        if (successBox) successBox.hidden = false;
+        toast(c.mesaj || 'Mesajul a fost trimis.');
+      })
+      .catch(function () {
+        gata();
+        toast(mesajFaraLegatura());
+      });
     });
   }
 

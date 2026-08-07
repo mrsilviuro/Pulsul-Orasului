@@ -20,6 +20,8 @@ const VARSTA_MIN    = 13;
 const VARSTA_MAX    = 120;
 const PAROLA_MIN    = 8;
 const PAROLA_MAX    = 72;    // bcrypt ignoră tot ce trece de 72 de octeți
+const MESAJ_MIN     = 10;    // mesajul din formularul de contact
+const MESAJ_MAX     = 5000;
 
 /**
  * Aduce diacriticele românești la forma corectă (virgulă dedesubt).
@@ -246,6 +248,131 @@ function verificaInregistrare(array $date, ?DateTimeImmutable $azi = null): arra
 
     if (!$acceptat) {
         $erori['termeni'] = 'Trebuie să accepți termenii ca să continui.';
+    }
+
+    return ['erori' => $erori, 'curat' => $curat];
+}
+
+/**
+ * Mesajul din formularul de contact.
+ *
+ * Nu-și scrie propriile reguli: numele trec prin esteNumeValid(), adresa prin
+ * aceeași verificare ca la înregistrare, telefonul prin verificaTelefon().
+ * Dacă vreuna dintre ele se schimbă vreodată, se schimbă și aici, singură.
+ *
+ * $dinCont: pentru un membru conectat, numele, adresa și telefonul vin din
+ * baza de date, nu din formular. Se verifică doar mesajul — restul nu-l scrie
+ * omul, deci n-are ce fi greșit, iar dacă l-ar scrie ar putea semna cu numele
+ * altcuiva.
+ *
+ * Întoarce ['erori' => [...], 'curat' => [...]].
+ */
+function verificaContact(array $date, array $dinCont = []): array
+{
+    $erori = [];
+    $curat = [];
+
+    $citeste = static function (string $cheie) use ($date): string {
+        $valoare = $date[$cheie] ?? '';
+        return is_string($valoare) ? $valoare : '';
+    };
+
+    $eLogat = $dinCont !== [];
+
+    /* --------------------------- Nume și prenume ---------------------- */
+
+    if ($eLogat) {
+        $curat['nume']    = (string) $dinCont['nume'];
+        $curat['prenume'] = (string) $dinCont['prenume'];
+    } else {
+        /**
+         * Formularul are un singur câmp, „Nume și prenume", dar în bază stau
+         * două coloane — ca peste tot în proiect.
+         *
+         * Despărțim la primul spațiu, în ordinea folosită la înregistrare:
+         * numele de familie întâi, prenumele după („Popescu Ionuț").
+         */
+        $intreg = pregatesteText($citeste('nume'));
+        $bucati = explode(' ', $intreg, 2);
+
+        $nume    = $bucati[0] ?? '';
+        $prenume = trim($bucati[1] ?? '');
+
+        if ($intreg === '') {
+            $erori['nume'] = 'Scrie-ți numele și prenumele.';
+        } elseif ($prenume === '') {
+            $erori['nume'] = 'Scrie și numele, și prenumele.';
+        } elseif (mb_strlen($intreg, 'UTF-8') > NUME_MAX * 2) {
+            $erori['nume'] = 'Numele e prea lung.';
+        } elseif (!esteNumeValid($nume) || !esteNumeValid($prenume)) {
+            $erori['nume'] = 'Numele poate conține doar litere, spații și cratime.';
+        } else {
+            $curat['nume']    = numeCuMajuscula($nume);
+            $curat['prenume'] = numeCuMajuscula($prenume);
+        }
+    }
+
+    /* ------------------------------ E-mail ---------------------------- */
+
+    if ($eLogat) {
+        $curat['email'] = (string) $dinCont['email'];
+    } else {
+        $email = curataSpatii($citeste('email'));
+
+        if ($email === '') {
+            $erori['email'] = 'Scrie adresa de e-mail.';
+        } elseif (mb_strlen($email, 'UTF-8') > EMAIL_MAX) {
+            $erori['email'] = 'Adresa de e-mail e prea lungă.';
+        } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $erori['email'] = 'Adresa de e-mail nu pare validă.';
+        } else {
+            $curat['email'] = mb_strtolower($email, 'UTF-8');
+        }
+    }
+
+    /* ------------------------------ Telefon --------------------------- */
+
+    /**
+     * Membrul care are deja telefon în cont nu-l mai scrie.
+     *
+     * Cine nu are, îl scrie acum — și îi e cerut, ca oricărui vizitator: la
+     * un mesaj de contact vrem să putem suna înapoi.
+     */
+    if ($eLogat && (string) ($dinCont['telefon'] ?? '') !== '') {
+        $curat['telefon'] = (string) $dinCont['telefon'];
+    } else {
+        $telefon = $citeste('telefon');
+
+        if (trim($telefon) === '') {
+            $erori['telefon'] = 'Scrie un număr de telefon.';
+        } elseif (strlen($telefon) > 40) {
+            $erori['telefon'] = 'Numărul e prea lung.';
+        } else {
+            // Aceeași regulă ca la setări: o singură formă în bază.
+            $rezultat = verificaTelefon($telefon);
+
+            if (!$rezultat['ok']) {
+                $erori['telefon'] = $rezultat['eroare'];
+            } else {
+                $curat['telefon'] = $rezultat['curat'];
+            }
+        }
+    }
+
+    /* ------------------------------- Mesajul -------------------------- */
+
+    $mesaj = trim($citeste('mesaj'));
+
+    if ($mesaj === '') {
+        $erori['mesaj'] = 'Scrie-ne câteva rânduri despre ce e vorba.';
+    } elseif (mb_strlen($mesaj, 'UTF-8') < MESAJ_MIN) {
+        $erori['mesaj'] = 'Mesajul e prea scurt — mai spune-ne câte ceva.';
+    } elseif (mb_strlen($mesaj, 'UTF-8') > MESAJ_MAX) {
+        $erori['mesaj'] = 'Mesajul e prea lung (cel mult ' . MESAJ_MAX . ' de caractere).';
+    } else {
+        // Rândurile goale de la capete pleacă, dar cele dinăuntru rămân: omul
+        // și-a împărțit mesajul pe paragrafe dintr-un motiv.
+        $curat['mesaj'] = $mesaj;
     }
 
     return ['erori' => $erori, 'curat' => $curat];

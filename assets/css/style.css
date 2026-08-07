@@ -2589,3 +2589,43 @@ body { overscroll-behavior-y: none; }
   .card-set .form > .btn { justify-self: stretch; }
   .stergere-confirm__actiuni .btn { flex: 1 1 auto; }
 }
+
+/* =========================================================================
+   28. FORMULARUL DE CONTACT — capcana pentru roboți
+   ========================================================================= */
+
+/**
+ * Câmpul pe care nu-l vede nimeni.
+ *
+ * NU „display: none" și nici „visibility: hidden": mulți roboți știu să sară
+ * peste câmpurile ascunse așa, tocmai fiindcă e cel mai des folosit truc. Îl
+ * scoatem din ecran, unde arată ca un câmp obișnuit pentru cine citește codul,
+ * dar nu poate fi văzut sau atins de un om.
+ *
+ * „aria-hidden" în HTML îl scoate și din calea cititoarelor de ecran, iar
+ * „tabindex=-1" de pe câmp îl scoate din drumul tastaturii — un om orb sau
+ * unul care nu folosește mausul nu trebuie să pățească nimic din cauza lui.
+ */
+.capcana {
+  position: absolute;
+  left: -9999px;
+  top: auto;
+  width: 1px; height: 1px;
+  overflow: hidden;
+}
+
+/* Lămurire sub un câmp, când nu e o eroare, ci doar ceva bun de știut. */
+.field__hint {
+  margin-top: 6px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-faint);
+}
+
+/* Câmpul precompletat din cont: se vede că e acolo, dar că nu se schimbă de
+   aici. Schimbarea se face din setări, unde îi e locul. */
+.field input[readonly] {
+  background: var(--surface-2);
+  color: var(--text-soft);
+  cursor: default;
+}

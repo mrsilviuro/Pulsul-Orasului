@@ -612,3 +612,54 @@ function emailStergereConfirmata(string $catre, string $prenume, string $cand, i
                      . 'site-ului, dar fără numele tău.',
     ]);
 }
+
+/**
+ * Mesajul din formularul de contact, trimis mai departe către noi.
+ *
+ * Pleacă la adresa de răspuns din config — cea la care oricum ar scrie omul
+ * dacă apăsa „Reply". Mesajul e deja în baza de date când ajunge aici, deci
+ * dacă e-mailul nu pleacă nu s-a pierdut nimic.
+ */
+function emailMesajDeContact(array $mesaj, ?int $membruId): bool
+{
+    global $config;
+
+    $catre = (string) ($config['email_raspuns'] ?? $config['email_expeditor'] ?? '');
+
+    /**
+     * Fără adresă în config n-avem unde trimite.
+     *
+     * Nu e o piedică pentru omul care a scris — mesajul lui e deja în baza de
+     * date. Dar e o piedică pentru noi, care n-am afla de el, așa că rămâne
+     * scrisă undeva în loc să se piardă în tăcere.
+     */
+    if ($catre === '') {
+        scrieInLog('spam-contact.log',
+            'ATENȚIE: mesaj primit, dar nu l-am putut trimite pe e-mail — '
+            . 'lipsesc email_raspuns și email_expeditor din inc/config.php');
+        return false;
+    }
+
+    $cine = $membruId === null
+        ? 'Vizitator fără cont.'
+        : 'Membrul #' . $membruId . ' — datele sunt luate din contul lui.';
+
+    /**
+     * Mesajul omului intră ca paragraf obișnuit, deci trece prin aceeași
+     * ieșire ca restul textelor din șablon (vezi sablonEmail): în varianta
+     * HTML e scăpat cu htmlspecialchars, deci nimeni nu ne poate strecura
+     * etichete în mesajul pe care îl citim noi.
+     */
+    return trimiteEmail($catre, 'Mesaj nou de la ' . $mesaj['prenume'] . ' ' . $mesaj['nume'], [
+        'salut'     => 'Mesaj nou din formularul de contact',
+        'paragrafe' => [
+            $cine,
+            'De la: ' . $mesaj['prenume'] . ' ' . $mesaj['nume'],
+            'E-mail: ' . $mesaj['email'],
+            'Telefon: ' . $mesaj['telefon'],
+            '— — —',
+            $mesaj['mesaj'],
+        ],
+        'incheiere' => 'Mesajul e salvat și în baza de date, în tabelul mesaje_contact.',
+    ]);
+}

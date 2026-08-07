@@ -87,10 +87,10 @@ inc/
 api/                → endpoint-uri JSON apelate din JS (fetch)
 cron/               → scripturi rulate din cron (doar CLI, .htaccess le blochează)
 sql/                → schema.sql + migrări numerotate (002, 003, 004, 005-google,
-                      006-tine-minte, 007-setari.sql)
+                      006-tine-minte, 007-setari, 008-mesaje-contact.sql)
 teste/              → test-validare.php (verificările din inc/validare.php)
-                      test-tine-minte.php, test-setari.php
-                      (ultimele două cer serverul pornit — vezi antetul lor)
+                      test-tine-minte.php, test-setari.php, test-contact.php
+                      (ultimele trei cer serverul pornit — vezi antetul lor)
 private/            → loguri (emailuri-trimise.log), protejat prin .htaccess
 assets/css/style.css, assets/js/main.js, assets/img/
 ```
@@ -113,6 +113,10 @@ assets/css/style.css, assets/js/main.js, assets/img/
 - CSRF token la orice acțiune care schimbă starea (inclusiv logout)
 - Amprentă browser legată de sesiune (fără IP — se schimbă legit pe mobil)
 - Stare cont (suspendat etc.) se citește din DB la fiecare cerere, nu din sesiune
+- Limitele pe IP se numără în tabelul propriu al funcției (conturi noi în `membri`,
+  mesaje în `mesaje_contact`), nu într-un sistem separat. `incercari_autentificare`
+  rămâne doar pentru intrarea în cont: acolo numărătoarea duce la blocare, iar o
+  limită de pe altă pagină n-are voie să încuie contul cuiva.
 - „Ține-mă minte" = rând în `sesiuni_amintite`, nu un cookie de sesiune lung.
   Cookie-ul are forma `selector:secret`, în DB stă doar sha256 al secretului,
   se rotește la fiecare folosire, e legat de amprenta browserului, iar
@@ -125,6 +129,8 @@ assets/css/style.css, assets/js/main.js, assets/img/
 - Email: lowercase la salvare
 - Permalink membru: 10 caractere random, alfabet fără `0/O/1/l/I` (dictabil la telefon)
 - Parolă temporară (recuperare): 6 caractere, același alfabet, valabilă 60 min, o singură dată
+- Telefon: o singură formă în bază, `0722334455` (verificaTelefon din inc/validare.php
+  aduce +40 / 0040 la 0). Se cere la contact, e opțional în setări.
 
 ## Ce e neterminat (roadmap)
 
