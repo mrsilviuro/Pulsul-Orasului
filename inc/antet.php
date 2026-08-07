@@ -106,7 +106,7 @@ if ($logat) {
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/css/style.css?v=17">
+<link rel="stylesheet" href="assets/css/style.css?v=20">
 
 <!-- Setează tema ÎNAINTE de randare, ca să nu apară un flash alb pe dark mode -->
 <script>
@@ -177,7 +177,20 @@ if ($logat) {
       </a>
       <?php endif; ?>
 
-      <button class="theme-toggle" id="theme-toggle" type="button"
+      <?php if ($logat): ?>
+      <!-- Rotița stă doar pentru cine e conectat: n-are ce seta un vizitator.
+           Ca și creionul de pe poza de profil, nu e ascunsă din CSS, ci pur și
+           simplu nu ajunge în pagină pentru ceilalți. -->
+      <a class="nav__btn nav__setari" href="setari.php"
+         title="Setările contului" aria-label="Setările contului">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="3.2"/>
+          <path d="M19.4 14.5a1.5 1.5 0 0 0 .3 1.7l.1.1a1.8 1.8 0 1 1-2.6 2.6l-.1-.1a1.5 1.5 0 0 0-1.7-.3 1.5 1.5 0 0 0-.9 1.4v.3a1.8 1.8 0 1 1-3.6 0v-.2a1.5 1.5 0 0 0-1-1.4 1.5 1.5 0 0 0-1.7.3l-.1.1a1.8 1.8 0 1 1-2.6-2.6l.1-.1a1.5 1.5 0 0 0 .3-1.7 1.5 1.5 0 0 0-1.4-.9h-.3a1.8 1.8 0 1 1 0-3.6h.2a1.5 1.5 0 0 0 1.4-1 1.5 1.5 0 0 0-.3-1.7l-.1-.1a1.8 1.8 0 1 1 2.6-2.6l.1.1a1.5 1.5 0 0 0 1.7.3h.1a1.5 1.5 0 0 0 .9-1.4v-.3a1.8 1.8 0 1 1 3.6 0v.2a1.5 1.5 0 0 0 .9 1.4 1.5 1.5 0 0 0 1.7-.3l.1-.1a1.8 1.8 0 1 1 2.6 2.6l-.1.1a1.5 1.5 0 0 0-.3 1.7v.1a1.5 1.5 0 0 0 1.4.9h.3a1.8 1.8 0 1 1 0 3.6h-.2a1.5 1.5 0 0 0-1.4.9Z"/>
+        </svg>
+      </a>
+      <?php endif; ?>
+
+      <button class="nav__btn theme-toggle" id="theme-toggle" type="button"
               aria-label="Schimbă tema" title="Schimbă tema (întuneric / luminos)">
         <svg class="ico ico--sun" viewBox="0 0 24 24" aria-hidden="true">
           <circle cx="12" cy="12" r="4.2"/>

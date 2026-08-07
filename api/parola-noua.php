@@ -60,14 +60,24 @@ $erori = [];
  * pentru că nu și-o amintește. Locul ei e luat de faptul că a putut citi
  * e-mailul trimis pe adresa contului.
  */
-if (!$dupaTemporara) {
-    $q = db()->prepare('SELECT parola_hash FROM membri WHERE id = ? LIMIT 1');
-    $q->execute([(int) $membru['id']]);
-    $hashVechi = (string) $q->fetchColumn();
+$q = db()->prepare('SELECT parola_hash FROM membri WHERE id = ? LIMIT 1');
+$q->execute([(int) $membru['id']]);
+$hashVechi = $q->fetchColumn();
 
+/**
+ * Cine a deschis contul cu Google n-are parolă la noi — parola_hash e NULL.
+ *
+ * Lui nu avem ce parolă veche să-i cerem, deci își pune prima parolă direct.
+ * Nu e o portiță: ca să ajungă aici, a trecut deja prin Google și e conectat.
+ * Cheia contului lui e contul de Google, iar acela e verificat la fiecare
+ * intrare.
+ */
+$areParola = is_string($hashVechi) && $hashVechi !== '';
+
+if (!$dupaTemporara && $areParola) {
     if ($veche === '') {
         $erori['parola_veche'] = 'Scrie parola de acum.';
-    } elseif (!password_verify($veche, $hashVechi)) {
+    } elseif (!password_verify($veche, (string) $hashVechi)) {
         $erori['parola_veche'] = 'Parola de acum nu e corectă.';
     }
 }
@@ -114,6 +124,24 @@ $u = db()->prepare(
 );
 $u->execute([$hash, acum(), (int) $membru['id']]);
 
+/**
+ * Parolă nouă = toate dispozitivele ținute minte sunt date afară.
+ *
+ * Cine își schimbă parola o face de multe ori tocmai fiindcă bănuiește că
+ * altcineva i-a intrat în cont. Dacă am lăsa amintirile vechi în picioare,
+ * intrusul ar rămâne conectat treizeci de zile, fără să aibă nevoie de parola
+ * cea nouă.
+ *
+ * Dispozitivul de pe care se schimbă parola e ținut minte din nou, curat, ca
+ * omul să nu se trezească dat afară de propria lui grijă.
+ */
+$tineaMinte = !empty($_SESSION['tine_minte']);
+uitaToateAle((int) $membru['id']);
+
+if ($tineaMinte) {
+    tineMinteAcest((int) $membru['id']);
+}
+
 gataCuParolaTemporara();
 
 /**
@@ -133,5 +161,5 @@ emailParolaSchimbata((string) $membru['email'], (string) $membru['prenume']);
 raspunsJson([
     'ok'       => true,
     'redirect' => 'index.php',
-    'mesaj'    => 'Parola a fost schimbată.',
+    'mesaj'    => $areParola ? 'Parola a fost schimbată.' : 'Parola a fost salvată.',
 ]);

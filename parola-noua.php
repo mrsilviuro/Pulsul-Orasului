@@ -65,76 +65,33 @@ require __DIR__ . '/inc/antet.php';
               <input type="hidden" name="csrf" value="<?= h($csrf) ?>">
 
               <?php if (!$dupaTemporara): ?>
-              <div class="field">
-                <label for="pn-veche">Parola de acum</label>
-                <div class="input-pass">
-                  <input type="password" id="pn-veche" name="parola_veche"
-                         autocomplete="current-password" placeholder="Parola ta de acum"
-                         required aria-describedby="err-pn-veche">
-                  <button class="input-pass__toggle" type="button" data-toggle-pass="pn-veche"
-                          aria-label="Arată parola" aria-pressed="false">
-                    <svg class="ico ico--eye" viewBox="0 0 24 24" aria-hidden="true">
-                      <path d="M2.5 12S6 5.8 12 5.8 21.5 12 21.5 12 18 18.2 12 18.2 2.5 12 2.5 12Z"/>
-                      <circle cx="12" cy="12" r="3.2"/>
-                    </svg>
-                    <svg class="ico ico--eye-off" viewBox="0 0 24 24" aria-hidden="true">
-                      <path d="M9.9 5.9A9.6 9.6 0 0 1 12 5.8c6 0 9.5 6.2 9.5 6.2a17 17 0 0 1-3.5 4.2M6 7.8A17 17 0 0 0 2.5 12S6 18.2 12 18.2c1.4 0 2.6-.3 3.7-.8"/>
-                      <path d="m4 4 16 16"/>
-                    </svg>
-                  </button>
-                </div>
-                <p class="field__error" id="err-pn-veche" hidden></p>
-              </div>
+              <?php
+                $campId   = 'pn-veche';
+                $campNume = 'parola_veche';
+                $campText = 'Parola de acum';
+                $campAjutor = 'Parola ta de acum';
+                require __DIR__ . '/inc/camp-parola.php';
+              ?>
               <?php endif; ?>
 
-              <div class="field">
-                <label for="pn-noua">Parola nouă</label>
-                <div class="input-pass">
-                  <input type="password" id="pn-noua" name="parola" autocomplete="new-password"
-                         placeholder="Cel puțin 8 caractere" required aria-describedby="err-pn-noua">
-                  <button class="input-pass__toggle" type="button" data-toggle-pass="pn-noua"
-                          aria-label="Arată parola" aria-pressed="false">
-                    <svg class="ico ico--eye" viewBox="0 0 24 24" aria-hidden="true">
-                      <path d="M2.5 12S6 5.8 12 5.8 21.5 12 21.5 12 18 18.2 12 18.2 2.5 12 2.5 12Z"/>
-                      <circle cx="12" cy="12" r="3.2"/>
-                    </svg>
-                    <svg class="ico ico--eye-off" viewBox="0 0 24 24" aria-hidden="true">
-                      <path d="M9.9 5.9A9.6 9.6 0 0 1 12 5.8c6 0 9.5 6.2 9.5 6.2a17 17 0 0 1-3.5 4.2M6 7.8A17 17 0 0 0 2.5 12S6 18.2 12 18.2c1.4 0 2.6-.3 3.7-.8"/>
-                      <path d="m4 4 16 16"/>
-                    </svg>
-                  </button>
-                </div>
-                <!-- Aceeași structură ca la înregistrare, deci același CSS și
-                     același cod din main.js. -->
-                <div class="pass-meter" id="pn-meter" hidden>
-                  <div class="pass-meter__bars" aria-hidden="true">
-                    <span></span><span></span><span></span><span></span>
-                  </div>
-                  <span class="pass-meter__label" id="pn-hint" role="status"></span>
-                </div>
-                <p class="field__error" id="err-pn-noua" hidden></p>
-              </div>
+              <?php
+                $campId    = 'pn-noua';
+                $campNume  = 'parola';
+                $campText  = 'Parola nouă';
+                $campAjutor= 'Cel puțin 8 caractere';
+                $campAuto  = 'new-password';
+                $campMetru = true;
+                require __DIR__ . '/inc/camp-parola.php';
+              ?>
 
-              <div class="field">
-                <label for="pn-noua2">Repetă parola nouă</label>
-                <div class="input-pass">
-                  <input type="password" id="pn-noua2" name="parola_confirmare"
-                         autocomplete="new-password" placeholder="Aceeași parolă"
-                         required aria-describedby="err-pn-noua2">
-                  <button class="input-pass__toggle" type="button" data-toggle-pass="pn-noua2"
-                          aria-label="Arată parola" aria-pressed="false">
-                    <svg class="ico ico--eye" viewBox="0 0 24 24" aria-hidden="true">
-                      <path d="M2.5 12S6 5.8 12 5.8 21.5 12 21.5 12 18 18.2 12 18.2 2.5 12 2.5 12Z"/>
-                      <circle cx="12" cy="12" r="3.2"/>
-                    </svg>
-                    <svg class="ico ico--eye-off" viewBox="0 0 24 24" aria-hidden="true">
-                      <path d="M9.9 5.9A9.6 9.6 0 0 1 12 5.8c6 0 9.5 6.2 9.5 6.2a17 17 0 0 1-3.5 4.2M6 7.8A17 17 0 0 0 2.5 12S6 18.2 12 18.2c1.4 0 2.6-.3 3.7-.8"/>
-                      <path d="m4 4 16 16"/>
-                    </svg>
-                  </button>
-                </div>
-                <p class="field__error" id="err-pn-noua2" hidden></p>
-              </div>
+              <?php
+                $campId    = 'pn-noua2';
+                $campNume  = 'parola_confirmare';
+                $campText  = 'Repetă parola nouă';
+                $campAjutor= 'Aceeași parolă';
+                $campAuto  = 'new-password';
+                require __DIR__ . '/inc/camp-parola.php';
+              ?>
 
               <button class="btn btn--primary btn--block" type="submit">Salvează parola</button>
 

@@ -273,7 +273,17 @@ un `curl`. Cele care contează sunt în `inc/validare.php`:
 - **Parolă** — minimum 8 caractere, maximum 72 de octeți, pentru că bcrypt
   ignoră tăcut tot ce trece de atât.
 
-Rularea verificărilor: `php teste/test-validare.php` (58 de cazuri).
+Rularea verificărilor: `php teste/test-validare.php` (86 de cazuri).
+
+Două suite vorbesc cu site-ul prin HTTP, cu cookie-uri adevărate, și cer
+serverul pornit: „ține-mă minte" (35 de cazuri) și setările, cu tot cu ștergerea
+contului și cron (86 de cazuri).
+
+```
+php -S 127.0.0.1:8126 -t . &
+php teste/test-tine-minte.php http://127.0.0.1:8126
+php teste/test-setari.php     http://127.0.0.1:8126
+```
 
 ### Unicitatea adresei de e-mail
 
@@ -370,6 +380,20 @@ Meniul se schimbă acum într-un singur loc, în `inc/antet.php`.
 principală. Când ești conectat, dispare și în locul ei apare ieșirea din cont,
 scrisă discret. Lângă butonul de temă apare numele tău prescurtat.
 
+Tot pentru cei conectați, între nume și butonul de temă stă o rotiță care duce
+la `setari.php`. Nu e ascunsă din CSS, ci pur și simplu nu ajunge în pagină
+pentru vizitatori — ca și creionul de pe poza de profil.
+
+Rotița și butonul de temă poartă amândouă clasa `.nav__btn`, care ține pătratul
+de 34px, chenarul, colțul și starea de hover. Un singur loc de schimbat, ca
+cele două să nu se despartă niciodată la aspect. `.theme-toggle` a rămas doar
+cu ce e al ei: schimbul dintre soare și lună.
+
+Cu rotița, bara are în dreapta patru lucruri pentru un membru conectat — cerc,
+rotiță, temă, hamburger — adică 158px. Sub **360px** nu mai încap și ele, și
+numele scris al site-ului, așa că acolo rămâne doar semnul din logo, tot ca
+legătură spre prima pagină.
+
 ### Ce se întâmplă la autentificare
 
 - **Parolă greșită sau adresă inexistentă** — același mesaj, „E-mail sau parolă
@@ -419,8 +443,9 @@ tot `Europe/Bucharest`, dar e mai bine să fie scrisă explicit.
 - **Amprentă de browser** legată de sesiune, ca un cookie furat să fie mai
   greu de folosit. Nu include adresa IP, care se schimbă firesc la trecerea
   de pe Wi-Fi pe date mobile.
-- **Sesiunea expiră** după 2 ore de inactivitate; „ține-mă minte" o prelungește
-  la 30 de zile.
+- **Sesiunea expiră** după 2 ore de inactivitate. Cine a bifat „ține-mă minte"
+  nu simte nimic: sesiunea moare, dar e ridicată imediat la loc din amintire
+  (mai jos), până la 30 de zile.
 - **Hash-ul parolei se reface** la intrare, dacă între timp s-a schimbat
   algoritmul (`password_needs_rehash`).
 - **Ieșirea din cont cere token CSRF**, ca alt site să nu poată deconecta
@@ -430,6 +455,60 @@ tot `Europe/Bucharest`, dar e mai bine să fie scrisă explicit.
   `Permissions-Policy`.
 - **Parola primită e limitată la 4096 de octeți**, ca nimeni să nu încarce
   serverul trimițând parole uriașe doar ca să-l pună să calculeze hash-uri.
+
+### „Ține-mă minte" — 30 de zile care chiar țin 30 de zile
+
+Prima încercare a fost cea care pare evidentă: cookie-ul de sesiune primește
+dată de expirare peste o lună. Nu ajunge, și merită înțeles de ce.
+
+Cookie-ul spune doar cât timp îl **păstrează browserul**. Conținutul sesiunii
+stă pe server, într-un fișier, iar acela e șters de PHP după
+`session.gc_maxlifetime` — implicit **24 de minute** de liniște. Pe deasupra,
+pe găzduirile partajate fișierele stau într-un dosar comun, unde mătură și
+vecinii, după setările lor. Un cookie de 30 de zile care arată spre un fișier
+șters de acum trei săptămâni nu conectează pe nimeni.
+
+Deci ce trebuie să dureze 30 de zile nu e sesiunea, ci **dovada că omul s-a
+autentificat cândva de pe dispozitivul ăsta**. Dovada stă în tabelul
+`sesiuni_amintite` (`sql/006-tine-minte.sql`), iar sesiunea se ridică din ea
+ori de câte ori e nevoie. Un rând = un dispozitiv.
+
+**Cookie-ul are două părți, `selector:secret`.** Selectorul spune care rând,
+secretul dovedește că e al tău. În baza de date intră doar `sha256` al
+secretului — dacă baza ajunge pe mâini străine, rândurile nu deschid nimic,
+exact ca la parole și la token-urile de confirmare.
+
+**Se rotește la fiecare folosire.** Secretul se schimbă, selectorul rămâne.
+Așa un cookie citit de pe fir sau rămas pe un calculator împrumutat e bun o
+singură dată.
+
+**Iar rotația e și un detector de furt.** Dacă apare un cookie cu selector bun
+și secret vechi, înseamnă ori un cookie uitat, ori unul furat — nu putem ști
+care. Atunci cad **toate** amintirile omului: în cel mai rău caz dăm afară
+hoțul, iar stăpânul contului mai tastează o dată parola.
+
+Restul apărărilor:
+
+- **Legat de amprenta browserului**, ca și sesiunea. Cookie-ul mutat pe alt
+  browser nu mai e bun de nimic.
+- **Cele 30 de zile curg de la autentificare**, nu de la ultima vizită. Cine
+  intră zilnic e întrebat de parolă tot o dată pe lună.
+- **Ieșirea din cont șterge rândul**, nu doar cookie-ul.
+- **Parola nouă dă afară toate dispozitivele.** Cine își schimbă parola o face
+  adesea tocmai fiindcă bănuiește pe cineva în cont; altfel intrusul ar rămâne
+  conectat 30 de zile fără parola cea nouă. Dispozitivul de pe care se schimbă
+  parola e ținut minte din nou, curat.
+- **Parola temporară nu primește amintire.** Sesiunea aia trebuie să țină cât
+  îi ia omului să-și pună o parolă nouă, nu o lună.
+- **Rândurile expirate** se mătură din PHP, la aproximativ una din 50 de
+  scrieri, ca și încercările de autentificare.
+
+**La intrarea cu Google e pornit din start.** N-are unde sta bifa — drumul
+pleacă spre Google și se întoarce singur — și n-ar avea nici ce alege: conturile
+Google n-au parolă la noi, deci singura cale înapoi tot pe la Google trece.
+
+Dacă tabelul lipsește (ai urcat fișierele dar n-ai rulat `sql/006`), site-ul
+merge normal: se intră în cont ca înainte, doar că nu se ține minte.
 
 ### login.php cât timp ești conectat
 
@@ -592,6 +671,112 @@ fără ele, deci poți urca tot codul înainte de a-ți face contul la Google.
 
 Nimic din ce ai cerut. Rămân: formularul de publicat un eveniment și paginile de
 categorie.
+
+## Setările contului (`setari.php`)
+
+Se ajunge din rotița din bara de meniu. Patru lucruri de greutăți foarte
+diferite, fiecare în cutia lui, cu butonul lui de salvare.
+
+### Parola — două formulare, unul singur în cod
+
+Cine are parolă vede trei câmpuri: cea de acum, cea nouă, încă o dată cea nouă.
+Cine a deschis contul cu Google vede doar două: n-are parolă veche, fiindcă
+`parola_hash` e `NULL`. Aceea e chiar întrebarea din baza de date — nu a fost
+nevoie de nicio coloană nouă ca să știm cine are parolă.
+
+Pentru contul fără parolă, sărirea peste parola veche nu e o portiță: ca să
+ajungă în pagină, omul a trecut deja prin Google și e conectat. Cheia contului
+lui e contul de Google, iar acela se verifică la fiecare intrare.
+
+Pagina folosește aceleași id-uri ca `parola-noua.php`, deci aceeași bucată din
+`main.js` le duce pe amândouă. Lipsa câmpului `#pn-veche` e chiar semnul după
+care JS-ul știe să nu-l ceară. Regulile de complexitate sunt cele de la
+înregistrare, din `inc/validare.php` — nu există un al doilea set.
+
+Cele douăzeci de rânduri ale unui câmp de parolă cu ochi erau scrise de trei ori
+numai în `parola-noua.php`. Au ieșit în `inc/camp-parola.php` și se cheamă acum
+de șase ori din două pagini.
+
+### Telefonul
+
+Opțional, cerut abia aici. **Nu se vede pe profil și nicăieri altundeva** — va
+folosi organizatorilor de evenimente, când vom lega participanții de evenimente.
+
+Același număr poate fi scris în multe feluri: `0722 33 44 55`,
+`+40 722 334 455`, `0040-722-334-455`. Toate ajung în bază la fel,
+`0722334455`, ca două scrieri ale aceluiași telefon să nu pară două numere.
+
+### Newsletterul
+
+O bifă, pornită din start. Coloana e `NOT NULL DEFAULT 1`, deci și conturile
+care există deja se trezesc cu ea pornită, fără vreun `UPDATE` de migrare.
+Trimiterea propriu-zisă nu e făcută încă.
+
+### Ștergerea contului, cu răgaz de 30 de zile
+
+Zonă roșie, jos de tot, despărțită de restul. Trei pași, dinadins:
+
+1. **Apeși butonul.** Apare al doilea pas, cu parola. Nimeni nu-și șterge contul
+   dintr-o singură mișcare greșită.
+2. **Scrii parola** (dacă ai una) și pleacă un e-mail. Până aici **nu s-a
+   schimbat nimic** în cont. Parola dovedește că ești omul din fața
+   calculatorului, e-mailul că ai și cutia poștală — un calculator lăsat deschis
+   nu e de ajuns ca să pierzi contul.
+3. **Apeși linkul din e-mail.** Abia acum pornește răgazul, iar tu ești dat afară
+   din cont.
+
+**Datele rămân neatinse cele 30 de zile.** Numele, poza, tot ce ai scris. Tocmai
+ca întoarcerea să aducă totul înapoi exact cum era.
+
+**Anularea nu are buton: e destul să intri în cont.** Verificarea stă în
+`autentifica()` din `inc/auth.php`, adică în locul prin care trec toate drumurile
+de intrare — parolă, Google, ultimul pas al înregistrării cu Google. Un singur
+loc, deci nu poate fi uitat la vreunul dintre ele. Omul vede pe ecran că
+ștergerea a fost oprită.
+
+La confirmare se uită și toate dispozitivele ținute minte. Altfel un telefon
+rămas conectat ar deschide site-ul singur peste două zile, ar trece prin
+`autentifica()` și ar anula ștergerea fără ca omul să fi cerut asta. Anularea
+trebuie să fie o faptă, nu un accident.
+
+### După 30 de zile: anonimizare, nu ștergere
+
+Rândul din `membri` **rămâne în baza de date pentru totdeauna**. De el atârnă
+evenimentele organizate și participările; un `DELETE` ar lăsa găuri în istoricul
+altor oameni. Se golește omul din rând, nu rândul.
+
+Numele devine „Șters Utilizator", adresa primește o valoare unică pe
+`@invalid.local` (unică, deci indexul nu se supără; pe un domeniu care nu există,
+deci nu poate fi folosită la intrare), telefonul, parola, legătura cu Google și
+poza de pe disc dispar, iar starea devine `sters` — pe care `membruCurent()` n-o
+primește niciodată.
+
+### Cronul
+
+```
+php /home/UTILIZATOR/public_html/cron/anonimizeaza-conturi.php
+```
+
+**O dată pe zi e destul.** Ora nu contează: dacă nu rulează o zi, conturile
+așteaptă cuminți și se anonimizează a doua zi.
+
+Pentru încercare, fără să schimbe nimic:
+
+```
+php cron/anonimizeaza-conturi.php --uscat
+```
+
+Scriptul refuză să pornească din browser (`PHP_SAPI !== 'cli'`), iar `cron/.htaccess`
+îl blochează și de acolo — două încuietori, fiindcă `.htaccess` nu e citit peste
+tot.
+
+Ce s-a făcut se scrie în `private/conturi-anonimizate.log`. **Adresa nu se scrie
+în log**: ar însemna să păstrăm exact lucrul pe care omul ne-a cerut să-l
+ștergem. Rămâne doar id-ul, cât să putem răspunde dacă cineva întreabă mai
+târziu. Rândul de încheiere se scrie doar când chiar a fost ceva de făcut —
+altfel un cron zilnic ar umple fișierul cu 365 de rânduri pe an care spun
+„n-am avut ce face".
+
 
 ## E-mailurile
 

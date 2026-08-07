@@ -252,6 +252,59 @@ function verificaInregistrare(array $date, ?DateTimeImmutable $azi = null): arra
 }
 
 /**
+ * Numărul de telefon, în forma folosită în România.
+ *
+ * Câmpul e opțional, deci gol înseamnă bun — și se salvează NULL.
+ *
+ * Același număr poate fi scris în multe feluri: „0722 33 44 55",
+ * „+40 722 334 455", „0040-722-334-455". Toate sunt același telefon, deci le
+ * aducem la o singură formă înainte de a le pune în bază. Altfel două rânduri
+ * ar arăta diferit fără să fie, iar o căutare de mai târziu ar da greș.
+ *
+ * Rămân zece cifre, cum le scrie omul pe hârtie: 0722334455. Prefixele 07
+ * (mobil), 02 și 03 (fix) sunt singurele din planul de numerotare românesc.
+ *
+ * Întoarce ['ok' => bool, 'curat' => string, 'eroare' => string].
+ */
+function verificaTelefon(string $telefon): array
+{
+    $telefon = trim($telefon);
+
+    if ($telefon === '') {
+        return ['ok' => true, 'curat' => '', 'eroare' => ''];
+    }
+
+    // Ce scrie omul între cifre — spații, puncte, liniuțe, paranteze — nu
+    // face parte din număr.
+    $cifre = preg_replace('/[\s.\-()\/]+/u', '', $telefon) ?? '';
+
+    // Orice altceva rămas în afară de cifre și un plus la început e semn că
+    // n-a fost un număr de telefon.
+    if (!preg_match('/^\+?[0-9]+$/', $cifre)) {
+        return ['ok' => false, 'curat' => '', 'eroare' => 'Scrie doar cifre, de forma 0722334455.'];
+    }
+
+    // Cele trei feluri de a scrie prefixul de țară duc la aceeași formă.
+    if (str_starts_with($cifre, '+40')) {
+        $cifre = '0' . substr($cifre, 3);
+    } elseif (str_starts_with($cifre, '0040')) {
+        $cifre = '0' . substr($cifre, 4);
+    } elseif (str_starts_with($cifre, '40') && strlen($cifre) === 11) {
+        $cifre = '0' . substr($cifre, 2);
+    }
+
+    if (!preg_match('/^0[237][0-9]{8}$/', $cifre)) {
+        return [
+            'ok'     => false,
+            'curat'  => '',
+            'eroare' => 'Numărul nu pare românesc. Zece cifre, începând cu 07, 02 sau 03.',
+        ];
+    }
+
+    return ['ok' => true, 'curat' => $cifre, 'eroare' => ''];
+}
+
+/**
  * Construiește adresa publică a profilului.
  *
  * Un șir aleatoriu, nu numele persoanei. Motivele sunt scrise pe larg în

@@ -238,7 +238,10 @@ button { cursor: pointer; border: 0; background: none; }
 /* Acțiuni */
 .nav__actions { display: flex; align-items: center; gap: 8px; margin-left: 4px; }
 
-.theme-toggle {
+/* Pătratul cu iconiță din bară: îl poartă și butonul de temă, și cel de
+   setări. Un singur loc de schimbat, ca cele două să nu se despartă niciodată
+   la chenar, colț sau culoare. */
+.nav__btn {
   width: 34px; height: 34px;
   display: grid; place-items: center;
   border-radius: 10px;
@@ -248,8 +251,8 @@ button { cursor: pointer; border: 0; background: none; }
   transition: color .18s var(--ease), background-color .18s var(--ease),
               border-color .18s var(--ease);
 }
-.theme-toggle:hover { color: var(--brand); border-color: var(--brand); }
-.theme-toggle .ico { width: 18px; height: 18px; }
+.nav__btn:hover { color: var(--brand); border-color: var(--brand); }
+.nav__btn .ico { width: 18px; height: 18px; }
 .theme-toggle .ico--moon { display: none; }
 [data-theme="dark"] .theme-toggle .ico--sun { display: none; }
 [data-theme="dark"] .theme-toggle .ico--moon { display: block; }
@@ -716,6 +719,21 @@ main { padding-block: 46px 64px; }
   .slideshow__arrow--next { right: 8px; }
   .footer__top { grid-template-columns: 1fr; }
   .footer__bottom { justify-content: center; text-align: center; }
+}
+
+/**
+ * Telefoane foarte înguste (320–360px): rămâne doar semnul din logo.
+ *
+ * Cu rotița de setări, bara are pentru un membru conectat patru lucruri în
+ * dreapta — cerc, rotiță, temă, hamburger — adică 158px. Sub 360px nu mai
+ * încap și ele, și numele scris al site-ului.
+ *
+ * Semnul rămâne, tot ca legătură spre prima pagină, iar butoanele rămân toate
+ * la vedere. Varianta cealaltă — să mutăm rotița în meniul hamburger — ar fi
+ * însemnat același buton scris în două locuri.
+ */
+@media (max-width: 359px) {
+  .logo__text { display: none; }
 }
 
 /* accesibilitate: mișcare redusă */
@@ -1731,7 +1749,7 @@ input, textarea { -webkit-border-radius: 0; }
 .reply-form textarea { border-radius: 12px; }
 .check input { border-radius: 6px; }
 .btn, .btn-google, .rsvp__btn, .chip, .tag { border-radius: var(--radius-pill); }
-.theme-toggle, .nav__burger, .icon-btn, .socials a { border-radius: 10px; }
+.nav__btn, .nav__burger, .icon-btn, .socials a { border-radius: 10px; }
 .input-pass__toggle { border-radius: 9px; }
 
 /* --- 3. Text de aceeași mărime la rotirea ecranului --------------------- */
@@ -2063,7 +2081,22 @@ body { overscroll-behavior-y: none; }
 
 @media (max-width: 640px) {
   .profile { flex-direction: column; align-items: stretch; padding: 20px; }
-  .profile__id { flex-direction: column; align-items: center; text-align: center; }
+  /**
+   * „flex: none" anulează aici basis-ul de 260px pus mai sus.
+   *
+   * De sus în jos, .profile e coloană, iar într-o coloană flex-basis nu mai
+   * înseamnă lățime, ci ÎNĂLȚIME. Lăsat așa, blocul cu numele s-ar întinde pe
+   * 260px pe verticală și ar rămâne un gol mare între pastile și notă.
+   *
+   * Cei 260px își fac treaba doar cât timp rândul e orizontal — adică exact
+   * până la pragul ăsta, unde nu mai avem nimic de rupt.
+   */
+  .profile__id {
+    flex: none;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
   .facts { justify-content: center; }
   .rating { width: 100%; }
   .rating-summary { gap: 20px; justify-content: center; }
@@ -2470,4 +2503,89 @@ body { overscroll-behavior-y: none; }
 @media (max-width: 560px) {
   .poza-card { padding: 20px 16px; }
   .poza-actiuni .btn { min-width: 0; }
+}
+
+/* =========================================================================
+   27. SETĂRILE CONTULUI (setari.php)
+   ========================================================================= */
+
+/* Pagina e o coloană de formulare scurte, nu conținut de citit: lată de tot,
+   rândurile ar deveni greu de urmărit de la un câmp la altul. */
+.wrap--ingust { max-width: 720px; }
+
+.setari__titlu { font-size: clamp(26px, 4vw, 34px); margin-bottom: 8px; }
+.setari__lead {
+  color: var(--text-soft);
+  font-size: 15px;
+  line-height: 1.6;
+  margin-bottom: 26px;
+  max-width: 56ch;
+}
+
+/* Fiecare setare în cutia ei: se vede din prima că sunt lucruri separate,
+   fiecare cu butonul lui de salvare. */
+.card-set {
+  padding: 22px 24px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 18px;
+}
+
+.card-set__titlu {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 18px;
+  margin-bottom: 6px;
+}
+.card-set__titlu .ico { width: 19px; height: 19px; flex: none; }
+
+.card-set__lead {
+  color: var(--text-soft);
+  font-size: 14px;
+  line-height: 1.6;
+  margin-bottom: 16px;
+  max-width: 60ch;
+}
+
+/* Butonul de salvare al unei setări nu se întinde pe tot rândul: sunt patru
+   formulare pe pagină, iar patru dungi late ar arăta ca patru îndemnuri.
+   „.form" e grilă, deci lățimea o strânge justify-self, nu align-self. */
+.card-set .form > .btn { justify-self: start; }
+
+.field__optional { color: var(--text-faint); font-weight: 500; }
+
+/* --- zona de pericol ---------------------------------------------------- */
+/* Roșu, dar stins: e o avertizare, nu un buton de apăsat. */
+.card-set--pericol {
+  border-color: rgba(224, 57, 59, .35);
+  background: rgba(224, 57, 59, .04);
+}
+.card-set--pericol .card-set__titlu { color: #c22b2d; }
+.card-set--pericol .card-set__titlu .ico { color: #e0393b; }
+[data-theme="dark"] .card-set--pericol { background: rgba(224, 57, 59, .07); }
+[data-theme="dark"] .card-set--pericol .card-set__titlu { color: #ff9b97; }
+
+/* Pasul al doilea al ștergerii, despărțit de restul printr-o linie. */
+.stergere-confirm {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(224, 57, 59, .3);
+}
+.stergere-confirm__actiuni { display: flex; flex-wrap: wrap; gap: 10px; }
+
+/* Mesajul de după, în cutie, nu pe toată pagina: restul setărilor rămân la
+   locul lor și se văd în continuare. */
+.card-set .done { padding: 6px 0 2px; }
+.card-set .done__ico { width: 46px; height: 46px; margin-bottom: 12px; }
+.card-set .done__ico .ico { width: 22px; height: 22px; }
+.card-set .done__title { font-size: 18px; }
+.card-set .done__text { font-size: 14px; }
+
+@media (max-width: 560px) {
+  .card-set { padding: 18px 16px; }
+  .card-set .form > .btn { justify-self: stretch; }
+  .stergere-confirm__actiuni .btn { flex: 1 1 auto; }
 }

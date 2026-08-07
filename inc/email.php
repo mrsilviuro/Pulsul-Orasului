@@ -559,3 +559,56 @@ function emailParolaSchimbata(string $catre, string $prenume): bool
         'incheiere' => 'Dacă tu ai schimbat-o, nu trebuie să faci nimic.',
     ]);
 }
+
+/**
+ * Linkul care pornește ștergerea contului.
+ *
+ * E-mailul e a doua încuietoare: cine a pus mâna pe un calculator lăsat
+ * deschis poate apăsa butonul, dar nu poate duce ștergerea la capăt fără să
+ * ajungă și la cutia poștală.
+ */
+function emailStergereCont(string $catre, string $prenume, string $link, int $ore, int $zile): bool
+{
+    return trimiteEmail($catre, 'Confirmă ștergerea contului de pe PulsulOrasului.Ro', [
+        'salut'     => 'Bună, ' . $prenume . '!',
+        'paragrafe' => [
+            'Ai cerut ștergerea contului tău. Nu am șters încă nimic — mai e nevoie de '
+            . 'o apăsare, aici, din e-mail.',
+            'După ce apeși, contul intră într-un răgaz de ' . $zile . ' de zile. În tot '
+            . 'acest timp datele tale rămân neatinse.',
+        ],
+        'buton'     => ['text' => 'Da, șterge-mi contul', 'href' => $link],
+        'link_gol'  => $link,
+        'atentie'   => 'Te răzgândești? Intră pur și simplu în cont oricând în cele '
+                     . $zile . ' de zile. Simpla intrare oprește ștergerea, fără să mai '
+                     . 'ai ceva de făcut. Abia după ' . $zile . ' de zile fără nicio '
+                     . 'intrare datele se șterg definitiv.',
+        'incheiere' => 'Dacă nu tu ai cerut ștergerea, nu apăsa butonul și schimbă-ți '
+                     . 'parola: cineva a ajuns în contul tău. Fără apăsarea de aici, '
+                     . 'linkul se stinge singur în ' . $ore . ' ore.',
+    ]);
+}
+
+/** Confirmarea că răgazul a pornit, cu data limpede scrisă. */
+function emailStergereConfirmata(string $catre, string $prenume, string $cand, int $zile): bool
+{
+    global $config;
+    $site = rtrim((string) ($config['url_site'] ?? ''), '/');
+
+    return trimiteEmail($catre, 'Contul tău va fi șters pe ' . $cand, [
+        'salut'     => 'Bună, ' . $prenume . '!',
+        'paragrafe' => [
+            'Am primit confirmarea. Contul tău e programat pentru ștergere pe ' . $cand . '.',
+            'Până atunci nu se schimbă nimic: numele, poza și tot ce ai scris rămân '
+            . 'exact cum le-ai lăsat.',
+        ],
+        'cod'       => ['eticheta' => 'Datele se șterg pe', 'valoare' => $cand],
+        'buton'     => ['text' => 'M-am răzgândit, intru în cont', 'href' => $site . '/login.php'],
+        'atentie'   => 'Ca să oprești ștergerea, e destul să intri în cont o dată, oricând '
+                     . 'în cele ' . $zile . ' de zile. Nu ai de apăsat niciun buton anume: '
+                     . 'intrarea singură anulează cererea.',
+        'incheiere' => 'După ' . $cand . ', numele, adresa de e-mail și telefonul dispar '
+                     . 'pentru totdeauna. Evenimentele la care ai fost rămân în istoricul '
+                     . 'site-ului, dar fără numele tău.',
+    ]);
+}
