@@ -96,14 +96,12 @@ require __DIR__ . '/inc/antet.php';
               <label for="cf-phone">Telefon <span class="req" aria-hidden="true">*</span></label>
               <!-- Membrul care n-are telefon în cont îl scrie acum, și tot
                    obligatoriu: la un mesaj de contact vrem să putem suna înapoi.
-                   Ce scrie aici se salvează și în contul lui. -->
+                   Numărul rămâne doar pe mesaj — în cont și-l pune singur, din
+                   setări, dacă vrea. -->
               <input type="tel" id="cf-phone" name="telefon" autocomplete="tel"
                      inputmode="tel" placeholder="0722 334 455" maxlength="40" required
                      value="<?= h($euTelefon) ?>"<?= $euTelefon !== '' ? ' readonly' : '' ?>
-                     aria-describedby="err-phone<?= $eu !== null && $euTelefon === '' ? ' cf-phone-hint' : '' ?>">
-              <?php if ($eu !== null && $euTelefon === ''): ?>
-              <p class="field__hint" id="cf-phone-hint">Îl salvăm și în contul tău, ca să nu-l mai scrii data viitoare.</p>
-              <?php endif; ?>
+                     aria-describedby="err-phone">
               <p class="field__error" id="err-phone" hidden></p>
             </div>
           </div>
@@ -199,10 +197,14 @@ require __DIR__ . '/inc/antet.php';
           </div>
         </div>
 
+        <?php if ($eu === null): ?>
+        <!-- Invitația la înscriere e doar pentru cine n-are cont. Unui membru
+             deja înscris i-ar spune să facă ceva ce a făcut demult. -->
         <div class="info-cta">
           <p>Vrei să publici tu evenimente pe site?</p>
           <a class="btn btn--ghost btn--sm" href="login.php#inregistrare">Alătură-te și tu</a>
         </div>
+        <?php endif; ?>
       </aside>
 
     </div>

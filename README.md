@@ -797,8 +797,13 @@ doar comoditate: **pe server datele se iau din baza de date**, nu din ce a venit
 mesajul cu numele altui membru.
 
 Membrul care n-are telefon în cont îl scrie acum — și îi e cerut, ca oricui: la
-un mesaj de contact vrem să putem suna înapoi. Ce scrie se salvează și în contul
-lui, ca să nu-l mai scrie data viitoare.
+un mesaj de contact vrem să putem suna înapoi. **Numărul rămâne doar pe mesaj**,
+nu intră în cont: datele din cont se schimbă dintr-un singur loc, din setări,
+unde omul le vede pe toate. Un formular care schimbă pe furiș altceva decât
+spune e exact felul de surpriză pe care nu-l vrem.
+
+Invitația „Alătură-te și tu" din coloana din dreapta se tipărește doar pentru
+vizitatori: unui membru deja înscris i-ar spune să facă ceva ce a făcut demult.
 
 Formularul are un singur câmp „Nume și prenume", dar în bază stau două coloane.
 Pentru vizitatori se desparte la primul spațiu, în ordinea de la înregistrare:

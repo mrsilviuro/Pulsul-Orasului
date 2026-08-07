@@ -2614,14 +2614,6 @@ body { overscroll-behavior-y: none; }
   overflow: hidden;
 }
 
-/* Lămurire sub un câmp, când nu e o eroare, ci doar ceva bun de știut. */
-.field__hint {
-  margin-top: 6px;
-  font-size: 12.5px;
-  line-height: 1.5;
-  color: var(--text-faint);
-}
-
 /* Câmpul precompletat din cont: se vede că e acolo, dar că nu se schimbă de
    aici. Schimbarea se face din setări, unde îi e locul. */
 .field input[readonly] {

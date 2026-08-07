@@ -162,14 +162,14 @@ $u->execute([
 ]);
 
 /**
- * Membrul care n-avea telefon în cont și tocmai l-a scris aici îl păstrează.
+ * Numărul rămâne doar pe mesaj, nu intră în cont.
  *
- * E același număr, la aceeași persoană — n-are rost să-l ceară a doua oară.
+ * L-am putea salva — e același număr, la aceeași persoană — dar omul l-a scris
+ * ca să-l sunăm despre mesajul ăsta, nu ca să-l ținem în cont. Datele din cont
+ * se schimbă dintr-un singur loc, din setări, unde omul le vede pe toate și
+ * știe ce face. Un formular care schimbă pe furiș altceva decât spune e exact
+ * felul de surpriză pe care nu-l vrem.
  */
-if ($membru !== null && (string) ($dinCont['telefon'] ?? '') === '') {
-    db()->prepare('UPDATE membri SET telefon = ? WHERE id = ?')
-        ->execute([$curat['telefon'], (int) $membru['id']]);
-}
 
 /* ========================== 5. E-MAILUL =============================== */
 

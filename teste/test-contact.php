@@ -295,7 +295,8 @@ $pagina = cerere($baza . '/contact.php', $cF);
 
 verifica('telefonul e gol', true, str_contains($pagina['corp'], 'id="cf-phone"'));
 verifica('și NU e blocat', 2, substr_count($pagina['corp'], ' readonly'));
-verifica('i se spune că se salvează în cont', true, str_contains($pagina['corp'], 'contul tău'));
+verifica('NU i se promite că se salvează în cont', false,
+    str_contains($pagina['corp'], 'salvăm și în contul tău'));
 
 $r = mesaj($cF, ['telefon' => '']);
 verifica('fără telefon: respins, deși e membru', true, !empty($r['erori']['telefon']));
@@ -306,9 +307,19 @@ verifica('cu telefon bun: trece', true, $r['ok'] ?? false);
 $m = ultimulMesaj();
 verifica('telefonul e adus la forma din bază', '0722998877', (string) $m['telefon']);
 
+// Numărul rămâne pe mesaj, nu intră în cont: acolo și-l pune omul singur,
+// din setări, dacă vrea.
 $q = db()->prepare('SELECT telefon FROM membri WHERE id = ?');
 $q->execute([$idFaraTel]);
-verifica('și s-a salvat în contul lui', '0722998877', (string) $q->fetchColumn());
+verifica('contul lui a rămas fără telefon', null, $q->fetchColumn());
+
+echo "\n=== INVITAȚIA DE ÎNSCRIERE ===\n";
+
+$strain = [];
+verifica('vizitatorul o vede', true,
+    str_contains(cerere($baza . '/contact.php', $strain)['corp'], 'Alătură-te și tu'));
+verifica('membrul NU o vede', false,
+    str_contains(cerere($baza . '/contact.php', $cM)['corp'], 'Alătură-te și tu'));
 
 echo "\n=== E-MAILUL CĂTRE NOI ===\n";
 
