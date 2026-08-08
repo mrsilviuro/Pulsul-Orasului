@@ -84,7 +84,25 @@ $coperta = null;
 $fisier  = $_FILES['coperta'] ?? null;
 
 if (is_array($fisier) && (int) ($fisier['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
-    $poza = procesezaCoperta($fisier);
+    /**
+     * Cadrul ales din pagină. Nu-l credem pe cuvânt — potrivesteDecupajCoperta()
+     * îl aduce la ceva care încape în poză. Trimitem fișierul întreg și trei
+     * numere, nu poza gata tăiată de JavaScript: altfel am salva ce vrea cel de
+     * la tastatură, nu ce am cerut noi.
+     */
+    $decupaj = null;
+
+    // is_numeric înainte de cast, ca la poza de profil: „l[]=1" ar fi un tablou,
+    // iar un tablou aruncat într-un (float) e o ceartă de pomană.
+    if (isset($_POST['l']) && is_numeric($_POST['l'])) {
+        $decupaj = [
+            'x' => is_numeric($_POST['x'] ?? null) ? (float) $_POST['x'] : 0,
+            'y' => is_numeric($_POST['y'] ?? null) ? (float) $_POST['y'] : 0,
+            'l' => (float) $_POST['l'],
+        ];
+    }
+
+    $poza = procesezaCoperta($fisier, $decupaj);
 
     if (!$poza['ok']) {
         raspunsJson(['ok' => false, 'erori' => ['coperta' => $poza['mesaj']]], 422);

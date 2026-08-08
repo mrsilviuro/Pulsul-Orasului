@@ -1747,6 +1747,193 @@
   }
 
 
+  /* ------------------- 8.5. DECUPATORUL (mutat + mărit) ------------------ */
+  /*
+    Un singur motor pentru toate ramele din site: cercul pozei de profil și
+    dreptunghiul lat al copertei de eveniment. Nu știe nimic despre ce se
+    decupează — primește o ramă și o poză, le ține una peste alta și spune, la
+    cerere, ce dreptunghi din poza originală se vede prin ramă.
+
+    Scris o dată fiindcă a doua oară s-ar fi scris altfel: pinch-ul de pe
+    telefon și marginile care nu lasă colțuri goale sunt exact genul de cod pe
+    care nimeni nu-l mai corectează în două locuri.
+
+    Rama poate fi pătrată sau lată — se ia din câți pixeli are pe ecran, deci
+    forma o hotărăște CSS-ul, nu JavaScriptul.
+  */
+  function faDecupator(rama, poza) {
+    var nW = 0, nH = 0;          // dimensiunile reale ale pozei
+    var ramaL = 0, ramaI = 0;    // rama, în pixeli de ecran
+    var baseScale = 1, zoom = 1, zoomMax = 4, pozX = 0, pozY = 0;
+    var degete = {};             // pointerId → ultima poziție
+    var pinchStart = 0, pinchZoom = 1;
+    var anunta = null;
+
+    function scara() { return baseScale * zoom; }
+
+    function masoara() {
+      ramaL = rama.clientWidth;
+      ramaI = rama.clientHeight;
+    }
+
+    /** Poza nu are voie să lase colțuri goale în ramă. */
+    function tine() {
+      var s = scara();
+      pozX = Math.min(0, Math.max(ramaL - nW * s, pozX));
+      pozY = Math.min(0, Math.max(ramaI - nH * s, pozY));
+    }
+
+    function deseneaza() {
+      tine();
+      var s = scara();
+      poza.style.width  = (nW * s) + 'px';
+      poza.style.height = (nH * s) + 'px';
+      poza.style.transform = 'translate(' + pozX + 'px, ' + pozY + 'px)';
+    }
+
+    /** Mărește sau micșorează păstrând sub deget același punct din poză. */
+    function schimbaZoom(nou, focX, focY) {
+      nou = Math.min(zoomMax, Math.max(1, nou));
+      if (!nW || nou === zoom) return;
+
+      var vechi = scara();
+      zoom = nou;
+      var acum = scara();
+
+      if (focX === undefined) { focX = ramaL / 2; focY = ramaI / 2; }
+
+      pozX = focX - (focX - pozX) * (acum / vechi);
+      pozY = focY - (focY - pozY) * (acum / vechi);
+
+      deseneaza();
+      if (anunta) anunta(zoom);
+    }
+
+    function pozitiaIn(e) {
+      var r = rama.getBoundingClientRect();
+      return { x: e.clientX - r.left, y: e.clientY - r.top };
+    }
+
+    function distanta(a, b) {
+      return Math.sqrt((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y));
+    }
+
+    rama.addEventListener('pointerdown', function (e) {
+      if (!nW) return;
+      rama.setPointerCapture(e.pointerId);
+      degete[e.pointerId] = pozitiaIn(e);
+      rama.classList.add('is-dragging');
+
+      var chei = Object.keys(degete);
+      if (chei.length === 2) {
+        pinchStart = distanta(degete[chei[0]], degete[chei[1]]);
+        pinchZoom = zoom;
+      }
+    });
+
+    rama.addEventListener('pointermove', function (e) {
+      if (!degete[e.pointerId]) return;
+      e.preventDefault();
+
+      var acum = pozitiaIn(e);
+      var chei = Object.keys(degete);
+
+      if (chei.length >= 2) {
+        // două degete: cât se depărtează unul de altul, atât se mărește poza
+        degete[e.pointerId] = acum;
+
+        var a = degete[chei[0]], b = degete[chei[1]];
+        var d = distanta(a, b);
+
+        if (pinchStart > 0) {
+          schimbaZoom(pinchZoom * (d / pinchStart), (a.x + b.x) / 2, (a.y + b.y) / 2);
+        }
+        return;
+      }
+
+      var vechi = degete[e.pointerId];
+      pozX += acum.x - vechi.x;
+      pozY += acum.y - vechi.y;
+      degete[e.pointerId] = acum;
+      deseneaza();
+    });
+
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (nume) {
+      rama.addEventListener(nume, function (e) {
+        delete degete[e.pointerId];
+        if (!Object.keys(degete).length) {
+          rama.classList.remove('is-dragging');
+          pinchStart = 0;
+        }
+      });
+    });
+
+    // rotița mausului, pe calculator
+    rama.addEventListener('wheel', function (e) {
+      if (!nW) return;
+      e.preventDefault();
+      var p = pozitiaIn(e);
+      schimbaZoom(zoom * (e.deltaY < 0 ? 1.12 : 1 / 1.12), p.x, p.y);
+    }, { passive: false });
+
+    // La rotirea telefonului rama își schimbă lățimea, deci refacem socoteala.
+    window.addEventListener('resize', function () {
+      if (!nW) return;
+
+      var vechiL = ramaL || 1, vechiI = ramaI || 1;
+      masoara();
+      if (!ramaL) return;          // rama e ascunsă acum
+
+      pozX *= ramaL / vechiL;
+      pozY *= ramaI / vechiI;
+      baseScale = Math.max(ramaL / nW, ramaI / nH);
+      deseneaza();
+    });
+
+    return {
+      /** Pune o poză nouă în ramă, potrivită din mijloc. Rama trebuie să fie
+          deja vizibilă — altfel n-are lățime din care să calculăm nimic. */
+      asaza: function (latime, inaltime) {
+        nW = latime;
+        nH = inaltime;
+        masoara();
+        baseScale = Math.max(ramaL / nW, ramaI / nH);
+        zoom = 1;
+        pozX = (ramaL - nW * baseScale) / 2;
+        pozY = (ramaI - nH * baseScale) / 2;
+        deseneaza();
+        if (anunta) anunta(zoom);
+      },
+
+      /** Uită poza: de aici înainte, trasul și rotița nu mai fac nimic. */
+      uita: function () { nW = 0; nH = 0; },
+
+      zoomLa: schimbaZoom,
+
+      /** Cât se poate mări. Peste asta, la copertă ar ieși o poză întinsă. */
+      zoomMaxim: function (cat) {
+        zoomMax = Math.max(1, cat);
+        if (zoom > zoomMax) schimbaZoom(zoomMax);
+      },
+
+      arePeCeMari: function () { return zoomMax > 1.001; },
+
+      laZoom: function (fn) { anunta = fn; },
+
+      /** Ce se vede prin ramă, în pixelii pozei originale. */
+      decupaj: function () {
+        var s = scara();
+        return {
+          x: Math.max(0, Math.round(-pozX / s)),
+          y: Math.max(0, Math.round(-pozY / s)),
+          l: Math.round(ramaL / s),
+          h: Math.round(ramaI / s)
+        };
+      }
+    };
+  }
+
+
   /* --------------------- 9. POZA DE PROFIL (poza.php) -------------------- */
   /*
     Decuparea se face aici doar ca să vadă omul ce alege. Poza tăiată nu se
@@ -1785,10 +1972,18 @@
 
     var fisierAles = null;   // File
     var adresaTemp = null;   // URL-ul creat pentru previzualizare
-    var nW = 0, nH = 0;      // dimensiunile reale ale pozei
-    var stageL = 0;          // latura ramei, în pixeli de ecran
-    var baseScale = 1, zoom = 1, pozX = 0, pozY = 0;
     var seTrimite = false;
+
+    // Mutatul, mărirea, pinch-ul și marginile ramei — toate în faDecupator().
+    // Aici rămâne doar ce ține de poza de profil: fișierul, mesajele, salvarea.
+    var decupator = faDecupator(stage, cropImg);
+
+    if (zoomInput) {
+      decupator.laZoom(function (z) { zoomInput.value = String(z); });
+      zoomInput.addEventListener('input', function () {
+        decupator.zoomLa(parseFloat(zoomInput.value));
+      });
+    }
 
     /* ---------------------------- mesaje ------------------------------- */
     var ICO_INFO = '<circle cx="12" cy="12" r="9"/><path d="M12 11v5.5"/><path d="M12 7.6v.1"/>';
@@ -1826,10 +2021,10 @@
       adresaTemp = URL.createObjectURL(file);
 
       cropImg.onload = function () {
-        nW = cropImg.naturalWidth;
-        nH = cropImg.naturalHeight;
+        var latime = cropImg.naturalWidth;
+        var inaltime = cropImg.naturalHeight;
 
-        if (Math.min(nW, nH) < SURSA_MIN) {
+        if (Math.min(latime, inaltime) < SURSA_MIN) {
           ascundeDecuparea();
           spune('Poza e prea mică. Avem nevoie de cel puțin ' +
                 SURSA_MIN + '×' + SURSA_MIN + ' pixeli.', 'rau');
@@ -1837,8 +2032,10 @@
         }
 
         fisierAles = file;
+        // Rama trebuie să fie vizibilă înainte de așezare: cât timp e ascunsă,
+        // n-are lățime, deci n-am avea din ce socoti scara.
         crop.hidden = false;
-        porneste();
+        decupator.asaza(latime, inaltime);
         btnSalvez.disabled = false;
 
         // Pe telefon, rama apare sub marginea ecranului: fără rândul ăsta,
@@ -1857,151 +2054,10 @@
     function ascundeDecuparea() {
       fisierAles = null;
       crop.hidden = true;
+      decupator.uita();
       btnSalvez.disabled = true;
       if (fisierInput) fisierInput.value = '';
     }
-
-    /* ------------------------- așezarea în ramă ------------------------ */
-    function porneste() {
-      stageL = stage.clientWidth;
-      baseScale = Math.max(stageL / nW, stageL / nH);   // acoperă rama întreagă
-      zoom = 1;
-      if (zoomInput) zoomInput.value = '1';
-
-      // pornim din mijlocul pozei
-      pozX = (stageL - nW * baseScale) / 2;
-      pozY = (stageL - nH * baseScale) / 2;
-
-      deseneaza();
-    }
-
-    function scaraCurenta() { return baseScale * zoom; }
-
-    /** Poza nu are voie să lase colțuri goale în ramă. */
-    function tine() {
-      var s = scaraCurenta();
-      var latimeDesen = nW * s;
-      var inaltimeDesen = nH * s;
-
-      pozX = Math.min(0, Math.max(stageL - latimeDesen, pozX));
-      pozY = Math.min(0, Math.max(stageL - inaltimeDesen, pozY));
-    }
-
-    function deseneaza() {
-      tine();
-      var s = scaraCurenta();
-      cropImg.style.width  = (nW * s) + 'px';
-      cropImg.style.height = (nH * s) + 'px';
-      cropImg.style.transform = 'translate(' + pozX + 'px, ' + pozY + 'px)';
-    }
-
-    /** Mărește sau micșorează păstrând sub deget același punct din poză. */
-    function schimbaZoom(nou, focX, focY) {
-      nou = Math.min(4, Math.max(1, nou));
-      if (nou === zoom) return;
-
-      var vechi = scaraCurenta();
-      zoom = nou;
-      var acum = scaraCurenta();
-
-      if (focX === undefined) { focX = stageL / 2; focY = stageL / 2; }
-
-      pozX = focX - (focX - pozX) * (acum / vechi);
-      pozY = focY - (focY - pozY) * (acum / vechi);
-
-      if (zoomInput) zoomInput.value = String(zoom);
-      deseneaza();
-    }
-
-    /* ---------------------- mutarea cu degetul / mausul ---------------- */
-    var degete = {};          // pointerId → ultima poziție
-    var pinchStart = 0;       // distanța dintre degete la începutul apropierii
-    var pinchZoom = 1;
-
-    function pozitiaIn(e) {
-      var r = stage.getBoundingClientRect();
-      return { x: e.clientX - r.left, y: e.clientY - r.top };
-    }
-
-    stage.addEventListener('pointerdown', function (e) {
-      if (crop.hidden) return;
-      stage.setPointerCapture(e.pointerId);
-      degete[e.pointerId] = pozitiaIn(e);
-      stage.classList.add('is-dragging');
-
-      var chei = Object.keys(degete);
-      if (chei.length === 2) {
-        pinchStart = distanta(degete[chei[0]], degete[chei[1]]);
-        pinchZoom = zoom;
-      }
-    });
-
-    stage.addEventListener('pointermove', function (e) {
-      if (!degete[e.pointerId]) return;
-      e.preventDefault();
-
-      var acum = pozitiaIn(e);
-      var chei = Object.keys(degete);
-
-      if (chei.length >= 2) {
-        // două degete: cât se depărtează unul de altul, atât se mărește poza
-        degete[e.pointerId] = acum;
-
-        var a = degete[chei[0]], b = degete[chei[1]];
-        var d = distanta(a, b);
-
-        if (pinchStart > 0) {
-          schimbaZoom(pinchZoom * (d / pinchStart), (a.x + b.x) / 2, (a.y + b.y) / 2);
-        }
-        return;
-      }
-
-      var vechi = degete[e.pointerId];
-      pozX += acum.x - vechi.x;
-      pozY += acum.y - vechi.y;
-      degete[e.pointerId] = acum;
-      deseneaza();
-    });
-
-    ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (nume) {
-      stage.addEventListener(nume, function (e) {
-        delete degete[e.pointerId];
-        if (!Object.keys(degete).length) {
-          stage.classList.remove('is-dragging');
-          pinchStart = 0;
-        }
-      });
-    });
-
-    function distanta(a, b) {
-      return Math.sqrt((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y));
-    }
-
-    // rotița mausului, pe calculator
-    stage.addEventListener('wheel', function (e) {
-      if (crop.hidden) return;
-      e.preventDefault();
-      var p = pozitiaIn(e);
-      schimbaZoom(zoom * (e.deltaY < 0 ? 1.12 : 1 / 1.12), p.x, p.y);
-    }, { passive: false });
-
-    if (zoomInput) {
-      zoomInput.addEventListener('input', function () {
-        schimbaZoom(parseFloat(zoomInput.value));
-      });
-    }
-
-    // La rotirea telefonului rama își schimbă lățimea, deci refacem socoteala.
-    window.addEventListener('resize', function () {
-      if (crop.hidden || !nW) return;
-      var vechi = stageL || 1;
-      stageL = stage.clientWidth;
-      var raport = stageL / vechi;
-      baseScale = Math.max(stageL / nW, stageL / nH);
-      pozX *= raport;
-      pozY *= raport;
-      deseneaza();
-    });
 
     /* ------------------ alegerea: buton, tragere, lipire --------------- */
     if (fisierInput) {
@@ -2030,15 +2086,6 @@
     });
 
     /* ------------------------- trimiterea ------------------------------ */
-    function decupajulCerut() {
-      var s = scaraCurenta();
-      return {
-        x: Math.max(0, Math.round(-pozX / s)),
-        y: Math.max(0, Math.round(-pozY / s)),
-        l: Math.round(stageL / s)
-      };
-    }
-
     function cere(date, laBine) {
       if (seTrimite) return;
       seTrimite = true;
@@ -2085,7 +2132,7 @@
       if (!fisierAles) return;
       taci();
 
-      var t = decupajulCerut();
+      var t = decupator.decupaj();
       var date = new FormData();
       date.append('csrf', csrfPoza.value);
       date.append('actiune', 'salveaza');
@@ -2341,9 +2388,11 @@
   if (evForm) {
     var evFisier = document.getElementById('ev-coperta');
     var evNume   = document.getElementById('ev-coperta-nume');
-    var evPrev   = document.getElementById('ev-previzualizare');
-    var evPrevImg= document.getElementById('ev-previzualizare-img');
     var evDrop   = document.getElementById('ev-drop');
+    var evCrop   = document.getElementById('ev-crop');
+    var evRama   = document.getElementById('ev-crop-stage');
+    var evCropImg = document.getElementById('ev-crop-img');
+    var evCropZoom = document.getElementById('ev-crop-zoom');
 
     /* --- bifele care ascund câmpul de sub ele --- */
     // Aceeași poveste de trei ori: gratuit, minim, maxim. O scriem o dată.
@@ -2357,10 +2406,20 @@
       if (!bifa || !tinta) return;
 
       var potriveste = function () {
-        // La cost ascundem tot câmpul; la participanți doar golim, fiindcă
-        // eticheta și lămurirea de deasupra rămân de citit.
-        if (p[2]) { tinta.hidden = bifa.checked; }
-        else      { tinta.disabled = bifa.checked; if (bifa.checked) tinta.value = ''; }
+        /**
+         * La cost se ascunde tot câmpul (cu etichetă cu tot), la participanți
+         * doar caseta: eticheta și lămurirea de deasupra rămân de citit, ca
+         * omul să știe ce anume a lăsat nespecificat.
+         *
+         * `hidden` singur n-ar ajunge: un câmp ascuns tot pleacă în FormData.
+         * `disabled` e cel care îl ține acasă.
+         */
+        if (p[2]) {
+          tinta.hidden = bifa.checked;
+        } else {
+          tinta.hidden = tinta.disabled = bifa.checked;
+          if (bifa.checked) tinta.value = '';
+        }
       };
 
       bifa.addEventListener('change', potriveste);
@@ -2396,39 +2455,86 @@
       numara();
     }
 
-    /* --- coperta: previzualizare și mărimea minimă, încă din browser --- */
+    /* --- coperta: rama de așezare și mărimea minimă, încă din browser --- */
+    /*
+      Rama e și previzualizarea: ce se vede prin ea e exact ce se salvează.
+      Ca la poza de profil, la server pleacă fișierul original plus colțul și
+      lățimea decupajului — poza tăiată aici n-ar fi de încredere.
+    */
+    var COPERTA_L = 1600, COPERTA_I = 900;
+    var evDecupator = null;
+    var evAdresa = null;         // URL-ul temporar al pozei alese
+
+    if (evRama && evCropImg) {
+      evDecupator = faDecupator(evRama, evCropImg);
+
+      if (evCropZoom) {
+        evDecupator.laZoom(function (z) { evCropZoom.value = String(z); });
+        evCropZoom.addEventListener('input', function () {
+          evDecupator.zoomLa(parseFloat(evCropZoom.value));
+        });
+      }
+    }
+
+    function scoateCoperta() {
+      if (evFisier) evFisier.value = '';
+      if (evCrop) evCrop.hidden = true;
+      if (evDecupator) evDecupator.uita();
+      if (evAdresa) { URL.revokeObjectURL(evAdresa); evAdresa = null; }
+      if (evNume) evNume.textContent = 'JPG, PNG sau WEBP, cel puțin 1600×900 px';
+    }
+
     function arataCoperta(fisier) {
-      if (!fisier) return;
+      if (!fisier || !evDecupator) return;
 
-      var url = URL.createObjectURL(fisier);
-      var proba = new Image();
+      if (evAdresa) URL.revokeObjectURL(evAdresa);
+      evAdresa = URL.createObjectURL(fisier);
 
-      proba.onload = function () {
+      evCropImg.onload = function () {
+        var latime = evCropImg.naturalWidth;
+        var inaltime = evCropImg.naturalHeight;
+
         // Aceeași regulă ca pe server. Aici e doar ca omul să afle imediat,
         // fără să aștepte încărcarea unui fișier de câțiva megabytes.
-        if (proba.naturalWidth < 1600 || proba.naturalHeight < 900) {
+        if (latime < COPERTA_L || inaltime < COPERTA_I) {
+          scoateCoperta();
           setError('ev-coperta', 'err-ev-coperta',
-            'Poza e prea mică: are ' + proba.naturalWidth + '×' + proba.naturalHeight +
+            'Poza e prea mică: are ' + latime + '×' + inaltime +
             ' pixeli, iar noi avem nevoie de cel puțin 1600×900. Încarcă alta, mai mare.');
-          evFisier.value = '';
-          evPrev.hidden = true;
-          URL.revokeObjectURL(url);
           return;
         }
 
         setError('ev-coperta', 'err-ev-coperta', '');
-        evPrevImg.src = url;
-        evPrev.hidden = false;
+
+        // Rama întâi vizibilă, apoi așezarea: ascunsă, n-are lățime.
+        evCrop.hidden = false;
+        evDecupator.asaza(latime, inaltime);
+
+        /**
+         * Cât se poate mări fără ca poza salvată să iasă întinsă.
+         *
+         * La zoom 1 se vede tot ce încape în ramă; de acolo, fiecare mărire
+         * micșorează decupajul. Când decupajul ar scădea sub 1600 px lățime,
+         * ne-am apuca să întindem pixeli care nu există — deci ne oprim exact
+         * acolo. La o poză fix de 1600×900 nu se poate mări deloc, iar bara
+         * dispare de tot: n-are rost o unealtă care nu face nimic.
+         */
+        var plin = evDecupator.decupaj();
+        var maxim = Math.max(1, plin.l / COPERTA_L);
+
+        evDecupator.zoomMaxim(maxim);
+        if (evCropZoom) evCropZoom.max = String(Math.min(4, maxim));
+        evCrop.classList.toggle('crop--fix', !evDecupator.arePeCeMari());
+
         if (evNume) evNume.textContent = fisier.name;
       };
 
-      proba.onerror = function () {
+      evCropImg.onerror = function () {
+        scoateCoperta();
         setError('ev-coperta', 'err-ev-coperta', 'Fișierul nu pare o poză.');
-        evFisier.value = '';
-        URL.revokeObjectURL(url);
       };
 
-      proba.src = url;
+      evCropImg.src = evAdresa;
     }
 
     if (evFisier) {
@@ -2462,10 +2568,8 @@
     var evRenunt = document.getElementById('ev-coperta-renunt');
     if (evRenunt) {
       evRenunt.addEventListener('click', function () {
-        evFisier.value = '';
-        evPrev.hidden = true;
+        scoateCoperta();
         setError('ev-coperta', 'err-ev-coperta', '');
-        if (evNume) evNume.textContent = 'JPG, PNG sau WEBP, cel puțin 1600×900 px';
       });
     }
 
@@ -2488,10 +2592,20 @@
        * Câmpurile dezactivate nu intră în FormData — exact ce vrem, fiindcă
        * bifa „Nespecificat" e cea care le dezactivează.
        */
+      var date = new FormData(evForm);
+
+      // Cadrul ales din ramă, dacă e vreo copertă. Serverul îl verifică oricum.
+      if (evDecupator && evFisier && evFisier.files && evFisier.files.length) {
+        var t = evDecupator.decupaj();
+        date.append('x', String(t.x));
+        date.append('y', String(t.y));
+        date.append('l', String(t.l));
+      }
+
       fetch('api/eveniment.php', {
         method: 'POST',
         credentials: 'same-origin',
-        body: new FormData(evForm)
+        body: date
       })
       .then(citesteRaspuns)
       .then(function (rez) {

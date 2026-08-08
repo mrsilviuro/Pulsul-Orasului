@@ -88,7 +88,7 @@ require __DIR__ . '/inc/antet.php';
     <?php else: ?>
     <!-- ======================== FORMULARUL ========================== -->
     <div id="ev-block">
-      <form class="form" id="eveniment-form" novalidate enctype="multipart/form-data">
+      <form class="form form--eveniment" id="eveniment-form" novalidate enctype="multipart/form-data">
         <input type="hidden" name="csrf" value="<?= h($csrf) ?>">
 
         <!-- --------------------- Ce și unde --------------------- -->
@@ -123,6 +123,68 @@ require __DIR__ . '/inc/antet.php';
           </div>
         </section>
 
+        <!-- ---------------------- Coperta ----------------------- -->
+        <section class="card-set">
+          <h2 class="card-set__titlu">Poza de copertă <span class="field__optional">(opțional)</span></h2>
+          <p class="card-set__lead">
+            E poza mare de sus, de la anunț. Cel puțin
+            <?= COPERTA_SURSA_MIN_LATIME ?>×<?= COPERTA_SURSA_MIN_INALTIME ?> pixeli. După ce
+            o alegi, o poți muta și mări în cadru — ce vezi acolo e exact ce se
+            salvează. Dacă nu pui niciuna, folosim imaginea categoriei.
+          </p>
+
+          <div class="field">
+            <!-- Aceleași clase ca la poza de profil (poza.php), deci același CSS. -->
+            <label class="poza-drop" id="ev-drop" for="ev-coperta">
+              <span class="poza-drop__ico" aria-hidden="true">
+                <svg class="ico" viewBox="0 0 24 24">
+                  <rect x="3" y="5" width="18" height="14" rx="2.5"/>
+                  <circle cx="8.5" cy="10" r="1.6"/><path d="m4 17 5-4.5 4 3.5 3-2.5 4 3.5"/>
+                </svg>
+              </span>
+              <span class="poza-drop__titlu">Alege o poză sau trage fișierul aici</span>
+              <span class="poza-drop__hint" id="ev-coperta-nume">JPG, PNG sau WEBP, cel puțin <?= COPERTA_SURSA_MIN_LATIME ?>×<?= COPERTA_SURSA_MIN_INALTIME ?> px</span>
+            </label>
+            <input type="file" id="ev-coperta" name="coperta" accept="image/jpeg,image/png,image/webp" hidden>
+            <p class="field__error" id="err-ev-coperta" hidden></p>
+          </div>
+
+          <!--
+            Cadrul de așezare. Aceleași clase ca la poza de profil, doar rama e
+            lată în loc de pătrată (.crop--lat) și n-are cerc peste ea.
+
+            Ce se trimite la server e tot fișierul original plus trei numere —
+            colțul din stânga-sus și lățimea decupajului. Poza tăiată de aici
+            n-ar fi de încredere: cine vrea poate schimba orice pleacă din pagină.
+          -->
+          <div class="crop crop--lat" id="ev-crop" hidden>
+            <div class="crop__stage" id="ev-crop-stage">
+              <img class="crop__img" id="ev-crop-img" alt="Coperta aleasă, de așezat în cadru">
+            </div>
+
+            <div class="crop__zoom" id="ev-crop-bara">
+              <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
+                <rect x="3" y="5" width="18" height="14" rx="2.5"/>
+                <circle cx="8.5" cy="10" r="1.6"/><path d="m4 17 5-4.5 4 3.5 3-2.5 4 3.5"/>
+              </svg>
+              <label class="sr-only" for="ev-crop-zoom">Mărimea pozei</label>
+              <input type="range" id="ev-crop-zoom" min="1" max="4" step="0.01" value="1">
+              <svg class="ico ico--mare" viewBox="0 0 24 24" aria-hidden="true">
+                <rect x="3" y="5" width="18" height="14" rx="2.5"/>
+                <circle cx="8.5" cy="10" r="1.6"/><path d="m4 17 5-4.5 4 3.5 3-2.5 4 3.5"/>
+              </svg>
+            </div>
+
+            <p class="crop__ajutor" id="ev-crop-ajutor">
+              Trage de poză ca să o miști. Din bară o mărești sau o micșorezi.
+            </p>
+
+            <div class="crop__actiuni">
+              <button class="btn btn--ghost btn--sm" type="button" id="ev-coperta-renunt">Scoate poza</button>
+            </div>
+          </div>
+        </section>
+
         <!-- ----------------------- Când ------------------------- -->
         <section class="card-set">
           <h2 class="card-set__titlu">Când</h2>
@@ -148,46 +210,14 @@ require __DIR__ . '/inc/antet.php';
               <label for="ev-ora-sfarsit">Ora de sfârșit</label>
               <input type="time" id="ev-ora-sfarsit" name="ora_sfarsit"
                      aria-describedby="err-ev-ora-sfarsit">
+              <!-- Bifa stă sub câmpul pe care îl stinge, nu sub tot rândul:
+                   altfel nu se vede din prima la care dintre ore se referă. -->
+              <label class="check check--mic">
+                <input type="checkbox" id="ev-fara-sfarsit" name="fara_ora_sfarsit" value="1">
+                <span>Nu se știe până când ține</span>
+              </label>
               <p class="field__error" id="err-ev-ora-sfarsit" hidden></p>
             </div>
-          </div>
-
-          <div class="field">
-            <label class="check">
-              <input type="checkbox" id="ev-fara-sfarsit" name="fara_ora_sfarsit" value="1">
-              <span>Nu se știe până când ține</span>
-            </label>
-          </div>
-        </section>
-
-        <!-- ---------------------- Coperta ----------------------- -->
-        <section class="card-set">
-          <h2 class="card-set__titlu">Poza de copertă <span class="field__optional">(opțional)</span></h2>
-          <p class="card-set__lead">
-            E poza mare de sus, de la anunț. Cel puțin
-            <?= COPERTA_SURSA_MIN_LATIME ?>×<?= COPERTA_SURSA_MIN_INALTIME ?> pixeli — o tăiem
-            din mijloc, la lat. Dacă nu pui niciuna, folosim imaginea categoriei.
-          </p>
-
-          <div class="field">
-            <!-- Aceleași clase ca la poza de profil (poza.php), deci același CSS. -->
-            <label class="poza-drop" id="ev-drop" for="ev-coperta">
-              <span class="poza-drop__ico" aria-hidden="true">
-                <svg class="ico" viewBox="0 0 24 24">
-                  <rect x="3" y="5" width="18" height="14" rx="2.5"/>
-                  <circle cx="8.5" cy="10" r="1.6"/><path d="m4 17 5-4.5 4 3.5 3-2.5 4 3.5"/>
-                </svg>
-              </span>
-              <span class="poza-drop__titlu">Alege o poză sau trage fișierul aici</span>
-              <span class="poza-drop__hint" id="ev-coperta-nume">JPG, PNG sau WEBP, cel puțin <?= COPERTA_SURSA_MIN_LATIME ?>×<?= COPERTA_SURSA_MIN_INALTIME ?> px</span>
-            </label>
-            <input type="file" id="ev-coperta" name="coperta" accept="image/jpeg,image/png,image/webp" hidden>
-            <p class="field__error" id="err-ev-coperta" hidden></p>
-          </div>
-
-          <div class="ev-previzualizare" id="ev-previzualizare" hidden>
-            <img id="ev-previzualizare-img" alt="">
-            <button class="btn btn--ghost btn--sm" type="button" id="ev-coperta-renunt">Scoate poza</button>
           </div>
         </section>
 

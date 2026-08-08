@@ -445,10 +445,11 @@ function stergeCopertaDeFisier(?string $coperta): void
  * niciodată pe disc. Numele e întâmplător, ca nimeni să nu poată ghici ce
  * altceva mai e în dosar.
  *
- * Decupajul e din mijloc: n-avem încă o unealtă cu care omul să-și aleagă
- * singur cadrul, iar mijlocul e locul unde stă subiectul în aproape orice poză.
+ * $decupaj — ['x' => int, 'y' => int, 'l' => int] în pixelii pozei originale,
+ *            așa cum l-a ales omul din pagină. Lipsește când n-a umblat la el
+ *            (sau când n-a mers JavaScriptul): atunci tăiem din mijloc.
  */
-function procesezaCoperta(array $fisier): array
+function procesezaCoperta(array $fisier, ?array $decupaj = null): array
 {
     $primita = deschidePozaPrimita($fisier, COPERTA_SURSA_MIN_LATIME, COPERTA_SURSA_MIN_INALTIME);
 
@@ -461,24 +462,7 @@ function procesezaCoperta(array $fisier): array
     $inaltime = $primita['inaltime'];
 
     try {
-        /**
-         * Cel mai mare dreptunghi 16:9 care încape în poză, luat din mijloc.
-         *
-         * Dacă poza e mai lată decât 16:9, tăiem din stânga și din dreapta;
-         * dacă e mai înaltă, tăiem de sus și de jos.
-         */
-        $raport = COPERTA_LATIME / COPERTA_INALTIME;
-
-        if ($latime / $inaltime > $raport) {
-            $taieInaltime = $inaltime;
-            $taieLatime   = (int) round($inaltime * $raport);
-        } else {
-            $taieLatime   = $latime;
-            $taieInaltime = (int) round($latime / $raport);
-        }
-
-        $x = (int) floor(($latime - $taieLatime) / 2);
-        $y = (int) floor(($inaltime - $taieInaltime) / 2);
+        $taietura = potrivesteDecupajCoperta($decupaj, $latime, $inaltime);
 
         $nume = bin2hex(random_bytes(16));
         $caleDosar = dirname(__DIR__) . '/' . COPERTA_DOSAR;
@@ -489,7 +473,8 @@ function procesezaCoperta(array $fisier): array
 
         $cale = $caleDosar . '/' . $nume . '.jpg';
 
-        if (!scrieDreptunghi($sursa, $x, $y, $taieLatime, $taieInaltime,
+        if (!scrieDreptunghi($sursa, $taietura['x'], $taietura['y'],
+                             $taietura['l'], $taietura['h'],
                              COPERTA_LATIME, COPERTA_INALTIME, $cale)) {
             return ['ok' => false, 'mesaj' => 'Nu am putut salva coperta. Încearcă din nou peste puțin.'];
         }
@@ -631,6 +616,63 @@ function potrivesteDecupajul(?array $decupaj, int $latime, int $inaltime): array
     $y = max(0, min($y, $inaltime - $l));
 
     return ['x' => $x, 'y' => $y, 'l' => $l];
+}
+
+/**
+ * Același lucru pentru copertă, unde dreptunghiul e 16:9, nu pătrat.
+ *
+ * Întoarce ['x' => int, 'y' => int, 'l' => int, 'h' => int].
+ *
+ * O deosebire față de poza de profil: acolo, dintr-un decupaj mic iese o poză
+ * mică și e în regulă. Aici ieșirea e mereu 1600×900, deci un decupaj mai
+ * îngust de 1600 ar însemna o poză întinsă. Îl lărgim până la 1600 — omul a
+ * mărit prea mult, iar noi îi dăm cel mai apropiat cadru care nu iese moale.
+ */
+function potrivesteDecupajCoperta(?array $decupaj, int $latime, int $inaltime): array
+{
+    $raport = COPERTA_LATIME / COPERTA_INALTIME;
+
+    /**
+     * Cel mai mare dreptunghi 16:9 care încape în poză.
+     *
+     * Dacă poza e mai lată decât 16:9, tăiem din stânga și din dreapta; dacă e
+     * mai înaltă, tăiem de sus și de jos.
+     */
+    if ($latime / $inaltime > $raport) {
+        $maxInaltime = $inaltime;
+        $maxLatime   = min($latime, (int) round($inaltime * $raport));
+    } else {
+        $maxLatime   = $latime;
+        $maxInaltime = min($inaltime, (int) round($latime / $raport));
+    }
+
+    $mijloc = [
+        'x' => (int) floor(($latime   - $maxLatime) / 2),
+        'y' => (int) floor(($inaltime - $maxInaltime) / 2),
+        'l' => $maxLatime,
+        'h' => $maxInaltime,
+    ];
+
+    if ($decupaj === null) {
+        return $mijloc;
+    }
+
+    $l = (int) round((float) ($decupaj['l'] ?? 0));
+    $x = (int) round((float) ($decupaj['x'] ?? 0));
+    $y = (int) round((float) ($decupaj['y'] ?? 0));
+
+    // Prea mic ca să însemne ceva, sau lipsă de tot.
+    if ($l < 1) {
+        return $mijloc;
+    }
+
+    $l = min(max($l, COPERTA_LATIME), $maxLatime);
+    $h = min((int) round($l / $raport), $maxInaltime);
+
+    $x = max(0, min($x, $latime   - $l));
+    $y = max(0, min($y, $inaltime - $h));
+
+    return ['x' => $x, 'y' => $y, 'l' => $l, 'h' => $h];
 }
 
 /**

@@ -393,7 +393,9 @@ function verificaEveniment(array $date, array $categoriiValide, ?DateTimeImmutab
         $sfarsit = trim($citeste('ora_sfarsit'));
 
         if ($sfarsit === '') {
-            $erori['ora_sfarsit'] = 'Scrie ora de sfârșit, sau bifează „Nedeterminat".';
+            // Bifa se cheamă în pagină „Nu se știe până când ține". Mesajul o
+            // numește la fel: altfel omul caută în formular ceva ce nu există.
+            $erori['ora_sfarsit'] = 'Scrie ora de sfârșit, sau bifează „Nu se știe până când ține".';
         } elseif (!preg_match('/^([01][0-9]|2[0-3]):[0-5][0-9]$/', $sfarsit)) {
             $erori['ora_sfarsit'] = 'Ora nu e validă.';
         } else {

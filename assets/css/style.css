@@ -2627,6 +2627,16 @@ body { overscroll-behavior-y: none; }
    Restul paginii folosește .card-set și .poza-drop, care există deja.
    ========================================================================= */
 
+/* Aici câmpurile stau direct în cartonaș, nu într-un `.form` dinăuntru ca la
+   setări, deci nu moștenesc de nicăieri distanța dintre ele — și ajungeau
+   lipite unul de altul, iar eticheta primului aproape atinsă de titlu.
+   Le dăm același pas de 18px pe care îl dă `.form`. Marginile fraților se
+   contopesc în layout de blocuri, deci cei 6px de sub titlu nu se adună la ei:
+   iese 18px peste tot, nu 24px într-un loc și 18px în altul. */
+.form--eveniment .card-set > .field,
+.form--eveniment .card-set > .field-row,
+.form--eveniment .card-set > .crop { margin-top: 18px; }
+
 /* Lămurire sub un câmp, când nu e o eroare, ci ceva bun de știut. */
 .field__hint {
   margin-top: 6px;
@@ -2644,9 +2654,11 @@ body { overscroll-behavior-y: none; }
   color: var(--text-faint);
 }
 
-/* Bifa „Nespecificat" de sub un câmp numeric: e o portiță, nu o alegere de
-   sine stătătoare, deci stă mai mică și mai ștearsă. */
-.check--mic { margin-top: 9px; font-size: 13px; color: var(--text-soft); }
+/* Bifa „Nespecificat" de sub un câmp: e o portiță, nu o alegere de sine
+   stătătoare, deci stă mai mică și mai ștearsă. Cei 11px plus cei 7 de la
+   `.field { gap }` fac 18 — același pas ca între câmpuri, ca bifa să nu pară
+   lipită de câmpul de deasupra ei. */
+.check--mic { margin-top: 11px; font-size: 13px; color: var(--text-soft); }
 
 /* Numărătoarea de caractere de sub descriere se colorează când s-a ajuns. */
 .field__hint.e-gata { color: #16a34a; font-weight: 600; }
@@ -2664,14 +2676,20 @@ body { overscroll-behavior-y: none; }
 }
 .lista-simpla__data { color: var(--text-faint); font-size: 13px; white-space: nowrap; }
 
-/* Previzualizarea copertei: 16:9, exact cum va fi salvată. */
-.ev-previzualizare { margin-top: 14px; }
-.ev-previzualizare img {
-  display: block;
-  width: 100%;
+/* Rama în care se așază coperta. E același decupator ca la poza de profil —
+   aceleași clase, același cod — doar că rama e lată, nu pătrată, și n-are
+   cercul de deasupra: ce se salvează e chiar dreptunghiul întreg.
+   Rama e și previzualizarea: nu mai e nevoie de încă o poză sub ea. */
+.crop--lat .crop__stage {
+  max-width: 100%;
   aspect-ratio: 16 / 9;
-  object-fit: cover;
-  border-radius: var(--radius);
   border: 1px solid var(--border);
-  margin-bottom: 10px;
 }
+
+.crop__actiuni { display: flex; justify-content: center; margin-top: 12px; }
+
+/* Când poza e fix cât rama, n-ai ce mișca și ce mări. Bara și îndemnul ar fi
+   două unelte care nu fac nimic, deci nu le arătăm deloc. */
+.crop--fix .crop__zoom,
+.crop--fix .crop__ajutor { display: none; }
+.crop--fix .crop__stage { cursor: default; }

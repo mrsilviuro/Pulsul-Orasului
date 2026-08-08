@@ -278,7 +278,7 @@ Rularea verificărilor: `php teste/test-validare.php` (86 de cazuri).
 Patru suite vorbesc cu site-ul prin HTTP, cu cookie-uri adevărate, și cer
 serverul pornit: „ține-mă minte" (35 de cazuri), setările, cu tot cu ștergerea
 contului și cron (95), formularul de contact (60) și publicarea evenimentelor,
-cu tot cu urcarea copertei (74).
+cu tot cu urcarea copertei (85).
 
 ```
 php -S 127.0.0.1:8126 -t . &
@@ -943,12 +943,31 @@ fișierului dispar), nume întâmplător. Ca să nu existe două căi paralele,
 verificările comune au fost scoase în `deschidePozaPrimita()`, folosită și de
 poza de profil, și de copertă.
 
-Diferența e forma: coperta se taie pe centru la **16:9 și se scrie 1600×900**.
-Iar dacă imaginea primită e mai mică de-atât, e **respinsă** și se cere alta —
-o poză de 800×450 întinsă la dublu arată rău pe orice ecran, și e mai cinstit
-să spui asta decât să publici ceva încețoșat. Măsurarea se face **după**
-rotirea EXIF: un telefon ținut vertical trimite adesea imaginea culcată, cu
-orientarea într-o etichetă, iar altfel am fi respins poze bune.
+Diferența e forma: coperta se scrie **16:9, la 1600×900**. Iar dacă imaginea
+primită e mai mică de-atât, e **respinsă** și se cere alta — o poză de 800×450
+întinsă la dublu arată rău pe orice ecran, și e mai cinstit să spui asta decât
+să publici ceva încețoșat. Măsurarea se face **după** rotirea EXIF: un telefon
+ținut vertical trimite adesea imaginea culcată, cu orientarea într-o etichetă,
+iar altfel am fi respins poze bune.
+
+Cadrul îl alege omul: aceeași ramă de mutat și mărit ca la poza de profil, doar
+lată în loc de pătrată. Motorul din spate (`faDecupator()` din `main.js`) e
+scris o dată și folosit de amândouă — pinch-ul de pe telefon și marginile care
+nu lasă colțuri goale sunt exact genul de cod pe care nimeni nu-l mai
+corectează în două locuri.
+
+La server pleacă **fișierul original plus trei numere** (colțul din
+stânga-sus și lățimea), nu poza tăiată de JavaScript: altfel am salva ce vrea
+cel de la tastatură, nu ce am cerut noi. `potrivesteDecupajCoperta()` le aduce
+la ceva care încape în poză — numere negative, uriașe, litere sau tablouri nu
+sunt un atac, sunt de obicei o fereastră redimensionată, deci nu ne supărăm pe
+ele, le potrivim.
+
+Mărirea se oprește acolo unde decupajul ar scădea sub 1600 px lățime: mai
+departe am întinde pixeli care nu există. La o poză fix de 1600×900 nu e nimic
+de mișcat, iar bara dispare de tot — o unealtă care nu face nimic e mai rea
+decât niciuna. Cine trimite totuși un decupaj mai strâns (formular măsluit) îl
+primește lărgit înapoi la 1600, nu refuzat.
 
 Coperta e opțională. Fără ea, în bază intră `NULL`, iar la afișare se ia
 imaginea implicită a categoriei. Dacă scrierea în bază pică după ce fișierul a
@@ -979,7 +998,7 @@ aprobare" — dinadins fără detalii despre cât durează, cât timp nu putem p
 nimic.
 
 Verificările: `php teste/test-evenimente.php http://127.0.0.1:8126`
-(74 de cazuri, cere serverul pornit).
+(85 de cazuri, cere serverul pornit).
 
 
 ## E-mailurile

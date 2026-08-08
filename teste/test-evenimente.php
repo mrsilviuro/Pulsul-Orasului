@@ -57,9 +57,16 @@ function cerere(string $url, array &$cookies, ?array $campuri = null, array $fis
 
         foreach ($campuri as $nume => $valoare) {
             if ($valoare === null) { continue; }
-            $corp .= "--$granita\r\n";
-            $corp .= "Content-Disposition: form-data; name=\"$nume\"\r\n\r\n";
-            $corp .= $valoare . "\r\n";
+
+            // Un tablou se trimite ca „nume[]", de mai multe ori — așa arată
+            // un câmp pe care cineva l-a stricat dinadins, ca să ajungă array
+            // în $_POST acolo unde codul aștepta un șir.
+            foreach (is_array($valoare) ? $valoare : [$valoare] as $bucata) {
+                $cheie = is_array($valoare) ? $nume . '[]' : $nume;
+                $corp .= "--$granita\r\n";
+                $corp .= "Content-Disposition: form-data; name=\"$cheie\"\r\n\r\n";
+                $corp .= $bucata . "\r\n";
+            }
         }
 
         foreach ($fisiere as $nume => $f) {
@@ -119,6 +126,37 @@ function pozaDeProba(int $latime, int $inaltime): string
     imagejpeg($im, null, 85);
     imagedestroy($im);
     return (string) ob_get_clean();
+}
+
+/**
+ * O poză în degrade, de la negru la roșu, de la stânga la dreapta.
+ *
+ * Se poate citi din ea unde a fost tăiată: cât roșu are un pixel din poza
+ * salvată spune din ce parte a originalului vine.
+ */
+function pozaInDegrade(int $latime, int $inaltime): string
+{
+    $im = imagecreatetruecolor($latime, $inaltime);
+
+    for ($x = 0; $x < $latime; $x++) {
+        $rosu = (int) round(255 * $x / max(1, $latime - 1));
+        imageline($im, $x, 0, $x, $inaltime, imagecolorallocate($im, $rosu, 40, 40));
+    }
+
+    ob_start();
+    imagejpeg($im, null, 92);
+    imagedestroy($im);
+    return (string) ob_get_clean();
+}
+
+/** Din ce parte a originalului (0…$latimeSursa) vine pixelul de la $x. */
+function deUndeVine(string $cale, int $x, int $latimeSursa): int
+{
+    $im = imagecreatefromjpeg($cale);
+    $culoare = imagecolorsforindex($im, imagecolorat($im, $x, 450));
+    imagedestroy($im);
+
+    return (int) round($culoare['red'] / 255 * ($latimeSursa - 1));
 }
 
 /* ---------------------------- teren curat ------------------------------ */
@@ -386,6 +424,75 @@ verifica('e JPEG, orice s-ar fi urcat', IMAGETYPE_JPEG, (int) ($masuri[2] ?? 0))
 
 db()->exec('DELETE FROM evenimente');
 @unlink($caleCoperta);
+
+echo "\n=== CADRUL ALES DIN PAGINĂ ===\n";
+
+/**
+ * Poza e un degrade de la negru (stânga) la roșu (dreapta), lată de 3200.
+ * Cerem partea din dreapta: din 1500 până în 3200.
+ */
+$panoramic = pozaInDegrade(3200, 1000);
+
+$r = trimite($c, ['titlu' => 'Cu un cadru ales de organizator', 'x' => '1500', 'y' => '0', 'l' => '1700'], [
+    'coperta' => ['nume' => 'lat.jpg', 'tip' => 'image/jpeg', 'continut' => $panoramic],
+]);
+verifica('cu decupaj: primită', true, $r['ok'] ?? false);
+
+$ev = ultimulEveniment();
+$cale = dirname(__DIR__) . '/' . COPERTA_DOSAR . '/' . $ev['coperta'] . '.jpg';
+$masuri = @getimagesize($cale);
+verifica('tot 1600×900 iese', [1600, 900], [(int) $masuri[0], (int) $masuri[1]]);
+
+// Marginile poveștii: pixelul 2 din stânga vine cam de la 1500, cel din
+// dreapta cam de la 3200. Lăsăm 60 de pixeli scăpare, cât ia comprimarea.
+$stanga  = deUndeVine($cale, 2, 3200);
+$dreapta = deUndeVine($cale, 1597, 3200);
+verifica('taie de unde am cerut (stânga ≈ 1500)', true, abs($stanga - 1500) < 60);
+verifica('și până unde am cerut (dreapta ≈ 3200)', true, abs($dreapta - 3200) < 60);
+
+db()->exec('DELETE FROM evenimente');
+@unlink($cale);
+
+// Un decupaj mai îngust de 1600 ar însemna o poză întinsă. Se lărgește.
+$r = trimite($c, ['titlu' => 'Cu un cadru prea strâns', 'x' => '0', 'y' => '0', 'l' => '400'], [
+    'coperta' => ['nume' => 'lat.jpg', 'tip' => 'image/jpeg', 'continut' => $panoramic],
+]);
+$ev = ultimulEveniment();
+$cale = dirname(__DIR__) . '/' . COPERTA_DOSAR . '/' . $ev['coperta'] . '.jpg';
+verifica('decupaj de 400: se lărgește la 1600', true,
+    abs(deUndeVine($cale, 1597, 3200) - 1600) < 60);
+
+db()->exec('DELETE FROM evenimente');
+@unlink($cale);
+
+/**
+ * Numere pe care nu le-a scris nimeni de bunăvoie.
+ *
+ * Niciunul n-are voie să dea eroare de server sau un fișier stricat: un
+ * decupaj greșit nu e un atac, e de obicei o fereastră redimensionată.
+ */
+foreach ([
+    'negativ'         => ['x' => '-9000', 'y' => '-9000', 'l' => '1700'],
+    'mai mare ca poza'=> ['x' => '99999', 'y' => '99999', 'l' => '99999'],
+    'litere'          => ['x' => 'abc',   'y' => 'x',     'l' => 'mult'],
+    'tablou'          => ['x' => ['1'],   'y' => ['1'],   'l' => ['1']],
+    'zero'            => ['x' => '0',     'y' => '0',     'l' => '0'],
+    'virgulă'         => ['x' => '1,5',   'y' => '2,5',   'l' => '1700,5'],
+] as $fel => $numere) {
+    $r = trimite($c, array_merge(['titlu' => 'Cu numere stricate: ' . $fel], $numere), [
+        'coperta' => ['nume' => 'lat.jpg', 'tip' => 'image/jpeg', 'continut' => $panoramic],
+    ]);
+
+    $ev = ultimulEveniment();
+    $cale = dirname(__DIR__) . '/' . COPERTA_DOSAR . '/' . ($ev['coperta'] ?? '') . '.jpg';
+    $masuri = is_file($cale) ? @getimagesize($cale) : null;
+
+    verifica('decupaj ' . $fel . ': tot iese 1600×900',
+        [1600, 900], [(int) ($masuri[0] ?? 0), (int) ($masuri[1] ?? 0)]);
+
+    db()->exec('DELETE FROM evenimente');
+    @unlink($cale);
+}
 
 // Un fișier care nu e poză, dar are nume de poză.
 $r = trimite($c, ['titlu' => 'Cu un fișier care nu e poză'], [
