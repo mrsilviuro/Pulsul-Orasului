@@ -2713,10 +2713,14 @@
           evPreviz.textContent = textInitial;
         }
 
-        // Fără fișier: n-are ce căuta la verificarea asta, iar previzualizarea
-        // ia poza din browser oricum.
+        // Fișierul nu pleacă: previzualizarea ia poza din browser. Dar
+        // serverul trebuie să ȘTIE că vine una, altfel — la editare — ar
+        // desena poza veche din bază și n-ar mai lăsa-o pe cea nouă la rând.
         var date = new FormData(evForm);
+        var arePozaNoua = !!(evFisier && evFisier.files && evFisier.files.length);
+
         date.delete('coperta');
+        date.append('coperta_noua', arePozaNoua ? '1' : '');
 
         fetch('api/previzualizare.php', {
           method: 'POST',
@@ -2779,6 +2783,11 @@
   var previzMain = document.querySelector('main[data-previzualizare]');
   var previzPoza = document.getElementById('prev-coperta');
 
+  /**
+   * Locul gol există DOAR când se așteaptă o poză din browser — serverul îl
+   * face numai atunci. Dacă omul n-a ales alta, poza salvată e deja desenată
+   * de pe server și nu trecem pe aici deloc.
+   */
   if (previzMain && previzPoza) {
     var cheiaPreviz = previzMain.getAttribute('data-previzualizare');
     var pastrata = '';
@@ -2789,8 +2798,25 @@
       previzPoza.src = pastrata;
       try { localStorage.removeItem('po-previzualizare-' + cheiaPreviz); } catch (e) {}
     } else {
+      /**
+       * Se aștepta o poză și n-a ajuns.
+       *
+       * Se întâmplă când browserul nu lasă localStorage să fie scris sau citit
+       * — navigare privată strânsă, extensii de confidențialitate — sau când
+       * fila e deschisă a doua oară, după ce poza a fost deja luată.
+       *
+       * Nu ascundem nimic pe tăcute și nu oprim restul: titlul, detaliile și
+       * descrierea se văd oricum. În locul pozei rămâne o vorbă limpede
+       * despre ce s-a întâmplat.
+       */
       var figura = previzPoza.closest('figure');
-      if (figura) figura.remove();
+
+      if (figura) {
+        figura.innerHTML = '';
+        figura.className = 'post__figure coperta-lipsa';
+        figura.textContent = 'Nu am putut încărca previzualizarea pozei — '
+          + 'încearcă din nou sau verifică setările de confidențialitate ale browserului.';
+      }
     }
   }
 

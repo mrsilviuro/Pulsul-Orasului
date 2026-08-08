@@ -1091,6 +1091,59 @@ verifica('și nu ajunge cod în pagină', false, str_contains($pagina, '<script>
 verifica('paragrafele devin <p>', true, str_contains($pagina, '<p>Primul paragraf'));
 verifica('rândul simplu devine <br>', true, str_contains($pagina, 'Al doilea.<br'));
 
+/* --------------------- care copertă se arată --------------------- */
+
+/**
+ * Ordinea, și n-are voie să se inverseze:
+ *
+ *   1. poza nouă din formular — și la creare, și la editare
+ *   2. la editare, dacă n-a ales alta, cea salvată pe eveniment
+ *   3. altfel, nimic
+ *
+ * A doua peste prima a fost un bug adevărat: la editare, cine alegea altă
+ * poză o vedea în previzualizare tot pe cea veche.
+ *
+ * Fișierul nu ajunge până aici — pagina îl ia din browser — deci formularul
+ * spune prin „coperta_noua" că vine unul. Locul lui în pagină se face doar
+ * atunci; altfel s-ar desena chiar poza din bază.
+ */
+$idCuPoza = pune($idOrg, 'Unul care are deja copertă', 'aprobat', 6);
+db()->prepare('UPDATE evenimente SET coperta = ? WHERE id = ?')
+    ->execute([str_repeat('ef', 16), $idCuPoza]);
+$slugCuPoza = $slugul($idCuPoza);
+
+$vedeCoperta = static function (array $r) use ($baza, &$c): string {
+    $p = cerere($baza . '/previzualizare.php?p=' . urlencode((string) $r['cheie']), $c)['corp'];
+
+    if (!str_contains($p, 'post__figure')) {
+        return 'fara';
+    }
+
+    return str_contains($p, 'id="prev-coperta"') ? 'browser' : 'bd';
+};
+
+// 2. editare, fără poză nouă → cea din bază
+verifica('la editare fără poză nouă: cea din bază', 'bd',
+    $vedeCoperta(previzualizeaza($c, ['slug' => $slugCuPoza])));
+
+// 1. editare, cu poză nouă → locul pentru cea din browser
+verifica('la editare CU poză nouă: locul pentru cea nouă', 'browser',
+    $vedeCoperta(previzualizeaza($c, ['slug' => $slugCuPoza, 'coperta_noua' => '1'])));
+
+// 1. creare, cu poză nouă → tot cea din browser
+verifica('la creare cu poză nouă: tot cea nouă', 'browser',
+    $vedeCoperta(previzualizeaza($c, ['coperta_noua' => '1'])));
+
+// 3. nimic nicăieri → fără figură
+verifica('fără nicio poză: nicio figură', 'fara',
+    $vedeCoperta(previzualizeaza($c)));
+
+// Un eveniment fără copertă, editat fără poză nouă: tot nimic.
+verifica('editare fără copertă și fără poză nouă: nimic', 'fara',
+    $vedeCoperta(previzualizeaza($c, ['slug' => $slugDeSchimbat])));
+
+db()->prepare('DELETE FROM evenimente WHERE id = ?')->execute([$idCuPoza]);
+
 /* ------------------------ cine poate deschide ------------------------ */
 
 verifica('cheia altcuiva nu duce nicăieri', 302,

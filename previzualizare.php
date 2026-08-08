@@ -40,12 +40,17 @@ if (!is_array($pastrat) || !is_array($pastrat['date'] ?? null)) {
 $date = $pastrat['date'];
 
 /**
- * Poza aleasă în formular n-a ajuns pe server, e doar în browser. Îi lăsăm
+ * Poza aleasă în formular n-a ajuns pe server, e doar în browser: îi lăsăm
  * aici un loc gol, pe care JS îl umple din ce a pus fila-mamă deoparte.
- * Dacă nu găsește nimic, blocul se dă la o parte singur.
+ *
+ * Locul se face DOAR când se așteaptă o poză nouă („coperta_fel" e 'browser').
+ * Când omul n-a ales alta și evenimentul are deja una salvată, se desenează
+ * chiar aceea, de pe server, fără să mai treacă prin JS.
  */
-if (($date['coperta_url'] ?? '') === '') {
-    $date['coperta_url'] = 'assets/img/avatars/implicit.svg';
+if (($date['coperta_fel'] ?? '') === 'browser') {
+    // Un pixel transparent, ca <img> să aibă ce arăta până vine poza. O
+    // adresă de fișier ar fi clipit o clipă înainte să fie înlocuită.
+    $date['coperta_url'] = 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
     $date['coperta_din_browser'] = true;
 }
 

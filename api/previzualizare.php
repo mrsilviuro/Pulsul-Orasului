@@ -75,20 +75,40 @@ foreach (categoriiEvenimente() as $c) {
 }
 
 /**
- * Coperta.
+ * Coperta — care dintre ele.
  *
  * Fișierul nou ales în formular NU se trimite aici: pagina de previzualizare
- * îl ia din browser, unde e deja. Rămâne de aflat ce se arată când n-a ales
- * niciunul — la editare, poza care există deja pe eveniment.
+ * îl ia din browser, unde e deja. De aceea serverul nu poate vedea singur dacă
+ * omul a ales unul; i-o spune formularul, prin „coperta_noua".
+ *
+ * Ordinea e limpede și n-are voie să se inverseze:
+ *
+ *   1. poza nouă din formular — indiferent dacă se scrie unul nou sau se
+ *      schimbă unul existent. Ea e cea pe care omul vrea s-o vadă.
+ *   2. la editare, dacă n-a ales alta, poza salvată pe eveniment.
+ *   3. altfel, nimic.
+ *
+ * A doua peste prima a fost chiar bug-ul: la editare, cine alegea altă poză
+ * o vedea tot pe cea veche.
  */
-$coperta = '';
-$slugCerut = trim((string) ($_POST['slug'] ?? ''));
+$copertaFel = '';   // 'browser' | 'bd' | ''
+$coperta    = '';
 
-if ($slugCerut !== '') {
-    $deEditat = evenimentDeEditat($slugCerut, $membruId);
+if (($_POST['coperta_noua'] ?? '') !== '') {
+    $copertaFel = 'browser';
+} else {
+    $slugCerut = trim((string) ($_POST['slug'] ?? ''));
 
-    if ($deEditat !== null) {
-        $coperta = urlCoperta($deEditat['coperta'] ?? null);
+    if ($slugCerut !== '') {
+        $deEditat = evenimentDeEditat($slugCerut, $membruId);
+
+        if ($deEditat !== null) {
+            $coperta = urlCoperta($deEditat['coperta'] ?? null);
+        }
+    }
+
+    if ($coperta !== '') {
+        $copertaFel = 'bd';
     }
 }
 
@@ -114,6 +134,7 @@ $_SESSION['previzualizari'][$cheie] = [
         'participanti_max' => $curat['participanti_max'],
         'gen_participanti' => $curat['gen_participanti'],
         'coperta_url'      => $coperta,
+        'coperta_fel'      => $copertaFel,
         'organizator'      => numeAfisat($membru['nume'], $membru['prenume']),
         'organizator_url'  => 'profil.php?m=' . urlencode((string) $membru['permalink']),
         'organizator_poza' => $membru['poza'] ?? null,

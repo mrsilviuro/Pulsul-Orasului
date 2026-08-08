@@ -278,7 +278,7 @@ Rularea verificărilor: `php teste/test-validare.php` (133 de cazuri).
 Patru suite vorbesc cu site-ul prin HTTP, cu cookie-uri adevărate, și cer
 serverul pornit: „ține-mă minte" (35 de cazuri), setările, cu tot cu ștergerea
 contului și cron (95), formularul de contact (60) și publicarea evenimentelor,
-cu tot cu urcarea copertei și secțiunea de pe profil (261).
+cu tot cu urcarea copertei și secțiunea de pe profil (266).
 
 ```
 php -S 127.0.0.1:8126 -t . &
@@ -1178,17 +1178,32 @@ cel mult trei deodată. Cheia e legată de sesiune: pentru altcineva, aceeași
 adresă nu duce nicăieri. Nimic nu se scrie în `evenimente`, iar limita de
 evenimente active nici nu se verifică — previzualizarea nu creează nimic.
 
-### Poza aleasă, dar netrimisă încă
+### Care copertă se arată
 
-Coperta nou aleasă e doar în browser. Nu o urcăm ca s-o arătăm: pagina-mamă o
-desenează pe o pânză exact cum ar tăia-o serverul — cu numerele din decupator,
-la 1600×900, cu alb dedesubt — și o lasă în `localStorage` sub cheia
-previzualizării. Fila nouă o ia de acolo și șterge urma.
+Ordinea, și n-are voie să se inverseze:
 
-Dacă nu găsește nimic (fila deschisă a doua oară, altă fereastră, spațiu plin),
-figura se dă la o parte de tot: mai bine fără poză decât cu o siluetă implicită
-care n-are ce căuta pe un anunț. La editare, când n-a fost aleasă altă poză, se
-arată cea care există deja pe eveniment — aia vine de pe server, ca de obicei.
+1. **poza nouă din formular** — și la creare, și la editare. E cea pe care omul
+   vrea s-o vadă;
+2. la editare, dacă n-a ales alta, **poza salvată** pe eveniment;
+3. altfel, **nimic** — nicio figură.
+
+A doua peste prima a fost un bug adevărat: la editarea unui eveniment care avea
+deja copertă, cine alegea alta o vedea în previzualizare tot pe cea veche.
+Cauza: fișierul nu ajunge la server, deci serverul nu putea vedea singur că s-a
+ales unul, și desena ce știa el — poza din bază. Acum formularul i-o spune,
+printr-un câmp `coperta_noua`, iar locul pentru poza din browser se face numai
+atunci.
+
+Coperta nouă nu se urcă doar ca s-o arătăm: pagina-mamă o desenează pe o pânză
+exact cum ar tăia-o serverul — cu numerele din decupator, la 1600×900, cu alb
+dedesubt — și o lasă în `localStorage` sub cheia previzualizării. Fila nouă o
+ia de acolo și șterge urma.
+
+**Când localStorage nu merge** — navigare privată strânsă, extensii de
+confidențialitate, filă redeschisă după ce poza a fost deja luată — în locul
+imaginii rămâne o vorbă limpede: „Nu am putut încărca previzualizarea pozei…".
+Restul previzualizării (titlu, detalii, descriere) se vede normal; nu se
+încearcă alt drum pentru poză și nu se ascunde nimic pe tăcute.
 
 ## Schimbarea unui eveniment
 
@@ -1254,7 +1269,7 @@ codul le preferă deja când există, dar fișierele nu sunt urcate, deci un
 eveniment fără copertă rămâne fără poza mare.
 
 Verificările: `php teste/test-evenimente.php http://127.0.0.1:8126`
-(261 de cazuri, cere serverul pornit).
+(266 de cazuri, cere serverul pornit).
 
 
 ## E-mailurile
