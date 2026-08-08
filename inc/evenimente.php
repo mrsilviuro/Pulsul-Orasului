@@ -356,6 +356,34 @@ function salveazaEveniment(int $membruId, array $curat, ?string $coperta): int
 }
 
 /**
+ * Anulează un eveniment: rândul iese din bază, coperta de pe disc.
+ *
+ * Ștergere adevărată, nu o stare nouă. Un eveniment anulat nu mai are ce
+ * spune nimănui: nu-l mai caută nimeni, nu mai atârnă nimic de el, iar o
+ * stare „anulat" ar fi însemnat un rând care se târăște prin toate
+ * interogările fără să folosească cuiva. Contul e altă poveste — de el atârnă
+ * evenimentele organizate, de-aia se anonimizează în loc să se șteargă.
+ *
+ * TODO: la implementarea sistemului de interese/participări, aici trebuie:
+ *   1) trimis email tuturor celor interesați/confirmați despre anularea
+ *      evenimentului;
+ *   2) șterse toate înregistrările de interes/participare asociate acestui
+ *      eveniment;
+ *   3) șterse toate comentariile asociate acestui eveniment.
+ * Momentan se șterge doar rândul din tabelul evenimente (plus coperta lui de
+ * pe disc, ca să nu rămână un fișier de care nu mai știe nimeni).
+ */
+function anuleazaEveniment(array $eveniment): void
+{
+    $q = db()->prepare('DELETE FROM evenimente WHERE id = ?');
+    $q->execute([(int) $eveniment['id']]);
+
+    // Fișierul se șterge ABIA după ce rândul a ieșit. Invers, o eroare la
+    // ștergere ar fi lăsat un eveniment care arată spre o poză inexistentă.
+    stergeCopertaDeFisier($eveniment['coperta'] ?? null);
+}
+
+/**
  * Scrie peste un eveniment care există deja. $curat vine gata verificat, prin
  * aceleași reguli ca la publicare — la editare nu se cere mai puțin.
  *

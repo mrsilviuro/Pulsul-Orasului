@@ -2811,6 +2811,11 @@ body { overscroll-behavior-y: none; }
   border-top: 1px solid var(--border);
 }
 
+/* Întrebarea de confirmare e cea de la ștergerea contului (.stergere-confirm),
+   care își aduce propria linie de sus. Aici zona are deja una, iar două linii
+   una sub alta arată ca o greșeală. */
+.zona-anulare .stergere-confirm { margin-top: 0; padding-top: 0; border-top: 0; }
+
 /* Cele două butoane de sub formular. Pe ecran lat stau unul lângă altul,
    „Previzualizează" mai șters: e o privire, nu o hotărâre. */
 .ev-butoane { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }

@@ -2679,6 +2679,77 @@
       o desenăm pe o pânză exact cum ar tăia-o serverul — cu numerele din
       decupator — și o lăsăm în localStorage pentru fila care se deschide.
     */
+    /* ------------------------ anularea ------------------------------- */
+    /*
+      În două trepte, ca ștergerea contului din setări: butonul își schimbă
+      locul cu întrebarea. Confirmarea e desenată de noi, nu de browser —
+      window.confirm() arată altfel pe fiecare sistem.
+    */
+    var evAnuleaza  = document.getElementById('ev-anuleaza');
+    var evSigur     = document.getElementById('ev-anulare-sigur');
+    var evAnulareDa = document.getElementById('ev-anulare-da');
+    var evAnulareNu = document.getElementById('ev-anulare-nu');
+
+    if (evAnuleaza && evSigur) {
+      evAnuleaza.addEventListener('click', function () {
+        evAnuleaza.hidden = true;
+        evSigur.hidden = false;
+        if (evAnulareNu) evAnulareNu.focus();   // atenția pe ieșire, nu pe faptă
+      });
+
+      if (evAnulareNu) {
+        evAnulareNu.addEventListener('click', function () {
+          evSigur.hidden = true;
+          evAnuleaza.hidden = false;
+          evAnuleaza.focus();
+        });
+      }
+    }
+
+    if (evAnulareDa) {
+      evAnulareDa.addEventListener('click', function () {
+        var slugAscuns = evForm.querySelector('[name="slug"]');
+        if (!slugAscuns) return;
+
+        var textInitial = evAnulareDa.textContent;
+        evAnulareDa.disabled = true;
+        evAnulareDa.textContent = 'Se anulează…';
+
+        function gata() {
+          evAnulareDa.disabled = false;
+          evAnulareDa.textContent = textInitial;
+        }
+
+        fetch('api/anuleaza-eveniment.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({
+            csrf: (evForm.querySelector('[name="csrf"]') || {}).value || '',
+            slug: slugAscuns.value
+          })
+        })
+        .then(citesteRaspuns)
+        .then(function (rez) {
+          if (!rez.corp) { gata(); toast(mesajRaspunsNeasteptat(rez)); return; }
+          var c = rez.corp;
+
+          if (!c.ok) { gata(); toast(c.mesaj || 'Nu am putut anula evenimentul.'); return; }
+
+          // Butonul rămâne stins: evenimentul nu mai e, n-are rost să se poată
+          // apăsa încă o dată cât se face mutarea.
+          toast(c.mesaj || 'Evenimentul a fost anulat.');
+          setTimeout(function () {
+            window.location.href = c.redirect || 'profil.php';
+          }, 700);
+        })
+        .catch(function () {
+          gata();
+          toast(mesajFaraLegatura());
+        });
+      });
+    }
+
     var evPreviz = document.getElementById('ev-previzualizeaza');
 
     function copertaCaImagine() {

@@ -278,7 +278,7 @@ Rularea verificărilor: `php teste/test-validare.php` (133 de cazuri).
 Patru suite vorbesc cu site-ul prin HTTP, cu cookie-uri adevărate, și cer
 serverul pornit: „ține-mă minte" (35 de cazuri), setările, cu tot cu ștergerea
 contului și cron (95), formularul de contact (60) și publicarea evenimentelor,
-cu tot cu urcarea copertei și secțiunea de pe profil (266).
+cu tot cu urcarea copertei și secțiunea de pe profil (292).
 
 ```
 php -S 127.0.0.1:8126 -t . &
@@ -1248,12 +1248,43 @@ tocmai de el, deci n-ar mai putea corecta niciodată nimic.
 de minimum opt — la editare nu se cere mai puțin, altfel s-ar putea publica un
 anunț bun și „edita" până rămâne gol.
 
-### Ce nu e făcut
+### Anularea
 
-Butonul **„Anulează evenimentul"**, sub „Trimite spre aprobare", e deocamdată
-doar desenat: apăsarea lui nu face nimic. Stă despărțit de restul formularului
-și în roșu stins, ca zona de ștergere a contului din setări, fiindcă va fi
-singura apăsare de pe pagina aia care nu se poate lua înapoi.
+Butonul **„Anulează evenimentul"**, în zona roșie de sub formular, apare doar
+la editare — la un eveniment care încă nu există n-are ce anula.
+
+Confirmarea e **desenată de noi, în pagină**, nu cu `window.confirm()`: o
+fereastră a browserului arată altfel pe Windows, pe Android și pe iPhone, iar
+noi vrem aceeași interfață peste tot. Același tipar ca la ștergerea contului
+din setări — butonul își schimbă locul cu întrebarea, care numește evenimentul,
+spune că ștergerea e definitivă și că oamenii interesați vor fi înștiințați
+prin e-mail. Atenția pleacă pe „Renunță", nu pe „Da, anulează": cine apasă
+Enter din obișnuință n-are voie să șteargă din greșeală.
+
+**Se șterge rândul, nu se pune o stare.** Un eveniment anulat nu mai are ce
+spune nimănui: nu-l mai caută nimeni, nu mai atârnă nimic de el, iar o stare
+„anulat" ar fi însemnat un rând care se târăște prin toate interogările fără
+să folosească cuiva. Contul e altă poveste — de el atârnă evenimentele
+organizate, de-aia se anonimizează în loc să se șteargă.
+
+Coperta se duce odată cu rândul, altfel ar rămâne un fișier pe disc de care nu
+mai știe nimeni. Se șterge **după** ce rândul a ieșit: invers, o eroare la
+ștergere ar fi lăsat un eveniment arătând spre o poză inexistentă.
+
+Cine anulează e verificat prin aceeași `evenimentDeEditat()` ca la editare, plus
+token CSRF. Punctul de intrare nu se bazează pe faptul că butonul s-a văzut în
+pagină: cererea poate veni de oriunde, cu orice slug.
+
+După ștergere, omul ajunge pe profilul lui cu un „Evenimentul a fost anulat." —
+mesajul trece prin `$_SESSION['mesaj_bun']`, ca la intrarea cu Google, deci se
+arată o singură dată.
+
+**Niciun e-mail nu pleacă acum**, fiindcă n-are cui: „mă interesează" și „voi
+participa" nu există încă. În `anuleazaEveniment()` din `inc/evenimente.php` e
+un `TODO` cu ce va trebui făcut acolo când vor exista — e-mailurile, ștergerea
+înscrierilor și a comentariilor.
+
+### Ce nu e făcut
 
 „Mergi la acest eveniment?" și comentariile de sub el sunt încă șablonul, cu
 numere și oameni inventați — se leagă de bază separat. Cât timp sunt acolo, un
@@ -1269,7 +1300,7 @@ codul le preferă deja când există, dar fișierele nu sunt urcate, deci un
 eveniment fără copertă rămâne fără poza mare.
 
 Verificările: `php teste/test-evenimente.php http://127.0.0.1:8126`
-(266 de cazuri, cere serverul pornit).
+(292 de cazuri, cere serverul pornit).
 
 
 ## E-mailurile

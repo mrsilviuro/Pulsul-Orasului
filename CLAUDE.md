@@ -184,8 +184,9 @@ assets/css/style.css, assets/js/main.js, assets/img/
   vede doar organizatorului, pe profilul lui și pe pagina evenimentului; nu
   există interfață de aprobare
 - Adresele frumoase: acum sunt `profil.php?m=<permalink>` și `event.php?slug=…`
-- „Anulează evenimentul", pe formularul de editare: butonul e desenat, dar
-  apăsarea lui nu face încă nimic
+- Interesele/participările și comentariile: nu există tabele pentru ele. Când
+  vor exista, vezi `TODO`-ul din `anuleazaEveniment()` — la anulare trebuie
+  trimise e-mailuri și șterse înscrierile și comentariile evenimentului
 - Încheierea manuală a unui eveniment (cea automată, din ziua următoare datei,
   funcționează deja — se calculează la citire, fără cron)
 - Paginile de categorie (slugurile sunt în tabelul `categorii`)

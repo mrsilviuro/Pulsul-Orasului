@@ -473,17 +473,35 @@ require __DIR__ . '/inc/antet.php';
 
         <?php if ($eEditare): ?>
         <!--
-          Anularea evenimentului. Deocamdată doar butonul: apăsarea lui nu face
-          încă nimic, se leagă separat.
+          Anularea evenimentului. Stă despărțită de restul formularului și în
+          roșu stins, ca zona de ștergere a contului din setări: e singura
+          apăsare de pe pagina asta care nu se poate lua înapoi.
 
-          Stă despărțit de restul formularului și în roșu stins, ca zona de
-          pericol din setări: e singura apăsare de pe pagina asta care nu se
-          poate lua înapoi.
+          Confirmarea e desenată de noi, în pagină, nu cu window.confirm(): o
+          fereastră a browserului arată altfel pe Windows, pe Android și pe
+          iPhone, iar noi vrem aceeași interfață peste tot. Același tipar ca la
+          ștergerea contului — butonul își schimbă locul cu întrebarea.
         -->
-        <div class="zona-anulare">
+        <div class="zona-anulare" id="ev-anulare">
           <button class="btn btn--rau btn--block" type="button" id="ev-anuleaza">
             Anulează evenimentul
           </button>
+
+          <div class="stergere-confirm" id="ev-anulare-sigur" hidden>
+            <p class="card-set__lead">
+              <strong>Sigur anulezi „<?= h(inceputDeText((string) $ev['titlu'], 60)) ?>"?</strong>
+            </p>
+            <p class="card-set__lead">
+              Evenimentul se șterge definitiv și nu mai poate fi adus înapoi.
+              Oamenii care și-au arătat interesul sau au spus că vin vor fi
+              înștiințați prin e-mail că nu mai are loc.
+            </p>
+
+            <div class="stergere-confirm__actiuni">
+              <button class="btn btn--rau" type="button" id="ev-anulare-da">Da, anulează</button>
+              <button class="btn btn--ghost" type="button" id="ev-anulare-nu">Renunță</button>
+            </div>
+          </div>
         </div>
         <?php endif; ?>
       </form>

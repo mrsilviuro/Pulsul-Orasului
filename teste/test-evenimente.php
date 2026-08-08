@@ -987,6 +987,100 @@ verifica('descrierea scurtă e refuzată și la schimbare', true, !empty($r['ero
 $r = trimite($c, ['slug' => $slugDeSchimbat, 'titlu' => 'ab']);
 verifica('titlul scurt, la fel', true, !empty($r['erori']['titlu']));
 
+echo "\n=== ANULAREA UNUI EVENIMENT ===\n";
+
+db()->exec('DELETE FROM evenimente');
+
+/** Cere anularea evenimentului cu slugul dat. */
+function anuleaza(array &$cookies, string $slug, ?string $token = null): array
+{
+    return json_din(cerere($GLOBALS['baza'] . '/api/anuleaza-eveniment.php', $cookies, [
+        'csrf' => $token ?? csrf($cookies),
+        'slug' => $slug,
+    ]));
+}
+
+$idDeAnulat = pune($idOrg, 'Unul care se anulează', 'aprobat', 8);
+$slugDeAnulat = $slugul($idDeAnulat);
+
+// Îi punem și o copertă pe disc, ca să vedem că nu rămâne orfană.
+$numeCoperta = bin2hex(random_bytes(16));
+$caleCoperta = dirname(__DIR__) . '/' . COPERTA_DOSAR . '/' . $numeCoperta . '.jpg';
+file_put_contents($caleCoperta, pozaDeProba(1600, 900));
+db()->prepare('UPDATE evenimente SET coperta = ? WHERE id = ?')->execute([$numeCoperta, $idDeAnulat]);
+
+/* ----------------------- cine NU are voie ----------------------- */
+
+$r = anuleaza($altul, $slugDeAnulat);
+verifica('altcineva nu poate anula evenimentul meu', false, $r['ok'] ?? false);
+verifica('și rândul e tot acolo', 1, cateEvenimente());
+
+$r = anuleaza($c, 'nu-exista-nicaieri');
+verifica('un slug inexistent nu șterge nimic', false, $r['ok'] ?? false);
+verifica('tot un rând', 1, cateEvenimente());
+
+$r = anuleaza($c, $slugDeAnulat, 'token-gresit');
+verifica('fără CSRF bun nu se anulează', false, $r['ok'] ?? false);
+verifica('și rândul rezistă', 1, cateEvenimente());
+
+$gol = [];
+$r = anuleaza($gol, $slugDeAnulat, 'orice');
+verifica('nelogatul nu poate anula', false, $r['ok'] ?? false);
+
+verifica('prin GET → 405', 405,
+    cerere($baza . '/api/anuleaza-eveniment.php', $c)['stare']);
+verifica('după toate încercările, evenimentul e neatins', 1, cateEvenimente());
+verifica('și coperta lui e pe disc', true, is_file($caleCoperta));
+
+/* ------------------------ organizatorul ------------------------ */
+
+$r = anuleaza($c, $slugDeAnulat);
+verifica('organizatorul îl poate anula', true, $r['ok'] ?? false);
+verifica('și e trimis pe profilul lui', 'profil.php', $r['redirect'] ?? '');
+verifica('cu mesajul cerut', 'Evenimentul a fost anulat.', $r['mesaj'] ?? '');
+
+/**
+ * Ștergere adevărată, nu o stare nouă: rândul iese din bază cu totul. Contul e
+ * altă poveste — de el atârnă evenimentele organizate, de-aia se anonimizează.
+ */
+verifica('rândul chiar a ieșit din bază', 0, cateEvenimente());
+
+// Fișierul se duce odată cu rândul: altfel ar rămâne pe disc pentru totdeauna,
+// fără să mai știe cineva de el.
+clearstatcache();
+verifica('coperta nu rămâne orfană pe disc', false, is_file($caleCoperta));
+
+verifica('pagina evenimentului nu se mai deschide', 302,
+    cerere($baza . '/event.php?slug=' . urlencode($slugDeAnulat), $c)['stare']);
+verifica('nici formularul lui de editare', 302,
+    cerere($baza . '/adauga_eveniment.php?slug=' . urlencode($slugDeAnulat), $c)['stare']);
+
+// Mesajul e pus în sesiune și se arată o singură dată, pe pagina următoare.
+$profil = cerere($baza . '/profil.php', $c)['corp'];
+verifica('mesajul apare pe profil', true,
+    str_contains($profil, 'data-mesaj="Evenimentul a fost anulat."'));
+verifica('și nu se mai repetă la a doua încărcare', false,
+    str_contains(cerere($baza . '/profil.php', $c)['corp'], 'Evenimentul a fost anulat.'));
+
+// Anularea nu e o cale de a scăpa de limită mai repede decât de drept: după ce
+// evenimentul a dispărut, se poate posta altul — ceea ce e și firesc.
+verifica('după anulare se poate posta din nou', true, trimite($c)['ok'] ?? false);
+verifica('și e un singur eveniment', 1, cateEvenimente());
+
+/* ------------- butonul apare doar unde trebuie ------------- */
+
+$idAlt = pune($idOrg, 'Altul, tot al meu', 'aprobat', 9);
+$formular = cerere($baza . '/adauga_eveniment.php?slug=' . urlencode($slugul($idAlt)), $c)['corp'];
+verifica('la editare apare butonul de anulare', true, str_contains($formular, 'ev-anuleaza'));
+verifica('și întrebarea de confirmare, ascunsă', true, str_contains($formular, 'ev-anulare-sigur'));
+verifica('care spune că e definitiv', true, str_contains($formular, 'definitiv'));
+verifica('și că oamenii sunt înștiințați', true, str_contains($formular, 'înștiințați prin e-mail'));
+
+db()->exec('DELETE FROM evenimente');
+$formularNou = cerere($baza . '/adauga_eveniment.php', $c)['corp'];
+verifica('la eveniment nou nu apare nimic din toate astea', false,
+    str_contains($formularNou, 'ev-anuleaza'));
+
 echo "\n=== PREVIZUALIZAREA ===\n";
 
 db()->exec('DELETE FROM evenimente');
