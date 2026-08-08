@@ -830,21 +830,6 @@ main { padding-block: 46px 64px; }
   font-size: 13px; color: var(--text-faint);
 }
 
-.post__share { display: flex; gap: 6px; }
-.icon-btn {
-  width: 34px; height: 34px;
-  display: grid; place-items: center;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--text-soft);
-  transition: all .18s var(--ease);
-}
-.icon-btn svg { width: 17px; height: 17px; fill: none; stroke: currentColor;
-                stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-.icon-btn:hover { color: #fff; background: var(--brand); border-color: var(--brand);
-                  transform: translateY(-2px); }
-
 .post__figure { margin: 26px 0 0; }
 .post__figure img {
   width: 100%;
@@ -1749,7 +1734,7 @@ input, textarea { -webkit-border-radius: 0; }
 .reply-form textarea { border-radius: 12px; }
 .check input { border-radius: 6px; }
 .btn, .btn-google, .rsvp__btn, .chip, .tag { border-radius: var(--radius-pill); }
-.nav__btn, .nav__burger, .icon-btn, .socials a { border-radius: 10px; }
+.nav__btn, .nav__burger, .socials a { border-radius: 10px; }
 .input-pass__toggle { border-radius: 9px; }
 
 /* --- 3. Text de aceeași mărime la rotirea ecranului --------------------- */

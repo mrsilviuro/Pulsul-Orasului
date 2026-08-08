@@ -714,8 +714,15 @@ verifica('titlul e în pagină', true, str_contains($pagina, 'Cursa aprobată'))
 verifica('categoria la fel', true, str_contains($pagina, 'Sport'));
 verifica('data scrisă întreagă', true,
     str_contains($pagina, dataLunga(date('Y-m-d', strtotime('+7 days')))));
-verifica('ora de sfârșit lipsă e spusă, nu ascunsă', true,
-    str_contains($pagina, 'oră de sfârșit nedeterminată'));
+// Fără oră de sfârșit se scrie doar ora de început, atât — nicio mențiune
+// despre ce nu se știe.
+verifica('ora de început, singură', true, str_contains($pagina, '<strong>19:00</strong>'));
+verifica('fără vorbe despre sfârșitul care lipsește', false,
+    str_contains($pagina, 'nedeterminat'));
+
+// Nici urmă de butoanele de distribuire: au fost scoase de tot.
+verifica('fără iconițe de share', false, str_contains($pagina, 'post__share'));
+verifica('și fără butonul de copiat linkul', false, str_contains($pagina, 'copy-link'));
 verifica('locația', true, str_contains($pagina, 'Piața Sfatului'));
 verifica('costul lipsă înseamnă gratuit', true, str_contains($pagina, 'Gratuit'));
 verifica('organizatorul, cu link spre profilul lui', true,
@@ -785,7 +792,53 @@ verifica('paragrafele devin <p>', true, substr_count($pagina, '<p>Primul paragra
 verifica('sunt trei paragrafe', 3, substr_count($pagina, '<p>Al doilea') + substr_count($pagina, '<p>Primul') + substr_count($pagina, '<p>Umplem'));
 verifica('rândul simplu devine <br>', true, str_contains($pagina, 'Al doilea paragraf.<br'));
 
+/* ------------- cifra de pe cartonașul „Evenimente organizate" ------------ */
+
+echo "\n=== CÂTE EVENIMENTE A ORGANIZAT ===\n";
+
+db()->exec('DELETE FROM evenimente');
+verifica('la început, zero', 0, cateEvenimenteOrganizate($idOrg));
+
+pune($idOrg, 'Aprobat, peste o lună', 'aprobat', 30);
+pune($idOrg, 'Aprobat, mâine',        'aprobat', 1);
+verifica('se numără cele aprobate care urmează', 2, cateEvenimenteOrganizate($idOrg));
+
+/**
+ * Trecutul se numără și el. Cifra spune cât a făcut omul pentru oraș, iar ce
+ * a făcut nu se șterge când trece ziua — spre deosebire de lista de dedesubt,
+ * care arată doar ce urmează.
+ */
+pune($idOrg, 'Aprobat, de acum un an',    'aprobat', -365);
+pune($idOrg, 'Aprobat, de săptămâna trecută', 'aprobat', -7);
+verifica('și cele din trecut se numără', 4, cateEvenimenteOrganizate($idOrg));
+
+pune($idOrg, 'Încă neaprobat', 'in_asteptare', 5);
+pune($idOrg, 'Respins',        'respins',      6);
+verifica('dar nu și ce așteaptă moderarea', 4, cateEvenimenteOrganizate($idOrg));
+
+pune($idAltul, 'Al altuia, aprobat', 'aprobat', 3);
+verifica('nici evenimentele altcuiva', 4, cateEvenimenteOrganizate($idOrg));
+verifica('fiecare cu numărul lui', 1, cateEvenimenteOrganizate($idAltul));
+
+/* ---- și cifra din pagină, care e alta decât lungimea listei de sub ea ---- */
+
+$pagina = cerere($baza . '/profil.php', $c)['corp'];
+
+preg_match('/stat__value">(\d+)</', $pagina, $m);
+verifica('cifra din pagină e cea numărată', '4', $m[1] ?? '');
+
+// Lista de dedesubt arată altceva: două aprobate care urmează + una în
+// așteptare. Tocmai de-aia numărul nu se poate lua din lungimea ei.
+verifica('lista de dedesubt are trei cartonașe', 3, substr_count($pagina, '<article class="card'));
+
+$paginaDinAfara = cerere($baza . '/profil.php?m=organizat02', $anonim)['corp'];
+preg_match('/stat__value">(\d+)</', $paginaDinAfara, $m);
+verifica('din afară se vede aceeași cifră', '4', $m[1] ?? '');
+
 /* ---------------- cartonașele de pe profil duc la pagină ---------------- */
+
+db()->exec('DELETE FROM evenimente');
+$idAprobat = pune($idOrg, 'Cursa aprobată', 'aprobat', 7);
 
 $pagina = cerere($baza . '/profil.php', $c)['corp'];
 verifica('cartonașele de pe profil trimit la event.php', true,

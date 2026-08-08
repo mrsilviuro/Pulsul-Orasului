@@ -134,18 +134,6 @@ require __DIR__ . '/inc/antet.php';
             <span>Editează</span>
           </a>
           <?php endif; ?>
-
-          <div class="post__share">
-            <button class="icon-btn" type="button" aria-label="Distribuie pe Facebook">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 8.5V7a1.5 1.5 0 0 1 1.5-1.5H17V3h-2.2A3.8 3.8 0 0 0 11 6.8v1.7H9V11h2v10h3V11h2.2l.4-2.5H14Z" fill="currentColor" stroke="none"/></svg>
-            </button>
-            <button class="icon-btn" type="button" aria-label="Distribuie pe WhatsApp">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11.5a8 8 0 0 1-11.9 7L4 20l1.6-4A8 8 0 1 1 20 11.5Z"/><path d="M9 9.5c.4 2 1.6 3.2 3.6 3.6l.9-1.2 1.7.8-.4 1.4c-2.9.3-5.8-2.6-5.5-5.5l1.4-.4.8 1.7z" fill="currentColor" stroke="none"/></svg>
-            </button>
-            <button class="icon-btn" type="button" aria-label="Copiază linkul" id="copy-link">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3A4 4 0 0 0 13 5.3l-1.4 1.4"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3A4 4 0 0 0 11 18.7l1.4-1.4"/></svg>
-            </button>
-          </div>
         </div>
       </header>
 
@@ -176,11 +164,10 @@ require __DIR__ . '/inc/antet.php';
             <circle cx="12" cy="12" r="9"/><path d="M12 7v5.2l3.4 2"/>
           </svg>
           <div><span>Ora</span><strong><?php
-            // Ora de început e mereu știută; doar sfârșitul poate lipsi. Nu-l
-            // ascundem pe primul din pricina celui de-al doilea.
-            echo h($oraSfarsit !== ''
-                ? $oraInceput . ' — ' . $oraSfarsit
-                : $oraInceput . ' — oră de sfârșit nedeterminată');
+            // Ora de început e mereu știută; sfârșitul poate lipsi. Când
+            // lipsește, nu se spune nimic despre el: „19:00", atât. O mențiune
+            // de genul „nedeterminat" ocupă un rând ca să nu spună nimic.
+            echo h($oraSfarsit !== '' ? $oraInceput . ' — ' . $oraSfarsit : $oraInceput);
           ?></strong></div>
         </div>
 

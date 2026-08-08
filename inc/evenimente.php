@@ -187,6 +187,29 @@ function evenimenteDePeProfil(int $membruId, bool $vedeSiCeleInAsteptare): array
     return $q->fetchAll();
 }
 
+/**
+ * Câte evenimente a organizat omul, cu totul.
+ *
+ * Numai cele aprobate, dar de oricând: și cele care abia urmează, și cele de
+ * acum trei ani. E cifra de pe cartonașul „Evenimente organizate", adică o
+ * măsură a cât a făcut cineva pentru oraș — iar ce a făcut nu se șterge când
+ * trece ziua. De aceea AICI nu se folosește filtruNeincheiat(): lista de mai
+ * jos arată ce urmează, numărul ăsta spune ce a fost.
+ *
+ * Ce așteaptă moderarea sau a fost respins nu se numără: n-a ajuns niciodată
+ * un eveniment adevărat, deci n-are ce căuta într-o cifră pe care o vede toată
+ * lumea.
+ */
+function cateEvenimenteOrganizate(int $membruId): int
+{
+    $q = db()->prepare(
+        'SELECT COUNT(*) FROM evenimente WHERE membru_id = ? AND stare_moderare = \'aprobat\''
+    );
+    $q->execute([$membruId]);
+
+    return (int) $q->fetchColumn();
+}
+
 /* ====================== PAGINA UNUI EVENIMENT ========================= */
 
 /**

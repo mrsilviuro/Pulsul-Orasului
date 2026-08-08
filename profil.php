@@ -55,6 +55,17 @@ $prenumeScurt = $p ? explode(' ', trim((string) $p['prenume']))[0] : 'Ionuț';
 // n-avem al cui profil să citim, deci nici evenimente.
 $evenimenteProfil = $p ? evenimenteDePeProfil((int) $p['id'], $eProfilulMeu) : [];
 
+/**
+ * Cifra de pe cartonașul „Evenimente organizate".
+ *
+ * Nu e lungimea listei de mai jos: acolo se văd doar cele care urmează (plus,
+ * pentru omul însuși, cele în așteptare), aici se numără tot ce a organizat
+ * vreodată și a fost aprobat. Un organizator cu douăzeci de evenimente în
+ * urmă și niciunul în față are „20" scris sus și lista goală dedesubt — și e
+ * corect așa.
+ */
+$cateOrganizate = $p ? cateEvenimenteOrganizate((int) $p['id']) : 12;
+
 /** Câte se văd din prima. Restul intră în pagină, dar ascunse. */
 const EVENIMENTE_VIZIBILE = 4;
 
@@ -187,7 +198,7 @@ require __DIR__ . '/inc/antet.php';
             <path d="M8.5 14.5h3M8.5 17.5h7"/>
           </svg>
         </span>
-        <span class="stat__value">12</span>
+        <span class="stat__value"><?= (int) $cateOrganizate ?></span>
         <span class="stat__label">Evenimente organizate</span>
       </div>
 

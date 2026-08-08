@@ -584,22 +584,6 @@
     });
   }
 
-  /* --- Copiază linkul articolului --- */
-  var copyBtn = document.getElementById('copy-link');
-  if (copyBtn) {
-    copyBtn.addEventListener('click', function () {
-      var url = window.location.href;
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(url).then(
-          function () { toast('Linkul a fost copiat.'); },
-          function () { toast('Nu am putut copia linkul.'); }
-        );
-      } else {
-        toast('Nu am putut copia linkul.');
-      }
-    });
-  }
-
   /* --- Bara de progres a citirii --- */
   var progress = document.querySelector('#read-progress span');
   var postBody = document.querySelector('.post__body');

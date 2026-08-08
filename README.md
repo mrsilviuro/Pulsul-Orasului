@@ -278,7 +278,7 @@ Rularea verificărilor: `php teste/test-validare.php` (133 de cazuri).
 Patru suite vorbesc cu site-ul prin HTTP, cu cookie-uri adevărate, și cer
 serverul pornit: „ține-mă minte" (35 de cazuri), setările, cu tot cu ștergerea
 contului și cron (95), formularul de contact (60) și publicarea evenimentelor,
-cu tot cu urcarea copertei și secțiunea de pe profil (161).
+cu tot cu urcarea copertei și secțiunea de pe profil (173).
 
 ```
 php -S 127.0.0.1:8126 -t . &
@@ -1023,6 +1023,26 @@ blocat de un eveniment pe care nu-l mai vede nicăieri.
 
 Cartonașele duc la `event.php?slug=…` — pagina evenimentului, descrisă mai jos.
 
+### Cifra de sus nu e lungimea listei
+
+Cartonașul „Evenimente organizate", dintre cele trei casete cu statistici,
+numără **tot ce a organizat omul și a fost aprobat, de oricând** — și ce
+urmează, și ce a fost acum trei ani (`cateEvenimenteOrganizate()`). Lista de
+dedesubt arată doar ce nu s-a încheiat încă.
+
+Sunt două lucruri diferite, dinadins: cifra spune cât a făcut cineva pentru
+oraș, iar ce a făcut nu se șterge când trece ziua. Un organizator cu douăzeci
+de evenimente în urmă și niciunul în față are „20" scris sus și lista goală
+dedesubt. De aceea `cateEvenimenteOrganizate()` **nu** folosește
+`filtruNeincheiat()`, deși aproape tot restul din `inc/evenimente.php` o face.
+
+Ce așteaptă moderarea sau a fost respins nu intră în cifră: n-a ajuns niciodată
+un eveniment adevărat, deci n-are ce căuta într-un număr pe care îl vede toată
+lumea.
+
+Celelalte două casete („Prezent la evenimente", „A confirmat, dar nu a venit")
+sunt încă numere scrise de mână: participările nu există în bază.
+
 **Primele patru se văd, restul intră ascunse.** Tot ce e de arătat pleacă în
 aceeași pagină; peste al patrulea, cartonașele primesc clasa `.ascuns`, iar
 butonul „Vezi mai mult… (2)" apare doar dacă are ce descoperi — cu numărul
@@ -1105,9 +1125,9 @@ Paginile nu-și mai scriu singure antetul: `cereIntrare('/calea.php')` din
 
 Ce lipsește nu se arată gol: un rând „Vârstă minimă: —" nu spune nimic, dar
 ocupă locul unuia care ar fi spus. Vârsta, participanții și genul apar doar
-când sunt completate; ora de sfârșit lipsă e scrisă pe față („19:00 — oră de
-sfârșit nedeterminată"), fiindcă ora de început tot e bună de știut. `cost`
-gol sau zero devine „Gratuit".
+când sunt completate. Ora de sfârșit lipsă nu se pomenește deloc — scrie doar
+„19:00", nu „19:00 — nedeterminat": o mențiune despre ce nu se știe ocupă un
+rând ca să nu spună nimic. `cost` gol sau zero devine „Gratuit".
 
 Descrierea e **escapată la randare, nu la salvare** — se escapează întâi și se
 pun etichetele după, altfel `<p>` și `<br>` ar fi escapate și ele, iar omul ar
@@ -1130,7 +1150,7 @@ codul le preferă deja când există, dar fișierele nu sunt urcate, deci un
 eveniment fără copertă rămâne fără poza mare.
 
 Verificările: `php teste/test-evenimente.php http://127.0.0.1:8126`
-(161 de cazuri, cere serverul pornit).
+(173 de cazuri, cere serverul pornit).
 
 
 ## E-mailurile
