@@ -1,0 +1,4 @@
+# Copertele încărcate de organizatori stau doar pe server, nu în depozitul de cod.
+*
+!.gitignore
+!.htaccess

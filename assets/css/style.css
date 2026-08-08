@@ -2621,3 +2621,57 @@ body { overscroll-behavior-y: none; }
   color: var(--text-soft);
   cursor: default;
 }
+
+/* =========================================================================
+   29. PUBLICAREA UNUI EVENIMENT (adauga_eveniment.php)
+   Restul paginii folosește .card-set și .poza-drop, care există deja.
+   ========================================================================= */
+
+/* Lămurire sub un câmp, când nu e o eroare, ci ceva bun de știut. */
+.field__hint {
+  margin-top: 6px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-faint);
+}
+
+/* Aceeași lămurire, dar pusă înaintea câmpului: „sub câți oameni evenimentul
+   nu poate începe" trebuie citit ÎNAINTE de a scrie numărul, nu după. */
+.field__hint-sus {
+  margin: -4px 0 8px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-faint);
+}
+
+/* Bifa „Nespecificat" de sub un câmp numeric: e o portiță, nu o alegere de
+   sine stătătoare, deci stă mai mică și mai ștearsă. */
+.check--mic { margin-top: 9px; font-size: 13px; color: var(--text-soft); }
+
+/* Numărătoarea de caractere de sub descriere se colorează când s-a ajuns. */
+.field__hint.e-gata { color: #16a34a; font-weight: 600; }
+[data-theme="dark"] .field__hint.e-gata { color: #6ee7a0; }
+
+/* Lista evenimentelor active, când omul nu mai poate publica încă unul. */
+.lista-simpla { display: grid; gap: 8px; margin: 0 0 16px; }
+.lista-simpla li {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+  padding: 11px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  font-size: 14px;
+}
+.lista-simpla__data { color: var(--text-faint); font-size: 13px; white-space: nowrap; }
+
+/* Previzualizarea copertei: 16:9, exact cum va fi salvată. */
+.ev-previzualizare { margin-top: 14px; }
+.ev-previzualizare img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  margin-bottom: 10px;
+}

@@ -82,34 +82,48 @@ Site live: https://pulsulorasului.ro
 8. **Poze de profil: niciodată nu se salvează fișierul primit așa cum a venit.**
    Se redesenează pixel cu pixel (`inc/imagini.php`), EXIF dispare, nume random hex.
    Orice funcționalitate nouă de upload trebuie să respecte acest pattern.
+   Verificările comune stau în `deschidePozaPrimita()` — o folosesc și poza de
+   profil, și coperta de eveniment. Nu face a treia cale.
+
+9. **În bază intră text curat, neescapat. Escaparea e la randare, cu `h()`.**
+   Escapat la salvare ar da `&amp;amp;` la a doua trecere și un text pe care nu-l
+   mai poți căuta sau exporta.
+
+10. **Caracterele se numără cu `mb_strlen()`, niciodată cu `strlen()`.** În UTF-8
+    „ă" ocupă doi octeți, deci o limită pe octeți ar avantaja pe cine scrie fără
+    diacritice. În JS la fel: `[...text].length`, nu `.length`.
 
 ## Structură fișiere
 
 ```
 index.php, articol.php, contact.php, despre.php, login.php,
-profil.php, poza.php, setari.php, parola-uitata.php, parola-noua.php,
-google.php, finalizare.php, confirma.php, stergere.php, iesire.php, verifica.php
+profil.php, poza.php, setari.php, adauga_eveniment.php, parola-uitata.php,
+parola-noua.php, google.php, finalizare.php, confirma.php, stergere.php,
+iesire.php, verifica.php
 
 inc/
   antet.php        → head + meniu + antete siguranță (folosit de toate paginile)
   subsol.php        → footer + scripturi
   bootstrap.php     → config, conexiune DB, sesiune, CSRF
   validare.php      → toate verificările server-side (fără atingere DB)
-  imagini.php       → procesare/validare poze de profil
+  imagini.php       → procesare/validare poze de profil ȘI coperți de eveniment
+  evenimente.php    → categorii, regula „un eveniment activ", salvarea
   email.php         → șablon unic pentru toate email-urile (table-based, inline style)
   google.php        → OAuth Google (authorization code flow + PKCE)
   buton-google.php  → butonul de login Google
   stergere.php      → ștergerea contului cu răgaz + anonimizarea
   camp-parola.php   → un câmp de parolă cu ochi (folosit de toate paginile)
 
-api/                → endpoint-uri JSON apelate din JS (fetch)
+api/                → endpoint-uri JSON apelate din JS (fetch); eveniment.php e
+                      singurul care primește multipart, fiindcă urcă un fișier
 cron/               → scripturi rulate din cron (doar CLI, .htaccess le blochează)
 sql/                → schema.sql + migrări numerotate (002, 003, 004, 005-google,
                       006-tine-minte, 007-setari, 008-mesaje-contact,
-                      009-evenimente.sql)
+                      009-evenimente, 010-limita-evenimente)
 teste/              → test-validare.php (verificările din inc/validare.php)
-                      test-tine-minte.php, test-setari.php, test-contact.php
-                      (ultimele trei cer serverul pornit — vezi antetul lor)
+                      test-tine-minte.php, test-setari.php, test-contact.php,
+                      test-evenimente.php
+                      (ultimele patru cer serverul pornit — vezi antetul lor)
 private/            → loguri (emailuri-trimise.log), protejat prin .htaccess
 assets/css/style.css, assets/js/main.js, assets/img/
 ```
@@ -153,11 +167,15 @@ assets/css/style.css, assets/js/main.js, assets/img/
 
 ## Ce e neterminat (roadmap)
 
-- Formularul de publicat un eveniment (`adauga_eveniment.php` — butonul de pe
-  prima pagină duce deja acolo; tabelele `evenimente` și `categorii` există)
-- Încărcarea copertei (trece prin `inc/imagini.php`, ca poza de profil)
-- Moderarea: fiecare eveniment intră cu `stare_moderare = 'in_asteptare'`
+- Pagina publică a unui eveniment (slugul se generează deja la salvare, dar
+  nu duce nicăieri)
+- Moderarea: fiecare eveniment intră cu `stare_moderare = 'in_asteptare'` și nu
+  se vede nicăieri; nu există interfață de aprobare
+- Editarea și încheierea manuală a unui eveniment (încheierea automată, din ziua
+  următoare datei, funcționează deja — se calculează la citire, fără cron)
 - Paginile de categorie (slugurile sunt în tabelul `categorii`)
+- Imaginile implicite de categorie (`categorii.imagine_default`) — coloana
+  există, fișierele nu; se urcă de mână, nu prin `inc/imagini.php`
 
 ## Workflow recomandat cu Claude Code
 

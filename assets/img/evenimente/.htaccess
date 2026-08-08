@@ -1,0 +1,52 @@
+# =========================================================================
+#  Dosarul cu copertele evenimentelor. Ca și cel cu pozele de profil, e un loc
+#  în care ajung fișiere venite din afară: aici nu se execută nimic.
+#
+#  Fișierele sunt oricum recreate de noi ca JPEG (vezi inc/imagini.php), deci
+#  n-ar avea ce cod să conțină. Regulile de mai jos sunt a doua încuietoare:
+#  dacă vreodată se strecoară ceva pe lângă prima, tot nu poate fi rulat.
+# =========================================================================
+
+# --- 1. Nicio interpretare de cod, indiferent de extensie ----------------
+<IfModule mod_php.c>
+    php_flag engine off
+</IfModule>
+<IfModule mod_php7.c>
+    php_flag engine off
+</IfModule>
+<IfModule mod_php5.c>
+    php_flag engine off
+</IfModule>
+
+# Când PHP rulează ca CGI sau FPM, „php_flag" de mai sus nu are efect. Atunci
+# scoatem legătura dintre extensii și interpretor, ceea ce funcționează în
+# ambele cazuri.
+<IfModule mod_mime.c>
+    RemoveHandler .php .phtml .php3 .php4 .php5 .php7 .php8 .phps .pht .cgi .pl .py .asp .aspx .shtml .htm .html
+    RemoveType    .php .phtml .php3 .php4 .php5 .php7 .php8 .phps .pht .cgi .pl .py .asp .aspx .shtml
+</IfModule>
+
+# --- 2. Se servesc doar fișierele pe care le scriem noi ------------------
+# Numele are exact forma dată de aplicație: 32 de caractere hexazecimale, apoi
+# .jpg. Orice altceva nu se vede din browser.
+<IfModule mod_authz_core.c>
+    Require all denied
+    <FilesMatch "^[0-9a-f]{32}\.jpg$">
+        Require all granted
+    </FilesMatch>
+</IfModule>
+<IfModule !mod_authz_core.c>
+    Order deny,allow
+    Deny from all
+    <FilesMatch "^[0-9a-f]{32}\.jpg$">
+        Allow from all
+    </FilesMatch>
+</IfModule>
+
+# --- 3. Browserul nu ghicește tipul fișierului ---------------------------
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    # Numele se schimbă la fiecare poză nouă, deci vechea poză nu mai e cerută
+    # niciodată. Putem lăsa liniștiți browserul să o țină un an.
+    Header set Cache-Control "public, max-age=31536000, immutable"
+</IfModule>

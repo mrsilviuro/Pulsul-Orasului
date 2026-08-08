@@ -275,15 +275,17 @@ un `curl`. Cele care contează sunt în `inc/validare.php`:
 
 Rularea verificărilor: `php teste/test-validare.php` (86 de cazuri).
 
-Două suite vorbesc cu site-ul prin HTTP, cu cookie-uri adevărate, și cer
-serverul pornit: „ține-mă minte" (35 de cazuri) și setările, cu tot cu ștergerea
-contului și cron (86 de cazuri).
+Patru suite vorbesc cu site-ul prin HTTP, cu cookie-uri adevărate, și cer
+serverul pornit: „ține-mă minte" (35 de cazuri), setările, cu tot cu ștergerea
+contului și cron (95), formularul de contact (60) și publicarea evenimentelor,
+cu tot cu urcarea copertei (74).
 
 ```
 php -S 127.0.0.1:8126 -t . &
-php teste/test-tine-minte.php http://127.0.0.1:8126
-php teste/test-setari.php     http://127.0.0.1:8126
-php teste/test-contact.php    http://127.0.0.1:8126
+php teste/test-tine-minte.php  http://127.0.0.1:8126
+php teste/test-setari.php      http://127.0.0.1:8126
+php teste/test-contact.php     http://127.0.0.1:8126
+php teste/test-evenimente.php  http://127.0.0.1:8126
 ```
 
 ### Unicitatea adresei de e-mail
@@ -847,10 +849,12 @@ Nu există încă niciun loc unde să citești mesajele din site. Se citesc din
 `citit_la` e pregătită pentru atunci.
 
 
-## Evenimentele — deocamdată doar tabelele
+## Evenimentele
 
-`sql/009-evenimente.sql` aduce `categorii` și `evenimente`. Formularul de
-publicare și încărcarea copertei vin separat.
+`sql/009-evenimente.sql` aduce `categorii` și `evenimente`, iar
+`sql/010-limita-evenimente.sql` coloana prin care se poate ridica, pentru un om
+anume, limita de evenimente active. Formularul de publicare e
+`adauga_eveniment.php`.
 
 Categoriile erau până acum scrise de mână în trei locuri: filtrele din
 `index.php`, eticheta de pe fiecare articol și lista din `despre.php`. De acum
@@ -896,6 +900,86 @@ deci rândul e mereu acolo.
 fără cont: cine nu e înscris trebuie să afle că poate publica, nu să descopere
 după ce se înregistrează. Fără cont duce la `login.php?redirect=…`, deci după
 autentificare omul pică direct pe formular, nu pe prima pagină.
+
+### Formularul de publicare
+
+`adauga_eveniment.php` e pagina, `api/eveniment.php` e punctul de intrare,
+`inc/evenimente.php` ține regulile, iar verificările stau unde stau toate
+celelalte: în `inc/validare.php` (`verificaEveniment()`).
+
+Pagina e **strict pentru cine e conectat**: cine nu e, e trimis la
+`login.php?redirect=…` înainte să se scrie ceva în pagină. Nu e ascundere de
+conținut — nelogatul nu primește formularul deloc.
+
+Datele vin ca `multipart/form-data`, nu ca JSON, fiindcă e singurul fel în care
+poate urca și un fișier. De aici o capcană care merită scrisă: un formular mai
+mare decât `post_max_size` ajunge în PHP **gol**, cu `$_POST` și `$_FILES`
+goale și fără nicio eroare. Omul, care completase tot, ar fi primit
+„completează câmpurile". Comparăm `CONTENT_LENGTH` cu limita și spunem ce s-a
+întâmplat de fapt.
+
+### Un singur eveniment activ
+
+Regula e „un eveniment activ per om", dar nu e scrisă `1` în cod: e citită din
+`membri.limita_evenimente_active`, care e `NULL` pentru toată lumea și
+înseamnă „regula obișnuită". Când cineva are nevoie de mai multe, se schimbă un
+număr în bază. Nu există interfață pentru asta și nici nu trebuie.
+
+**Un eveniment se încheie fără cron.** Fie organizatorul îl marchează așa
+(butonul nu e făcut încă), fie trece ziua în care a avut loc — iar a doua se
+află comparând data cu ziua de azi *în clipa în care întrebăm*. O sarcină
+programată la miezul nopții care ar întoarce un rând în bază poate să nu ruleze,
+iar ziua în care n-a rulat ar ține oamenii blocați degeaba. Așa, răspunsul e
+corect chiar dacă serverul a stat oprit o săptămână.
+
+Verificarea se face **înainte** de procesarea copertei: n-are rost să
+redesenăm o imagine de 1600×900 pentru un eveniment pe care oricum nu-l primim.
+
+### Coperta
+
+Trece prin `inc/imagini.php`, exact pe unde trec și pozele de profil — decodare,
+redesenare pixel cu pixel (deci EXIF-ul și orice s-ar fi lipit la coada
+fișierului dispar), nume întâmplător. Ca să nu existe două căi paralele,
+verificările comune au fost scoase în `deschidePozaPrimita()`, folosită și de
+poza de profil, și de copertă.
+
+Diferența e forma: coperta se taie pe centru la **16:9 și se scrie 1600×900**.
+Iar dacă imaginea primită e mai mică de-atât, e **respinsă** și se cere alta —
+o poză de 800×450 întinsă la dublu arată rău pe orice ecran, și e mai cinstit
+să spui asta decât să publici ceva încețoșat. Măsurarea se face **după**
+rotirea EXIF: un telefon ținut vertical trimite adesea imaginea culcată, cu
+orientarea într-o etichetă, iar altfel am fi respins poze bune.
+
+Coperta e opțională. Fără ea, în bază intră `NULL`, iar la afișare se ia
+imaginea implicită a categoriei. Dacă scrierea în bază pică după ce fișierul a
+ajuns pe disc, fișierul e șters — altfel ar rămâne acolo pentru totdeauna,
+nelegat de nimic.
+
+### Descrierea
+
+Minimum 300 de caractere, **numărate ca litere, nu ca octeți**. În UTF-8, „ă"
+ocupă doi octeți, deci `strlen()` ar fi lăsat să treacă un text de 150 de
+caractere scris cu diacritice — cine scrie corect românește ar fi fost
+avantajat, ceea ce e o prostie. Server-side se numără cu `mb_strlen()`, iar
+contorul din pagină cu `[...text].length`, nu cu `.length`, care numără tot
+unități UTF-16.
+
+Paragrafele se păstrează: `curataTextPeRanduri()` normalizează rândurile și
+strânge trei sau mai multe rânduri goale la unul singur, dar nu turtește textul
+într-un bloc. **În bază intră textul curat, neescapat.** Escaparea se face la
+randare, cu `h()`. Invers — escapat la salvare — ar fi însemnat `&amp;amp;` la
+a doua editare și un text pe care nu-l mai poți căuta sau exporta.
+
+### Ce nu e făcut
+
+Evenimentul intră cu `stare_moderare = 'in_asteptare'` și nu se vede nicăieri
+pe site. Nu există încă interfață de aprobare, editare sau încheiere manuală, și
+nici pagină de eveniment. Omul vede doar „Evenimentul tău a fost trimis spre
+aprobare" — dinadins fără detalii despre cât durează, cât timp nu putem promite
+nimic.
+
+Verificările: `php teste/test-evenimente.php http://127.0.0.1:8126`
+(74 de cazuri, cere serverul pornit).
 
 
 ## E-mailurile

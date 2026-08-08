@@ -23,6 +23,17 @@ const PAROLA_MAX    = 72;    // bcrypt ignoră tot ce trece de 72 de octeți
 const MESAJ_MIN     = 10;    // mesajul din formularul de contact
 const MESAJ_MAX     = 5000;
 
+/* Evenimente */
+const TITLU_EVENIMENT_MIN = 8;
+const TITLU_EVENIMENT_MAX = 140;
+const LOCATIE_MIN         = 4;
+const LOCATIE_MAX         = 160;
+const DESCRIERE_MIN       = 300;   // caractere, nu octeți — vezi verificaEveniment()
+const DESCRIERE_MAX       = 8000;
+const COST_MAX            = 99999.99;
+const PARTICIPANTI_MAX    = 65535; // cât încape în SMALLINT UNSIGNED
+const ANI_INAINTE_MAX     = 2;     // cât de departe în viitor poate fi pus un eveniment
+
 /**
  * Aduce diacriticele românești la forma corectă (virgulă dedesubt).
  *
@@ -251,6 +262,286 @@ function verificaInregistrare(array $date, ?DateTimeImmutable $azi = null): arra
     }
 
     return ['erori' => $erori, 'curat' => $curat];
+}
+
+/**
+ * Un titlu, o locație — text scris de om, care ajunge pe pagină.
+ *
+ * Nu se curăță de HTML aici: textul se păstrează în bază exact cum l-a scris
+ * omul, iar scăparea se face la AFIȘARE, cu h(). Dacă am curăța la salvare,
+ * un titlu ca „Meci Dinamo & Rapid" ar ajunge în bază cu „&amp;" și l-am
+ * scăpa a doua oară la afișare — omul ar citi „Dinamo &amp; Rapid".
+ *
+ * Se scot doar caracterele de control, care n-au ce căuta nicăieri.
+ */
+function curataTextLiber(string $text): string
+{
+    // Tot ce e sub spațiu, plus DEL. Rândurile noi și taburile se păstrează
+    // separat, acolo unde au sens (vezi curataTextPeRanduri).
+    $text = preg_replace('/[\x00-\x1F\x7F]/u', '', $text) ?? '';
+
+    return curataSpatii($text);
+}
+
+/**
+ * Text pe mai multe rânduri: descrierea unui eveniment.
+ *
+ * Paragrafele omului rămân întregi — el le-a pus dintr-un motiv. Se
+ * îndreaptă doar sfârșiturile de rând (Windows scrie \r\n) și se taie
+ * șirurile de peste două rânduri goale la rând, ca nimeni să nu-și împingă
+ * anunțul mai jos în pagină cu cincizeci de Enter-uri.
+ */
+function curataTextPeRanduri(string $text): string
+{
+    $text = str_replace(["\r\n", "\r"], "\n", $text);
+
+    // Caracterele de control, dar NU rândul nou și nu tabul.
+    $text = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', '', $text) ?? '';
+
+    // Cel mult un rând gol între paragrafe.
+    $text = preg_replace('/\n{3,}/', "\n\n", $text) ?? '';
+
+    return trim($text);
+}
+
+/**
+ * Formularul de eveniment, verificat pe server.
+ *
+ * $azi se poate da din teste, ca verificarea datei să nu depindă de ziua în
+ * care se rulează.
+ *
+ * Întoarce ['erori' => [...], 'curat' => [...]].
+ */
+function verificaEveniment(array $date, array $categoriiValide, ?DateTimeImmutable $azi = null): array
+{
+    $azi   = $azi ?? new DateTimeImmutable('today');
+    $erori = [];
+    $curat = [];
+
+    $citeste = static function (string $cheie) use ($date): string {
+        $valoare = $date[$cheie] ?? '';
+        return is_string($valoare) ? $valoare : '';
+    };
+
+    /* ------------------------------ Titlul ---------------------------- */
+    $titlu = curataTextLiber($citeste('titlu'));
+
+    if ($titlu === '') {
+        $erori['titlu'] = 'Scrie un titlu.';
+    } elseif (mb_strlen($titlu, 'UTF-8') < TITLU_EVENIMENT_MIN) {
+        $erori['titlu'] = 'Titlul e prea scurt — spune în câteva cuvinte despre ce e vorba.';
+    } elseif (mb_strlen($titlu, 'UTF-8') > TITLU_EVENIMENT_MAX) {
+        $erori['titlu'] = 'Titlul e prea lung (cel mult ' . TITLU_EVENIMENT_MAX . ' de caractere).';
+    } else {
+        $curat['titlu'] = $titlu;
+    }
+
+    /* ---------------------------- Categoria --------------------------- */
+    $categorie = (int) $citeste('categorie_id');
+
+    if ($categorie <= 0) {
+        $erori['categorie_id'] = 'Alege o categorie.';
+    } elseif (!in_array($categorie, $categoriiValide, true)) {
+        // Lista vine din baza de date, nu din formular: cine trimite un id
+        // inventat nu poate strecura un eveniment într-o categorie care nu e.
+        $erori['categorie_id'] = 'Alege o categorie din listă.';
+    } else {
+        $curat['categorie_id'] = $categorie;
+    }
+
+    /* ------------------------------ Data ------------------------------ */
+    $data = trim($citeste('data_eveniment'));
+
+    if ($data === '') {
+        $erori['data_eveniment'] = 'Alege data.';
+    } else {
+        $d = DateTimeImmutable::createFromFormat('!Y-m-d', $data);
+
+        if ($d === false || $d->format('Y-m-d') !== $data) {
+            $erori['data_eveniment'] = 'Data nu e validă.';
+        } elseif ($d < $azi) {
+            $erori['data_eveniment'] = 'Data a trecut deja. Alege una de azi înainte.';
+        } elseif ($d > $azi->modify('+' . ANI_INAINTE_MAX . ' years')) {
+            $erori['data_eveniment'] = 'Data e prea departe în viitor.';
+        } else {
+            $curat['data_eveniment'] = $data;
+        }
+    }
+
+    /* ------------------------------ Orele ----------------------------- */
+    $inceput = trim($citeste('ora_inceput'));
+
+    if ($inceput === '') {
+        $erori['ora_inceput'] = 'Scrie ora de început.';
+    } elseif (!preg_match('/^([01][0-9]|2[0-3]):[0-5][0-9]$/', $inceput)) {
+        $erori['ora_inceput'] = 'Ora nu e validă.';
+    } else {
+        $curat['ora_inceput'] = $inceput . ':00';
+    }
+
+    /**
+     * „Nedeterminat" e o alegere, nu o omisiune.
+     *
+     * De aceea are bifa lui: altfel n-am putea deosebi „nu se știe cât ține"
+     * de „am uitat să completez".
+     */
+    $faraSfarsit = !empty($date['fara_ora_sfarsit']);
+
+    if ($faraSfarsit) {
+        $curat['ora_sfarsit'] = null;
+    } else {
+        $sfarsit = trim($citeste('ora_sfarsit'));
+
+        if ($sfarsit === '') {
+            $erori['ora_sfarsit'] = 'Scrie ora de sfârșit, sau bifează „Nedeterminat".';
+        } elseif (!preg_match('/^([01][0-9]|2[0-3]):[0-5][0-9]$/', $sfarsit)) {
+            $erori['ora_sfarsit'] = 'Ora nu e validă.';
+        } else {
+            // Nu comparăm cele două ore: un eveniment poate începe la 22:00 și
+            // se poate termina la 02:00. Ar fi o „greșeală" care nu e greșeală.
+            $curat['ora_sfarsit'] = $sfarsit . ':00';
+        }
+    }
+
+    /* ----------------------------- Locația ---------------------------- */
+    $locatie = curataTextLiber($citeste('locatie'));
+
+    if ($locatie === '') {
+        $erori['locatie'] = 'Scrie unde are loc.';
+    } elseif (mb_strlen($locatie, 'UTF-8') < LOCATIE_MIN) {
+        $erori['locatie'] = 'Locația e prea scurtă.';
+    } elseif (mb_strlen($locatie, 'UTF-8') > LOCATIE_MAX) {
+        $erori['locatie'] = 'Locația e prea lungă (cel mult ' . LOCATIE_MAX . ' de caractere).';
+    } else {
+        $curat['locatie'] = $locatie;
+    }
+
+    /* ------------------------------ Costul ---------------------------- */
+    if (!empty($date['gratuit'])) {
+        $curat['cost'] = null;
+    } else {
+        // Oamenii scriu „25,50" la fel de des ca „25.50".
+        $cost = str_replace(',', '.', trim($citeste('cost')));
+
+        if ($cost === '') {
+            $erori['cost'] = 'Scrie cât costă, sau bifează „Gratuit".';
+        } elseif (!preg_match('/^[0-9]{1,5}(\.[0-9]{1,2})?$/', $cost)) {
+            $erori['cost'] = 'Scrie o sumă, de forma 25 sau 25.50.';
+        } elseif ((float) $cost > COST_MAX) {
+            $erori['cost'] = 'Suma e prea mare.';
+        } else {
+            $curat['cost'] = number_format((float) $cost, 2, '.', '');
+        }
+    }
+
+    /* -------------------------- Vârsta minimă ------------------------- */
+    $varsta = trim($citeste('varsta_minima'));
+
+    if ($varsta === '' || $varsta === 'nespecificat') {
+        $curat['varsta_minima'] = null;
+    } elseif (!in_array($varsta, ['13', '16', '18'], true)) {
+        $erori['varsta_minima'] = 'Alege o opțiune din listă.';
+    } else {
+        $curat['varsta_minima'] = (int) $varsta;
+    }
+
+    /* ------------------------- Participanții -------------------------- */
+    foreach ([
+        ['participanti_min', 'fara_participanti_min', 'Numărul minim'],
+        ['participanti_max', 'fara_participanti_max', 'Numărul maxim'],
+    ] as [$camp, $bifa, $eticheta]) {
+
+        if (!empty($date[$bifa])) {
+            $curat[$camp] = null;
+            continue;
+        }
+
+        $valoare = trim($citeste($camp));
+
+        if ($valoare === '') {
+            $erori[$camp] = $eticheta . ' lipsește. Scrie-l, sau bifează „Nespecificat".';
+        } elseif (!preg_match('/^[0-9]{1,5}$/', $valoare)) {
+            $erori[$camp] = 'Scrie un număr întreg.';
+        } elseif ((int) $valoare < 1) {
+            $erori[$camp] = 'Numărul trebuie să fie cel puțin 1.';
+        } elseif ((int) $valoare > PARTICIPANTI_MAX) {
+            $erori[$camp] = 'Numărul e prea mare.';
+        } else {
+            $curat[$camp] = (int) $valoare;
+        }
+    }
+
+    // Are sens doar dacă amândouă au fost completate cum trebuie.
+    if (!isset($erori['participanti_min'], $erori['participanti_max'])
+        && isset($curat['participanti_min'], $curat['participanti_max'])
+        && $curat['participanti_min'] > $curat['participanti_max']) {
+        $erori['participanti_max'] = 'Numărul maxim nu poate fi mai mic decât cel minim.';
+    }
+
+    /* ---------------------------- Descrierea -------------------------- */
+    $descriere = curataTextPeRanduri($citeste('descriere'));
+
+    /**
+     * Se numără CARACTERE, nu octeți.
+     *
+     * În UTF-8, „ă" ocupă doi octeți. Cu strlen(), un text românesc de 280 de
+     * caractere ar părea că are peste 300 și ar trece, iar unul scris fără
+     * diacritice ar fi respins pe nedrept. mb_strlen numără ce vede omul.
+     */
+    $cateCaractere = mb_strlen($descriere, 'UTF-8');
+
+    if ($descriere === '') {
+        $erori['descriere'] = 'Scrie câteva rânduri despre eveniment.';
+    } elseif ($cateCaractere < DESCRIERE_MIN) {
+        $erori['descriere'] = 'Mai scrie puțin: ai ' . $cateCaractere . ' caractere din '
+                            . DESCRIERE_MIN . ' cerute.';
+    } elseif ($cateCaractere > DESCRIERE_MAX) {
+        $erori['descriere'] = 'Descrierea e prea lungă (cel mult ' . DESCRIERE_MAX . ' de caractere).';
+    } else {
+        $curat['descriere'] = $descriere;
+    }
+
+    /* ------------------------ Sexul participanților ------------------- */
+    $gen = trim($citeste('gen_participanti'));
+
+    if ($gen === '') {
+        $curat['gen_participanti'] = 'nespecificat';
+    } elseif (!in_array($gen, ['barbati', 'femei', 'nespecificat'], true)) {
+        $erori['gen_participanti'] = 'Alege o opțiune din listă.';
+    } else {
+        $curat['gen_participanti'] = $gen;
+    }
+
+    return ['erori' => $erori, 'curat' => $curat];
+}
+
+/**
+ * Adresa publică a unui eveniment, făcută din titlu.
+ *
+ * Coada întâmplătoare e acolo fiindcă două evenimente pot avea același titlu
+ * („Târg de Crăciun") în ani diferiți, iar adresa trebuie să rămână unică.
+ */
+function slugEveniment(string $titlu): string
+{
+    $slug = normalizeazaDiacritice($titlu);
+
+    // Diacriticele devin literele de bază: „Cluj-Napoca în seară" → „...in seara".
+    $slug = strtr(mb_strtolower($slug, 'UTF-8'), [
+        'ă' => 'a', 'â' => 'a', 'î' => 'i', 'ș' => 's', 'ț' => 't',
+    ]);
+
+    // Orice nu e literă sau cifră devine o singură cratimă.
+    $slug = preg_replace('/[^a-z0-9]+/u', '-', $slug) ?? '';
+    $slug = trim($slug, '-');
+
+    // Tăiat la 140, ca împreună cu coada să încapă în coloana de 170.
+    $slug = mb_substr($slug, 0, 140, 'UTF-8');
+
+    if ($slug === '') {
+        $slug = 'eveniment';
+    }
+
+    return $slug . '-' . bin2hex(random_bytes(3));
 }
 
 /**

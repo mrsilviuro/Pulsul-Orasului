@@ -67,6 +67,27 @@ const POZA_SECUNDE_PAUZA = 15;
 /** Dosarul în care stau pozele, relativ la rădăcina site-ului. */
 const POZA_DOSAR = 'assets/img/membri';
 
+/* ----------------------- Coperta de eveniment ------------------------- */
+
+/**
+ * Coperta e 16:9, nu pătrată: așa arată cartonașele de pe prima pagină și
+ * antetul paginii de eveniment.
+ */
+const COPERTA_LATIME  = 1600;
+const COPERTA_INALTIME = 900;
+
+/**
+ * Sub 1600×900 nu primim nimic.
+ *
+ * La poza de profil mărim la nevoie, fiindcă un chip mic tot se recunoaște.
+ * O copertă întinsă peste lățimea ecranului dintr-o poză de telefon veche ar
+ * ieși neclară exact acolo unde se uită omul prima dată.
+ */
+const COPERTA_SURSA_MIN_LATIME  = 1600;
+const COPERTA_SURSA_MIN_INALTIME = 900;
+
+const COPERTA_DOSAR = 'assets/img/evenimente';
+
 /** Silueta arătată celor care nu și-au pus poză. */
 const POZA_IMPLICITA = 'assets/img/avatars/implicit.svg';
 
@@ -200,15 +221,19 @@ function incapeInMemorie(int $latime, int $inaltime): bool
 /* ========================== PRELUCRAREA POZEI ========================== */
 
 /**
- * Ia fișierul primit și scoate din el două poze pătrate.
+ * Verificările prin care trece ORICE poză primită, plus deschiderea ei.
  *
- * $fisier  — un element din $_FILES
- * $decupaj — ['x' => int, 'y' => int, 'l' => int] în pixerii pozei originale,
- *            așa cum l-a ales utilizatorul din pagină. Poate lipsi.
+ * Stau într-un singur loc fiindcă sunt cele care ne apără: fișier chiar
+ * încărcat prin formular, mărime, tip citit din primii octeți (nu din
+ * extensie), a doua părere de la finfo, bombă de decompresie, memorie.
+ * Copiate în două funcții, s-ar fi despărțit la prima corectură — iar codul
+ * de siguranță e ultimul care are voie să se despartă.
  *
- * Întoarce ['ok' => true, 'nume' => '9f3c…'] sau ['ok' => false, 'mesaj' => …].
+ * Întoarce ['ok' => true, 'sursa' => GdImage, 'latime' => int, 'inaltime' => int]
+ * sau ['ok' => false, 'mesaj' => string]. Cine primește GdImage-ul răspunde de
+ * imagedestroy().
  */
-function procesezaPozaProfil(array $fisier, ?array $decupaj = null): array
+function deschidePozaPrimita(array $fisier, int $minLatime, int $minInaltime): array
 {
     /* ------------------------ 1. A ajuns întreg? ---------------------- */
 
@@ -284,19 +309,11 @@ function procesezaPozaProfil(array $fisier, ?array $decupaj = null): array
         return ['ok' => false, 'mesaj' => 'Poza are prea mulți pixeli. Micșoreaz-o puțin și încearcă din nou.'];
     }
 
-    if (min($latime, $inaltime) < POZA_SURSA_MIN) {
-        return [
-            'ok'    => false,
-            'mesaj' => 'Poza e prea mică. Avem nevoie de cel puțin '
-                     . POZA_SURSA_MIN . '×' . POZA_SURSA_MIN . ' pixeli.',
-        ];
-    }
-
     if (!incapeInMemorie($latime, $inaltime)) {
         return ['ok' => false, 'mesaj' => 'Poza e prea mare pentru server. Micșoreaz-o și încearcă din nou.'];
     }
 
-    /* ------------------------ 5. Desenarea ---------------------------- */
+    /* ------------------------ 5. Deschiderea -------------------------- */
 
     $citeste = $acceptate[$tip];
     $sursa   = @$citeste($temporar);
@@ -305,16 +322,58 @@ function procesezaPozaProfil(array $fisier, ?array $decupaj = null): array
         return ['ok' => false, 'mesaj' => 'Nu am putut citi poza. Încearcă alt fișier.'];
     }
 
-    try {
-        // Fotografiile de pe telefon sunt aproape mereu salvate „culcat", cu o
-        // notă în EXIF care spune cum trebuie rotite la afișare. Dacă nu
-        // ținem cont de ea, poza iese întoarsă pe o parte.
-        if ($tip === IMAGETYPE_JPEG) {
-            $sursa = aplicaOrientarea($sursa, $temporar);
-            $latime   = imagesx($sursa);
-            $inaltime = imagesy($sursa);
-        }
+    // Fotografiile de pe telefon sunt aproape mereu salvate „culcat", cu o
+    // notă în EXIF care spune cum trebuie rotite la afișare. Dacă nu ținem
+    // cont de ea, poza iese întoarsă pe o parte.
+    if ($tip === IMAGETYPE_JPEG) {
+        $sursa    = aplicaOrientarea($sursa, $temporar);
+        $latime   = imagesx($sursa);
+        $inaltime = imagesy($sursa);
+    }
 
+    /**
+     * Mărimea minimă se cere ABIA ACUM, după rotire.
+     *
+     * O poză de 900×1600 făcută pe telefon are nota EXIF care spune „rotește-mă";
+     * până nu o rotim, pare prea îngustă pentru o copertă, deși după rotire e
+     * exact cât trebuie.
+     */
+    if ($latime < $minLatime || $inaltime < $minInaltime) {
+        imagedestroy($sursa);
+
+        return [
+            'ok'    => false,
+            'mesaj' => 'Poza e prea mică: are ' . $latime . '×' . $inaltime
+                     . ' pixeli, iar noi avem nevoie de cel puțin '
+                     . $minLatime . '×' . $minInaltime . '. Încarcă alta, mai mare.',
+        ];
+    }
+
+    return ['ok' => true, 'sursa' => $sursa, 'latime' => $latime, 'inaltime' => $inaltime];
+}
+
+/**
+ * Ia fișierul primit și scoate din el două poze pătrate.
+ *
+ * $fisier  — un element din $_FILES
+ * $decupaj — ['x' => int, 'y' => int, 'l' => int] în pixerii pozei originale,
+ *            așa cum l-a ales utilizatorul din pagină. Poate lipsi.
+ *
+ * Întoarce ['ok' => true, 'nume' => '9f3c…'] sau ['ok' => false, 'mesaj' => …].
+ */
+function procesezaPozaProfil(array $fisier, ?array $decupaj = null): array
+{
+    $primita = deschidePozaPrimita($fisier, POZA_SURSA_MIN, POZA_SURSA_MIN);
+
+    if (!$primita['ok']) {
+        return $primita;
+    }
+
+    $sursa    = $primita['sursa'];
+    $latime   = $primita['latime'];
+    $inaltime = $primita['inaltime'];
+
+    try {
         $taietura = potrivesteDecupajul($decupaj, $latime, $inaltime);
 
         $nume = bin2hex(random_bytes(16));
@@ -348,6 +407,141 @@ function procesezaPozaProfil(array $fisier, ?array $decupaj = null): array
         if ($sursa instanceof GdImage) {
             imagedestroy($sursa);
         }
+    }
+}
+
+/* ===================== COPERTA DE EVENIMENT =========================== */
+
+/** Adresa copertei, sau '' dacă evenimentul n-are una. */
+function urlCoperta(?string $coperta): string
+{
+    if (!esteCopertaValida($coperta)) {
+        return '';
+    }
+
+    return COPERTA_DOSAR . '/' . $coperta . '.jpg';
+}
+
+/** Numele scris în bază e mereu 32 de caractere hexazecimale. Nimic altceva. */
+function esteCopertaValida(?string $coperta): bool
+{
+    return is_string($coperta) && preg_match('/^[0-9a-f]{32}$/', $coperta) === 1;
+}
+
+function stergeCopertaDeFisier(?string $coperta): void
+{
+    if (!esteCopertaValida($coperta)) {
+        return;
+    }
+
+    @unlink(dirname(__DIR__) . '/' . COPERTA_DOSAR . '/' . $coperta . '.jpg');
+}
+
+/**
+ * Coperta unui eveniment: aceleași apărări ca la poza de profil, dar 16:9.
+ *
+ * Poza se redesenează pixel cu pixel, deci ce era ascuns în fișierul primit —
+ * EXIF cu locul unde a fost făcută, comentarii, cod lipit la coadă — nu ajunge
+ * niciodată pe disc. Numele e întâmplător, ca nimeni să nu poată ghici ce
+ * altceva mai e în dosar.
+ *
+ * Decupajul e din mijloc: n-avem încă o unealtă cu care omul să-și aleagă
+ * singur cadrul, iar mijlocul e locul unde stă subiectul în aproape orice poză.
+ */
+function procesezaCoperta(array $fisier): array
+{
+    $primita = deschidePozaPrimita($fisier, COPERTA_SURSA_MIN_LATIME, COPERTA_SURSA_MIN_INALTIME);
+
+    if (!$primita['ok']) {
+        return $primita;
+    }
+
+    $sursa    = $primita['sursa'];
+    $latime   = $primita['latime'];
+    $inaltime = $primita['inaltime'];
+
+    try {
+        /**
+         * Cel mai mare dreptunghi 16:9 care încape în poză, luat din mijloc.
+         *
+         * Dacă poza e mai lată decât 16:9, tăiem din stânga și din dreapta;
+         * dacă e mai înaltă, tăiem de sus și de jos.
+         */
+        $raport = COPERTA_LATIME / COPERTA_INALTIME;
+
+        if ($latime / $inaltime > $raport) {
+            $taieInaltime = $inaltime;
+            $taieLatime   = (int) round($inaltime * $raport);
+        } else {
+            $taieLatime   = $latime;
+            $taieInaltime = (int) round($latime / $raport);
+        }
+
+        $x = (int) floor(($latime - $taieLatime) / 2);
+        $y = (int) floor(($inaltime - $taieInaltime) / 2);
+
+        $nume = bin2hex(random_bytes(16));
+        $caleDosar = dirname(__DIR__) . '/' . COPERTA_DOSAR;
+
+        if (!is_dir($caleDosar) && !@mkdir($caleDosar, 0755, true) && !is_dir($caleDosar)) {
+            return ['ok' => false, 'mesaj' => 'Nu am putut salva coperta. Încearcă din nou peste puțin.'];
+        }
+
+        $cale = $caleDosar . '/' . $nume . '.jpg';
+
+        if (!scrieDreptunghi($sursa, $x, $y, $taieLatime, $taieInaltime,
+                             COPERTA_LATIME, COPERTA_INALTIME, $cale)) {
+            return ['ok' => false, 'mesaj' => 'Nu am putut salva coperta. Încearcă din nou peste puțin.'];
+        }
+
+        return ['ok' => true, 'nume' => $nume];
+    } finally {
+        if ($sursa instanceof GdImage) {
+            imagedestroy($sursa);
+        }
+    }
+}
+
+/**
+ * Scrie pe disc un dreptunghi din imagine, adus la mărimea cerută.
+ *
+ * Fratele lui scriePatrat(), pentru cazul în care lățimea și înălțimea nu sunt
+ * egale.
+ */
+function scrieDreptunghi(
+    GdImage $sursa,
+    int $x, int $y, int $latimeTaiata, int $inaltimeTaiata,
+    int $latimeTinta, int $inaltimeTinta,
+    string $cale
+): bool {
+    $tinta = imagecreatetruecolor($latimeTinta, $inaltimeTinta);
+
+    if (!$tinta instanceof GdImage) {
+        return false;
+    }
+
+    try {
+        // JPEG-ul nu știe de transparență. Un PNG cu fundal transparent ar
+        // ieși cu fundalul negru, așa că îl umplem întâi cu alb.
+        $alb = imagecolorallocate($tinta, 255, 255, 255);
+        imagefilledrectangle($tinta, 0, 0, $latimeTinta, $inaltimeTinta, $alb);
+
+        $bun = imagecopyresampled(
+            $tinta, $sursa,
+            0, 0, $x, $y,
+            $latimeTinta, $inaltimeTinta,
+            $latimeTaiata, $inaltimeTaiata
+        );
+
+        if (!$bun) {
+            return false;
+        }
+
+        imageinterlace($tinta, true);
+
+        return imagejpeg($tinta, $cale, POZA_CALITATE);
+    } finally {
+        imagedestroy($tinta);
     }
 }
 

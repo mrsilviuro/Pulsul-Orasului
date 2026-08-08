@@ -11,6 +11,7 @@
    8. Stele și pagina de profil
    9. Poza de profil
    10. Setările contului
+   11. Publicarea unui eveniment
    ========================================================================= */
 (function () {
   'use strict';
@@ -2328,6 +2329,206 @@
       .catch(function () {
         buton.disabled = false;
         buton.textContent = textInitial;
+        toast(mesajFaraLegatura());
+      });
+    });
+  }
+
+  /* ------------------ 11. PUBLICAREA UNUI EVENIMENT --------------------- */
+
+  var evForm = document.getElementById('eveniment-form');
+
+  if (evForm) {
+    var evFisier = document.getElementById('ev-coperta');
+    var evNume   = document.getElementById('ev-coperta-nume');
+    var evPrev   = document.getElementById('ev-previzualizare');
+    var evPrevImg= document.getElementById('ev-previzualizare-img');
+    var evDrop   = document.getElementById('ev-drop');
+
+    /* --- bifele care ascund câmpul de sub ele --- */
+    // Aceeași poveste de trei ori: gratuit, minim, maxim. O scriem o dată.
+    [
+      ['ev-gratuit',      'ev-cost-camp', true],
+      ['ev-fara-min',     'ev-min',       false],
+      ['ev-fara-max',     'ev-max',       false]
+    ].forEach(function (p) {
+      var bifa = document.getElementById(p[0]);
+      var tinta = document.getElementById(p[1]);
+      if (!bifa || !tinta) return;
+
+      var potriveste = function () {
+        // La cost ascundem tot câmpul; la participanți doar golim, fiindcă
+        // eticheta și lămurirea de deasupra rămân de citit.
+        if (p[2]) { tinta.hidden = bifa.checked; }
+        else      { tinta.disabled = bifa.checked; if (bifa.checked) tinta.value = ''; }
+      };
+
+      bifa.addEventListener('change', potriveste);
+      potriveste();
+    });
+
+    var evFaraSfarsit = document.getElementById('ev-fara-sfarsit');
+    var evOraSfarsit  = document.getElementById('ev-ora-sfarsit');
+
+    if (evFaraSfarsit && evOraSfarsit) {
+      var potrivesteOra = function () {
+        evOraSfarsit.disabled = evFaraSfarsit.checked;
+        if (evFaraSfarsit.checked) evOraSfarsit.value = '';
+      };
+      evFaraSfarsit.addEventListener('change', potrivesteOra);
+      potrivesteOra();
+    }
+
+    /* --- numărătoarea de caractere --- */
+    var evDescriere = document.getElementById('ev-descriere');
+    var evNumar     = document.getElementById('ev-numar');
+    var minCaractere = 300;
+
+    if (evDescriere && evNumar) {
+      var numara = function () {
+        // [...sir].length numără caractere, nu unități UTF-16 — la fel ca
+        // mb_strlen pe server. Cu .length simplu, un emoji ar conta ca două.
+        var cate = [...evDescriere.value].length;
+        evNumar.textContent = cate + ' din ' + minCaractere + ' de caractere';
+        evNumar.classList.toggle('e-gata', cate >= minCaractere);
+      };
+      evDescriere.addEventListener('input', numara);
+      numara();
+    }
+
+    /* --- coperta: previzualizare și mărimea minimă, încă din browser --- */
+    function arataCoperta(fisier) {
+      if (!fisier) return;
+
+      var url = URL.createObjectURL(fisier);
+      var proba = new Image();
+
+      proba.onload = function () {
+        // Aceeași regulă ca pe server. Aici e doar ca omul să afle imediat,
+        // fără să aștepte încărcarea unui fișier de câțiva megabytes.
+        if (proba.naturalWidth < 1600 || proba.naturalHeight < 900) {
+          setError('ev-coperta', 'err-ev-coperta',
+            'Poza e prea mică: are ' + proba.naturalWidth + '×' + proba.naturalHeight +
+            ' pixeli, iar noi avem nevoie de cel puțin 1600×900. Încarcă alta, mai mare.');
+          evFisier.value = '';
+          evPrev.hidden = true;
+          URL.revokeObjectURL(url);
+          return;
+        }
+
+        setError('ev-coperta', 'err-ev-coperta', '');
+        evPrevImg.src = url;
+        evPrev.hidden = false;
+        if (evNume) evNume.textContent = fisier.name;
+      };
+
+      proba.onerror = function () {
+        setError('ev-coperta', 'err-ev-coperta', 'Fișierul nu pare o poză.');
+        evFisier.value = '';
+        URL.revokeObjectURL(url);
+      };
+
+      proba.src = url;
+    }
+
+    if (evFisier) {
+      evFisier.addEventListener('change', function () {
+        arataCoperta(evFisier.files && evFisier.files[0]);
+      });
+    }
+
+    if (evDrop && evFisier) {
+      ['dragenter', 'dragover'].forEach(function (e) {
+        evDrop.addEventListener(e, function (ev) {
+          ev.preventDefault(); evDrop.classList.add('is-over');
+        });
+      });
+      ['dragleave', 'drop'].forEach(function (e) {
+        evDrop.addEventListener(e, function (ev) {
+          ev.preventDefault(); evDrop.classList.remove('is-over');
+        });
+      });
+      evDrop.addEventListener('drop', function (ev) {
+        var f = ev.dataTransfer && ev.dataTransfer.files && ev.dataTransfer.files[0];
+        if (!f) return;
+        // DataTransfer merge direct în input, ca formularul să-l trimită.
+        var dt = new DataTransfer();
+        dt.items.add(f);
+        evFisier.files = dt.files;
+        arataCoperta(f);
+      });
+    }
+
+    var evRenunt = document.getElementById('ev-coperta-renunt');
+    if (evRenunt) {
+      evRenunt.addEventListener('click', function () {
+        evFisier.value = '';
+        evPrev.hidden = true;
+        setError('ev-coperta', 'err-ev-coperta', '');
+        if (evNume) evNume.textContent = 'JPG, PNG sau WEBP, cel puțin 1600×900 px';
+      });
+    }
+
+    /* --- trimiterea --- */
+    evForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+
+      var buton = evForm.querySelector('button[type=submit]');
+      var textInitial = buton.textContent;
+      buton.disabled = true;
+      buton.textContent = 'Se trimite…';
+
+      function gata() {
+        buton.disabled = false;
+        buton.textContent = textInitial;
+      }
+
+      /**
+       * FormData, nu JSON: e singurul fel în care poate pleca și fișierul.
+       * Câmpurile dezactivate nu intră în FormData — exact ce vrem, fiindcă
+       * bifa „Nespecificat" e cea care le dezactivează.
+       */
+      fetch('api/eveniment.php', {
+        method: 'POST',
+        credentials: 'same-origin',
+        body: new FormData(evForm)
+      })
+      .then(citesteRaspuns)
+      .then(function (rez) {
+        gata();
+
+        if (!rez.corp) { toast(mesajRaspunsNeasteptat(rez)); return; }
+        var c = rez.corp;
+
+        if (c.erori) {
+          var primul = null;
+          [['titlu', 'ev-titlu'], ['categorie_id', 'ev-categorie'], ['locatie', 'ev-locatie'],
+           ['data_eveniment', 'ev-data'], ['ora_inceput', 'ev-ora-inceput'],
+           ['ora_sfarsit', 'ev-ora-sfarsit'], ['cost', 'ev-cost'],
+           ['varsta_minima', 'ev-varsta'], ['gen_participanti', 'ev-gen'],
+           ['participanti_min', 'ev-min'], ['participanti_max', 'ev-max'],
+           ['descriere', 'ev-descriere'], ['coperta', 'ev-coperta']
+          ].forEach(function (p) {
+            var mesaj = c.erori[p[0]] || '';
+            setError(p[1], 'err-' + p[1], mesaj);
+            if (mesaj && !primul) primul = document.getElementById(p[1]);
+          });
+          if (primul) primul.focus();
+          toast('Mai sunt câmpuri de corectat.');
+          return;
+        }
+
+        if (!c.ok) { toast(c.mesaj || 'Nu am putut trimite evenimentul.'); return; }
+
+        document.getElementById('ev-block').hidden = true;
+        var done = document.getElementById('ev-done');
+        done.hidden = false;
+        var panou = done.querySelector('.done');
+        if (panou) panou.focus();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      })
+      .catch(function () {
+        gata();
         toast(mesajFaraLegatura());
       });
     });
