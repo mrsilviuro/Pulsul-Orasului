@@ -271,9 +271,12 @@ require __DIR__ . '/inc/antet.php';
           if ($coperta === '' && !empty($ev['imagine_default'])) {
               $coperta = 'assets/img/categorii/' . $ev['imagine_default'];
           }
+
+          // De acum pagina evenimentului există, deci cartonașul duce undeva.
+          $adresa = h(urlEveniment((string) $ev['slug']));
         ?>
         <article class="<?= $clase ?>">
-          <div class="card__media">
+          <a class="card__media" href="<?= $adresa ?>">
             <?php if ($coperta !== ''): ?>
             <img src="<?= h($coperta) ?>" alt="" width="1600" height="900" loading="lazy" decoding="async">
             <?php endif; ?>
@@ -281,9 +284,9 @@ require __DIR__ . '/inc/antet.php';
             <?php if ($inAsteptare): ?>
             <span class="card__stare">În așteptare de aprobare</span>
             <?php endif; ?>
-          </div>
+          </a>
           <div class="card__body">
-            <h3 class="card__title"><?= h($ev['titlu']) ?></h3>
+            <h3 class="card__title"><a href="<?= $adresa ?>"><?= h($ev['titlu']) ?></a></h3>
             <p class="card__excerpt"><?= h(inceputDeText((string) $ev['descriere'])) ?></p>
             <div class="card__meta">
               <time datetime="<?= h((string) $ev['data_eveniment']) ?>"><?= h(dataScurta($ev['data_eveniment'])) ?></time>

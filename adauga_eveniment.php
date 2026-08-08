@@ -19,8 +19,7 @@ $membru = membruCurent();
  * apăsarea butonului, cu tot ce scrisese pierdut.
  */
 if ($membru === null) {
-    header('Location: login.php?redirect=' . urlencode('/adauga_eveniment.php'));
-    exit;
+    cereIntrare('/adauga_eveniment.php');
 }
 
 $membruId   = (int) $membru['id'];

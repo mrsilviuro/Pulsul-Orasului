@@ -19,8 +19,7 @@ require_once __DIR__ . '/inc/stergere.php';   // ZILE_RAGAZ_STERGERE
 $membru = membruCurent();
 
 if ($membru === null) {
-    header('Location: login.php?redirect=' . urlencode('/setari.php'));
-    exit;
+    cereIntrare('/setari.php');
 }
 
 /**

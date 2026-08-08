@@ -641,6 +641,156 @@ foreach ([
     verifica($ce . ' → trimis pe prima pagină', 302, $r['stare']);
 }
 
+echo "\n=== PAGINA UNUI EVENIMENT (event.php) ===\n";
+
+db()->exec('DELETE FROM evenimente');
+
+$idAprobat  = pune($idOrg,   'Cursa aprobată',       'aprobat',      7);
+$idAsteapta = pune($idOrg,   'Cursa în așteptare',   'in_asteptare', 8);
+$idRespins  = pune($idOrg,   'Cursa respinsă',       'respins',      9);
+$idStrain   = pune($idAltul, 'Al altuia, în așteptare', 'in_asteptare', 10);
+
+$slugul = static function (int $id): string {
+    $q = db()->prepare('SELECT slug FROM evenimente WHERE id = ?');
+    $q->execute([$id]);
+    return (string) $q->fetchColumn();
+};
+
+$laEveniment = static fn(int $id): string => $baza . '/event.php?slug=' . urlencode($slugul($id));
+
+/* -------------------- fără cont nu se intră deloc -------------------- */
+
+$r = cerere($laEveniment($idAprobat), $anonim);
+verifica('nelogat → trimis la login', 302, $r['stare']);
+verifica('spre login, nu în altă parte', true, str_contains($r['unde'], 'login.php'));
+verifica('și adus înapoi la eveniment după intrare', true,
+    str_contains($r['unde'], 'redirect=' . urlencode('/event.php?slug=' . $slugul($idAprobat))));
+
+// Un slug care nu există trebuie să arate EXACT ca unul care există: altfel,
+// cine nu are cont ar putea afla ce sluguri sunt bune.
+$rInexistent = cerere($baza . '/event.php?slug=nu-exista-abc123', $anonim);
+verifica('nelogat, slug inexistent: același răspuns', $r['stare'], $rInexistent['stare']);
+
+/* ------------------------- cine ce poate vedea ------------------------ */
+
+verifica('aprobatul se deschide pentru oricine e conectat', 200,
+    cerere($laEveniment($idAprobat), $c)['stare']);
+
+verifica('organizatorul își vede evenimentul în așteptare', 200,
+    cerere($laEveniment($idAsteapta), $c)['stare']);
+
+verifica('și pe cel respins', 200, cerere($laEveniment($idRespins), $c)['stare']);
+
+// Alt membru conectat, care nu e organizatorul.
+$altul = [];
+intra($altul, EMAIL_ALTUL);
+
+verifica('altcineva NU vede ce așteaptă moderarea', 302,
+    cerere($laEveniment($idAsteapta), $altul)['stare']);
+verifica('nici ce a fost respins', 302, cerere($laEveniment($idRespins), $altul)['stare']);
+verifica('dar vede aprobatul', 200, cerere($laEveniment($idAprobat), $altul)['stare']);
+verifica('organizatorul nu vede ce așteaptă la altul', 302,
+    cerere($laEveniment($idStrain), $c)['stare']);
+
+verifica('slug inexistent → prima pagină', 302,
+    cerere($baza . '/event.php?slug=nu-exista-abc123', $c)['stare']);
+verifica('fără slug → prima pagină', 302, cerere($baza . '/event.php', $c)['stare']);
+
+foreach ([
+    'injecție SQL' => "' OR 1=1 --",
+    'cale de fișier' => '../../inc/config.php',
+    'majuscule'      => 'CURSA-APROBATA-ABC',
+    'semne'          => '<script>alert(1)</script>',
+] as $ce => $slugRau) {
+    verifica('slug ' . $ce . ' → prima pagină', 302,
+        cerere($baza . '/event.php?slug=' . urlencode($slugRau), $c)['stare']);
+}
+
+/* --------------------------- ce se afișează --------------------------- */
+
+$pagina = cerere($laEveniment($idAprobat), $c)['corp'];
+
+verifica('titlul e în pagină', true, str_contains($pagina, 'Cursa aprobată'));
+verifica('categoria la fel', true, str_contains($pagina, 'Sport'));
+verifica('data scrisă întreagă', true,
+    str_contains($pagina, dataLunga(date('Y-m-d', strtotime('+7 days')))));
+verifica('ora de sfârșit lipsă e spusă, nu ascunsă', true,
+    str_contains($pagina, 'oră de sfârșit nedeterminată'));
+verifica('locația', true, str_contains($pagina, 'Piața Sfatului'));
+verifica('costul lipsă înseamnă gratuit', true, str_contains($pagina, 'Gratuit'));
+verifica('organizatorul, cu link spre profilul lui', true,
+    str_contains($pagina, 'profil.php?m=organizat02'));
+
+/**
+ * Câmpurile nespecificate nu lasă rânduri goale.
+ *
+ * Se caută eticheta așa cum e tipărită, „<span>Vârstă minimă</span>", nu
+ * doar cuvintele: altfel un comentariu din sursă ar trece drept rând afișat —
+ * cum s-a și întâmplat prima dată când am scris verificarea asta.
+ */
+verifica('patru rânduri de detalii, atât', 4, substr_count($pagina, 'event-box__item'));
+verifica('fără rând de vârstă minimă', false, str_contains($pagina, '<span>Vârstă minimă</span>'));
+verifica('fără rând de participanți', false, str_contains($pagina, '<span>Participanți</span>'));
+verifica('fără rând „Pentru cine"', false, str_contains($pagina, '<span>Pentru cine</span>'));
+
+// …iar când sunt completate, se văd toate.
+db()->prepare(
+    'UPDATE evenimente SET ora_sfarsit = ?, cost = ?, varsta_minima = ?,
+            participanti_min = ?, participanti_max = ?, gen_participanti = ?
+      WHERE id = ?'
+)->execute(['22:30:00', '45.50', 18, 10, 50, 'femei', $idAprobat]);
+
+$paginaPlina = cerere($laEveniment($idAprobat), $c)['corp'];
+
+verifica('cu toate completate: șapte rânduri', 7, substr_count($paginaPlina, 'event-box__item'));
+verifica('intervalul orar întreg', true, str_contains($paginaPlina, '19:00 — 22:30'));
+verifica('costul scris pe românește', true, str_contains($paginaPlina, '45,50 lei'));
+verifica('vârsta minimă', true, str_contains($paginaPlina, '18 ani'));
+verifica('genul participanților', true, str_contains($paginaPlina, 'Doar femei'));
+verifica('participanții, într-un singur rând', true,
+    str_contains($paginaPlina, 'minimum 10, cel mult 50'));
+
+verifica('organizatorul primește butonul de editare', true,
+    str_contains($pagina, 'post__editeaza'));
+verifica('și duce la formular', true, str_contains($pagina, 'href="adauga_eveniment.php"'));
+
+$paginaAltul = cerere($laEveniment($idAprobat), $altul)['corp'];
+verifica('altcineva nu primește butonul de editare', false,
+    str_contains($paginaAltul, 'post__editeaza'));
+
+$paginaAsteapta = cerere($laEveniment($idAsteapta), $c)['corp'];
+verifica('starea se scrie pe pagină', true,
+    str_contains($paginaAsteapta, 'În așteptare de aprobare'));
+verifica('și nu se lasă indexată', true, str_contains($paginaAsteapta, 'name="robots"'));
+
+$paginaRespins = cerere($laEveniment($idRespins), $c)['corp'];
+verifica('respinsul își spune starea altfel', true,
+    str_contains($paginaRespins, 'nu a trecut de verificare'));
+
+/* ------------------- textul rămâne text, nu cod ------------------- */
+
+db()->prepare('UPDATE evenimente SET titlu = ?, descriere = ? WHERE id = ?')->execute([
+    'Titlu cu <script>alert(1)</script> & semne',
+    "Primul paragraf, cu <b>etichete</b> & \"ghilimele\".\n\nAl doilea paragraf.\n"
+        . "Un rând nou.\n\n" . str_repeat('Umplem până la trei sute de caractere. ', 8),
+    $idAprobat,
+]);
+
+$pagina = cerere($laEveniment($idAprobat), $c)['corp'];
+
+verifica('eticheta din titlu e scăpată', true, str_contains($pagina, '&lt;script&gt;'));
+verifica('și nu ajunge cod în pagină', false, str_contains($pagina, '<script>alert(1)</script>'));
+verifica('„&" rămâne text, nu entitate ruptă', true, str_contains($pagina, '&amp; semne'));
+verifica('paragrafele devin <p>', true, substr_count($pagina, '<p>Primul paragraf') === 1);
+verifica('sunt trei paragrafe', 3, substr_count($pagina, '<p>Al doilea') + substr_count($pagina, '<p>Primul') + substr_count($pagina, '<p>Umplem'));
+verifica('rândul simplu devine <br>', true, str_contains($pagina, 'Al doilea paragraf.<br'));
+
+/* ---------------- cartonașele de pe profil duc la pagină ---------------- */
+
+$pagina = cerere($baza . '/profil.php', $c)['corp'];
+verifica('cartonașele de pe profil trimit la event.php', true,
+    str_contains($pagina, 'href="event.php?slug=' . $slugul($idAprobat) . '"'));
+
 /* ---------------------------- curățenie -------------------------------- */
 
 db()->exec('DELETE FROM evenimente');

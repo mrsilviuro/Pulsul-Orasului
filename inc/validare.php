@@ -578,6 +578,120 @@ function slugEveniment(string $titlu): string
 }
 
 /**
+ * O dată scrisă întreagă: „Duminică, 16 august 2026".
+ *
+ * Ziua săptămânii e acolo fiindcă asta caută omul întâi când se uită la un
+ * eveniment: nu „16", ci „e sâmbătă sau e într-o zi de lucru?".
+ */
+function dataLunga(?string $data): string
+{
+    if ($data === null || $data === '') {
+        return '';
+    }
+
+    try {
+        $moment = new DateTimeImmutable($data);
+    } catch (Exception $e) {
+        return '';
+    }
+
+    $zile = ['duminică', 'luni', 'marți', 'miercuri', 'joi', 'vineri', 'sâmbătă'];
+    $zi   = $zile[(int) $moment->format('w')];
+
+    return mb_strtoupper(mb_substr($zi, 0, 1, 'UTF-8'), 'UTF-8') . mb_substr($zi, 1, null, 'UTF-8')
+        . ', ' . $moment->format('j') . ' ' . numeleLunilor()[(int) $moment->format('n')]
+        . ' ' . $moment->format('Y');
+}
+
+/** Ora fără secunde: „19:00:00" din bază devine „19:00". */
+function oraScurta(?string $ora): string
+{
+    return ($ora !== null && preg_match('/^(\d{2}:\d{2})/', $ora, $m) === 1) ? $m[1] : '';
+}
+
+/**
+ * Costul, scris pe românește.
+ *
+ * NULL înseamnă „gratuit", iar 0 înseamnă „am scris eu zero" — la afișare sunt
+ * același lucru, dar în bază rămân diferite (vezi README). Zecimalele apar doar
+ * când există: „25 lei", nu „25,00 lei".
+ */
+function costScris($cost): string
+{
+    if ($cost === null || $cost === '') {
+        return 'Gratuit';
+    }
+
+    $bani = (float) $cost;
+
+    if ($bani <= 0) {
+        return 'Gratuit';
+    }
+
+    $scris = (fmod($bani, 1.0) === 0.0)
+        ? number_format($bani, 0, ',', '.')
+        : number_format($bani, 2, ',', '.');
+
+    return $scris . ' lei';
+}
+
+/**
+ * O cale de pe site-ul nostru, luată dintr-un parametru de adresă.
+ *
+ * Întoarce calea curățată, sau '' dacă nu e de încredere. Se folosește oriunde
+ * ajunge un „?redirect=" — la intrarea obișnuită, la cea cu Google, și la orice
+ * pagină care trimite omul să se conecteze și îl aduce înapoi.
+ *
+ * Verificarea era până acum scrisă de trei ori, în trei fișiere, și lăsa să
+ * treacă exact lucrul de care se ferea. „/\alt-site.ro" începe cu o bară, deci
+ * trecea — iar browserele îndreaptă bara inversă și ajung la „//alt-site.ro",
+ * adică la o adresă de pe alt domeniu. La fel, un tab sau un rând nou în mijloc
+ * e scos de browser înainte să se uite la adresă, deci „/\ttp://..." nu e ce
+ * pare. De aceea aici nu mai întrebăm doar cu ce începe:
+ *
+ *   - trebuie să înceapă cu o singură bară obișnuită;
+ *   - nicio bară inversă nicăieri;
+ *   - niciun caracter de control;
+ *   - nu mai lungă decât are rost.
+ *
+ * Restul — ce pagină, cu ce parametri — nu ne privește: e o cale de pe site.
+ */
+function caleInterna(?string $cerut, int $lungimeMax = 300): string
+{
+    if (!is_string($cerut)) {
+        return '';
+    }
+
+    /**
+     * Caracterele de control se caută în ce a venit, ÎNAINTE de orice tăiere.
+     *
+     * trim() înghite din capete și „\0", și „\n" — deci un „/pagina.php\0" ar
+     * ieși curat din el și ar trece verificarea de mai jos ca și cum octetul
+     * acela n-ar fi fost trimis niciodată. Or, dacă cineva l-a trimis, vrem să
+     * ne oprim, nu să-i curățăm noi adresa.
+     */
+    if (preg_match('/[\x00-\x1F\x7F]/', $cerut) === 1) {
+        return '';
+    }
+
+    $cale = trim($cerut, ' ');
+
+    if ($cale === '' || strlen($cale) > $lungimeMax) {
+        return '';
+    }
+
+    if ($cale[0] !== '/' || ($cale[1] ?? '') === '/') {
+        return '';
+    }
+
+    if (str_contains($cale, '\\')) {
+        return '';
+    }
+
+    return $cale;
+}
+
+/**
  * Mesajul din formularul de contact.
  *
  * Nu-și scrie propriile reguli: numele trec prin esteNumeValid(), adresa prin

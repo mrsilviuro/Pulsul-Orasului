@@ -818,10 +818,23 @@
     /* --- Mesajul „intră în cont ca să continui" --- */
     // Acceptăm doar căi relative la site-ul nostru, ca parametrul redirect să nu
     // poată fi folosit pentru a trimite utilizatorul pe un domeniu străin.
+    /**
+     * Unde ne întoarcem după intrare — dar numai dacă e o cale de pe site.
+     *
+     * Aceleași reguli ca la caleInterna() din inc/validare.php, fiindcă
+     * valoarea asta ajunge în window.location: o bară inversă („/\alt-site.ro")
+     * e îndreptată de browser și devine o adresă de pe alt domeniu, iar un tab
+     * sau un rând nou e scos înainte ca browserul să se uite la adresă.
+     *
+     * Serverul verifică oricum a doua oară; aici e ca omul să nu ajungă în
+     * altă parte nici măcar pentru o clipă.
+     */
     function safeRedirect() {
       var value = params.get('redirect');
       if (!value) return '';
       if (value.charAt(0) !== '/' || value.charAt(1) === '/') return '';
+      if (value.indexOf('\\') !== -1) return '';
+      if (/[\x00-\x1F\x7F]/.test(value)) return '';
       return value;
     }
 

@@ -186,14 +186,11 @@ autentifica($membru, $tineMinte && !$cuParolaTemporara, $cuParolaTemporara);
  *
  * Se acceptă doar căi din interiorul site-ului. O valoare de forma
  * „https://alt-site.ro" sau „//alt-site.ro" e ignorată, ca parametrul să nu
- * poată fi folosit pentru a duce oamenii în altă parte.
+ * poată fi folosit pentru a duce oamenii în altă parte. Regula stă întreagă în
+ * caleInterna() — și aici, și la login.php, și la google.php.
  */
-$redirect = 'index.php';
-$cerut    = is_string($date['redirect'] ?? null) ? $date['redirect'] : '';
-
-if ($cerut !== '' && $cerut[0] === '/' && ($cerut[1] ?? '') !== '/') {
-    $redirect = $cerut;
-}
+$cerut    = caleInterna($date['redirect'] ?? null);
+$redirect = $cerut !== '' ? $cerut : 'index.php';
 
 // Cine a intrat cu parola temporară merge direct la schimbarea ei, oriunde ar
 // fi vrut să ajungă.

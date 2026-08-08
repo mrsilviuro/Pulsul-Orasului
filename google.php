@@ -54,12 +54,7 @@ if (!isset($_GET['code'])) {
      * obișnuită: altfel parametrul ar putea fi folosit ca să trimită oamenii
      * pe un domeniu străin, imediat după ce s-au conectat la noi.
      */
-    $inapoiLa = '';
-    $cerut    = isset($_GET['redirect']) && is_string($_GET['redirect']) ? $_GET['redirect'] : '';
-
-    if ($cerut !== '' && $cerut[0] === '/' && ($cerut[1] ?? '') !== '/') {
-        $inapoiLa = $cerut;
-    }
+    $inapoiLa = caleInterna($_GET['redirect'] ?? null);
 
     header('Location: ' . googleAdresaDePlecare($inapoiLa));
     exit;

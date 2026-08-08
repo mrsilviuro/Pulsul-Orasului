@@ -187,6 +187,64 @@ function evenimenteDePeProfil(int $membruId, bool $vedeSiCeleInAsteptare): array
     return $q->fetchAll();
 }
 
+/* ====================== PAGINA UNUI EVENIMENT ========================= */
+
+/**
+ * Un eveniment după slugul din adresă, cu categoria și organizatorul lui.
+ *
+ * Întoarce null dacă slugul nu duce nicăieri. Nu se filtrează aici după starea
+ * de moderare: cine are voie să vadă ce hotărăște poateVedeaEvenimentul(), ca
+ * regula să stea într-un loc în care se poate citi, nu ascunsă într-un WHERE.
+ */
+function evenimentDupaSlug(string $slug): ?array
+{
+    // Alfabetul slugului, așa cum îl scrie slugEveniment(): litere mici, cifre
+    // și cratime. Orice altceva nici nu ajunge până la bază.
+    if (preg_match('/^[a-z0-9][a-z0-9-]{0,169}$/', $slug) !== 1) {
+        return null;
+    }
+
+    $q = db()->prepare(
+        'SELECT e.*,
+                c.nume AS categorie, c.slug AS categorie_slug, c.imagine_default,
+                m.permalink AS org_permalink, m.nume AS org_nume, m.prenume AS org_prenume,
+                m.poza AS org_poza, m.poza_actualizata_la AS org_poza_actualizata_la
+           FROM evenimente e
+           JOIN categorii c ON c.id = e.categorie_id
+           JOIN membri m    ON m.id = e.membru_id
+          WHERE e.slug = ?
+          LIMIT 1'
+    );
+    $q->execute([$slug]);
+
+    return $q->fetch() ?: null;
+}
+
+/**
+ * Are voie omul ăsta să vadă evenimentul ăsta?
+ *
+ * Aprobat — oricine e conectat. Neaprobat (în așteptare sau respins) — doar
+ * organizatorul. Simetric dinadins: un anunț respins nu e o rușine de arătat
+ * altora, e o treabă între noi și cel care l-a scris.
+ *
+ * $membruId e 0 pentru cine nu e conectat, deci nu poate nimeri peste
+ * membru_id-ul nimănui.
+ */
+function poateVedeaEvenimentul(array $eveniment, int $membruId): bool
+{
+    if ((int) $eveniment['membru_id'] === $membruId && $membruId > 0) {
+        return true;
+    }
+
+    return $eveniment['stare_moderare'] === 'aprobat';
+}
+
+/** Adresa paginii unui eveniment. Un singur loc care o știe. */
+function urlEveniment(string $slug): string
+{
+    return 'event.php?slug=' . urlencode($slug);
+}
+
 /* ============================= SALVAREA =============================== */
 
 /**

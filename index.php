@@ -19,15 +19,15 @@ require __DIR__ . '/inc/antet.php';
     <div class="slideshow" id="slideshow" data-interval="5000" aria-roledescription="carusel">
       <div class="slideshow__track" id="slideshow-track">
 
-        <a class="slide" href="articol.php">
+        <a class="slide" href="event.php">
           <img src="assets/img/slides/slide-1.svg" alt="Evenimentele săptămânii în oraș" width="1600" height="900" fetchpriority="high" decoding="async">
         </a>
 
-        <a class="slide" href="articol.php">
+        <a class="slide" href="event.php">
           <img src="assets/img/slides/slide-2.svg" alt="Competiții sportive locale" width="1600" height="900" decoding="async">
         </a>
 
-        <a class="slide" href="articol.php">
+        <a class="slide" href="event.php">
           <img src="assets/img/slides/slide-3.svg" alt="Comunitatea în acțiune" width="1600" height="900" decoding="async">
         </a>
 
@@ -86,12 +86,12 @@ require __DIR__ . '/inc/antet.php';
     <div class="grid">
 
       <article class="card">
-        <a class="card__media" href="articol.php">
+        <a class="card__media" href="event.php">
           <img src="assets/img/posts/post-2.svg" alt="" width="1280" height="720" loading="lazy" decoding="async">
           <span class="card__tag">Cultură</span>
         </a>
         <div class="card__body">
-          <h2 class="card__title"><a href="articol.php">Trei zile de festival în parcul central, cu intrare liberă</a></h2>
+          <h2 class="card__title"><a href="event.php">Trei zile de festival în parcul central, cu intrare liberă</a></h2>
           <p class="card__excerpt">Peste 20 de trupe, food trucks și o zonă dedicată celor mici. Programul complet, pe zile.</p>
           <div class="card__meta">
             <span class="avatar" aria-hidden="true">IR</span>
@@ -103,12 +103,12 @@ require __DIR__ . '/inc/antet.php';
       </article>
 
       <article class="card">
-        <a class="card__media" href="articol.php">
+        <a class="card__media" href="event.php">
           <img src="assets/img/posts/post-3.svg" alt="" width="1280" height="720" loading="lazy" decoding="async">
           <span class="card__tag">Comunitate</span>
         </a>
         <div class="card__body">
-          <h2 class="card__title"><a href="articol.php">Piața de weekend își schimbă locul. Unde o găsești de sâmbătă</a></h2>
+          <h2 class="card__title"><a href="event.php">Piața de weekend își schimbă locul. Unde o găsești de sâmbătă</a></h2>
           <p class="card__excerpt">Producătorii locali se mută temporar, pe perioada lucrărilor din zona centrală.</p>
           <div class="card__meta">
             <span class="avatar" aria-hidden="true">VS</span>
@@ -120,12 +120,12 @@ require __DIR__ . '/inc/antet.php';
       </article>
 
       <article class="card">
-        <a class="card__media" href="articol.php">
+        <a class="card__media" href="event.php">
           <img src="assets/img/posts/post-4.svg" alt="" width="1280" height="720" loading="lazy" decoding="async">
           <span class="card__tag">Muzică</span>
         </a>
         <div class="card__body">
-          <h2 class="card__title"><a href="articol.php">Concert în aer liber pe faleză, sâmbătă seara</a></h2>
+          <h2 class="card__title"><a href="event.php">Concert în aer liber pe faleză, sâmbătă seara</a></h2>
           <p class="card__excerpt">Acces gratuit, dar locurile pe scaune se rezervă online. Cum ajungi cu transportul public.</p>
           <div class="card__meta">
             <span class="avatar" aria-hidden="true">DP</span>
@@ -137,12 +137,12 @@ require __DIR__ . '/inc/antet.php';
       </article>
 
       <article class="card">
-        <a class="card__media" href="articol.php">
+        <a class="card__media" href="event.php">
           <img src="assets/img/posts/post-5.svg" alt="" width="1280" height="720" loading="lazy" decoding="async">
           <span class="card__tag">Sport</span>
         </a>
         <div class="card__body">
-          <h2 class="card__title"><a href="articol.php">Prima pistă de ciclism care leagă cele două maluri</a></h2>
+          <h2 class="card__title"><a href="event.php">Prima pistă de ciclism care leagă cele două maluri</a></h2>
           <p class="card__excerpt">7 kilometri, complet separați de trafic. Am mers pe ea și îți spunem cum arată.</p>
           <div class="card__meta">
             <span class="avatar" aria-hidden="true">MC</span>
@@ -154,12 +154,12 @@ require __DIR__ . '/inc/antet.php';
       </article>
 
       <article class="card">
-        <a class="card__media" href="articol.php">
+        <a class="card__media" href="event.php">
           <img src="assets/img/posts/post-6.svg" alt="" width="1280" height="720" loading="lazy" decoding="async">
           <span class="card__tag">Gastro</span>
         </a>
         <div class="card__body">
-          <h2 class="card__title"><a href="articol.php">Târgul de street food, ediția de vară: 30 de standuri</a></h2>
+          <h2 class="card__title"><a href="event.php">Târgul de street food, ediția de vară: 30 de standuri</a></h2>
           <p class="card__excerpt">De la langoși la ramen. Ce merită încercat și cât costă, realist.</p>
           <div class="card__meta">
             <span class="avatar" aria-hidden="true">RG</span>

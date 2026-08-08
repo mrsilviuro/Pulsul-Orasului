@@ -14,8 +14,7 @@ $membru = membruCurent();
 
 // Pagina e a contului propriu, deci fără cont nu are ce arăta.
 if ($membru === null) {
-    header('Location: login.php?redirect=' . urlencode('/poza.php'));
-    exit;
+    cereIntrare('/poza.php');
 }
 
 $titlu     = 'Poza de profil — PulsulOrasului.Ro';

@@ -28,15 +28,10 @@ $tocmaiIesit = isset($_GET['iesit']);
  * Unde vrea omul să ajungă după ce intră.
  *
  * Se ia din adresă și se dă mai departe butonului de Google, care pleacă de pe
- * server, nu din JavaScript. Se acceptă doar căi de pe site-ul nostru — vezi
- * aceeași regulă din api/autentificare.php.
+ * server, nu din JavaScript. Se acceptă doar căi de pe site-ul nostru — regula
+ * întreagă e în caleInterna(), din inc/validare.php.
  */
-$inapoiLa = '';
-$cerut    = isset($_GET['redirect']) && is_string($_GET['redirect']) ? $_GET['redirect'] : '';
-
-if ($cerut !== '' && $cerut[0] === '/' && ($cerut[1] ?? '') !== '/') {
-    $inapoiLa = $cerut;
-}
+$inapoiLa = caleInterna($_GET['redirect'] ?? null);
 
 // Necazul lăsat de google.php, dacă întoarcerea de la Google n-a mers.
 pornesteSesiunea();

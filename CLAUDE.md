@@ -93,10 +93,15 @@ Site live: https://pulsulorasului.ro
     „ă" ocupă doi octeți, deci o limită pe octeți ar avantaja pe cine scrie fără
     diacritice. În JS la fel: `[...text].length`, nu `.length`.
 
+11. **O pagină numai pentru cine e conectat cheamă `cereIntrare('/calea.php')`**,
+    nu-și scrie singură antetul de redirecționare. Calea de întoarcere trece
+    mereu prin `caleInterna()` — o verificare scrisă de mână lasă să treacă
+    „/\alt-site.ro", pe care browserul îl îndreaptă în „//alt-site.ro".
+
 ## Structură fișiere
 
 ```
-index.php, articol.php, contact.php, despre.php, login.php,
+index.php, event.php, contact.php, despre.php, login.php,
 profil.php, poza.php, setari.php, adauga_eveniment.php, parola-uitata.php,
 parola-noua.php, google.php, finalizare.php, confirma.php, stergere.php,
 iesire.php, verifica.php
@@ -108,7 +113,7 @@ inc/
   validare.php      → toate verificările server-side (fără atingere DB)
   imagini.php       → procesare/validare poze de profil ȘI coperți de eveniment
   evenimente.php    → categorii, regula „un eveniment activ", lista de pe
-                      profil, salvarea
+                      profil, pagina unui eveniment, salvarea
   email.php         → șablon unic pentru toate email-urile (table-based, inline style)
   google.php        → OAuth Google (authorization code flow + PKCE)
   buton-google.php  → butonul de login Google
@@ -168,13 +173,18 @@ assets/css/style.css, assets/js/main.js, assets/img/
 
 ## Ce e neterminat (roadmap)
 
-- Pagina publică a unui eveniment (slugul se generează deja la salvare, dar
-  nu duce nicăieri; de aceea cartonașele de pe profil n-au link)
+- „Mergi la acest eveniment?" și comentariile de pe `event.php` — încă șablon,
+  cu numere și oameni inventați sub un eveniment adevărat
+- Prima pagină (`index.php`) e tot cu articole scrise de mână; linkurile duc la
+  `event.php` fără slug, deci se întorc pe `index.php`
 - Moderarea: fiecare eveniment intră cu `stare_moderare = 'in_asteptare'`; se
-  vede doar organizatorului, pe profilul lui; nu există interfață de aprobare
-- Adresele frumoase de profil: acum e `profil.php?m=<permalink>`
-- Editarea și încheierea manuală a unui eveniment (încheierea automată, din ziua
-  următoare datei, funcționează deja — se calculează la citire, fără cron)
+  vede doar organizatorului, pe profilul lui și pe pagina evenimentului; nu
+  există interfață de aprobare
+- Adresele frumoase: acum sunt `profil.php?m=<permalink>` și `event.php?slug=…`
+- Editarea unui eveniment: butonul „Editează" duce deja la `adauga_eveniment.php`,
+  dar formularul nu știe încă să încarce un eveniment existent
+- Încheierea manuală a unui eveniment (cea automată, din ziua următoare datei,
+  funcționează deja — se calculează la citire, fără cron)
 - Paginile de categorie (slugurile sunt în tabelul `categorii`)
 - Imaginile implicite de categorie (`categorii.imagine_default`) — coloana
   există, fișierele nu; se urcă de mână, nu prin `inc/imagini.php`

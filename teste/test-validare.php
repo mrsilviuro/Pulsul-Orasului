@@ -188,5 +188,53 @@ verifica('un cuvânt fără spații se taie sec', true,
     str_ends_with(inceputDeText(str_repeat('x', 300), 50), 'x…'));
 verifica('textul gol rămâne gol', '', inceputDeText(''));
 
+echo "\n=== DATA LUNGĂ, ORA ȘI COSTUL ===\n";
+
+verifica('data cu ziua săptămânii', 'Duminică, 16 august 2026', dataLunga('2026-08-16'));
+verifica('luni', 'Luni, 17 august 2026', dataLunga('2026-08-17'));
+verifica('sâmbătă', 'Sâmbătă, 3 ianuarie 2026', dataLunga('2026-01-03'));
+verifica('data aiurea → nimic', '', dataLunga('gogoașă'));
+
+verifica('ora fără secunde', '19:00', oraScurta('19:00:00'));
+verifica('ora lipsă → nimic', '', oraScurta(null));
+verifica('ora stricată → nimic', '', oraScurta('mai târziu'));
+
+verifica('NULL înseamnă gratuit', 'Gratuit', costScris(null));
+verifica('și zero tot gratuit', 'Gratuit', costScris('0.00'));
+verifica('suma rotundă, fără zecimale', '25 lei', costScris('25.00'));
+verifica('suma cu bani, cu virgulă', '25,50 lei', costScris('25.50'));
+verifica('miile despărțite', '1.200 lei', costScris('1200.00'));
+
+echo "\n=== CALEA DE ÎNTOARCERE DUPĂ INTRARE ===\n";
+
+verifica('o cale de-a noastră trece', '/setari.php', caleInterna('/setari.php'));
+verifica('cu parametri cu tot', '/event.php?slug=a-b-c', caleInterna('/event.php?slug=a-b-c'));
+
+/**
+ * Fiecare dintre astea a fost, la un moment dat, o cale de a scoate omul de pe
+ * site imediat după ce s-a conectat. Bara inversă e cea mai urâtă: browserul o
+ * îndreaptă, iar „/\alt-site.ro" ajunge „//alt-site.ro", adică alt domeniu.
+ */
+foreach ([
+    'protocol-relativ'      => '//alt-site.ro',
+    'bară inversă'          => '/\\alt-site.ro',
+    'două bare inverse'     => '\\\\alt-site.ro',
+    'bară inversă la mijloc'=> '/pagina\\..\\alt',
+    'adresă întreagă'       => 'https://alt-site.ro',
+    'fără bară la început'  => 'setari.php',
+    'javascript'            => 'javascript:alert(1)',
+    'date:'                 => 'data:text/html,<script>alert(1)</script>',
+    'rând nou'              => "/setari.php\nLocation: https://alt-site.ro",
+    'tab'                   => "/\tsetari.php",
+    'octet nul'             => "/setari.php\0",
+    'gol'                   => '',
+    'doar spații'           => '   ',
+] as $ce => $valoare) {
+    verifica('respinsă: ' . $ce, '', caleInterna($valoare));
+}
+
+verifica('nu se acceptă nici null', '', caleInterna(null));
+verifica('prea lungă → respinsă', '', caleInterna('/' . str_repeat('a', 400)));
+
 printf("\n%s\nTOTAL: %d trecute, %d picate\n", str_repeat('=',60), $treceri, $picaturi);
 exit($picaturi > 0 ? 1 : 0);

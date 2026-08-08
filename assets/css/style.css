@@ -2706,10 +2706,8 @@ body { overscroll-behavior-y: none; }
    `.feedback` are marginea lui de sus, spațiul era deja bun. */
 .evenimente-profil { margin-top: 54px; margin-bottom: 54px; }
 
-/* Titlul unui eveniment nu e link: pagina publică a evenimentului nu există
-   încă. Îi păstrăm mărimea și greutatea din .card__title, dar fără sublinierea
-   care apare la trecerea cu mausul — ar promite un click care nu duce nicăieri. */
-.evenimente-profil .card__media { cursor: default; }
+/* Cartonașele duc acum la event.php, deci se poartă ca oricare altele de pe
+   site — nimic de spus în plus aici. */
 
 /* --- În așteptare de aprobare ------------------------------------------
    Nu e ascuns și nu e roșu: nu s-a greșit nimic, doar n-a ajuns încă la noi.
@@ -2762,3 +2760,40 @@ body { overscroll-behavior-y: none; }
   text-align: center;
 }
 .fara-nimic__text { color: var(--text-soft); font-size: 15px; margin: 0; }
+
+/* =========================================================================
+   31. PAGINA UNUI EVENIMENT (event.php)
+   Șablonul e cel de articol (.post & co). Aici stă doar ce e în plus.
+   ========================================================================= */
+
+/* Anunțul care nu e (încă) public. Îl vede doar organizatorul — pentru
+   oricine altcineva pagina nici nu se deschide — deci e o informare, nu o
+   avertizare pentru cititor. Galbenul e cel de pe cartonașele din profil, ca
+   omul să recunoască aceeași stare în două locuri. */
+.stare-anunt {
+  display: flex; align-items: center; gap: 9px;
+  margin: 4px 0 18px;
+  padding: 11px 15px;
+  border: 1px solid rgba(240, 160, 40, .45);
+  border-radius: var(--radius);
+  background: rgba(240, 160, 40, .12);
+  color: #8a5a06;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.stare-anunt .ico { width: 18px; height: 18px; flex: none; color: #d68a10; }
+[data-theme="dark"] .stare-anunt { color: #f0c780; }
+
+/* Respins e tot o informare, dar altfel: nu mai aștepți nimic. */
+.stare-anunt--respins {
+  border-color: rgba(224, 57, 59, .4);
+  background: rgba(224, 57, 59, .1);
+  color: #a3272a;
+}
+.stare-anunt--respins .ico { color: #e0393b; }
+[data-theme="dark"] .stare-anunt--respins { color: #f2a3a4; }
+
+/* Butonul de editare stă lângă butoanele de distribuire, pe același rând cu
+   organizatorul. `.post__by` are deja margin-right:auto, deci le împinge pe
+   amândouă la dreapta, una lângă alta. */
+.post__editeaza { flex: none; }

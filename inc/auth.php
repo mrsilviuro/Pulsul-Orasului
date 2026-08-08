@@ -128,6 +128,24 @@ function membruDupaPermalink(string $permalink): ?array
     return ($gasit && $gasit['stare'] === 'activ') ? $gasit : null;
 }
 
+/**
+ * Trimite omul să se conecteze și îl aduce înapoi de unde a plecat.
+ *
+ * $inapoiLa — calea de pe site la care voia să ajungă, cu parametri cu tot
+ *             („/event.php?slug=..."). Trece prin caleInterna(): dacă nu e o
+ *             cale de-a noastră, se pierde, și omul rămâne pe prima pagină.
+ *
+ * Nu se mai întoarce: opreșe pagina pe loc. De aceea se cheamă înainte să se
+ * fi tipărit ceva — după primul octet trimis, un antet nu mai poate pleca.
+ */
+function cereIntrare(string $inapoiLa = ''): void
+{
+    $cale = caleInterna($inapoiLa);
+
+    header('Location: login.php' . ($cale !== '' ? '?redirect=' . urlencode($cale) : ''));
+    exit;
+}
+
 function esteLogat(): bool
 {
     return membruCurent() !== null;

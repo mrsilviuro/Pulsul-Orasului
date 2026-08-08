@@ -1,8 +1,70 @@
 <?php
 declare(strict_types=1);
 
-$titlu     = 'Maratonul orașului revine: peste 4.000 de alergători la start — PulsulOrasului.Ro';
-$descriere = 'Traseul trece anul acesta prin centrul vechi. Tot ce trebuie să știi despre restricții, puncte de hidratare și program.';
+/**
+ * PulsulOrasului.Ro — pagina unui eveniment.
+ *
+ * Adresa: event.php?slug=<slugul-evenimentului>. Slugul, nu id-ul: se poate
+ * citi la telefon, spune despre ce e vorba și nu dă în vileag câte evenimente
+ * are site-ul.
+ */
+
+require_once __DIR__ . '/inc/evenimente.php';
+
+$slug = trim((string) ($_GET['slug'] ?? ''));
+
+/**
+ * Fără cont nu se intră deloc — de oriunde ar veni linkul.
+ *
+ * Verificarea e ÎNAINTEA căutării în bază, dinadins: așa, cine nu e conectat
+ * nu poate afla nici măcar dacă un slug duce undeva. Și tot de aici se pleacă
+ * spre login cu adresa de acum în buzunar, ca după conectare omul să ajungă
+ * fix la evenimentul pe care voia să-l vadă, nu pe prima pagină.
+ */
+$membru = membruCurent();
+
+if ($membru === null) {
+    cereIntrare('/event.php' . ($slug !== '' ? '?slug=' . urlencode($slug) : ''));
+}
+
+$eveniment = evenimentDupaSlug($slug);
+
+/**
+ * Un slug care nu duce nicăieri și un eveniment pe care n-ai voie să-l vezi
+ * sfârșesc la fel: pe prima pagină.
+ *
+ * Același răspuns pentru amândouă, dinadins. Dacă „nu există" ar arăta altfel
+ * decât „nu ai voie", oricine ar putea afla, ghicind sluguri, ce evenimente
+ * așteaptă la moderare.
+ */
+if ($eveniment === null || !poateVedeaEvenimentul($eveniment, (int) $membru['id'])) {
+    header('Location: index.php');
+    exit;
+}
+
+$eOrganizatorul = (int) $eveniment['membru_id'] === (int) $membru['id'];
+$eAprobat       = $eveniment['stare_moderare'] === 'aprobat';
+
+/* --------------------------- ce se afișează --------------------------- */
+
+$coperta = urlCoperta($eveniment['coperta'] ?? null);
+
+// Imaginea implicită a categoriei, când va exista. Coloana e deja în bază,
+// fișierele se urcă de mână — vezi roadmap-ul din CLAUDE.md.
+if ($coperta === '' && !empty($eveniment['imagine_default'])) {
+    $coperta = 'assets/img/categorii/' . $eveniment['imagine_default'];
+}
+
+$oraInceput = oraScurta($eveniment['ora_inceput']);
+$oraSfarsit = oraScurta($eveniment['ora_sfarsit'] ?? null);
+
+$organizator = numeAfisat($eveniment['org_nume'], $eveniment['org_prenume']);
+
+$titlu     = $eveniment['titlu'] . ' — PulsulOrasului.Ro';
+$descriere = inceputDeText((string) $eveniment['descriere'], 155);
+
+// Cât timp nu e aprobat, n-are ce căuta în motoarele de căutare.
+$noindex   = !$eAprobat;
 
 require __DIR__ . '/inc/antet.php';
 ?>
@@ -18,33 +80,60 @@ require __DIR__ . '/inc/antet.php';
     <nav class="crumbs" aria-label="Navigare">
       <a href="index.php">Acasă</a>
       <span aria-hidden="true">/</span>
-      <a href="#">Sport</a>
+      <span><?= h($eveniment['categorie']) ?></span>
       <span aria-hidden="true">/</span>
-      <span class="crumbs__current">Maratonul orașului</span>
+      <span class="crumbs__current"><?= h(inceputDeText($eveniment['titlu'], 60)) ?></span>
     </nav>
 
     <article class="post">
 
-      <!-- ======================= ANTETUL ARTICOLULUI ======================= -->
+      <!-- ======================= ANTETUL EVENIMENTULUI ===================== -->
       <header class="post__head">
-        <span class="post__cat">Sport</span>
-        <h1 class="post__title">Maratonul orașului revine: peste 4.000 de alergători la start</h1>
-        <p class="post__lead">
-          Traseul trece anul acesta prin centrul vechi, iar înscrierile pentru cursa de 10 km
-          s-au închis în mai puțin de 48 de ore. Tot ce trebuie să știi despre restricții de
-          circulație, puncte de hidratare și programul pe ore.
+        <span class="post__cat"><?= h($eveniment['categorie']) ?></span>
+        <h1 class="post__title"><?= h($eveniment['titlu']) ?></h1>
+
+        <?php if (!$eAprobat): ?>
+        <!--
+          Aici ajunge doar organizatorul: pentru oricine altcineva, un eveniment
+          neaprobat nu se deschide deloc. Îi spunem pe față unde stă anunțul,
+          cu aceeași etichetă galbenă de pe cartonașele din profil.
+        -->
+        <p class="stare-anunt stare-anunt--<?= $eveniment['stare_moderare'] === 'respins' ? 'respins' : 'asteptare' ?>">
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="9"/><path d="M12 7v5.2l3.4 2"/>
+          </svg>
+          <?php if ($eveniment['stare_moderare'] === 'respins'): ?>
+          <span>Anunțul nu a trecut de verificare. Îl vezi doar tu.</span>
+          <?php else: ?>
+          <span>În așteptare de aprobare. Îl vezi doar tu, până îl citim.</span>
+          <?php endif; ?>
         </p>
+        <?php endif; ?>
 
         <div class="post__meta">
-          <img class="post__avatar" src="assets/img/avatars/andrei.svg" alt="" width="96" height="96">
+          <!-- Poza organizatorului; cine n-are, arată silueta implicită. -->
+          <img class="post__avatar" src="<?= h(urlPoza($eveniment['org_poza'] ?? null, true)) ?>"
+               alt="" width="96" height="96">
           <div class="post__by">
-            <a class="post__author" href="profil.php">Andrei Munteanu</a>
+            <a class="post__author" href="profil.php?m=<?= h(urlencode((string) $eveniment['org_permalink'])) ?>"><?= h($organizator) ?></a>
             <div class="post__sub">
-              <time datetime="2026-08-04">4 august 2026</time>
+              <span>Organizator</span>
               <span class="dot" aria-hidden="true"></span>
-              <span>5 min citire</span>
+              <time datetime="<?= h((string) $eveniment['creat_la']) ?>">publicat <?= h(dataScurta($eveniment['creat_la'])) ?></time>
             </div>
           </div>
+
+          <?php if ($eOrganizatorul): ?>
+          <!-- Doar pentru cel care l-a scris. Formularul învață să și editeze
+               separat; deocamdată doar linkul. -->
+          <a class="btn btn--ghost btn--sm post__editeaza" href="adauga_eveniment.php">
+            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 20h4l10-10a2.4 2.4 0 0 0-3.4-3.4L4.6 16.6z"/>
+              <path d="m14.2 7.4 2.4 2.4"/>
+            </svg>
+            <span>Editează</span>
+          </a>
+          <?php endif; ?>
 
           <div class="post__share">
             <button class="icon-btn" type="button" aria-label="Distribuie pe Facebook">
@@ -60,103 +149,122 @@ require __DIR__ . '/inc/antet.php';
         </div>
       </header>
 
-      <!-- ======================= THUMBNAIL 16:9 =========================== -->
+      <?php if ($coperta !== ''): ?>
+      <!-- ======================= COPERTA 16:9 ============================= -->
+      <!-- Fără figcaption: n-avem de unde ști ce e în poză, iar o legendă
+           inventată e mai rea decât niciuna. -->
       <figure class="post__figure">
-        <img src="assets/img/posts/post-1.svg" alt="Alergători pe traseul din centrul orașului"
-             width="1280" height="720" fetchpriority="high" decoding="async">
-        <figcaption>Startul se dă din Piața Centrală, la ora 08:00. Foto: arhiva PulsulOrasului.Ro</figcaption>
+        <img src="<?= h($coperta) ?>" alt=""
+             width="1600" height="900" fetchpriority="high" decoding="async">
       </figure>
+      <?php endif; ?>
 
-      <!-- ==================== DETALIILE EVENIMENTULUI ===================== -->
+      <!-- ==================== DETALIILE EVENIMENTULUI =====================
+        Ce lipsește nu se arată gol. Un rând „Vârstă minimă: —" nu spune
+        nimic, dar ocupă locul unuia care ar fi spus.
+      ================================================================== -->
       <section class="event-box" aria-label="Detaliile evenimentului">
         <div class="event-box__item">
           <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
             <rect x="3.5" y="5" width="17" height="16" rx="3"/><path d="M8 3v4M16 3v4M3.5 10h17"/>
           </svg>
-          <div><span>Data</span><strong>Duminică, 16 august 2026</strong></div>
+          <div><span>Data</span><strong><?= h(dataLunga($eveniment['data_eveniment'])) ?></strong></div>
         </div>
+
         <div class="event-box__item">
           <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
             <circle cx="12" cy="12" r="9"/><path d="M12 7v5.2l3.4 2"/>
           </svg>
-          <div><span>Ora</span><strong>08:00 — 14:00</strong></div>
+          <div><span>Ora</span><strong><?php
+            // Ora de început e mereu știută; doar sfârșitul poate lipsi. Nu-l
+            // ascundem pe primul din pricina celui de-al doilea.
+            echo h($oraSfarsit !== ''
+                ? $oraInceput . ' — ' . $oraSfarsit
+                : $oraInceput . ' — oră de sfârșit nedeterminată');
+          ?></strong></div>
         </div>
+
         <div class="event-box__item">
           <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M12 21s7-5.6 7-11a7 7 0 1 0-14 0c0 5.4 7 11 7 11Z"/><circle cx="12" cy="10" r="2.6"/>
           </svg>
-          <div><span>Locul</span><strong>Piața Centrală</strong></div>
+          <div><span>Locul</span><strong><?= h($eveniment['locatie']) ?></strong></div>
         </div>
+
         <div class="event-box__item">
           <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
             <rect x="2.5" y="6" width="19" height="12" rx="3"/><circle cx="12" cy="12" r="2.6"/>
           </svg>
-          <div><span>Acces</span><strong>Gratuit pentru public</strong></div>
+          <div><span>Acces</span><strong><?= h(costScris($eveniment['cost'])) ?></strong></div>
         </div>
+
+        <?php if ($eveniment['varsta_minima'] !== null): ?>
+        <div class="event-box__item">
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="8.2" r="3.6"/><path d="M5 20c0-3.9 3.1-6.4 7-6.4s7 2.5 7 6.4"/>
+          </svg>
+          <div><span>Vârstă minimă</span><strong><?= (int) $eveniment['varsta_minima'] ?> ani</strong></div>
+        </div>
+        <?php endif; ?>
+
+        <?php if ($eveniment['gen_participanti'] !== 'nespecificat'): ?>
+        <div class="event-box__item">
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="9" cy="8.5" r="3.4"/><path d="M3 20c0-3.4 2.7-5.7 6-5.7s6 2.3 6 5.7"/>
+            <path d="M17 8.5h4M19 6.5v4"/>
+          </svg>
+          <div><span>Pentru cine</span><strong><?=
+            $eveniment['gen_participanti'] === 'barbati' ? 'Doar bărbați' : 'Doar femei'
+          ?></strong></div>
+        </div>
+        <?php endif; ?>
+
+        <?php
+          // Cele două numere stau într-un singur rând: „minim 10" și „cel mult
+          // 50" sunt aceeași informație, câți oameni încap.
+          $participanti = [];
+          if ($eveniment['participanti_min'] !== null) {
+              $participanti[] = 'minimum ' . (int) $eveniment['participanti_min'];
+          }
+          if ($eveniment['participanti_max'] !== null) {
+              $participanti[] = 'cel mult ' . (int) $eveniment['participanti_max'];
+          }
+        ?>
+        <?php if ($participanti !== []): ?>
+        <div class="event-box__item">
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="9" cy="8.5" r="3.4"/><path d="M3 20c0-3.4 2.7-5.7 6-5.7s6 2.3 6 5.7"/>
+            <path d="M16.5 5.6a3.4 3.4 0 0 1 0 5.8"/><path d="M18 14.6c2 .8 3 2.6 3 5.4"/>
+          </svg>
+          <div><span>Participanți</span><strong><?= h(implode(', ', $participanti)) ?></strong></div>
+        </div>
+        <?php endif; ?>
       </section>
 
       <!-- ======================== CORPUL ARTICOLULUI ====================== -->
+      <!-- ======================== DESCRIEREA ============================
+        Textul e în bază exact cum l-a scris omul, neescapat. Escaparea se
+        face aici, la randare, cu h() — invers ar fi însemnat „&amp;amp;" la
+        a doua editare și un text pe care nu-l mai poți căuta.
+
+        Se escapează ÎNTÂI, se pun etichetele DUPĂ: altfel <p> și <br> ar fi
+        escapate și ele, iar omul ar vedea codul în loc de paragrafe.
+      ================================================================== -->
       <div class="post__body">
-        <p>
-          După doi ani în care traseul a ocolit zona pietonală, organizatorii au anunțat că
-          ediția din această vară revine în inima orașului. Este cea mai mare ediție de până
-          acum: <strong>peste 4.000 de participanți</strong> înscriși la cele trei curse, dintre
-          care aproape jumătate la proba de 10 kilometri.
-        </p>
+        <?php
+          $paragrafe = preg_split('/\n{2,}/', (string) $eveniment['descriere']) ?: [];
 
-        <h2>Traseul și restricțiile de circulație</h2>
-        <p>
-          Startul se dă din Piața Centrală și urmează bulevardul principal până la parcul de pe
-          malul râului, de unde alergătorii revin pe strada veche. Circulația va fi închisă
-          între orele 07:00 și 15:00 pe următoarele artere:
-        </p>
-        <ul>
-          <li>Bulevardul Principal, între Piața Centrală și podul de fier</li>
-          <li>Strada Veche, pe toată lungimea ei</li>
-          <li>Aleea Parcului și accesul dinspre faleză</li>
-        </ul>
-        <p>
-          Transportul public va fi deviat pe rutele ocolitoare, iar liniile 3 și 14 vor circula
-          la interval dublu. Riverani vor putea ieși din zonă pe la punctele semnalizate.
-        </p>
+          foreach ($paragrafe as $paragraf) {
+              $paragraf = trim($paragraf);
 
-        <blockquote>
-          <p>
-            Ne-am dorit de mult să aducem cursa înapoi în centru. Atmosfera de pe strada veche,
-            cu oamenii la ferestre, nu se compară cu nimic.
-          </p>
-          <cite>— Organizatorii cursei</cite>
-        </blockquote>
+              if ($paragraf === '') {
+                  continue;
+              }
 
-        <h2>Puncte de hidratare și asistență medicală</h2>
-        <p>
-          Sunt prevăzute șase puncte de hidratare, la fiecare cinci kilometri, plus două corturi
-          medicale — unul la start și unul la kilometrul 21. Voluntarii vor purta veste
-          portocalii și pot fi recunoscuți ușor pe tot traseul.
-        </p>
-
-        <h3>Programul pe ore</h3>
-        <ol>
-          <li><strong>07:00</strong> — deschiderea zonei de start, ridicarea kiturilor</li>
-          <li><strong>08:00</strong> — startul cursei de maraton</li>
-          <li><strong>09:30</strong> — startul cursei de 10 km</li>
-          <li><strong>11:00</strong> — cursa copiilor, 1 km</li>
-          <li><strong>13:00</strong> — festivitatea de premiere</li>
-        </ol>
-
-        <p>
-          Dacă vii cu mașina, cele mai apropiate parcări rămase deschise sunt cea de la
-          complexul sportiv și cea subterană din spatele primăriei. Recomandarea organizatorilor
-          este însă transportul public sau bicicleta — vor fi rasteluri suplimentare lângă start.
-        </p>
-
-        <!-- etichete -->
-        <div class="post__tags">
-          <a class="tag" href="#">#maraton</a>
-          <a class="tag" href="#">#sport</a>
-          <a class="tag" href="#">#evenimente</a>
-          <a class="tag" href="#">#centruvechi</a>
-        </div>
+              // Rândurile simple dinăuntrul unui paragraf rămân rânduri.
+              echo '<p>', nl2br(h($paragraf), false), '</p>', "\n";
+          }
+        ?>
       </div>
 
       <!-- =========================== PARTICIPARE ========================== -->
@@ -551,12 +659,12 @@ require __DIR__ . '/inc/antet.php';
 
       <div class="grid">
         <article class="card">
-          <a class="card__media" href="articol.php">
+          <a class="card__media" href="event.php">
             <img src="assets/img/posts/post-5.svg" alt="" width="1280" height="720" loading="lazy" decoding="async">
             <span class="card__tag">Sport</span>
           </a>
           <div class="card__body">
-            <h3 class="card__title"><a href="articol.php">Prima pistă de ciclism care leagă cele două maluri</a></h3>
+            <h3 class="card__title"><a href="event.php">Prima pistă de ciclism care leagă cele două maluri</a></h3>
             <div class="card__meta">
               <time datetime="2026-07-30">30 iul 2026</time>
               <span class="dot" aria-hidden="true"></span>
@@ -566,12 +674,12 @@ require __DIR__ . '/inc/antet.php';
         </article>
 
         <article class="card">
-          <a class="card__media" href="articol.php">
+          <a class="card__media" href="event.php">
             <img src="assets/img/posts/post-2.svg" alt="" width="1280" height="720" loading="lazy" decoding="async">
             <span class="card__tag">Cultură</span>
           </a>
           <div class="card__body">
-            <h3 class="card__title"><a href="articol.php">Trei zile de festival în parcul central, cu intrare liberă</a></h3>
+            <h3 class="card__title"><a href="event.php">Trei zile de festival în parcul central, cu intrare liberă</a></h3>
             <div class="card__meta">
               <time datetime="2026-08-03">3 aug 2026</time>
               <span class="dot" aria-hidden="true"></span>

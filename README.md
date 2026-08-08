@@ -273,12 +273,12 @@ un `curl`. Cele care contează sunt în `inc/validare.php`:
 - **Parolă** — minimum 8 caractere, maximum 72 de octeți, pentru că bcrypt
   ignoră tăcut tot ce trece de atât.
 
-Rularea verificărilor: `php teste/test-validare.php` (104 cazuri).
+Rularea verificărilor: `php teste/test-validare.php` (133 de cazuri).
 
 Patru suite vorbesc cu site-ul prin HTTP, cu cookie-uri adevărate, și cer
 serverul pornit: „ține-mă minte" (35 de cazuri), setările, cu tot cu ștergerea
 contului și cron (95), formularul de contact (60) și publicarea evenimentelor,
-cu tot cu urcarea copertei și secțiunea de pe profil (114).
+cu tot cu urcarea copertei și secțiunea de pe profil (161).
 
 ```
 php -S 127.0.0.1:8126 -t . &
@@ -1021,6 +1021,8 @@ bucata de `WHERE` și valoarea ei împreună, iar de ea se folosesc și limita d
 postare, și lista de pe profil. Dacă cele două ar socoti altfel, omul ar fi
 blocat de un eveniment pe care nu-l mai vede nicăieri.
 
+Cartonașele duc la `event.php?slug=…` — pagina evenimentului, descrisă mai jos.
+
 **Primele patru se văd, restul intră ascunse.** Tot ce e de arătat pleacă în
 aceeași pagină; peste al patrulea, cartonașele primesc clasa `.ascuns`, iar
 butonul „Vezi mai mult… (2)" apare doar dacă are ce descoperi — cu numărul
@@ -1050,21 +1052,85 @@ tastare — nu e o eroare de arătat: pagina trimite omul pe prima pagină. E
 minimul de care avea nevoie secțiunea de mai sus ca să existe și pentru
 vizitatori; adresele frumoase, de forma `/membru/<permalink>`, vin mai târziu.
 
+## Pagina unui eveniment
+
+`event.php?slug=<slug>` — fostul `articol.php`, care era doar un șablon cu
+text inventat. Șablonul a rămas, textul e acum din bază.
+
+**Slugul, nu id-ul.** Se citește la telefon, spune despre ce e vorba, și nu dă
+în vileag câte evenimente are site-ul. Coada lui întâmplătoare face ca nici
+ghicitul să nu ducă undeva.
+
+### Cine intră
+
+Pagina e **strict pentru cine e conectat**. Verificarea se face *înaintea*
+căutării în bază, dinadins: așa, cine nu are cont nu poate afla nici măcar dacă
+un slug duce undeva.
+
+| starea anunțului | organizatorul | alt membru conectat | nelogat |
+|---|---|---|---|
+| aprobat | vede | vede | trimis la login |
+| în așteptare | vede | prima pagină | trimis la login |
+| respins | vede | prima pagină | trimis la login |
+
+**Un slug inexistent și unul interzis sfârșesc la fel: pe prima pagină.** Dacă
+„nu există" ar arăta altfel decât „nu ai voie", oricine ar putea afla, ghicind,
+ce evenimente așteaptă la moderare.
+
+Organizatorul vede în plus o bandă cu starea anunțului și butonul „Editează"
+(care duce la formular — modul de editare se construiește separat).
+
+### Întoarcerea după intrare
+
+Mecanismul exista deja și se refolosește: pagina trimite omul la
+`login.php?redirect=/calea/de/unde/a/plecat`, iar `api/autentificare.php`
+răspunde cu acea cale. Nou e doar că valoarea trece acum prin **un singur loc**,
+`caleInterna()` din `inc/validare.php`, în locul aceleiași verificări scrise de
+trei ori — și că verificarea aia lăsa să treacă exact ce voia să oprească:
+
+- `/\alt-site.ro` începe cu o bară, deci trecea. Browserul îndreaptă bara
+  inversă și ajunge la `//alt-site.ro`, adică pe alt domeniu — imediat după ce
+  omul s-a conectat la noi.
+- un tab sau un rând nou în mijloc e scos de browser *înainte* să se uite la
+  adresă, deci `/\ttp://…` nu e ce pare.
+
+Acum se cere o singură bară la început, nicio bară inversă nicăieri, niciun
+caracter de control, și o lungime cu capăt. Aceleași reguli sunt și în
+`safeRedirect()` din `main.js`, fiindcă valoarea ajunge și în `window.location`.
+
+Paginile nu-și mai scriu singure antetul: `cereIntrare('/calea.php')` din
+`inc/auth.php` face redirecționarea și oprește pagina.
+
+### Ce se arată și ce nu
+
+Ce lipsește nu se arată gol: un rând „Vârstă minimă: —" nu spune nimic, dar
+ocupă locul unuia care ar fi spus. Vârsta, participanții și genul apar doar
+când sunt completate; ora de sfârșit lipsă e scrisă pe față („19:00 — oră de
+sfârșit nedeterminată"), fiindcă ora de început tot e bună de știut. `cost`
+gol sau zero devine „Gratuit".
+
+Descrierea e **escapată la randare, nu la salvare** — se escapează întâi și se
+pun etichetele după, altfel `<p>` și `<br>` ar fi escapate și ele, iar omul ar
+vedea codul în loc de paragrafe. Rândurile goale despart paragrafe, cele simple
+rămân rânduri.
+
 ### Ce nu e făcut
 
-Evenimentul intră cu `stare_moderare = 'in_asteptare'` și nu se vede pe prima
-pagină. Nu există încă interfață de aprobare, editare sau încheiere manuală, și
-nici pagină publică de eveniment — de aceea, pe profil, titlul și coperta nu
-duc nicăieri (sunt `<div>`, nu `<a>`). Omul vede doar „Evenimentul tău a fost
-trimis spre aprobare" — dinadins fără detalii despre cât durează, cât timp nu
-putem promite nimic.
+„Mergi la acest eveniment?" și comentariile de sub el sunt încă șablonul, cu
+numere și oameni inventați — se leagă de bază separat. Cât timp sunt acolo, un
+eveniment adevărat arată sub el 128 de „interesați" care nu există.
+
+Nu există încă interfață de aprobare, editare sau încheiere manuală. Evenimentul
+intră cu `stare_moderare = 'in_asteptare'` și nu se vede pe prima pagină; omul
+vede doar „Evenimentul tău a fost trimis spre aprobare" — dinadins fără detalii
+despre cât durează, cât timp nu putem promite nimic.
 
 Lipsesc și imaginile implicite de categorie (`categorii.imagine_default`):
 codul le preferă deja când există, dar fișierele nu sunt urcate, deci un
-eveniment fără copertă rămâne cu dreptunghiul gol al cartonașului.
+eveniment fără copertă rămâne fără poza mare.
 
 Verificările: `php teste/test-evenimente.php http://127.0.0.1:8126`
-(114 cazuri, cere serverul pornit).
+(161 de cazuri, cere serverul pornit).
 
 
 ## E-mailurile

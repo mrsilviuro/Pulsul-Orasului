@@ -14,8 +14,7 @@ require_once __DIR__ . '/inc/auth.php';
 $membru = membruCurent();
 
 if ($membru === null) {
-    header('Location: login.php?redirect=' . urlencode('/parola-noua.php'));
-    exit;
+    cereIntrare('/parola-noua.php');
 }
 
 // Dacă a intrat cu parola temporară, nu i se cere și parola veche: tocmai aia
