@@ -589,6 +589,8 @@ $catePe = static fn(string $corp, string $ce): int => substr_count($corp, $ce);
 $pagina = cerere($baza . '/profil.php?m=organizat02', $anonim)['corp'];
 
 verifica('vizitatorul primește patru cartonașe', 4, $catePe($pagina, '<article class="card'));
+verifica('și citește „Ce pune la cale"', true, str_contains($pagina, 'Ce pune la cale'));
+verifica('nu „Ce pui la cale", că nu e al lui', false, str_contains($pagina, 'Ce pui la cale'));
 verifica('și niciunul în așteptare', 0, $catePe($pagina, 'card--in-asteptare'));
 verifica('titlul unui eveniment în așteptare nu se scurge', false,
     str_contains($pagina, 'Aștept de puțin'));
@@ -598,10 +600,12 @@ verifica('fără buton „Vezi mai mult", că nu e nimic ascuns', false,
 $pagina = cerere($baza . '/profil.php', $c)['corp'];
 
 verifica('proprietarul primește toate șase', 6, $catePe($pagina, '<article class="card'));
+verifica('lui i se vorbește la persoana a doua', true, str_contains($pagina, 'Ce pui la cale'));
 verifica('două sunt însemnate ca fiind în așteptare', 2, $catePe($pagina, 'card--in-asteptare'));
 verifica('cu eticheta scrisă pe ele', 2, $catePe($pagina, 'În așteptare de aprobare'));
 verifica('două stau ascunse', 2, $catePe($pagina, 'card ascuns'));
 verifica('deci apare și butonul', true, str_contains($pagina, 'Vezi mai mult'));
+verifica('cu numărul celor rămase pe el', true, str_contains($pagina, 'Vezi mai mult… (2)'));
 
 // Ordinea în HTML: cele în așteptare înaintea celorlalte.
 verifica('în pagină, cele în așteptare vin primele', true,

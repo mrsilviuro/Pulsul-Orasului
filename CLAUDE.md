@@ -170,8 +170,6 @@ assets/css/style.css, assets/js/main.js, assets/img/
 
 - Pagina publică a unui eveniment (slugul se generează deja la salvare, dar
   nu duce nicăieri; de aceea cartonașele de pe profil n-au link)
-- Butonul „Vezi mai mult…" de pe profil: cartonașele peste primele patru sunt
-  deja în pagină cu clasa `.ascuns`, dar nimic nu le arată încă
 - Moderarea: fiecare eveniment intră cu `stare_moderare = 'in_asteptare'`; se
   vede doar organizatorului, pe profilul lui; nu există interfață de aprobare
 - Adresele frumoase de profil: acum e `profil.php?m=<permalink>`

@@ -2648,4 +2648,45 @@
     });
   }
 
+
+  /* --------------- 12. „VEZI MAI MULT…" PE PROFIL ----------------------- */
+  /*
+    Evenimentele de peste al patrulea sunt deja în pagină, cu clasa .ascuns.
+    Butonul le descoperă scoțând clasa — nimic nu se cere de la server, fiindcă
+    nimic nu lipsește.
+
+    Se descoperă toate deodată, nu câte patru: la câte evenimente active poate
+    avea cineva, o a doua apăsare ar fi o treaptă degeaba.
+  */
+  var maiMult = document.getElementById('evenimente-mai-mult');
+  var listaEv = document.getElementById('evenimente-lista');
+
+  if (maiMult && listaEv) {
+    maiMult.addEventListener('click', function () {
+      var ascunse = listaEv.querySelectorAll('.ascuns');
+
+      for (var i = 0; i < ascunse.length; i++) {
+        ascunse[i].classList.remove('ascuns');
+      }
+
+      /**
+       * Butonul pleacă: nu mai are ce descoperi.
+       *
+       * Înainte să dispară, mutăm atenția pe primul cartonaș scos la iveală.
+       * Cine merge cu tastatura sau cu cititorul de ecran ar rămâne altfel cu
+       * atenția pe un buton care tocmai s-a evaporat, adică nicăieri.
+       */
+      var primulNou = ascunse.length ? ascunse[0] : null;
+
+      // Se duce rândul întreg, nu doar butonul: altfel ar rămâne în urma lui
+      // un gol cât marginea lui, fără nimic în el.
+      (maiMult.closest('.vezi-mai-mult') || maiMult).remove();
+
+      if (primulNou) {
+        primulNou.setAttribute('tabindex', '-1');
+        primulNou.focus({ preventScroll: true });
+      }
+    });
+  }
+
 })();

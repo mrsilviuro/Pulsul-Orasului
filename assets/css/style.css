@@ -2701,7 +2701,10 @@ body { overscroll-behavior-y: none; }
    care nu e nimic de arătat.
    ========================================================================= */
 
-.evenimente-profil { margin-bottom: 54px; }
+/* Aceeași distanță și deasupra, și dedesubt. Casetele cu statistici n-au
+   margine jos, deci fără rândul ăsta secțiunea se lipea de ele — sub ea, unde
+   `.feedback` are marginea lui de sus, spațiul era deja bun. */
+.evenimente-profil { margin-top: 54px; margin-bottom: 54px; }
 
 /* Titlul unui eveniment nu e link: pagina publică a evenimentului nu există
    încă. Îi păstrăm mărimea și greutatea din .card__title, dar fără sublinierea

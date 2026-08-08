@@ -225,7 +225,9 @@ require __DIR__ . '/inc/antet.php';
 
       <div class="section-head">
         <div>
-          <p class="eyebrow"><span class="pulse-dot" aria-hidden="true"></span> Ce pune la cale</p>
+          <!-- Pe profilul propriu vorbim cu omul, nu despre el. -->
+          <p class="eyebrow"><span class="pulse-dot" aria-hidden="true"></span>
+            <?= $eProfilulMeu ? 'Ce pui la cale' : 'Ce pune la cale' ?></p>
           <h2 class="section-title" id="evenimente-title">Evenimente organizate</h2>
         </div>
       </div>
@@ -294,8 +296,12 @@ require __DIR__ . '/inc/antet.php';
       </div>
 
       <?php if (count($evenimenteProfil) > EVENIMENTE_VIZIBILE): ?>
+      <!-- Numărul se scrie aici, nu din JS: altfel butonul ar apărea o clipă
+           fără el și s-ar corecta singur sub ochii omului. -->
       <div class="vezi-mai-mult">
-        <button class="btn btn--ghost" type="button" id="evenimente-mai-mult">Vezi mai mult…</button>
+        <button class="btn btn--ghost" type="button" id="evenimente-mai-mult">
+          Vezi mai mult… (<?= count($evenimenteProfil) - EVENIMENTE_VIZIBILE ?>)
+        </button>
       </div>
       <?php endif; ?>
       <?php endif; ?>

@@ -278,7 +278,7 @@ Rularea verificărilor: `php teste/test-validare.php` (104 cazuri).
 Patru suite vorbesc cu site-ul prin HTTP, cu cookie-uri adevărate, și cer
 serverul pornit: „ține-mă minte" (35 de cazuri), setările, cu tot cu ștergerea
 contului și cron (95), formularul de contact (60) și publicarea evenimentelor,
-cu tot cu urcarea copertei și secțiunea de pe profil (110).
+cu tot cu urcarea copertei și secțiunea de pe profil (114).
 
 ```
 php -S 127.0.0.1:8126 -t . &
@@ -1006,6 +1006,10 @@ Ce n-a trecut încă pe la moderare nu se vede din afară. Altfel ar fi de ajuns
 să deschizi profilul cuiva ca să citești ce a trimis, înainte ca noi să fi
 apucat să ne uităm.
 
+Deasupra titlului, eticheta mică se schimbă după cine se uită: „Ce pui la
+cale" pe profilul propriu, „Ce pune la cale" pe al altcuiva. Aceeași condiție
+(`$eProfilulMeu`) hotărăște și mesajele de mai jos, când nu e nimic de arătat.
+
 Cele în așteptare stau primele și poartă eticheta „În așteptare de aprobare",
 cu chenar punctat galben și poza mai stinsă — sunt treaba ta, nu a
 vizitatorului, și trebuie să se vadă dintr-o privire că nu sunt încă publice.
@@ -1019,8 +1023,20 @@ blocat de un eveniment pe care nu-l mai vede nicăieri.
 
 **Primele patru se văd, restul intră ascunse.** Tot ce e de arătat pleacă în
 aceeași pagină; peste al patrulea, cartonașele primesc clasa `.ascuns`, iar
-butonul „Vezi mai mult…" apare doar dacă are ce descoperi. (Butonul e
-deocamdată fără efect — apăsarea lui se leagă în pasul următor.)
+butonul „Vezi mai mult… (2)" apare doar dacă are ce descoperi — cu numărul
+scris de PHP, nu de JavaScript, ca butonul să nu apară o clipă fără el și să se
+corecteze singur sub ochii omului.
+
+Apăsarea lui scoate clasa de pe toate cartonașele ascunse deodată și apoi își
+ia rândul cu tot cu el: nu mai are ce descoperi, iar un rând gol în urma lui
+n-ar avea ce căuta. Nu se cere nimic de la server, fiindcă nimic nu lipsește —
+tot ce se vede era deja în pagină. Se descoperă toate odată, nu încă patru: la
+câte evenimente active poate avea cineva, o a doua apăsare ar fi o treaptă
+degeaba.
+
+Înainte să dispară butonul, atenția trece pe primul cartonaș descoperit. Cine
+merge cu tastatura sau cu cititorul de ecran ar rămâne altfel cu atenția pe un
+buton care tocmai s-a evaporat, adică nicăieri.
 
 Când nu e nimic: pe profilul propriu, „Nu organizezi nimic, nu vrei să
 încerci?" cu butonul „+ Eveniment nou"; pe al altcuiva, „Ana nu organizează
@@ -1048,7 +1064,7 @@ codul le preferă deja când există, dar fișierele nu sunt urcate, deci un
 eveniment fără copertă rămâne cu dreptunghiul gol al cartonașului.
 
 Verificările: `php teste/test-evenimente.php http://127.0.0.1:8126`
-(110 cazuri, cere serverul pornit).
+(114 cazuri, cere serverul pornit).
 
 
 ## E-mailurile
