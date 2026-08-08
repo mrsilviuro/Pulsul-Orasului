@@ -2,13 +2,22 @@
 declare(strict_types=1);
 
 /**
- * PulsulOrasului.Ro — publicarea unui eveniment.
+ * PulsulOrasului.Ro — publicarea și editarea unui eveniment.
  *
- * Se ajunge aici din butonul „+ Eveniment nou" de pe prima pagină.
+ * Fără parametri: formular gol, pentru un eveniment nou. Se ajunge aici din
+ * butonul „+ Eveniment nou" de pe prima pagină.
+ *
+ * Cu „?slug=…": același formular, dar precompletat cu evenimentul acela, de
+ * schimbat. Se ajunge din butonul „Editează" de pe event.php.
+ *
+ * Un singur formular pentru amândouă, dinadins: două formulare aproape la fel
+ * s-ar despărți la prima corectură, iar regulile de verificare ar începe să
+ * difere între „nou" și „schimbat" — exact acolo unde n-au voie.
  */
 
 require_once __DIR__ . '/inc/evenimente.php';
 
+$slug   = trim((string) ($_GET['slug'] ?? ''));
 $membru = membruCurent();
 
 /**
@@ -19,14 +28,75 @@ $membru = membruCurent();
  * apăsarea butonului, cu tot ce scrisese pierdut.
  */
 if ($membru === null) {
-    cereIntrare('/adauga_eveniment.php');
+    cereIntrare('/adauga_eveniment.php' . ($slug !== '' ? '?slug=' . urlencode($slug) : ''));
 }
 
-$membruId   = (int) $membru['id'];
-$categorii  = categoriiEvenimente();
-$voie       = poatePublicaEveniment($membruId);
+$membruId  = (int) $membru['id'];
+$categorii = categoriiEvenimente();
 
-$titlu     = 'Publică un eveniment — PulsulOrasului.Ro';
+/**
+ * Ce se editează, dacă se editează ceva.
+ *
+ * Un slug care nu duce nicăieri și unul al altcuiva sfârșesc la fel: pe prima
+ * pagină. Ca la event.php, același răspuns pentru amândouă — altfel, ghicind
+ * sluguri, s-ar putea afla ce evenimente există.
+ */
+$ev = null;
+
+if ($slug !== '') {
+    $ev = evenimentDeEditat($slug, $membruId);
+
+    if ($ev === null) {
+        header('Location: index.php');
+        exit;
+    }
+}
+
+$eEditare = $ev !== null;
+
+/**
+ * Limita de evenimente active se cere doar la unul nou.
+ *
+ * La editare, limita s-ar aplica chiar evenimentului care se editează: omul cu
+ * un singur eveniment activ ar fi oprit tocmai de el, deci n-ar mai putea
+ * corecta niciodată nimic.
+ */
+$voie = $eEditare
+    ? ['poate' => true, 'mesaj' => '', 'active' => []]
+    : poatePublicaEveniment($membruId);
+
+/* ------------------- valorile cu care pleacă formularul ---------------- */
+
+/** Ce scrie într-un câmp: ce era în bază la editare, nimic la unul nou. */
+$val = static function (string $camp, string $implicit = '') use ($ev): string {
+    return $ev !== null && $ev[$camp] !== null ? (string) $ev[$camp] : $implicit;
+};
+
+$copertaAcum = $eEditare ? urlCoperta($ev['coperta'] ?? null) : '';
+
+/**
+ * Bifele: la editare urmează ce e în bază, la un formular gol rămân cum erau.
+ *
+ * „Nu se știe până când ține" face notă discordantă dinadins: la un eveniment
+ * nou pornește NEbifată, ca omul să scrie ora dacă o știe, și se bifează
+ * singură doar când editează unul care chiar n-are oră de sfârșit.
+ */
+$faraOraSfarsit = $eEditare && ($ev['ora_sfarsit'] ?? null) === null;
+
+/**
+ * „Gratuit" înseamnă aici același lucru ca la afișare (costScris): și NULL, și
+ * zero. În bază rămân două lucruri diferite — NULL e „n-a cerut bani", 0 e „a
+ * scris el zero" — dar pe pagina evenimentului amândouă scriu „Gratuit", deci
+ * formularul n-are voie să spună altceva. Altfel omul ar deschide editarea unui
+ * eveniment gratuit și ar găsi bifa scoasă și un preț de 0 lei.
+ */
+$eGratuit  = !$eEditare || ($ev['cost'] ?? null) === null || (float) $ev['cost'] <= 0;
+$faraMinim = !$eEditare || ($ev['participanti_min'] ?? null) === null;
+$faraMaxim = !$eEditare || ($ev['participanti_max'] ?? null) === null;
+
+$titlu     = $eEditare
+    ? 'Schimbă evenimentul — PulsulOrasului.Ro'
+    : 'Publică un eveniment — PulsulOrasului.Ro';
 $descriere = 'Spune orașului ce pui la cale.';
 $noindex   = true;
 $pagina    = '';
@@ -45,14 +115,28 @@ require __DIR__ . '/inc/antet.php';
     <nav class="crumbs" aria-label="Navigare">
       <a href="index.php">Acasă</a>
       <span aria-hidden="true">/</span>
+      <?php if ($eEditare): ?>
+      <a href="<?= h(urlEveniment((string) $ev['slug'])) ?>"><?= h(inceputDeText((string) $ev['titlu'], 40)) ?></a>
+      <span aria-hidden="true">/</span>
+      <span class="crumbs__current">Schimbă</span>
+      <?php else: ?>
       <span class="crumbs__current">Eveniment nou</span>
+      <?php endif; ?>
     </nav>
 
+    <?php if ($eEditare): ?>
+    <h1 class="setari__titlu">Schimbă evenimentul</h1>
+    <p class="setari__lead">
+      Orice schimbare trece din nou pe la noi: până îl citim, anunțul nu se mai
+      vede pe site. E singurul fel în care verificarea înseamnă ceva.
+    </p>
+    <?php else: ?>
     <h1 class="setari__titlu">Publică un eveniment</h1>
     <p class="setari__lead">
       Completează ce știi acum. Anunțul intră la verificare și apare pe site
       după ce îl citim.
     </p>
+    <?php endif; ?>
 
     <?php if (!$voie['poate']): ?>
     <!-- ================== ARE DEJA UNUL ACTIV ====================== -->
@@ -89,6 +173,11 @@ require __DIR__ . '/inc/antet.php';
     <div id="ev-block">
       <form class="form form--eveniment" id="eveniment-form" novalidate enctype="multipart/form-data">
         <input type="hidden" name="csrf" value="<?= h($csrf) ?>">
+        <?php if ($eEditare): ?>
+        <!-- Slugul spune punctului de intrare care eveniment se schimbă. Nu e
+             o dovadă: acolo se verifică din nou al cui e. -->
+        <input type="hidden" name="slug" value="<?= h((string) $ev['slug']) ?>">
+        <?php endif; ?>
 
         <!-- --------------------- Ce și unde --------------------- -->
         <section class="card-set">
@@ -97,6 +186,7 @@ require __DIR__ . '/inc/antet.php';
           <div class="field">
             <label for="ev-titlu">Titlul evenimentului <span class="req" aria-hidden="true">*</span></label>
             <input type="text" id="ev-titlu" name="titlu" maxlength="<?= TITLU_EVENIMENT_MAX ?>"
+                   value="<?= h($val('titlu')) ?>"
                    placeholder="Cursa de seară prin centrul vechi" required
                    aria-describedby="err-ev-titlu">
             <p class="field__error" id="err-ev-titlu" hidden></p>
@@ -105,9 +195,10 @@ require __DIR__ . '/inc/antet.php';
           <div class="field">
             <label for="ev-categorie">Categorie <span class="req" aria-hidden="true">*</span></label>
             <select id="ev-categorie" name="categorie_id" required aria-describedby="err-ev-categorie">
-              <option value="" selected disabled>Alege…</option>
+              <option value="" <?= $eEditare ? '' : 'selected' ?> disabled>Alege…</option>
               <?php foreach ($categorii as $c): ?>
-              <option value="<?= (int) $c['id'] ?>"><?= h($c['nume']) ?></option>
+              <option value="<?= (int) $c['id'] ?>"
+                      <?= $val('categorie_id') === (string) $c['id'] ? 'selected' : '' ?>><?= h($c['nume']) ?></option>
               <?php endforeach; ?>
             </select>
             <p class="field__error" id="err-ev-categorie" hidden></p>
@@ -116,6 +207,7 @@ require __DIR__ . '/inc/antet.php';
           <div class="field">
             <label for="ev-locatie">Unde are loc <span class="req" aria-hidden="true">*</span></label>
             <input type="text" id="ev-locatie" name="locatie" maxlength="<?= LOCATIE_MAX ?>"
+                   value="<?= h($val('locatie')) ?>"
                    placeholder="Piața Sfatului, lângă fântână" required
                    aria-describedby="err-ev-locatie">
             <p class="field__error" id="err-ev-locatie" hidden></p>
@@ -131,6 +223,22 @@ require __DIR__ . '/inc/antet.php';
             o alegi, o poți muta și mări în cadru — ce vezi acolo e exact ce se
             salvează. Dacă nu pui niciuna, folosim imaginea categoriei.
           </p>
+
+          <?php if ($copertaAcum !== ''): ?>
+          <!--
+            Poza de acum, la editare. Cât timp nu alege alta, asta rămâne:
+            un formular trimis fără fișier înseamnă „n-am umblat la poză", nu
+            „șterge-o". Când alege alta, JS ascunde blocul ăsta și arată cadrul
+            de așezare — ca să nu stea două poze una peste alta.
+          -->
+          <div class="coperta-acum" id="ev-coperta-acum">
+            <img src="<?= h($copertaAcum) ?>" alt="Coperta de acum a evenimentului"
+                 width="1600" height="900" decoding="async">
+            <p class="coperta-acum__text">
+              Asta e poza de acum. Dacă nu alegi alta, rămâne ea.
+            </p>
+          </div>
+          <?php endif; ?>
 
           <div class="field">
             <!-- Aceleași clase ca la poza de profil (poza.php), deci același CSS. -->
@@ -190,8 +298,14 @@ require __DIR__ . '/inc/antet.php';
 
           <div class="field">
             <label for="ev-data">Data <span class="req" aria-hidden="true">*</span></label>
+            <!--
+              La editare, „min" e ziua evenimentului dacă ea a trecut deja:
+              altfel browserul ar arăta ca greșită o dată pe care omul nici
+              n-a atins-o. Verificarea adevărată e oricum pe server.
+            -->
             <input type="date" id="ev-data" name="data_eveniment"
-                   min="<?= h(date('Y-m-d')) ?>"
+                   value="<?= h($val('data_eveniment')) ?>"
+                   min="<?= h(min(date('Y-m-d'), $val('data_eveniment', date('Y-m-d')))) ?>"
                    max="<?= h(date('Y-m-d', strtotime('+' . ANI_INAINTE_MAX . ' years'))) ?>"
                    required aria-describedby="err-ev-data">
             <p class="field__error" id="err-ev-data" hidden></p>
@@ -201,6 +315,7 @@ require __DIR__ . '/inc/antet.php';
             <div class="field">
               <label for="ev-ora-inceput">Ora de început <span class="req" aria-hidden="true">*</span></label>
               <input type="time" id="ev-ora-inceput" name="ora_inceput" required
+                     value="<?= h(oraScurta($val('ora_inceput') ?: null)) ?>"
                      aria-describedby="err-ev-ora-inceput">
               <p class="field__error" id="err-ev-ora-inceput" hidden></p>
             </div>
@@ -208,11 +323,13 @@ require __DIR__ . '/inc/antet.php';
             <div class="field">
               <label for="ev-ora-sfarsit">Ora de sfârșit</label>
               <input type="time" id="ev-ora-sfarsit" name="ora_sfarsit"
+                     value="<?= h(oraScurta($val('ora_sfarsit') ?: null)) ?>"
                      aria-describedby="err-ev-ora-sfarsit">
               <!-- Bifa stă sub câmpul pe care îl stinge, nu sub tot rândul:
                    altfel nu se vede din prima la care dintre ore se referă. -->
               <label class="check check--mic">
-                <input type="checkbox" id="ev-fara-sfarsit" name="fara_ora_sfarsit" value="1">
+                <input type="checkbox" id="ev-fara-sfarsit" name="fara_ora_sfarsit" value="1"
+                       <?= $faraOraSfarsit ? 'checked' : '' ?>>
                 <span>Nu se știe până când ține</span>
               </label>
               <p class="field__error" id="err-ev-ora-sfarsit" hidden></p>
@@ -226,14 +343,22 @@ require __DIR__ . '/inc/antet.php';
 
           <div class="field">
             <label class="check">
-              <input type="checkbox" id="ev-gratuit" name="gratuit" value="1" checked>
+              <input type="checkbox" id="ev-gratuit" name="gratuit" value="1"
+                     <?= $eGratuit ? 'checked' : '' ?>>
               <span>Intrarea e gratuită</span>
             </label>
           </div>
 
-          <div class="field" id="ev-cost-camp" hidden>
+          <div class="field" id="ev-cost-camp" <?= $eGratuit ? 'hidden' : '' ?>>
             <label for="ev-cost">Cât costă, de persoană (lei)</label>
+            <!-- „25.00" din bază se arată „25", iar „45.50" se arată „45.5":
+                 zecimalele apar doar când există. Trecerea prin float face
+                 asta singură — tăiatul zerourilor din coadă cu rtrim() ar fi
+                 mers pentru „25.00", dar ar fi făcut din „500" un „5".
+                 Virgula sau punctul, cum îi vine omului, le primește oricum
+                 verificarea de pe server. -->
             <input type="text" id="ev-cost" name="cost" inputmode="decimal"
+                   value="<?= h($eGratuit ? '' : (string) (float) $val('cost')) ?>"
                    placeholder="25" aria-describedby="err-ev-cost">
             <p class="field__error" id="err-ev-cost" hidden></p>
           </div>
@@ -241,21 +366,32 @@ require __DIR__ . '/inc/antet.php';
           <div class="field-row">
             <div class="field">
               <label for="ev-varsta">Vârstă minimă</label>
+              <?php $varstaAcum = $eEditare && $ev['varsta_minima'] !== null
+                    ? (string) (int) $ev['varsta_minima'] : 'nespecificat'; ?>
               <select id="ev-varsta" name="varsta_minima" aria-describedby="err-ev-varsta">
-                <option value="nespecificat" selected>Nespecificată</option>
-                <option value="13">13+</option>
-                <option value="16">16+</option>
-                <option value="18">18+</option>
+                <?php foreach ([
+                    'nespecificat' => 'Nespecificată',
+                    '13' => '13+', '16' => '16+', '18' => '18+',
+                ] as $valoare => $eticheta): ?>
+                <option value="<?= h((string) $valoare) ?>"
+                        <?= (string) $valoare === $varstaAcum ? 'selected' : '' ?>><?= h($eticheta) ?></option>
+                <?php endforeach; ?>
               </select>
               <p class="field__error" id="err-ev-varsta" hidden></p>
             </div>
 
             <div class="field">
               <label for="ev-gen">Pentru cine e</label>
+              <?php $genAcum = $val('gen_participanti', 'nespecificat'); ?>
               <select id="ev-gen" name="gen_participanti" aria-describedby="err-ev-gen">
-                <option value="nespecificat" selected>Oricine poate veni</option>
-                <option value="barbati">Doar bărbați</option>
-                <option value="femei">Doar femei</option>
+                <?php foreach ([
+                    'nespecificat' => 'Oricine poate veni',
+                    'barbati'      => 'Doar bărbați',
+                    'femei'        => 'Doar femei',
+                ] as $valoare => $eticheta): ?>
+                <option value="<?= h($valoare) ?>"
+                        <?= $valoare === $genAcum ? 'selected' : '' ?>><?= h($eticheta) ?></option>
+                <?php endforeach; ?>
               </select>
               <p class="field__error" id="err-ev-gen" hidden></p>
             </div>
@@ -266,9 +402,11 @@ require __DIR__ . '/inc/antet.php';
               <label for="ev-min">Participanți minim</label>
               <p class="field__hint-sus">Sub câți oameni evenimentul nu poate începe.</p>
               <input type="text" id="ev-min" name="participanti_min" inputmode="numeric"
+                     value="<?= h($faraMinim ? '' : $val('participanti_min')) ?>"
                      placeholder="10" aria-describedby="err-ev-min">
               <label class="check check--mic">
-                <input type="checkbox" id="ev-fara-min" name="fara_participanti_min" value="1" checked>
+                <input type="checkbox" id="ev-fara-min" name="fara_participanti_min" value="1"
+                       <?= $faraMinim ? 'checked' : '' ?>>
                 <span>Nespecificat</span>
               </label>
               <p class="field__error" id="err-ev-min" hidden></p>
@@ -278,9 +416,11 @@ require __DIR__ . '/inc/antet.php';
               <label for="ev-max">Participanți maxim</label>
               <p class="field__hint-sus">Câți încap, dacă există o limită.</p>
               <input type="text" id="ev-max" name="participanti_max" inputmode="numeric"
+                     value="<?= h($faraMaxim ? '' : $val('participanti_max')) ?>"
                      placeholder="50" aria-describedby="err-ev-max">
               <label class="check check--mic">
-                <input type="checkbox" id="ev-fara-max" name="fara_participanti_max" value="1" checked>
+                <input type="checkbox" id="ev-fara-max" name="fara_participanti_max" value="1"
+                       <?= $faraMaxim ? 'checked' : '' ?>>
                 <span>Nespecificat</span>
               </label>
               <p class="field__error" id="err-ev-max" hidden></p>
@@ -301,13 +441,29 @@ require __DIR__ . '/inc/antet.php';
             <textarea id="ev-descriere" name="descriere" rows="10"
                       maxlength="<?= DESCRIERE_MAX ?>"
                       placeholder="Pornim din fața primăriei la ora 19:00…"
-                      required aria-describedby="err-ev-descriere ev-numar"></textarea>
+                      required aria-describedby="err-ev-descriere ev-numar"><?= h($val('descriere')) ?></textarea>
             <p class="field__hint" id="ev-numar" role="status">0 din <?= DESCRIERE_MIN ?> de caractere</p>
             <p class="field__error" id="err-ev-descriere" hidden></p>
           </div>
         </section>
 
         <button class="btn btn--primary btn--block" type="submit">Trimite spre aprobare</button>
+
+        <?php if ($eEditare): ?>
+        <!--
+          Anularea evenimentului. Deocamdată doar butonul: apăsarea lui nu face
+          încă nimic, se leagă separat.
+
+          Stă despărțit de restul formularului și în roșu stins, ca zona de
+          pericol din setări: e singura apăsare de pe pagina asta care nu se
+          poate lua înapoi.
+        -->
+        <div class="zona-anulare">
+          <button class="btn btn--rau btn--block" type="button" id="ev-anuleaza">
+            Anulează evenimentul
+          </button>
+        </div>
+        <?php endif; ?>
       </form>
     </div>
 
@@ -326,7 +482,13 @@ require __DIR__ . '/inc/antet.php';
           Îl citim și, dacă e totul în regulă, apare pe site.
         </p>
         <div class="done__actions">
+          <?php if ($eEditare): ?>
+          <!-- La editare, cel mai firesc lucru e să te uiți cum a ieșit. -->
+          <a class="btn btn--primary" href="<?= h(urlEveniment((string) $ev['slug'])) ?>">Vezi evenimentul</a>
+          <a class="btn btn--ghost" href="index.php">Mergi pe prima pagină</a>
+          <?php else: ?>
           <a class="btn btn--primary" href="index.php">Mergi pe prima pagină</a>
+          <?php endif; ?>
         </div>
       </div>
     </div>

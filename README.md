@@ -278,7 +278,7 @@ Rularea verificărilor: `php teste/test-validare.php` (133 de cazuri).
 Patru suite vorbesc cu site-ul prin HTTP, cu cookie-uri adevărate, și cer
 serverul pornit: „ține-mă minte" (35 de cazuri), setările, cu tot cu ștergerea
 contului și cron (95), formularul de contact (60) și publicarea evenimentelor,
-cu tot cu urcarea copertei și secțiunea de pe profil (173).
+cu tot cu urcarea copertei și secțiunea de pe profil (224).
 
 ```
 php -S 127.0.0.1:8126 -t . &
@@ -1134,13 +1134,61 @@ pun etichetele după, altfel `<p>` și `<br>` ar fi escapate și ele, iar omul a
 vedea codul în loc de paragrafe. Rândurile goale despart paragrafe, cele simple
 rămân rânduri.
 
+## Schimbarea unui eveniment
+
+`adauga_eveniment.php?slug=…` — **același formular** ca la publicare, doar
+precompletat. Două formulare aproape la fel s-ar despărți la prima corectură,
+iar regulile de verificare ar începe să difere între „nou" și „schimbat" —
+exact acolo unde n-au voie.
+
+Se ajunge din butonul „Editează" de pe pagina evenimentului, care apare numai
+organizatorului. Cine altcineva cere adresa — sau cere un slug care nu duce
+nicăieri — e trimis pe prima pagină, la fel ca la `event.php`.
+
+Regula „al cui e" stă într-un singur loc, `evenimentDeEditat()`, fiindcă o cer
+două fișiere: pagina cu formularul și punctul de intrare care primește ce s-a
+scris. Scrisă de două ori, ar fi de ajuns ca una să rămână în urmă pentru ca
+cineva să poată edita evenimentul altuia. Punctul de intrare **nu** se bazează
+pe faptul că formularul s-a deschis: cererea poate veni de oriunde, cu orice
+slug în ea.
+
+### Ce se schimbă la salvare, și ce nu
+
+**Starea se întoarce mereu la „în așteptare"**, oricare ar fi fost — aprobat,
+în așteptare sau respins. Altfel s-ar putea publica orice: trimiți un anunț
+cumsecade, îl aprobăm, iar a doua zi îi schimbi tot conținutul fără să mai
+treacă pe la nimeni. (Un anunț respins se poate corecta la fel de bine: e chiar
+cel care are cea mai mare nevoie.)
+
+**Slugul nu se schimbă**, nici dacă se schimbă titlul: adresa poate fi deja
+dată mai departe, iar un link stricat supără mai tare decât un slug care nu mai
+seamănă cu titlul.
+
+**Poza rămâne dacă nu alegi alta.** Un formular trimis fără fișier înseamnă
+„n-am umblat la poză", nu „șterge-o" — coloana nici nu e atinsă. Cine alege
+alta o vede pe cea veche dându-se la o parte; dacă se răzgândește, se întoarce.
+Fișierul vechi se șterge de pe disc abia după ce rândul s-a schimbat cu bine.
+
+**Limita de evenimente active nu se aplică la schimbare.** Ar fi chiar
+evenimentul care se editează: omul cu un singur eveniment activ ar fi oprit
+tocmai de el, deci n-ar mai putea corecta niciodată nimic.
+
+**Verificările sunt aceleași.** Descrierea tot de 300 de caractere, titlul tot
+de minimum opt — la editare nu se cere mai puțin, altfel s-ar putea publica un
+anunț bun și „edita" până rămâne gol.
+
 ### Ce nu e făcut
+
+Butonul **„Anulează evenimentul"**, sub „Trimite spre aprobare", e deocamdată
+doar desenat: apăsarea lui nu face nimic. Stă despărțit de restul formularului
+și în roșu stins, ca zona de ștergere a contului din setări, fiindcă va fi
+singura apăsare de pe pagina aia care nu se poate lua înapoi.
 
 „Mergi la acest eveniment?" și comentariile de sub el sunt încă șablonul, cu
 numere și oameni inventați — se leagă de bază separat. Cât timp sunt acolo, un
 eveniment adevărat arată sub el 128 de „interesați" care nu există.
 
-Nu există încă interfață de aprobare, editare sau încheiere manuală. Evenimentul
+Nu există încă interfață de aprobare și nici încheiere manuală. Evenimentul
 intră cu `stare_moderare = 'in_asteptare'` și nu se vede pe prima pagină; omul
 vede doar „Evenimentul tău a fost trimis spre aprobare" — dinadins fără detalii
 despre cât durează, cât timp nu putem promite nimic.
@@ -1150,7 +1198,7 @@ codul le preferă deja când există, dar fișierele nu sunt urcate, deci un
 eveniment fără copertă rămâne fără poza mare.
 
 Verificările: `php teste/test-evenimente.php http://127.0.0.1:8126`
-(173 de cazuri, cere serverul pornit).
+(224 de cazuri, cere serverul pornit).
 
 
 ## E-mailurile

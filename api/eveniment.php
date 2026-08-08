@@ -47,21 +47,50 @@ opresteDacaTrebuieParolaNoua(true);
 
 $membruId = (int) $membru['id'];
 
-/* ==================== 1. Are voie să publice acum? ==================== */
+/* ============== 1. Eveniment nou, sau unul care se schimbă? ============ */
 
 /**
- * Se verifică ÎNAINTE de orice altceva.
+ * Slugul spune care e care: dacă vine unul, se editează evenimentul acela.
  *
- * Altfel am procesa coperta — partea cea mai scumpă — pentru un eveniment pe
- * care oricum nu-l primim.
+ * Cine are voie hotărăște evenimentDeEditat(), aceeași funcție de care se
+ * folosește și pagina cu formularul. Nu ne bazăm pe faptul că formularul s-a
+ * deschis: cererea asta poate veni de oriunde, cu orice slug în ea.
  */
-$voie = poatePublicaEveniment($membruId);
+$slugCerut = trim((string) ($_POST['slug'] ?? ''));
+$deEditat  = null;
 
-if (!$voie['poate']) {
-    raspunsJson(['ok' => false, 'mesaj' => $voie['mesaj']], 409);
+if ($slugCerut !== '') {
+    $deEditat = evenimentDeEditat($slugCerut, $membruId);
+
+    if ($deEditat === null) {
+        raspunsJson([
+            'ok'    => false,
+            'mesaj' => 'Evenimentul nu mai există sau nu e al tău.',
+        ], 404);
+    }
 }
 
-/* ========================= 2. Câmpurile ============================== */
+/* ==================== 2. Are voie să publice acum? ==================== */
+
+/**
+ * Numai la eveniment nou.
+ *
+ * La editare, limita s-ar aplica evenimentului care se editează: omul cu un
+ * singur eveniment activ ar fi oprit tocmai de el, deci n-ar mai putea corecta
+ * niciodată nimic.
+ *
+ * Se verifică ÎNAINTE de orice altceva. Altfel am procesa coperta — partea cea
+ * mai scumpă — pentru un eveniment pe care oricum nu-l primim.
+ */
+if ($deEditat === null) {
+    $voie = poatePublicaEveniment($membruId);
+
+    if (!$voie['poate']) {
+        raspunsJson(['ok' => false, 'mesaj' => $voie['mesaj']], 409);
+    }
+}
+
+/* ========================= 3. Câmpurile ============================== */
 
 $rezultat = verificaEveniment($_POST, idCategoriiValide());
 
@@ -71,11 +100,15 @@ if ($rezultat['erori'] !== []) {
 
 $curat = $rezultat['curat'];
 
-/* =========================== 3. Coperta ============================== */
+/* =========================== 4. Coperta ============================== */
 
 /**
  * Coperta e opțională: fără ea, în bază intră NULL, iar la afișare se ia
  * imaginea implicită a categoriei.
+ *
+ * La editare, un formular trimis fără fișier nu înseamnă „șterge poza",
+ * înseamnă „n-am umblat la ea" — de aceea $coperta rămâne null și
+ * actualizeazaEveniment() nu atinge coloana.
  *
  * Se procesează DUPĂ verificarea câmpurilor: dacă titlul lipsește, n-are rost
  * să scriem un fișier pe disc pe care apoi să-l ștergem.
@@ -111,12 +144,23 @@ if (is_array($fisier) && (int) ($fisier['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLO
     $coperta = $poza['nume'];
 }
 
-/* =========================== 4. Salvarea ============================= */
+/* =========================== 5. Salvarea ============================= */
 
 try {
-    salveazaEveniment($membruId, $curat, $coperta);
+    if ($deEditat !== null) {
+        actualizeazaEveniment((int) $deEditat['id'], $curat, $coperta);
+
+        // Poza veche se șterge abia după ce rândul s-a schimbat cu bine.
+        // Invers, o eroare la scriere ar lăsa evenimentul arătând spre un
+        // fișier care nu mai e.
+        if ($coperta !== null) {
+            stergeCopertaDeFisier($deEditat['coperta'] ?? null);
+        }
+    } else {
+        salveazaEveniment($membruId, $curat, $coperta);
+    }
 } catch (PDOException $e) {
-    // Fișierul de pe disc n-are de ce să rămână dacă rândul n-a intrat.
+    // Fișierul nou n-are de ce să rămână dacă rândul n-a intrat.
     stergeCopertaDeFisier($coperta);
     throw $e;
 }

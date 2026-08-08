@@ -124,9 +124,10 @@ require __DIR__ . '/inc/antet.php';
           </div>
 
           <?php if ($eOrganizatorul): ?>
-          <!-- Doar pentru cel care l-a scris. Formularul învață să și editeze
-               separat; deocamdată doar linkul. -->
-          <a class="btn btn--ghost btn--sm post__editeaza" href="adauga_eveniment.php">
+          <!-- Doar pentru cel care l-a scris. Slugul spune formularului ce
+               eveniment să încarce; acolo se verifică din nou al cui e. -->
+          <a class="btn btn--ghost btn--sm post__editeaza"
+             href="<?= h(urlEditareEveniment((string) $eveniment['slug'])) ?>">
             <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M4 20h4l10-10a2.4 2.4 0 0 0-3.4-3.4L4.6 16.6z"/>
               <path d="m14.2 7.4 2.4 2.4"/>

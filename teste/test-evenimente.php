@@ -259,11 +259,14 @@ $pagina = cerere($baza . '/adauga_eveniment.php', $c);
 verifica('logat: pagina se deschide', 200, $pagina['stare']);
 verifica('are formularul', true, str_contains($pagina['corp'], 'id="eveniment-form"'));
 verifica('are token CSRF', true, str_contains($pagina['corp'], 'name="csrf"'));
+/**
+ * Câte opțiuni are lista de categorii — numărate chiar din ea, nu scăzând din
+ * toate opțiunile paginii ce nu e categorie. Scăderea aia se strica de fiecare
+ * dată când se atingea altă listă.
+ */
+preg_match('/<select id="ev-categorie".*?<\/select>/s', $pagina['corp'], $listaCat);
 verifica('categoriile vin din bază (toate cinci)', 5,
-    substr_count($pagina['corp'], '<option value="') - substr_count($pagina['corp'], 'value="nespecificat"')
-    - substr_count($pagina['corp'], 'value="13"') - substr_count($pagina['corp'], 'value="16"')
-    - substr_count($pagina['corp'], 'value="18"') - substr_count($pagina['corp'], 'value="barbati"')
-    - substr_count($pagina['corp'], 'value="femei"') - substr_count($pagina['corp'], 'value=""'));
+    substr_count($listaCat[0] ?? '', '<option value="') - 1);   // minus „Alege…"
 
 echo "\n=== UN EVENIMENT BUN ===\n";
 
@@ -759,7 +762,8 @@ verifica('participanții, într-un singur rând', true,
 
 verifica('organizatorul primește butonul de editare', true,
     str_contains($pagina, 'post__editeaza'));
-verifica('și duce la formular', true, str_contains($pagina, 'href="adauga_eveniment.php"'));
+verifica('și duce la formular, cu slugul lui', true,
+    str_contains($pagina, 'href="adauga_eveniment.php?slug=' . $slugul($idAprobat) . '"'));
 
 $paginaAltul = cerere($laEveniment($idAprobat), $altul)['corp'];
 verifica('altcineva nu primește butonul de editare', false,
@@ -793,6 +797,195 @@ verifica('sunt trei paragrafe', 3, substr_count($pagina, '<p>Al doilea') + subst
 verifica('rândul simplu devine <br>', true, str_contains($pagina, 'Al doilea paragraf.<br'));
 
 /* ------------- cifra de pe cartonașul „Evenimente organizate" ------------ */
+
+echo "\n=== SCHIMBAREA UNUI EVENIMENT ===\n";
+
+db()->exec('DELETE FROM evenimente');
+
+$idDeSchimbat = pune($idOrg, 'Cum era la început', 'aprobat', 12);
+$slugDeSchimbat = $slugul($idDeSchimbat);
+
+// Îi punem tot ce se poate completa, ca să vedem că se întoarce în formular.
+db()->prepare(
+    'UPDATE evenimente SET ora_sfarsit = ?, cost = ?, varsta_minima = ?,
+            participanti_min = ?, participanti_max = ?, gen_participanti = ?, coperta = ?
+      WHERE id = ?'
+)->execute(['21:30:00', '45.50', 16, 8, 40, 'barbati', str_repeat('ab', 16), $idDeSchimbat]);
+
+$laFormular = static fn(string $slug): string
+    => $baza . '/adauga_eveniment.php?slug=' . urlencode($slug);
+
+/* ---------------------- cine ajunge la formular ---------------------- */
+
+verifica('organizatorul își poate deschide evenimentul', 200,
+    cerere($laFormular($slugDeSchimbat), $c)['stare']);
+
+verifica('altcineva nu: e trimis pe prima pagină', 302,
+    cerere($laFormular($slugDeSchimbat), $altul)['stare']);
+
+verifica('un slug inexistent, la fel', 302,
+    cerere($laFormular('nu-exista-abc123'), $c)['stare']);
+
+$r = cerere($laFormular($slugDeSchimbat), $anonim);
+verifica('nelogatul e trimis la login', 302, $r['stare']);
+verifica('și adus înapoi la formularul lui', true,
+    str_contains($r['unde'], urlencode('/adauga_eveniment.php?slug=' . $slugDeSchimbat)));
+
+/* ------------------- ce scrie în câmpuri la deschidere ------------------- */
+
+$formular = cerere($laFormular($slugDeSchimbat), $c)['corp'];
+
+/** Valoarea unui câmp din HTML — atributele pot fi pe mai multe rânduri. */
+$valoarea = static function (string $id, string $html): ?string {
+    if (preg_match('/id="' . preg_quote($id, '/') . '"(.*?)>/s', $html, $m) !== 1) {
+        return null;
+    }
+    return preg_match('/value="([^"]*)"/', $m[1], $v) === 1 ? $v[1] : null;
+};
+
+$bifat = static function (string $id, string $html): bool {
+    return preg_match('/id="' . preg_quote($id, '/') . '"(.*?)>/s', $html, $m) === 1
+        && str_contains($m[1], 'checked');
+};
+
+verifica('titlul e precompletat', 'Cum era la început', $valoarea('ev-titlu', $formular));
+verifica('locația', 'Piața Sfatului', $valoarea('ev-locatie', $formular));
+verifica('data', date('Y-m-d', strtotime('+12 days')), $valoarea('ev-data', $formular));
+verifica('ora de început, fără secunde', '19:00', $valoarea('ev-ora-inceput', $formular));
+verifica('ora de sfârșit', '21:30', $valoarea('ev-ora-sfarsit', $formular));
+verifica('costul, fără zerouri de prisos', '45.5', $valoarea('ev-cost', $formular));
+verifica('participanți minim', '8', $valoarea('ev-min', $formular));
+verifica('participanți maxim', '40', $valoarea('ev-max', $formular));
+verifica('descrierea e în textarea', true,
+    str_contains($formular, 'Povestea evenimentului.'));
+
+verifica('categoria e aleasă', true, str_contains($formular, 'value="1"' . "\n" . '                      selected'));
+verifica('vârsta minimă e aleasă', true, preg_match('/value="16"\s*\n?\s*selected/', $formular) === 1);
+verifica('genul e ales', true, preg_match('/value="barbati"\s*\n?\s*selected/', $formular) === 1);
+
+verifica('bifa „gratuit" e scoasă, că are preț', false, $bifat('ev-gratuit', $formular));
+verifica('bifa „nu se știe până când" e scoasă', false, $bifat('ev-fara-sfarsit', $formular));
+verifica('bifele „nespecificat" sunt scoase', [false, false],
+    [$bifat('ev-fara-min', $formular), $bifat('ev-fara-max', $formular)]);
+
+verifica('slugul pleacă ascuns în formular', true,
+    str_contains($formular, 'name="slug" value="' . $slugDeSchimbat . '"'));
+verifica('poza de acum se arată', true, str_contains($formular, 'ev-coperta-acum'));
+verifica('și apare butonul de anulare', true, str_contains($formular, 'ev-anuleaza'));
+
+/* ------------- un eveniment gol: bifele se întorc la locul lor ------------- */
+
+$idGol = pune($idOrg, 'Fără nimic în plus', 'aprobat', 13);
+$golul = cerere($laFormular($slugul($idGol)), $c)['corp'];
+
+verifica('fără preț → „gratuit" bifat', true, $bifat('ev-gratuit', $golul));
+verifica('fără oră de sfârșit → bifa pusă', true, $bifat('ev-fara-sfarsit', $golul));
+verifica('fără participanți → bifele puse', [true, true],
+    [$bifat('ev-fara-min', $golul), $bifat('ev-fara-max', $golul)]);
+verifica('fără copertă → niciun bloc de poză', false, str_contains($golul, 'ev-coperta-acum'));
+
+// „0.00" e altceva decât NULL în bază, dar la afișare amândouă zic „Gratuit".
+// Formularul trebuie să spună la fel, altfel omul vede o contradicție.
+db()->prepare('UPDATE evenimente SET cost = ? WHERE id = ?')->execute(['0.00', $idGol]);
+$golul = cerere($laFormular($slugul($idGol)), $c)['corp'];
+verifica('costul zero e tot „gratuit"', true, $bifat('ev-gratuit', $golul));
+
+/* -------------------- formularul de eveniment nou -------------------- */
+
+db()->exec('DELETE FROM evenimente');
+$formularNou = cerere($baza . '/adauga_eveniment.php', $c)['corp'];
+
+verifica('la unul nou nu apare butonul de anulare', false, str_contains($formularNou, 'ev-anuleaza'));
+verifica('nici slugul ascuns', false, str_contains($formularNou, 'name="slug"'));
+verifica('titlul e gol', '', $valoarea('ev-titlu', $formularNou));
+verifica('„gratuit" bifat, ca înainte', true, $bifat('ev-gratuit', $formularNou));
+verifica('„nu se știe până când" NEbifat, ca înainte', false, $bifat('ev-fara-sfarsit', $formularNou));
+verifica('„nespecificat" bifat, ca înainte', true, $bifat('ev-fara-min', $formularNou));
+
+/* --------------------------- salvarea --------------------------- */
+
+$idDeSchimbat = pune($idOrg, 'Titlul dinainte', 'aprobat', 12);
+$slugDeSchimbat = $slugul($idDeSchimbat);
+
+db()->prepare('UPDATE evenimente SET coperta = ? WHERE id = ?')
+    ->execute([str_repeat('cd', 16), $idDeSchimbat]);
+
+$r = trimite($c, [
+    'slug'         => $slugDeSchimbat,
+    'titlu'        => 'Titlul de după schimbare',
+    'categorie_id' => '3',
+    'locatie'      => 'Cu totul altundeva, în alt cartier',
+]);
+verifica('schimbarea trece', true, $r['ok'] ?? false);
+
+$dupa = db()->prepare('SELECT * FROM evenimente WHERE id = ?');
+$dupa->execute([$idDeSchimbat]);
+$dupa = $dupa->fetch();
+
+verifica('titlul s-a schimbat', 'Titlul de după schimbare', $dupa['titlu']);
+verifica('și categoria', 3, (int) $dupa['categorie_id']);
+
+/**
+ * Slugul NU se schimbă odată cu titlul: adresa poate fi deja dată mai
+ * departe, iar un link stricat supără mai tare decât un slug care nu mai
+ * seamănă cu titlul.
+ */
+verifica('slugul rămâne cel dinainte', $slugDeSchimbat, $dupa['slug']);
+
+/**
+ * Orice schimbare trece din nou pe la moderare. Altfel s-ar putea publica
+ * orice: trimiți un anunț cumsecade, îl aprobăm, iar a doua zi îi schimbi tot
+ * conținutul fără să mai treacă pe la nimeni.
+ */
+verifica('din „aprobat" se întoarce la „în așteptare"', 'in_asteptare', $dupa['stare_moderare']);
+
+// Fără fișier nou, poza rămâne. Un formular gol nu înseamnă „șterge poza".
+verifica('coperta n-a fost atinsă', str_repeat('cd', 16), $dupa['coperta']);
+
+verifica('nu s-a făcut un eveniment în plus', 1, cateEvenimente());
+
+// Și un anunț respins se poate corecta — e chiar cel care are nevoie.
+db()->prepare('UPDATE evenimente SET stare_moderare = ? WHERE id = ?')->execute(['respins', $idDeSchimbat]);
+$r = trimite($c, ['slug' => $slugDeSchimbat, 'titlu' => 'Corectat după refuz']);
+verifica('și cel respins se poate corecta', true, $r['ok'] ?? false);
+
+$dupa = db()->prepare('SELECT stare_moderare FROM evenimente WHERE id = ?');
+$dupa->execute([$idDeSchimbat]);
+verifica('tot la „în așteptare" ajunge', 'in_asteptare', $dupa->fetchColumn());
+
+/**
+ * Limita de evenimente active nu se aplică la schimbare.
+ *
+ * Altfel omul cu un singur eveniment activ ar fi oprit tocmai de el, deci
+ * n-ar mai putea corecta niciodată nimic. Aici are deja unul activ: dovada e
+ * că un eveniment NOU e refuzat, iar schimbarea lui trece.
+ */
+verifica('un eveniment nou e refuzat, are deja unul', false, trimite($c)['ok'] ?? false);
+verifica('dar schimbarea celui existent merge', true,
+    trimite($c, ['slug' => $slugDeSchimbat, 'titlu' => 'Schimbat cu limita atinsă'])['ok'] ?? false);
+
+/* ---------------- cine NU are voie să schimbe ---------------- */
+
+$r = trimite($altul, ['slug' => $slugDeSchimbat, 'titlu' => 'Nu e al meu, dar încerc']);
+verifica('altcineva nu poate schimba evenimentul meu', false, $r['ok'] ?? false);
+
+$q = db()->prepare('SELECT titlu FROM evenimente WHERE id = ?');
+$q->execute([$idDeSchimbat]);
+verifica('titlul a rămas neatins', 'Schimbat cu limita atinsă', $q->fetchColumn());
+
+$r = trimite($c, ['slug' => 'nu-exista-nicaieri', 'titlu' => 'Pe ce anume?']);
+verifica('un slug inexistent nu creează nimic', false, $r['ok'] ?? false);
+verifica('și nu apare vreun eveniment nou', 1, cateEvenimente());
+
+/**
+ * Verificările sunt aceleași ca la publicare. La schimbare nu se cere mai
+ * puțin — altfel s-ar putea publica un anunț bun și „edita" până rămâne gol.
+ */
+$r = trimite($c, ['slug' => $slugDeSchimbat, 'descriere' => 'prea scurt']);
+verifica('descrierea scurtă e refuzată și la schimbare', true, !empty($r['erori']['descriere']));
+
+$r = trimite($c, ['slug' => $slugDeSchimbat, 'titlu' => 'ab']);
+verifica('titlul scurt, la fel', true, !empty($r['erori']['titlu']));
 
 echo "\n=== CÂTE EVENIMENTE A ORGANIZAT ===\n";
 

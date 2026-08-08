@@ -2782,3 +2782,31 @@ body { overscroll-behavior-y: none; }
    organizatorul. `.post__by` are deja margin-right:auto, deci le împinge pe
    amândouă la dreapta, una lângă alta. */
 .post__editeaza { flex: none; }
+
+/* --- Formularul în modul „schimbă un eveniment" ------------------------- */
+
+/* Poza de acum, cât timp omul nu alege alta. 16:9, ca la anunț. */
+.coperta-acum { margin-bottom: 18px; }
+.coperta-acum img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.coperta-acum__text {
+  margin: 8px 0 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-faint);
+}
+
+/* Anularea evenimentului. Despărțită de restul formularului printr-o linie și
+   prin distanță: e singura apăsare de aici care nu se poate lua înapoi, deci
+   n-are voie să stea lipită de „Trimite spre aprobare". */
+.zona-anulare {
+  margin-top: 34px;
+  padding-top: 26px;
+  border-top: 1px solid var(--border);
+}

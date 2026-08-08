@@ -268,6 +268,38 @@ function urlEveniment(string $slug): string
     return 'event.php?slug=' . urlencode($slug);
 }
 
+/** Adresa formularului, în modul în care editează un eveniment anume. */
+function urlEditareEveniment(string $slug): string
+{
+    return 'adauga_eveniment.php?slug=' . urlencode($slug);
+}
+
+/**
+ * Evenimentul pe care omul ăsta are voie să-l editeze, sau null.
+ *
+ * Regula stă aici, într-un singur loc, fiindcă o cer două fișiere: pagina cu
+ * formularul (ca să știe ce să precompleteze) și punctul de intrare care
+ * primește ce s-a scris. Dacă ar fi scrisă de două ori, ar fi de ajuns ca una
+ * să rămână în urmă pentru ca cineva să poată edita evenimentul altcuiva.
+ *
+ * Editează doar organizatorul — oricare ar fi starea de moderare. Un anunț
+ * respins e tocmai cel care are cea mai mare nevoie de o corectură.
+ */
+function evenimentDeEditat(string $slug, int $membruId): ?array
+{
+    if ($membruId <= 0) {
+        return null;
+    }
+
+    $eveniment = evenimentDupaSlug($slug);
+
+    if ($eveniment === null || (int) $eveniment['membru_id'] !== $membruId) {
+        return null;
+    }
+
+    return $eveniment;
+}
+
 /* ============================= SALVAREA =============================== */
 
 /**
@@ -321,4 +353,52 @@ function salveazaEveniment(int $membruId, array $curat, ?string $coperta): int
     }
 
     return 0;
+}
+
+/**
+ * Scrie peste un eveniment care există deja. $curat vine gata verificat, prin
+ * aceleași reguli ca la publicare — la editare nu se cere mai puțin.
+ *
+ * $copertaNoua e null când omul n-a ales altă poză: atunci coloana nu se
+ * atinge, deci rămâne ce era. Un formular trimis fără fișier nu înseamnă
+ * „șterge poza", înseamnă „n-am umblat la ea".
+ *
+ * Slugul NU se schimbă, nici dacă se schimbă titlul: adresa poate fi deja
+ * dată mai departe, iar un link care se strică e mai supărător decât un slug
+ * care nu mai seamănă cu titlul.
+ *
+ * Starea de moderare se întoarce mereu la „în așteptare", oricare ar fi fost.
+ * Altfel s-ar putea publica orice: trimiți un anunț cumsecade, îl aprobăm, iar
+ * a doua zi îi schimbi tot conținutul fără să mai treacă pe la nimeni.
+ */
+function actualizeazaEveniment(int $id, array $curat, ?string $copertaNoua): void
+{
+    $campuri = [
+        'categorie_id'     => $curat['categorie_id'],
+        'titlu'            => $curat['titlu'],
+        'data_eveniment'   => $curat['data_eveniment'],
+        'ora_inceput'      => $curat['ora_inceput'],
+        'ora_sfarsit'      => $curat['ora_sfarsit'],
+        'locatie'          => $curat['locatie'],
+        'cost'             => $curat['cost'],
+        'varsta_minima'    => $curat['varsta_minima'],
+        'participanti_min' => $curat['participanti_min'],
+        'participanti_max' => $curat['participanti_max'],
+        'descriere'        => $curat['descriere'],
+        'gen_participanti' => $curat['gen_participanti'],
+        'stare_moderare'   => 'in_asteptare',
+        'actualizat_la'    => acum(),
+    ];
+
+    if ($copertaNoua !== null) {
+        $campuri['coperta'] = $copertaNoua;
+    }
+
+    $bucati = [];
+    foreach (array_keys($campuri) as $nume) {
+        $bucati[] = $nume . ' = ?';
+    }
+
+    $q = db()->prepare('UPDATE evenimente SET ' . implode(', ', $bucati) . ' WHERE id = ?');
+    $q->execute([...array_values($campuri), $id]);
 }

@@ -2473,12 +2473,25 @@
       }
     }
 
+    /**
+     * Poza de acum, la editare. Cât timp omul nu alege alta, ea rămâne — atât
+     * pe ecran, cât și în bază: un formular trimis fără fișier înseamnă „n-am
+     * umblat la poză". Când alege alta, blocul se ascunde, ca să nu stea două
+     * poze una peste alta; când renunță, se întoarce.
+     */
+    var evCopertaAcum = document.getElementById('ev-coperta-acum');
+
+    function arataPozaDeAcum(da) {
+      if (evCopertaAcum) evCopertaAcum.hidden = !da;
+    }
+
     function scoateCoperta() {
       if (evFisier) evFisier.value = '';
       if (evCrop) evCrop.hidden = true;
       if (evDecupator) evDecupator.uita();
       if (evAdresa) { URL.revokeObjectURL(evAdresa); evAdresa = null; }
       if (evNume) evNume.textContent = 'JPG, PNG sau WEBP, cel puțin 1600×900 px';
+      arataPozaDeAcum(true);
     }
 
     function arataCoperta(fisier) {
@@ -2502,6 +2515,9 @@
         }
 
         setError('ev-coperta', 'err-ev-coperta', '');
+
+        // Poza cea nouă o ia pe cea veche din loc.
+        arataPozaDeAcum(false);
 
         // Rama întâi vizibilă, apoi așezarea: ascunsă, n-are lățime.
         evCrop.hidden = false;
