@@ -987,6 +987,144 @@ verifica('descrierea scurtă e refuzată și la schimbare', true, !empty($r['ero
 $r = trimite($c, ['slug' => $slugDeSchimbat, 'titlu' => 'ab']);
 verifica('titlul scurt, la fel', true, !empty($r['erori']['titlu']));
 
+echo "\n=== PREVIZUALIZAREA ===\n";
+
+db()->exec('DELETE FROM evenimente');
+
+/** Trimite datele spre previzualizare. Aceleași câmpuri ca la trimite(). */
+function previzualizeaza(array &$cookies, array $peste = []): array
+{
+    $descriere = str_repeat('Pornim din fața primăriei și mergem agale prin centrul vechi. ', 8);
+
+    return json_din(cerere($GLOBALS['baza'] . '/api/previzualizare.php', $cookies, array_merge([
+        'csrf'             => csrf($cookies),
+        'titlu'            => 'Cursa de seară prin centrul vechi',
+        'categorie_id'     => '1',
+        'locatie'          => 'Piața Sfatului, lângă fântână',
+        'data_eveniment'   => date('Y-m-d', strtotime('+10 days')),
+        'ora_inceput'      => '19:00',
+        'fara_ora_sfarsit' => '1',
+        'gratuit'          => '1',
+        'varsta_minima'    => 'nespecificat',
+        'gen_participanti' => 'nespecificat',
+        'fara_participanti_min' => '1',
+        'fara_participanti_max' => '1',
+        'descriere'        => $descriere,
+    ], $peste)));
+}
+
+/* -------------------- aceleași verificări ca la salvare ------------------- */
+
+/**
+ * Nu o copie „mai îngăduitoare": dacă previzualizarea ar trece peste ceva ce
+ * salvarea refuză, omul ar vedea o pagină frumoasă și apoi un teanc de erori.
+ */
+$rPreviz = previzualizeaza($c, ['descriere' => 'prea scurt']);
+$rSalvat = trimite($c, ['descriere' => 'prea scurt']);
+verifica('descrierea scurtă e refuzată și la previzualizare', true,
+    !empty($rPreviz['erori']['descriere']));
+verifica('cu exact același mesaj ca la trimitere',
+    $rSalvat['erori']['descriere'] ?? 'x', $rPreviz['erori']['descriere'] ?? 'y');
+
+$rPreviz = previzualizeaza($c, ['titlu' => 'ab', 'locatie' => '']);
+verifica('titlul scurt, la fel', true, !empty($rPreviz['erori']['titlu']));
+verifica('și locația lipsă', true, !empty($rPreviz['erori']['locatie']));
+verifica('când sunt erori, nu se dă nicio cheie', true, empty($rPreviz['cheie']));
+
+verifica('nimic în bază, oricâte greșeli', 0, cateEvenimente());
+
+/* ------------------------ când datele sunt bune ------------------------ */
+
+$rPreviz = previzualizeaza($c);
+verifica('cu date bune, se primește o cheie', true, !empty($rPreviz['cheie']));
+verifica('și tot nu se salvează nimic', 0, cateEvenimente());
+
+$cheie = (string) $rPreviz['cheie'];
+$pagina = cerere($baza . '/previzualizare.php?p=' . urlencode($cheie), $c);
+
+verifica('pagina se deschide', 200, $pagina['stare']);
+verifica('cu titlul din formular', true,
+    str_contains($pagina['corp'], 'Cursa de seară prin centrul vechi'));
+verifica('cu categoria pe nume, nu pe id', true, str_contains($pagina['corp'], 'Sport'));
+verifica('spune limpede că nu e publicat', true,
+    str_contains($pagina['corp'], 'nu e publicat nimic'));
+verifica('și nu se lasă indexată', true, str_contains($pagina['corp'], 'name="robots"'));
+
+/**
+ * Aceeași afișare condiționată ca pe pagina adevărată: ce lipsește nu se
+ * arată. E și dovada că amândouă trec prin afiseazaEveniment().
+ */
+verifica('patru rânduri de detalii, ca la un eveniment fără opționale', 4,
+    substr_count($pagina['corp'], 'event-box__item'));
+verifica('fără rând de vârstă minimă', false,
+    str_contains($pagina['corp'], '<span>Vârstă minimă</span>'));
+verifica('fără vorbe despre ora de sfârșit care lipsește', false,
+    str_contains($pagina['corp'], 'nedeterminat'));
+
+$rPreviz = previzualizeaza($c, [
+    'ora_sfarsit' => '22:30', 'fara_ora_sfarsit' => null,
+    'gratuit' => null, 'cost' => '45,50',
+    'varsta_minima' => '18', 'gen_participanti' => 'femei',
+    'fara_participanti_min' => null, 'participanti_min' => '10',
+    'fara_participanti_max' => null, 'participanti_max' => '50',
+]);
+$pagina = cerere($baza . '/previzualizare.php?p=' . urlencode((string) $rPreviz['cheie']), $c)['corp'];
+
+verifica('cu toate completate: șapte rânduri', 7, substr_count($pagina, 'event-box__item'));
+verifica('intervalul orar întreg', true, str_contains($pagina, '19:00 — 22:30'));
+verifica('costul scris pe românește', true, str_contains($pagina, '45,50 lei'));
+verifica('vârsta minimă', true, str_contains($pagina, '18 ani'));
+verifica('genul', true, str_contains($pagina, 'Doar femei'));
+verifica('participanții', true, str_contains($pagina, 'minimum 10, cel mult 50'));
+
+/* ----------------------- textul rămâne text ----------------------- */
+
+$rPreviz = previzualizeaza($c, [
+    'titlu'     => 'Titlu cu <script>alert(1)</script> & semne',
+    'descriere' => "Primul paragraf, cu <b>etichete</b>.\n\nAl doilea.\nUn rând nou.\n\n"
+                 . str_repeat('Umplem până la trei sute de caractere. ', 8),
+]);
+$pagina = cerere($baza . '/previzualizare.php?p=' . urlencode((string) $rPreviz['cheie']), $c)['corp'];
+
+verifica('eticheta din titlu e scăpată', true, str_contains($pagina, '&lt;script&gt;'));
+verifica('și nu ajunge cod în pagină', false, str_contains($pagina, '<script>alert(1)</script>'));
+verifica('paragrafele devin <p>', true, str_contains($pagina, '<p>Primul paragraf'));
+verifica('rândul simplu devine <br>', true, str_contains($pagina, 'Al doilea.<br'));
+
+/* ------------------------ cine poate deschide ------------------------ */
+
+verifica('cheia altcuiva nu duce nicăieri', 302,
+    cerere($baza . '/previzualizare.php?p=' . urlencode($cheie), $altul)['stare']);
+verifica('nici o cheie inventată', 302,
+    cerere($baza . '/previzualizare.php?p=deadbeef', $c)['stare']);
+verifica('nici fără cheie', 302, cerere($baza . '/previzualizare.php', $c)['stare']);
+
+$r = cerere($baza . '/previzualizare.php?p=' . urlencode($cheie), $anonim);
+verifica('nelogatul e trimis la login', 302, $r['stare']);
+verifica('spre formular, unde voia să ajungă', true,
+    str_contains($r['unde'], 'login.php'));
+
+/* --------------------- apărarea punctului de intrare --------------------- */
+
+$r = cerere($baza . '/api/previzualizare.php', $c, ['csrf' => 'gresit', 'titlu' => 'x']);
+verifica('fără CSRF bun → 419', 419, $r['stare']);
+
+$gol = [];
+$r = cerere($baza . '/api/previzualizare.php', $gol, ['titlu' => 'x']);
+verifica('nelogat → 401 sau 419', true, in_array($r['stare'], [401, 419], true));
+
+$r = cerere($baza . '/api/previzualizare.php', $c);
+verifica('prin GET → 405', 405, $r['stare']);
+
+/**
+ * Previzualizarea nu creează niciun eveniment, deci limita de evenimente
+ * active n-are ce căuta aici. Facem unul, ca limita să fie atinsă.
+ */
+pune($idOrg, 'Unul activ, ca să atingem limita', 'aprobat', 4);
+verifica('un eveniment nou e refuzat, are deja unul', false, trimite($c)['ok'] ?? false);
+verifica('dar previzualizarea merge oricum', true, !empty(previzualizeaza($c)['cheie']));
+verifica('și tot un singur eveniment e în bază', 1, cateEvenimente());
+
 echo "\n=== CÂTE EVENIMENTE A ORGANIZAT ===\n";
 
 db()->exec('DELETE FROM evenimente');

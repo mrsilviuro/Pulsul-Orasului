@@ -2810,3 +2810,26 @@ body { overscroll-behavior-y: none; }
   padding-top: 26px;
   border-top: 1px solid var(--border);
 }
+
+/* Cele două butoane de sub formular. Pe ecran lat stau unul lângă altul,
+   „Previzualizează" mai șters: e o privire, nu o hotărâre. */
+.ev-butoane { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+/* Portița pentru browserele care blochează fila nouă. Ascunsă până e nevoie. */
+.ev-previz-link { margin: 12px 0 0; text-align: center; font-size: 14px; }
+.ev-previz-link a { color: var(--brand); font-weight: 700; text-decoration: underline; }
+
+/* Banda de sus a previzualizării: nu e o avertizare, e o lămurire. */
+.stare-anunt--previzualizare {
+  border-color: var(--border);
+  background: var(--surface-2);
+  color: var(--text-soft);
+}
+.stare-anunt--previzualizare .ico { color: var(--text-faint); }
+[data-theme="dark"] .stare-anunt--previzualizare { color: var(--text-soft); }
+
+@media (max-width: 560px) {
+  /* Pe telefon unul sub altul: două butoane înghesuite pe un rând de 390px
+     ajung amândouă prea înguste ca să se citească. */
+  .ev-butoane { grid-template-columns: 1fr; }
+}

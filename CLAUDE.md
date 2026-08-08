@@ -102,9 +102,9 @@ Site live: https://pulsulorasului.ro
 
 ```
 index.php, event.php, contact.php, despre.php, login.php,
-profil.php, poza.php, setari.php, adauga_eveniment.php, parola-uitata.php,
-parola-noua.php, google.php, finalizare.php, confirma.php, stergere.php,
-iesire.php, verifica.php
+profil.php, poza.php, setari.php, adauga_eveniment.php, previzualizare.php,
+parola-uitata.php, parola-noua.php, google.php, finalizare.php, confirma.php,
+stergere.php, iesire.php, verifica.php
 
 inc/
   antet.php        → head + meniu + antete siguranță (folosit de toate paginile)
@@ -114,6 +114,9 @@ inc/
   imagini.php       → procesare/validare poze de profil ȘI coperți de eveniment
   evenimente.php    → categorii, regula „un eveniment activ", lista de pe
                       profil, pagina unui eveniment, salvarea
+  afisare-eveniment.php → CUM ARATĂ un eveniment pe ecran (antet, copertă,
+                      caseta cu detalii, descrierea). Folosit și de event.php,
+                      și de previzualizare.php — schimbă aici, nu în pagini
   email.php         → șablon unic pentru toate email-urile (table-based, inline style)
   google.php        → OAuth Google (authorization code flow + PKCE)
   buton-google.php  → butonul de login Google

@@ -10,6 +10,7 @@ declare(strict_types=1);
  */
 
 require_once __DIR__ . '/inc/evenimente.php';
+require_once __DIR__ . '/inc/afisare-eveniment.php';
 
 $slug = trim((string) ($_GET['slug'] ?? ''));
 
@@ -47,19 +48,9 @@ $eAprobat       = $eveniment['stare_moderare'] === 'aprobat';
 
 /* --------------------------- ce se afișează --------------------------- */
 
-$coperta = urlCoperta($eveniment['coperta'] ?? null);
-
-// Imaginea implicită a categoriei, când va exista. Coloana e deja în bază,
-// fișierele se urcă de mână — vezi roadmap-ul din CLAUDE.md.
-if ($coperta === '' && !empty($eveniment['imagine_default'])) {
-    $coperta = 'assets/img/categorii/' . $eveniment['imagine_default'];
-}
-
-$oraInceput = oraScurta($eveniment['ora_inceput']);
-$oraSfarsit = oraScurta($eveniment['ora_sfarsit'] ?? null);
-
-$organizator = numeAfisat($eveniment['org_nume'], $eveniment['org_prenume']);
-
+// Coperta, orele, numele organizatorului — toate se pregătesc în
+// evenimentDinBaza(), din inc/afisare-eveniment.php. Aici rămâne doar ce ține
+// de pagină: titlul din bara browserului și dacă se lasă indexată.
 $titlu     = $eveniment['titlu'] . ' — PulsulOrasului.Ro';
 $descriere = inceputDeText((string) $eveniment['descriere'], 155);
 
@@ -87,173 +78,43 @@ require __DIR__ . '/inc/antet.php';
 
     <article class="post">
 
-      <!-- ======================= ANTETUL EVENIMENTULUI ===================== -->
-      <header class="post__head">
-        <span class="post__cat"><?= h($eveniment['categorie']) ?></span>
-        <h1 class="post__title"><?= h($eveniment['titlu']) ?></h1>
+      <?php
+        /**
+         * Tot ce se vede din datele evenimentului — antet, copertă, caseta cu
+         * detalii, descrierea — se desenează în inc/afisare-eveniment.php.
+         *
+         * Acolo, și nu aici, fiindcă aceeași bucată desenează și
+         * previzualizarea din formular. Dacă ar fi scrisă în două locuri,
+         * previzualizarea ar rămâne în urmă la prima schimbare, și tocmai ea
+         * trebuie să arate exact ca pagina adevărată.
+         *
+         * Ce ține de pagina asta se dă din afară: banda cu starea anunțului
+         * (o vede doar organizatorul, ceilalți nu deschid pagina deloc) și
+         * butonul „Editează".
+         */
+        $banda = null;
 
-        <?php if (!$eAprobat): ?>
-        <!--
-          Aici ajunge doar organizatorul: pentru oricine altcineva, un eveniment
-          neaprobat nu se deschide deloc. Îi spunem pe față unde stă anunțul,
-          cu aceeași etichetă galbenă de pe cartonașele din profil.
-        -->
-        <p class="stare-anunt stare-anunt--<?= $eveniment['stare_moderare'] === 'respins' ? 'respins' : 'asteptare' ?>">
-          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
-            <circle cx="12" cy="12" r="9"/><path d="M12 7v5.2l3.4 2"/>
-          </svg>
-          <?php if ($eveniment['stare_moderare'] === 'respins'): ?>
-          <span>Anunțul nu a trecut de verificare. Îl vezi doar tu.</span>
-          <?php else: ?>
-          <span>În așteptare de aprobare. Îl vezi doar tu, până îl citim.</span>
-          <?php endif; ?>
-        </p>
-        <?php endif; ?>
+        if (!$eAprobat) {
+            $banda = $eveniment['stare_moderare'] === 'respins'
+                ? ['fel' => 'respins',   'text' => 'Anunțul nu a trecut de verificare. Îl vezi doar tu.']
+                : ['fel' => 'asteptare', 'text' => 'În așteptare de aprobare. Îl vezi doar tu, până îl citim.'];
+        }
 
-        <div class="post__meta">
-          <!-- Poza organizatorului; cine n-are, arată silueta implicită. -->
-          <img class="post__avatar" src="<?= h(urlPoza($eveniment['org_poza'] ?? null, true)) ?>"
-               alt="" width="96" height="96">
-          <div class="post__by">
-            <a class="post__author" href="profil.php?m=<?= h(urlencode((string) $eveniment['org_permalink'])) ?>"><?= h($organizator) ?></a>
-            <div class="post__sub">
-              <span>Organizator</span>
-              <span class="dot" aria-hidden="true"></span>
-              <time datetime="<?= h((string) $eveniment['creat_la']) ?>">publicat <?= h(dataScurta($eveniment['creat_la'])) ?></time>
-            </div>
-          </div>
-
-          <?php if ($eOrganizatorul): ?>
-          <!-- Doar pentru cel care l-a scris. Slugul spune formularului ce
-               eveniment să încarce; acolo se verifică din nou al cui e. -->
-          <a class="btn btn--ghost btn--sm post__editeaza"
-             href="<?= h(urlEditareEveniment((string) $eveniment['slug'])) ?>">
-            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M4 20h4l10-10a2.4 2.4 0 0 0-3.4-3.4L4.6 16.6z"/>
-              <path d="m14.2 7.4 2.4 2.4"/>
-            </svg>
-            <span>Editează</span>
-          </a>
-          <?php endif; ?>
-        </div>
-      </header>
-
-      <?php if ($coperta !== ''): ?>
-      <!-- ======================= COPERTA 16:9 ============================= -->
-      <!-- Fără figcaption: n-avem de unde ști ce e în poză, iar o legendă
-           inventată e mai rea decât niciuna. -->
-      <figure class="post__figure">
-        <img src="<?= h($coperta) ?>" alt=""
-             width="1600" height="900" fetchpriority="high" decoding="async">
-      </figure>
-      <?php endif; ?>
-
-      <!-- ==================== DETALIILE EVENIMENTULUI =====================
-        Ce lipsește nu se arată gol. Un rând „Vârstă minimă: —" nu spune
-        nimic, dar ocupă locul unuia care ar fi spus.
-      ================================================================== -->
-      <section class="event-box" aria-label="Detaliile evenimentului">
-        <div class="event-box__item">
-          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
-            <rect x="3.5" y="5" width="17" height="16" rx="3"/><path d="M8 3v4M16 3v4M3.5 10h17"/>
-          </svg>
-          <div><span>Data</span><strong><?= h(dataLunga($eveniment['data_eveniment'])) ?></strong></div>
-        </div>
-
-        <div class="event-box__item">
-          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
-            <circle cx="12" cy="12" r="9"/><path d="M12 7v5.2l3.4 2"/>
-          </svg>
-          <div><span>Ora</span><strong><?php
-            // Ora de început e mereu știută; sfârșitul poate lipsi. Când
-            // lipsește, nu se spune nimic despre el: „19:00", atât. O mențiune
-            // de genul „nedeterminat" ocupă un rând ca să nu spună nimic.
-            echo h($oraSfarsit !== '' ? $oraInceput . ' — ' . $oraSfarsit : $oraInceput);
-          ?></strong></div>
-        </div>
-
-        <div class="event-box__item">
-          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M12 21s7-5.6 7-11a7 7 0 1 0-14 0c0 5.4 7 11 7 11Z"/><circle cx="12" cy="10" r="2.6"/>
-          </svg>
-          <div><span>Locul</span><strong><?= h($eveniment['locatie']) ?></strong></div>
-        </div>
-
-        <div class="event-box__item">
-          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
-            <rect x="2.5" y="6" width="19" height="12" rx="3"/><circle cx="12" cy="12" r="2.6"/>
-          </svg>
-          <div><span>Acces</span><strong><?= h(costScris($eveniment['cost'])) ?></strong></div>
-        </div>
-
-        <?php if ($eveniment['varsta_minima'] !== null): ?>
-        <div class="event-box__item">
-          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
-            <circle cx="12" cy="8.2" r="3.6"/><path d="M5 20c0-3.9 3.1-6.4 7-6.4s7 2.5 7 6.4"/>
-          </svg>
-          <div><span>Vârstă minimă</span><strong><?= (int) $eveniment['varsta_minima'] ?> ani</strong></div>
-        </div>
-        <?php endif; ?>
-
-        <?php if ($eveniment['gen_participanti'] !== 'nespecificat'): ?>
-        <div class="event-box__item">
-          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
-            <circle cx="9" cy="8.5" r="3.4"/><path d="M3 20c0-3.4 2.7-5.7 6-5.7s6 2.3 6 5.7"/>
-            <path d="M17 8.5h4M19 6.5v4"/>
-          </svg>
-          <div><span>Pentru cine</span><strong><?=
-            $eveniment['gen_participanti'] === 'barbati' ? 'Doar bărbați' : 'Doar femei'
-          ?></strong></div>
-        </div>
-        <?php endif; ?>
-
-        <?php
-          // Cele două numere stau într-un singur rând: „minim 10" și „cel mult
-          // 50" sunt aceeași informație, câți oameni încap.
-          $participanti = [];
-          if ($eveniment['participanti_min'] !== null) {
-              $participanti[] = 'minimum ' . (int) $eveniment['participanti_min'];
-          }
-          if ($eveniment['participanti_max'] !== null) {
-              $participanti[] = 'cel mult ' . (int) $eveniment['participanti_max'];
-          }
-        ?>
-        <?php if ($participanti !== []): ?>
-        <div class="event-box__item">
-          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
-            <circle cx="9" cy="8.5" r="3.4"/><path d="M3 20c0-3.4 2.7-5.7 6-5.7s6 2.3 6 5.7"/>
-            <path d="M16.5 5.6a3.4 3.4 0 0 1 0 5.8"/><path d="M18 14.6c2 .8 3 2.6 3 5.4"/>
-          </svg>
-          <div><span>Participanți</span><strong><?= h(implode(', ', $participanti)) ?></strong></div>
-        </div>
-        <?php endif; ?>
-      </section>
-
-      <!-- ======================== CORPUL ARTICOLULUI ====================== -->
-      <!-- ======================== DESCRIEREA ============================
-        Textul e în bază exact cum l-a scris omul, neescapat. Escaparea se
-        face aici, la randare, cu h() — invers ar fi însemnat „&amp;amp;" la
-        a doua editare și un text pe care nu-l mai poți căuta.
-
-        Se escapează ÎNTÂI, se pun etichetele DUPĂ: altfel <p> și <br> ar fi
-        escapate și ele, iar omul ar vedea codul în loc de paragrafe.
-      ================================================================== -->
-      <div class="post__body">
-        <?php
-          $paragrafe = preg_split('/\n{2,}/', (string) $eveniment['descriere']) ?: [];
-
-          foreach ($paragrafe as $paragraf) {
-              $paragraf = trim($paragraf);
-
-              if ($paragraf === '') {
-                  continue;
-              }
-
-              // Rândurile simple dinăuntrul unui paragraf rămân rânduri.
-              echo '<p>', nl2br(h($paragraf), false), '</p>', "\n";
-          }
-        ?>
-      </div>
+        afiseazaEveniment(evenimentDinBaza($eveniment), $banda, $eOrganizatorul ? function () use ($eveniment) {
+            ?>
+            <!-- Doar pentru cel care l-a scris. Slugul spune formularului ce
+                 eveniment să încarce; acolo se verifică din nou al cui e. -->
+            <a class="btn btn--ghost btn--sm post__editeaza"
+               href="<?= h(urlEditareEveniment((string) $eveniment['slug'])) ?>">
+              <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M4 20h4l10-10a2.4 2.4 0 0 0-3.4-3.4L4.6 16.6z"/>
+                <path d="m14.2 7.4 2.4 2.4"/>
+              </svg>
+              <span>Editează</span>
+            </a>
+            <?php
+        } : null);
+      ?>
 
       <!-- =========================== PARTICIPARE ========================== -->
       <!--

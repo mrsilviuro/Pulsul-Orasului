@@ -2586,6 +2586,32 @@
       });
     }
 
+    /**
+     * Erorile de la server, puse fiecare lângă câmpul ei.
+     *
+     * Scrisă o dată fiindcă o cer două butoane: „Trimite spre aprobare" și
+     * „Previzualizează". Amândouă trec prin aceleași verificări pe server,
+     * deci trebuie să arate la fel și când ceva nu e în regulă.
+     */
+    function arataErorile(erori) {
+      var primul = null;
+
+      [['titlu', 'ev-titlu'], ['categorie_id', 'ev-categorie'], ['locatie', 'ev-locatie'],
+       ['data_eveniment', 'ev-data'], ['ora_inceput', 'ev-ora-inceput'],
+       ['ora_sfarsit', 'ev-ora-sfarsit'], ['cost', 'ev-cost'],
+       ['varsta_minima', 'ev-varsta'], ['gen_participanti', 'ev-gen'],
+       ['participanti_min', 'ev-min'], ['participanti_max', 'ev-max'],
+       ['descriere', 'ev-descriere'], ['coperta', 'ev-coperta']
+      ].forEach(function (p) {
+        var mesaj = erori[p[0]] || '';
+        setError(p[1], 'err-' + p[1], mesaj);
+        if (mesaj && !primul) primul = document.getElementById(p[1]);
+      });
+
+      if (primul) primul.focus();
+      toast('Mai sunt câmpuri de corectat.');
+    }
+
     /* --- trimiterea --- */
     evForm.addEventListener('submit', function (e) {
       e.preventDefault();
@@ -2627,23 +2653,7 @@
         if (!rez.corp) { toast(mesajRaspunsNeasteptat(rez)); return; }
         var c = rez.corp;
 
-        if (c.erori) {
-          var primul = null;
-          [['titlu', 'ev-titlu'], ['categorie_id', 'ev-categorie'], ['locatie', 'ev-locatie'],
-           ['data_eveniment', 'ev-data'], ['ora_inceput', 'ev-ora-inceput'],
-           ['ora_sfarsit', 'ev-ora-sfarsit'], ['cost', 'ev-cost'],
-           ['varsta_minima', 'ev-varsta'], ['gen_participanti', 'ev-gen'],
-           ['participanti_min', 'ev-min'], ['participanti_max', 'ev-max'],
-           ['descriere', 'ev-descriere'], ['coperta', 'ev-coperta']
-          ].forEach(function (p) {
-            var mesaj = c.erori[p[0]] || '';
-            setError(p[1], 'err-' + p[1], mesaj);
-            if (mesaj && !primul) primul = document.getElementById(p[1]);
-          });
-          if (primul) primul.focus();
-          toast('Mai sunt câmpuri de corectat.');
-          return;
-        }
+        if (c.erori) { arataErorile(c.erori); return; }
 
         if (!c.ok) { toast(c.mesaj || 'Nu am putut trimite evenimentul.'); return; }
 
@@ -2659,6 +2669,129 @@
         toast(mesajFaraLegatura());
       });
     });
+
+    /* ------------------------ previzualizarea ------------------------- */
+    /*
+      Aceleași verificări ca la trimitere, pe server, cu aceeași funcție.
+      Diferă doar ce se întâmplă după: una salvează, cealaltă doar desenează.
+
+      Fișierul NU pleacă spre server. Coperta aleasă e deja în browser, așa că
+      o desenăm pe o pânză exact cum ar tăia-o serverul — cu numerele din
+      decupator — și o lăsăm în localStorage pentru fila care se deschide.
+    */
+    var evPreviz = document.getElementById('ev-previzualizeaza');
+
+    function copertaCaImagine() {
+      if (!evDecupator || !evFisier || !evFisier.files || !evFisier.files.length) return '';
+
+      try {
+        var t = evDecupator.decupaj();
+        var panza = document.createElement('canvas');
+        panza.width = COPERTA_L;
+        panza.height = COPERTA_I;
+
+        var ctx = panza.getContext('2d');
+        // Alb dedesubt, ca la server: un PNG cu fundal transparent ar ieși negru.
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, COPERTA_L, COPERTA_I);
+        ctx.drawImage(evCropImg, t.x, t.y, t.l, t.h, 0, 0, COPERTA_L, COPERTA_I);
+
+        return panza.toDataURL('image/jpeg', 0.82);
+      } catch (e) {
+        // Dacă nu merge, previzualizarea se descurcă fără poză.
+        return '';
+      }
+    }
+
+    if (evPreviz) {
+      evPreviz.addEventListener('click', function () {
+        var textInitial = evPreviz.textContent;
+        evPreviz.disabled = true;
+
+        function gata() {
+          evPreviz.disabled = false;
+          evPreviz.textContent = textInitial;
+        }
+
+        // Fără fișier: n-are ce căuta la verificarea asta, iar previzualizarea
+        // ia poza din browser oricum.
+        var date = new FormData(evForm);
+        date.delete('coperta');
+
+        fetch('api/previzualizare.php', {
+          method: 'POST',
+          credentials: 'same-origin',
+          body: date
+        })
+        .then(citesteRaspuns)
+        .then(function (rez) {
+          gata();
+
+          if (!rez.corp) { toast(mesajRaspunsNeasteptat(rez)); return; }
+          var c = rez.corp;
+
+          // Aceleași erori, în aceleași locuri. Fila nu se deschide deloc.
+          if (c.erori) { arataErorile(c.erori); return; }
+          if (!c.ok || !c.cheie) { toast(c.mesaj || 'Nu am putut pregăti previzualizarea.'); return; }
+
+          var poza = copertaCaImagine();
+
+          if (poza !== '') {
+            try { localStorage.setItem('po-previzualizare-' + c.cheie, poza); } catch (e) {}
+          }
+
+          var fila = window.open('previzualizare.php?p=' + encodeURIComponent(c.cheie), '_blank');
+
+          /**
+           * Unele browsere nu lasă o filă să se deschidă dintr-un răspuns
+           * primit mai târziu, chiar dacă totul a pornit de la o apăsare. Nu-l
+           * lăsăm pe om să creadă că butonul e stricat: îi dăm un link pe care
+           * să apese el, iar apăsarea aia e o mișcare a lui, deci trece.
+           */
+          if (!fila) {
+            var link = document.getElementById('ev-previz-link');
+            if (link) {
+              link.href = 'previzualizare.php?p=' + encodeURIComponent(c.cheie);
+              link.hidden = false;
+            }
+            toast('Deschide previzualizarea din linkul de sub buton.');
+          }
+        })
+        .catch(function () {
+          gata();
+          toast(mesajFaraLegatura());
+        });
+      });
+    }
+  }
+
+
+  /* ------------- 11.5. POZA DIN PREVIZUALIZARE (previzualizare.php) ------ */
+  /*
+    Coperta aleasă în formular n-a ajuns niciodată pe server — e doar în
+    browser. Fila-mamă a lăsat-o în localStorage, tăiată deja cum ar tăia-o
+    serverul; aici o punem la locul ei și ștergem urma.
+
+    Dacă nu găsim nimic (fila deschisă a doua oară, altă fereastră, spațiu
+    plin la scriere), figura se dă la o parte: mai bine fără poză decât cu
+    silueta implicită, care n-are ce căuta pe un anunț.
+  */
+  var previzMain = document.querySelector('main[data-previzualizare]');
+  var previzPoza = document.getElementById('prev-coperta');
+
+  if (previzMain && previzPoza) {
+    var cheiaPreviz = previzMain.getAttribute('data-previzualizare');
+    var pastrata = '';
+
+    try { pastrata = localStorage.getItem('po-previzualizare-' + cheiaPreviz) || ''; } catch (e) {}
+
+    if (pastrata !== '') {
+      previzPoza.src = pastrata;
+      try { localStorage.removeItem('po-previzualizare-' + cheiaPreviz); } catch (e) {}
+    } else {
+      var figura = previzPoza.closest('figure');
+      if (figura) figura.remove();
+    }
   }
 
 

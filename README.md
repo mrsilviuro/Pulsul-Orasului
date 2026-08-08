@@ -278,7 +278,7 @@ Rularea verificărilor: `php teste/test-validare.php` (133 de cazuri).
 Patru suite vorbesc cu site-ul prin HTTP, cu cookie-uri adevărate, și cer
 serverul pornit: „ține-mă minte" (35 de cazuri), setările, cu tot cu ștergerea
 contului și cron (95), formularul de contact (60) și publicarea evenimentelor,
-cu tot cu urcarea copertei și secțiunea de pe profil (224).
+cu tot cu urcarea copertei și secțiunea de pe profil (261).
 
 ```
 php -S 127.0.0.1:8126 -t . &
@@ -1134,6 +1134,62 @@ pun etichetele după, altfel `<p>` și `<br>` ar fi escapate și ele, iar omul a
 vedea codul în loc de paragrafe. Rândurile goale despart paragrafe, cele simple
 rămân rânduri.
 
+## Previzualizarea, înainte de trimitere
+
+Butonul **„Previzualizează"**, lângă „Trimite spre aprobare", arată cum va
+arăta anunțul — cu tot ce e scris în formular chiar atunci, inclusiv ce n-a
+fost încă salvat.
+
+### Unde se uită cine vrea să schimbe ceva
+
+| fișier | ce face |
+|---|---|
+| `inc/afisare-eveniment.php` | **cum arată** un eveniment: antet, copertă, caseta cu detalii, descrierea |
+| `api/previzualizare.php` | primește formularul, verifică, pune datele deoparte în sesiune |
+| `previzualizare.php` | pagina care se deschide în fila nouă |
+
+`afiseazaEveniment()` e bucata de care atârnă amândouă paginile — și
+`event.php`, cu datele din bază, și `previzualizare.php`, cu datele din
+formular. **Orice schimbare vizuală se face acolo**, și se vede pe amândouă
+deodată; scrisă în două locuri, previzualizarea ar rămâne în urmă la prima
+corectură, și tocmai ea trebuie să arate exact ca pagina adevărată.
+
+Funcția nu atinge baza și nu știe nimic despre moderare sau despre cine e
+conectat: primește un tablou cu ce e de arătat. Ce diferă între pagini — banda
+de sus, butonul „Editează" — se dă din afară, ca argument. Rândul din bază se
+traduce în forma aia cu `evenimentDinBaza()`, tot acolo, ca numele coloanelor
+să nu se împrăștie prin pagini.
+
+### De ce în doi pași
+
+Un formular obișnuit cu `target="_blank"` ar deschide fila **înainte** să se
+știe dacă datele sunt bune, iar erorile ar ajunge acolo, nu pe formular. Or,
+tocmai asta trebuie evitat: omul rămâne pe formular și vede ce are de
+corectat.
+
+Așa că butonul trimite datele cu `fetch`. Serverul le trece prin
+`verificaEveniment()` — **exact funcția de la salvare**, nu o copie mai
+îngăduitoare — și răspunde fie cu erorile, fie cu o cheie. Erorile se pun
+lângă câmpuri prin aceeași `arataErorile()` pe care o folosește și trimiterea
+adevărată; fila se deschide numai când chiar are ce arăta.
+
+Datele stau în sesiune, sub o cheie întâmplătoare, cel mult un sfert de oră și
+cel mult trei deodată. Cheia e legată de sesiune: pentru altcineva, aceeași
+adresă nu duce nicăieri. Nimic nu se scrie în `evenimente`, iar limita de
+evenimente active nici nu se verifică — previzualizarea nu creează nimic.
+
+### Poza aleasă, dar netrimisă încă
+
+Coperta nou aleasă e doar în browser. Nu o urcăm ca s-o arătăm: pagina-mamă o
+desenează pe o pânză exact cum ar tăia-o serverul — cu numerele din decupator,
+la 1600×900, cu alb dedesubt — și o lasă în `localStorage` sub cheia
+previzualizării. Fila nouă o ia de acolo și șterge urma.
+
+Dacă nu găsește nimic (fila deschisă a doua oară, altă fereastră, spațiu plin),
+figura se dă la o parte de tot: mai bine fără poză decât cu o siluetă implicită
+care n-are ce căuta pe un anunț. La editare, când n-a fost aleasă altă poză, se
+arată cea care există deja pe eveniment — aia vine de pe server, ca de obicei.
+
 ## Schimbarea unui eveniment
 
 `adauga_eveniment.php?slug=…` — **același formular** ca la publicare, doar
@@ -1198,7 +1254,7 @@ codul le preferă deja când există, dar fișierele nu sunt urcate, deci un
 eveniment fără copertă rămâne fără poza mare.
 
 Verificările: `php teste/test-evenimente.php http://127.0.0.1:8126`
-(224 de cazuri, cere serverul pornit).
+(261 de cazuri, cere serverul pornit).
 
 
 ## E-mailurile

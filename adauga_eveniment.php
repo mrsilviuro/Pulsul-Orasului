@@ -447,7 +447,29 @@ require __DIR__ . '/inc/antet.php';
           </div>
         </section>
 
-        <button class="btn btn--primary btn--block" type="submit">Trimite spre aprobare</button>
+        <!--
+          Previzualizarea trece prin aceleași verificări ca trimiterea; dacă
+          ceva nu e în regulă, erorile apar aici, pe formular, și fila nouă nu
+          se mai deschide. De aceea e un buton obișnuit, nu un formular cu
+          target="_blank": acela ar deschide fila înainte să știe dacă are ce
+          arăta. Vezi secțiunea 11 din main.js, la „previzualizarea".
+        -->
+        <div class="ev-butoane">
+          <button class="btn btn--ghost btn--block" type="button" id="ev-previzualizeaza">
+            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+            <span>Previzualizează</span>
+          </button>
+          <button class="btn btn--primary btn--block" type="submit">Trimite spre aprobare</button>
+        </div>
+
+        <!-- Portița pentru browserele care nu lasă o filă să se deschidă
+             dintr-un răspuns venit mai târziu. Stă ascunsă până e nevoie. -->
+        <p class="ev-previz-link">
+          <a id="ev-previz-link" href="#" target="_blank" rel="noopener" hidden>Deschide previzualizarea</a>
+        </p>
 
         <?php if ($eEditare): ?>
         <!--
