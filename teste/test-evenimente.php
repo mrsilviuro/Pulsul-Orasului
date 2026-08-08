@@ -517,10 +517,130 @@ verifica('prin GET → 405', 405, $r['stare']);
 
 verifica('nimic în bază', 0, cateEvenimente());
 
+echo "\n=== EVENIMENTELE DE PE PROFIL ===\n";
+
+const EMAIL_ALTUL = 'alt-organizator-test@exemplu-test.ro';
+
+$idAltul = faMembru(EMAIL_ALTUL, 'organizat03');
+
+/** Un eveniment scris direct în bază, ca să putem alege starea și data. */
+function pune(int $membruId, string $titlu, string $stare, int $peste): int
+{
+    db()->prepare(
+        'INSERT INTO evenimente (membru_id, categorie_id, titlu, slug, data_eveniment,
+                                 ora_inceput, locatie, descriere, gen_participanti,
+                                 stare_moderare, creat_la, actualizat_la)
+         VALUES (?,1,?,?,?,\'19:00\',?,?,\'nespecificat\',?,?,?)'
+    )->execute([
+        $membruId, $titlu, slugEveniment($titlu),
+        date('Y-m-d', strtotime(($peste >= 0 ? '+' : '-') . abs($peste) . ' days')),
+        'Piața Sfatului', str_repeat('Povestea evenimentului. ', 15),
+        $stare, acum(), acum(),
+    ]);
+
+    return (int) db()->lastInsertId();
+}
+
+db()->exec('DELETE FROM evenimente');
+
+// Gazda: două în așteptare (una peste 20 de zile, una peste 3), patru aprobate
+// viitoare, unul aprobat de ieri și unul respins.
+pune($idOrg, 'Aștept de mult',        'in_asteptare', 20);
+pune($idOrg, 'Aștept de puțin',       'in_asteptare', 3);
+pune($idOrg, 'Aprobat, poimâine',     'aprobat',      2);
+pune($idOrg, 'Aprobat, peste o săptămână', 'aprobat', 9);
+pune($idOrg, 'Aprobat, peste două',   'aprobat',      14);
+pune($idOrg, 'Aprobat, peste o lună', 'aprobat',      30);
+pune($idOrg, 'Aprobat, dar de ieri',  'aprobat',      -1);
+pune($idOrg, 'Respins',               'respins',      5);
+
+/* --------- ce spune funcția, înainte de orice pagină --------- */
+
+$aleMele = evenimenteDePeProfil($idOrg, true);
+$aleLui  = evenimenteDePeProfil($idOrg, false);
+
+$titluri = static fn(array $lista): array
+    => array_map(static fn(array $e): string => (string) $e['titlu'], $lista);
+
+verifica('vizitatorul vede doar aprobatele viitoare', [
+    'Aprobat, poimâine', 'Aprobat, peste o săptămână',
+    'Aprobat, peste două', 'Aprobat, peste o lună',
+], $titluri($aleLui));
+
+verifica('proprietarul le vede și pe cele în așteptare, primele', [
+    'Aștept de puțin', 'Aștept de mult',
+    'Aprobat, poimâine', 'Aprobat, peste o săptămână',
+    'Aprobat, peste două', 'Aprobat, peste o lună',
+], $titluri($aleMele));
+
+verifica('cel de ieri nu apare nicăieri', false,
+    in_array('Aprobat, dar de ieri', $titluri($aleMele), true));
+verifica('nici cel respins', false, in_array('Respins', $titluri($aleMele), true));
+
+verifica('aceeași regulă ca la limita de postare',
+    count(evenimenteActive($idOrg)), count($aleMele));
+
+verifica('evenimentele altcuiva nu se amestecă', [], $titluri(evenimenteDePeProfil($idAltul, true)));
+
+/* --------------------- ce ajunge în pagină --------------------- */
+
+$catePe = static fn(string $corp, string $ce): int => substr_count($corp, $ce);
+
+$pagina = cerere($baza . '/profil.php?m=organizat02', $anonim)['corp'];
+
+verifica('vizitatorul primește patru cartonașe', 4, $catePe($pagina, '<article class="card'));
+verifica('și niciunul în așteptare', 0, $catePe($pagina, 'card--in-asteptare'));
+verifica('titlul unui eveniment în așteptare nu se scurge', false,
+    str_contains($pagina, 'Aștept de puțin'));
+verifica('fără buton „Vezi mai mult", că nu e nimic ascuns', false,
+    str_contains($pagina, 'Vezi mai mult'));
+
+$pagina = cerere($baza . '/profil.php', $c)['corp'];
+
+verifica('proprietarul primește toate șase', 6, $catePe($pagina, '<article class="card'));
+verifica('două sunt însemnate ca fiind în așteptare', 2, $catePe($pagina, 'card--in-asteptare'));
+verifica('cu eticheta scrisă pe ele', 2, $catePe($pagina, 'În așteptare de aprobare'));
+verifica('două stau ascunse', 2, $catePe($pagina, 'card ascuns'));
+verifica('deci apare și butonul', true, str_contains($pagina, 'Vezi mai mult'));
+
+// Ordinea în HTML: cele în așteptare înaintea celorlalte.
+verifica('în pagină, cele în așteptare vin primele', true,
+    strpos($pagina, 'Aștept de puțin') < strpos($pagina, 'Aprobat, poimâine'));
+
+/* ------------------------- când nu e nimic ------------------------- */
+
+db()->exec('DELETE FROM evenimente');
+
+$pagina = cerere($baza . '/profil.php', $c)['corp'];
+verifica('pe profilul propriu, o invitație', true,
+    str_contains($pagina, 'Nu organizezi nimic, nu vrei să încerci?'));
+verifica('cu butonul care duce la formular', true,
+    str_contains($pagina, 'href="adauga_eveniment.php"'));
+
+$pagina = cerere($baza . '/profil.php?m=organizat02', $anonim)['corp'];
+verifica('pe profilul altuia, o constatare', true,
+    str_contains($pagina, 'nu organizează momentan nimic'));
+verifica('cu prenumele omului, nu cu numele întreg', true,
+    str_contains($pagina, 'Ionuț nu organizează momentan nimic'));
+verifica('și fără butonul de adăugare', false,
+    str_contains($pagina, 'Nu organizezi nimic'));
+
+/* --------------- adresa cerută, când nu duce nicăieri --------------- */
+
+foreach ([
+    'permalink inexistent' => 'nuexista01',
+    'injecție SQL'         => "' OR 1=1 --",
+    'prea scurt'           => 'ab',
+    'cu semne'             => '<script>',
+] as $ce => $adresa) {
+    $r = cerere($baza . '/profil.php?m=' . urlencode($adresa), $anonim);
+    verifica($ce . ' → trimis pe prima pagină', 302, $r['stare']);
+}
+
 /* ---------------------------- curățenie -------------------------------- */
 
 db()->exec('DELETE FROM evenimente');
-db()->prepare('DELETE FROM membri WHERE email = ?')->execute([EMAIL_ORG]);
+db()->prepare('DELETE FROM membri WHERE email IN (?, ?)')->execute([EMAIL_ORG, EMAIL_ALTUL]);
 foreach (glob(dirname(__DIR__) . '/' . COPERTA_DOSAR . '/*.jpg') ?: [] as $f) { @unlink($f); }
 
 printf("\n%s\nTOTAL: %d trecute, %d picate\n", str_repeat('=', 60), $treceri, $picaturi);

@@ -99,6 +99,35 @@ function membruCurent(): ?array
     return $poMembruCache;
 }
 
+/**
+ * Un membru după adresa lui publică (permalink), pentru profilul văzut din
+ * afară. Întoarce null dacă nu există sau dacă nu e activ.
+ *
+ * Aceleași coloane ca la membrul conectat, minus e-mailul: pe profilul altcuiva
+ * n-are ce căuta. Conturile suspendate sau anonimizate nu se deschid deloc —
+ * altfel un cont șters ar rămâne o pagină care se poate deschide la nesfârșit.
+ */
+function membruDupaPermalink(string $permalink): ?array
+{
+    // Alfabetul permalinkului: cifre și litere, fără 0/O/1/l/I. Orice altceva
+    // nici nu ajunge până la bază.
+    if (preg_match('/^[A-Za-z0-9]{6,20}$/', $permalink) !== 1) {
+        return null;
+    }
+
+    $q = db()->prepare(
+        'SELECT id, permalink, nume, prenume, sex, data_nasterii,
+                localitate, poza, poza_actualizata_la, stare, creat_la
+           FROM membri
+          WHERE permalink = ?
+          LIMIT 1'
+    );
+    $q->execute([$permalink]);
+    $gasit = $q->fetch();
+
+    return ($gasit && $gasit['stare'] === 'activ') ? $gasit : null;
+}
+
 function esteLogat(): bool
 {
     return membruCurent() !== null;

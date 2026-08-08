@@ -2693,3 +2693,69 @@ body { overscroll-behavior-y: none; }
 .crop--fix .crop__zoom,
 .crop--fix .crop__ajutor { display: none; }
 .crop--fix .crop__stage { cursor: default; }
+
+/* =========================================================================
+   30. EVENIMENTELE DE PE PROFIL (profil.php)
+   Cartonașele sunt cele de pe prima pagină (.card & co). Aici stă doar ce e
+   în plus: starea „în așteptare", ascunderea peste primele patru și cazul în
+   care nu e nimic de arătat.
+   ========================================================================= */
+
+.evenimente-profil { margin-bottom: 54px; }
+
+/* Titlul unui eveniment nu e link: pagina publică a evenimentului nu există
+   încă. Îi păstrăm mărimea și greutatea din .card__title, dar fără sublinierea
+   care apare la trecerea cu mausul — ar promite un click care nu duce nicăieri. */
+.evenimente-profil .card__media { cursor: default; }
+
+/* --- În așteptare de aprobare ------------------------------------------
+   Nu e ascuns și nu e roșu: nu s-a greșit nimic, doar n-a ajuns încă la noi.
+   Galbenul e cel de la „a confirmat, dar nu a venit", ca să nu apară a treia
+   culoare de avertizare în site. */
+/* Chenarul se desenează cu un strat peste poză, nu cu `outline`: rama are
+   overflow ascuns, iar poza dinăuntru ar acoperi conturul tocmai la cartonașele
+   care au copertă — adică exact acolo unde se vede cel mai puțin că lipsește. */
+.card--in-asteptare .card__media::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 2px dashed rgba(240, 160, 40, .85);
+  border-radius: inherit;
+  pointer-events: none;
+}
+/* Poza mai stinsă spune, fără cuvinte, că anunțul nu e încă public. */
+.card--in-asteptare .card__media img { opacity: .72; }
+
+.card__stare {
+  position: absolute;
+  top: 10px; right: 10px;
+  max-width: calc(100% - 20px);
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  background: #d68a10;
+  color: #fff;
+  font-size: 11px; font-weight: 800;
+  letter-spacing: .03em;
+  line-height: 1.5;
+}
+
+/* --- Peste primele patru ------------------------------------------------
+   Sunt deja în pagină, doar nu se văd. Butonul „Vezi mai mult…" le arată
+   scoțând clasa, fără să mai ceară nimic de la server. */
+.ascuns { display: none; }
+
+.vezi-mai-mult { display: flex; justify-content: center; margin-top: 26px; }
+
+/* --- Când nu e nimic ---------------------------------------------------- */
+.fara-nimic {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 34px 24px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-2);
+  text-align: center;
+}
+.fara-nimic__text { color: var(--text-soft); font-size: 15px; margin: 0; }

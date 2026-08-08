@@ -305,6 +305,37 @@ function curataTextPeRanduri(string $text): string
 }
 
 /**
+ * Începutul unui text, pentru cartonașele de pe listă.
+ *
+ * Se taie la ultimul spațiu dinaintea limitei, nu în mijlocul unui cuvânt, iar
+ * rândurile noi devin spații: pe cartonaș descrierea e un rând-două, nu un
+ * text cu paragrafe.
+ *
+ * Se numără cu mb_strlen, nu cu strlen: în UTF-8 „ă" ocupă doi octeți, deci o
+ * tăiere pe octeți ar scurta mai tare tocmai textele scrise cu diacritice — și
+ * ar putea reteza un caracter în două.
+ */
+function inceputDeText(string $text, int $caractere = 160): string
+{
+    $intrUnRand = trim(preg_replace('/\s+/u', ' ', $text) ?? '');
+
+    if (mb_strlen($intrUnRand, 'UTF-8') <= $caractere) {
+        return $intrUnRand;
+    }
+
+    $taiat = mb_substr($intrUnRand, 0, $caractere, 'UTF-8');
+    $ultimulSpatiu = mb_strrpos($taiat, ' ', 0, 'UTF-8');
+
+    // Un text fără niciun spațiu în primele $caractere rămâne tăiat sec:
+    // n-avem unde altundeva să-l rupem.
+    if ($ultimulSpatiu !== false && $ultimulSpatiu > $caractere / 2) {
+        $taiat = mb_substr($taiat, 0, $ultimulSpatiu, 'UTF-8');
+    }
+
+    return rtrim($taiat, " ,.;:–-") . '…';
+}
+
+/**
  * Formularul de eveniment, verificat pe server.
  *
  * $azi se poate da din teste, ca verificarea datei să nu depindă de ziua în
@@ -813,12 +844,43 @@ function lunaSiAnul(?string $data): string
         return '';
     }
 
-    $luni = [
+    return numeleLunilor()[(int) $moment->format('n')] . ' ' . $moment->format('Y');
+}
+
+/** Lunile pe românește, numerotate de la 1 ca în `date('n')`. */
+function numeleLunilor(): array
+{
+    return [
         1 => 'ianuarie', 'februarie', 'martie', 'aprilie', 'mai', 'iunie',
         'iulie', 'august', 'septembrie', 'octombrie', 'noiembrie', 'decembrie',
     ];
+}
 
-    return $luni[(int) $moment->format('n')] . ' ' . $moment->format('Y');
+/**
+ * O dată scrisă scurt: „3 aug 2026".
+ *
+ * Prescurtarea e chiar primele trei litere ale lunii — în română toate ies
+ * cum trebuie (ian, feb, …, mai, iun, iul, …), deci nu e nevoie de încă o
+ * listă care s-ar putea despărți de prima.
+ *
+ * Întoarce '' dacă data lipsește sau nu se înțelege: mai bine nimic decât o
+ * dată greșită.
+ */
+function dataScurta(?string $data): string
+{
+    if ($data === null || $data === '') {
+        return '';
+    }
+
+    try {
+        $moment = new DateTimeImmutable($data);
+    } catch (Exception $e) {
+        return '';
+    }
+
+    $luna = numeleLunilor()[(int) $moment->format('n')];
+
+    return $moment->format('j') . ' ' . mb_substr($luna, 0, 3, 'UTF-8') . ' ' . $moment->format('Y');
 }
 
 /**

@@ -273,12 +273,12 @@ un `curl`. Cele care contează sunt în `inc/validare.php`:
 - **Parolă** — minimum 8 caractere, maximum 72 de octeți, pentru că bcrypt
   ignoră tăcut tot ce trece de atât.
 
-Rularea verificărilor: `php teste/test-validare.php` (86 de cazuri).
+Rularea verificărilor: `php teste/test-validare.php` (104 cazuri).
 
 Patru suite vorbesc cu site-ul prin HTTP, cu cookie-uri adevărate, și cer
 serverul pornit: „ține-mă minte" (35 de cazuri), setările, cu tot cu ștergerea
 contului și cron (95), formularul de contact (60) și publicarea evenimentelor,
-cu tot cu urcarea copertei (85).
+cu tot cu urcarea copertei și secțiunea de pe profil (110).
 
 ```
 php -S 127.0.0.1:8126 -t . &
@@ -989,16 +989,66 @@ strânge trei sau mai multe rânduri goale la unul singur, dar nu turtește text
 randare, cu `h()`. Invers — escapat la salvare — ar fi însemnat `&amp;amp;` la
 a doua editare și un text pe care nu-l mai poți căuta sau exporta.
 
+### Evenimentele de pe profil
+
+Sub cele trei casete cu statistici, `profil.php` arată ce organizează omul.
+Cartonașele sunt **exact cele de pe prima pagină** (`.card`, `.card__media`,
+`.card__body`…), ca să nu existe două feluri de a arăta un eveniment.
+
+**Cine ce vede:**
+
+| | aprobate, viitoare | în așteptare |
+|---|---|---|
+| oricine | da | nu |
+| omul însuși, pe profilul lui | da | da, primele |
+
+Ce n-a trecut încă pe la moderare nu se vede din afară. Altfel ar fi de ajuns
+să deschizi profilul cuiva ca să citești ce a trimis, înainte ca noi să fi
+apucat să ne uităm.
+
+Cele în așteptare stau primele și poartă eticheta „În așteptare de aprobare",
+cu chenar punctat galben și poza mai stinsă — sunt treaba ta, nu a
+vizitatorului, și trebuie să se vadă dintr-o privire că nu sunt încă publice.
+Galbenul e cel de la „a confirmat, dar nu a venit", ca să nu apară a treia
+culoare de avertizare în site.
+
+**„Încheiat" se socotește într-un singur loc.** `filtruNeincheiat()` întoarce
+bucata de `WHERE` și valoarea ei împreună, iar de ea se folosesc și limita de
+postare, și lista de pe profil. Dacă cele două ar socoti altfel, omul ar fi
+blocat de un eveniment pe care nu-l mai vede nicăieri.
+
+**Primele patru se văd, restul intră ascunse.** Tot ce e de arătat pleacă în
+aceeași pagină; peste al patrulea, cartonașele primesc clasa `.ascuns`, iar
+butonul „Vezi mai mult…" apare doar dacă are ce descoperi. (Butonul e
+deocamdată fără efect — apăsarea lui se leagă în pasul următor.)
+
+Când nu e nimic: pe profilul propriu, „Nu organizezi nimic, nu vrei să
+încerci?" cu butonul „+ Eveniment nou"; pe al altcuiva, „Ana nu organizează
+momentan nimic." — pe primul prenume, cum i-ai spune în față.
+
+### Profilul altcuiva
+
+`profil.php?m=<permalink>` deschide profilul membrului cu adresa aia publică.
+Un permalink care nu duce nicăieri — cont șters, suspendat, sau o greșeală de
+tastare — nu e o eroare de arătat: pagina trimite omul pe prima pagină. E
+minimul de care avea nevoie secțiunea de mai sus ca să existe și pentru
+vizitatori; adresele frumoase, de forma `/membru/<permalink>`, vin mai târziu.
+
 ### Ce nu e făcut
 
-Evenimentul intră cu `stare_moderare = 'in_asteptare'` și nu se vede nicăieri
-pe site. Nu există încă interfață de aprobare, editare sau încheiere manuală, și
-nici pagină de eveniment. Omul vede doar „Evenimentul tău a fost trimis spre
-aprobare" — dinadins fără detalii despre cât durează, cât timp nu putem promite
-nimic.
+Evenimentul intră cu `stare_moderare = 'in_asteptare'` și nu se vede pe prima
+pagină. Nu există încă interfață de aprobare, editare sau încheiere manuală, și
+nici pagină publică de eveniment — de aceea, pe profil, titlul și coperta nu
+duc nicăieri (sunt `<div>`, nu `<a>`). Omul vede doar „Evenimentul tău a fost
+trimis spre aprobare" — dinadins fără detalii despre cât durează, cât timp nu
+putem promite nimic.
+
+Lipsesc și imaginile implicite de categorie (`categorii.imagine_default`):
+codul le preferă deja când există, dar fișierele nu sunt urcate, deci un
+eveniment fără copertă rămâne cu dreptunghiul gol al cartonașului.
 
 Verificările: `php teste/test-evenimente.php http://127.0.0.1:8126`
-(85 de cazuri, cere serverul pornit).
+(110 cazuri, cere serverul pornit).
 
 
 ## E-mailurile

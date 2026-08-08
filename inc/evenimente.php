@@ -43,7 +43,7 @@ function idCategoriiValide(): array
 /* ====================== UN EVENIMENT ACTIV ============================ */
 
 /**
- * Ce înseamnă „încheiat".
+ * Ce înseamnă „încheiat", într-un singur loc.
  *
  * Un eveniment se încheie în două feluri: organizatorul îl marchează așa (n-am
  * construit încă butonul), sau trece ziua în care a avut loc. Al doilea nu are
@@ -55,22 +55,34 @@ function idCategoriiValide(): array
  * motiv. Așa, răspunsul e mereu corect, chiar dacă serverul a fost oprit o
  * săptămână.
  *
+ * Întoarce bucata de WHERE și valoarea ei împreună, ca să nu poată fi folosită
+ * una fără cealaltă: regula asta hotărăște și câte evenimente poate posta
+ * cineva, și ce se vede pe profilul lui. Dacă cele două ar socoti altfel, omul
+ * ar fi blocat de un eveniment pe care nu-l mai vede nicăieri.
+ *
  * „data_eveniment >= CURDATE()" — dar data o dăm noi, din PHP, ca peste tot.
+ * Ziua, nu ora: un eveniment de azi de la 19:00 e activ și la 20:00, fiindcă
+ * se încheie abia mâine.
  */
+function filtruNeincheiat(): array
+{
+    return ['data_eveniment >= ?', date('Y-m-d')];
+}
+
 function evenimenteActive(int $membruId): array
 {
+    [$unde, $azi] = filtruNeincheiat();
+
     $q = db()->prepare(
         'SELECT id, titlu, slug, data_eveniment, stare_moderare
            FROM evenimente
           WHERE membru_id = ?
             AND stare_moderare <> \'respins\'
-            AND data_eveniment >= ?
+            AND ' . $unde . '
           ORDER BY data_eveniment'
     );
 
-    // Ziua de azi, nu ora: un eveniment de azi la 19:00 e activ și la 20:00,
-    // fiindcă se încheie abia mâine.
-    $q->execute([$membruId, date('Y-m-d')]);
+    $q->execute([$membruId, $azi]);
 
     return $q->fetchAll();
 }
@@ -117,6 +129,62 @@ function poatePublicaEveniment(int $membruId): array
         . 'Poți posta unul nou după ce se încheie vreunul.';
 
     return ['poate' => false, 'mesaj' => $mesaj, 'active' => $active];
+}
+
+/* ====================== EVENIMENTELE DE PE PROFIL ===================== */
+
+/**
+ * Câte evenimente se citesc pentru un profil.
+ *
+ * Toate ajung în pagină deodată — cele de peste patru doar ascunse — deci
+ * numărul are nevoie de un capăt. Cu regula obișnuită de un eveniment activ,
+ * nimeni nu se apropie de el; e acolo pentru ziua în care cineva primește o
+ * limită mare și pentru ca pagina să nu poată crește la nesfârșit.
+ */
+const EVENIMENTE_PE_PROFIL_MAX = 60;
+
+/**
+ * Evenimentele arătate pe profilul cuiva.
+ *
+ * $vedeSiCeleInAsteptare — true doar pentru omul care își vede propriul
+ * profil. Pentru oricine altcineva, ce n-a trecut încă pe la moderare nu
+ * există: altfel ar fi de ajuns să deschizi profilul cuiva ca să vezi ce a
+ * trimis, înainte ca noi să fi apucat să citim.
+ *
+ * Aceeași regulă de „încheiat" ca la limita de postare (filtruNeincheiat), și
+ * pentru cele aprobate, și pentru cele în așteptare: mulțimea care te
+ * împiedică să postezi altul e chiar mulțimea pe care o vezi pe profil.
+ *
+ * Ordinea: întâi cele în așteptare (sunt treaba ta, nu a vizitatorului), apoi
+ * după dată, cea mai apropiată prima.
+ */
+function evenimenteDePeProfil(int $membruId, bool $vedeSiCeleInAsteptare): array
+{
+    [$unde, $azi] = filtruNeincheiat();
+
+    $stari = $vedeSiCeleInAsteptare ? ['aprobat', 'in_asteptare'] : ['aprobat'];
+    $semne = implode(',', array_fill(0, count($stari), '?'));
+
+    $q = db()->prepare(
+        'SELECT e.id, e.titlu, e.slug, e.coperta, e.data_eveniment, e.ora_inceput,
+                e.locatie, e.descriere, e.stare_moderare,
+                c.nume AS categorie, c.slug AS categorie_slug, c.imagine_default
+           FROM evenimente e
+           JOIN categorii c ON c.id = e.categorie_id
+          WHERE e.membru_id = ?
+            AND e.stare_moderare IN (' . $semne . ')
+            -- fără prefix de tabel: „data_eveniment" e doar în evenimente, iar
+            -- bucata vine gata scrisă din filtruNeincheiat() — dacă i-am lipi
+            -- un „e." în față, s-ar strica în ziua în care regula se schimbă.
+            AND ' . $unde . '
+          ORDER BY (e.stare_moderare = \'in_asteptare\') DESC,
+                   e.data_eveniment, e.ora_inceput
+          LIMIT ' . EVENIMENTE_PE_PROFIL_MAX
+    );
+
+    $q->execute(array_merge([$membruId], $stari, [$azi]));
+
+    return $q->fetchAll();
 }
 
 /* ============================= SALVAREA =============================== */

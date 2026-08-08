@@ -151,5 +151,42 @@ foreach ([
     verifica('respins: ' . $ce, false, verificaTelefon($valoare)['ok']);
 }
 
+echo "\n=== DATA SCURTĂ ===\n";
+
+foreach ([
+    ['2026-08-03', '3 aug 2026'],
+    ['2026-01-15', '15 ian 2026'],
+    ['2026-05-01', '1 mai 2026'],
+    ['2026-06-30', '30 iun 2026'],
+    ['2026-07-04', '4 iul 2026'],
+    ['2026-12-25', '25 dec 2026'],
+] as [$data, $asteptat]) {
+    verifica('"' . $data . '" -> ' . $asteptat, $asteptat, dataScurta($data));
+}
+
+verifica('data lipsă → nimic', '', dataScurta(null));
+verifica('data goală → nimic', '', dataScurta(''));
+verifica('data aiurea → nimic, nu o ghicim', '', dataScurta('gogoașă'));
+
+echo "\n=== ÎNCEPUT DE TEXT (pe cartonașe) ===\n";
+
+verifica('textul scurt rămâne întreg', 'Ceva scurt.', inceputDeText('Ceva scurt.'));
+verifica('rândurile noi devin spații', 'Un rând. Alt paragraf.',
+    inceputDeText("Un rând.\n\nAlt paragraf."));
+verifica('spațiile multiple se strâng', 'a b c', inceputDeText("a   b \t c"));
+
+$lung = inceputDeText(str_repeat('cuvânt ', 60), 40);
+verifica('se taie la limită', true, mb_strlen($lung, 'UTF-8') <= 41);
+verifica('și se termină cu trei puncte', true, str_ends_with($lung, '…'));
+verifica('fără cuvânt rupt în două', true, !str_contains($lung, 'cuv…'));
+
+// 200 de „ă" = 400 de octeți. Cu strlen() s-ar fi tăiat la jumătate.
+$diacritice = inceputDeText(str_repeat('ă', 200), 100);
+verifica('se numără litere, nu octeți', 101, mb_strlen($diacritice, 'UTF-8'));
+
+verifica('un cuvânt fără spații se taie sec', true,
+    str_ends_with(inceputDeText(str_repeat('x', 300), 50), 'x…'));
+verifica('textul gol rămâne gol', '', inceputDeText(''));
+
 printf("\n%s\nTOTAL: %d trecute, %d picate\n", str_repeat('=',60), $treceri, $picaturi);
 exit($picaturi > 0 ? 1 : 0);

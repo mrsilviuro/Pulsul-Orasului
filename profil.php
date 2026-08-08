@@ -3,23 +3,60 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/inc/auth.php';
 require_once __DIR__ . '/inc/imagini.php';
+require_once __DIR__ . '/inc/evenimente.php';
 
 /**
- * Deocamdată pagina arată profilul celui conectat. Când vor exista adrese de
- * forma /membru/<permalink>, aici se va căuta în bază membrul cerut, iar
- * $eProfilulMeu va fi „membrul găsit e chiar cel conectat".
+ * Al cui e profilul.
+ *
+ * Fără „?m=", al celui conectat. Cu „?m=<permalink>", al membrului cerut —
+ * adresa publică a cuiva, cea de zece caractere. Când vor exista adrese
+ * frumoase de forma /membru/<permalink>, tot aici se va ajunge.
+ *
+ * Un permalink care nu duce nicăieri (cont șters, greșeală de tastare) nu e o
+ * eroare de arătat: pagina trimite omul înapoi pe prima pagină.
  */
-$eu           = membruCurent();
-$eProfilulMeu = $eu !== null;
+$eu     = membruCurent();
+$cerut  = trim((string) ($_GET['m'] ?? ''));
+$membruProfil = $eu;
+
+if ($cerut !== '') {
+    $membruProfil = membruDupaPermalink($cerut);
+
+    if ($membruProfil === null) {
+        header('Location: index.php');
+        exit;
+    }
+}
+
+$eProfilulMeu = $eu !== null && $membruProfil !== null
+    && (int) $eu['id'] === (int) $membruProfil['id'];
 
 // Datele scurte din antet vin din bază atunci când avem pe cine arăta.
-// Restul paginii — activitatea și evaluările — e încă exemplu de așezare.
-$numeProfil = $eu ? numeAfisat($eu['nume'], $eu['prenume']) : 'P. Ionuț';
-$pozaProfil = $eu['poza'] ?? null;
-$varsta     = $eu ? varstaDin($eu['data_nasterii'] ?? null) : 34;
-$localitate = $eu ? ($eu['localitate'] ?? null) : 'Brașov';
-$sex        = $eu['sex'] ?? 'M';
-$membruDin  = $eu ? lunaSiAnul($eu['creat_la'] ?? null) : 'mai 2024';
+// Restul paginii — evaluările — e încă exemplu de așezare.
+$p = $membruProfil;
+
+$numeProfil = $p ? numeAfisat($p['nume'], $p['prenume']) : 'P. Ionuț';
+$pozaProfil = $p['poza'] ?? null;
+$varsta     = $p ? varstaDin($p['data_nasterii'] ?? null) : 34;
+$localitate = $p ? ($p['localitate'] ?? null) : 'Brașov';
+$sex        = $p['sex'] ?? 'M';
+$membruDin  = $p ? lunaSiAnul($p['creat_la'] ?? null) : 'mai 2024';
+
+/**
+ * Doar primul prenume, pentru „Ana nu organizează momentan nimic".
+ *
+ * Cine are două prenume („Ana Maria") e strigat pe primul, ca între oameni.
+ */
+$prenumeScurt = $p ? explode(' ', trim((string) $p['prenume']))[0] : 'Ionuț';
+
+/* ---------------------- Evenimentele organizate ----------------------- */
+
+// Cine nu are cont (și nici nu cere un profil anume) vede pagina-exemplu:
+// n-avem al cui profil să citim, deci nici evenimente.
+$evenimenteProfil = $p ? evenimenteDePeProfil((int) $p['id'], $eProfilulMeu) : [];
+
+/** Câte se văd din prima. Restul intră în pagină, dar ascunse. */
+const EVENIMENTE_VIZIBILE = 4;
 
 $titlu     = $numeProfil . ' — Profil membru — PulsulOrasului.Ro';
 $descriere = 'Profilul membrului ' . $numeProfil . ' pe PulsulOrasului.Ro: evenimente organizate, participări și evaluări primite.';
@@ -173,6 +210,96 @@ require __DIR__ . '/inc/antet.php';
         <span class="stat__value">3</span>
         <span class="stat__label">A confirmat, dar nu a venit</span>
       </div>
+    </section>
+
+    <!-- ===================== EVENIMENTE ORGANIZATE ======================
+      Cartonașele sunt aceleași ca pe prima pagină (.card, .card__media,
+      .card__body…), ca să nu existe două feluri de a arăta un eveniment.
+
+      Două lucruri lipsesc, fiindcă nu există încă: pagina publică a unui
+      eveniment, deci titlul și poza nu duc nicăieri (sunt <div>, nu <a>), și
+      imaginile implicite de categorie, deci evenimentele fără copertă rămân
+      cu dreptunghiul gol al cartonașului.
+    ================================================================== -->
+    <section class="evenimente-profil" aria-labelledby="evenimente-title">
+
+      <div class="section-head">
+        <div>
+          <p class="eyebrow"><span class="pulse-dot" aria-hidden="true"></span> Ce pune la cale</p>
+          <h2 class="section-title" id="evenimente-title">Evenimente organizate</h2>
+        </div>
+      </div>
+
+      <?php if ($evenimenteProfil === []): ?>
+      <!-- Niciunul. Al meu → o invitație; al altcuiva → o constatare. -->
+      <div class="fara-nimic">
+        <?php if ($eProfilulMeu): ?>
+        <p class="fara-nimic__text">Nu organizezi nimic, nu vrei să încerci?</p>
+        <a class="btn btn--primary btn--sm" href="<?= $logat
+              ? 'adauga_eveniment.php'
+              : 'login.php?redirect=' . h(urlencode('/adauga_eveniment.php')) ?>">
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 5v14"/><path d="M5 12h14"/>
+          </svg>
+          <span>Eveniment nou</span>
+        </a>
+        <?php else: ?>
+        <p class="fara-nimic__text"><?= h($prenumeScurt) ?> nu organizează momentan nimic.</p>
+        <?php endif; ?>
+      </div>
+
+      <?php else: ?>
+      <div class="grid" id="evenimente-lista">
+        <?php foreach ($evenimenteProfil as $i => $ev): ?>
+        <?php
+          $inAsteptare = ($ev['stare_moderare'] ?? '') === 'in_asteptare';
+
+          // Peste primele patru, cartonașele intră în pagină ascunse. Le arată
+          // butonul „Vezi mai mult…", fără să mai ceară nimic de la server.
+          $ascuns = $i >= EVENIMENTE_VIZIBILE;
+
+          $clase = 'card';
+          if ($inAsteptare) { $clase .= ' card--in-asteptare'; }
+          if ($ascuns)      { $clase .= ' ascuns'; }
+
+          $coperta = urlCoperta($ev['coperta'] ?? null);
+
+          // Imaginea implicită a categoriei, când va exista. Coloana e deja în
+          // bază, fișierele se urcă de mână — vezi roadmap-ul din CLAUDE.md.
+          if ($coperta === '' && !empty($ev['imagine_default'])) {
+              $coperta = 'assets/img/categorii/' . $ev['imagine_default'];
+          }
+        ?>
+        <article class="<?= $clase ?>">
+          <div class="card__media">
+            <?php if ($coperta !== ''): ?>
+            <img src="<?= h($coperta) ?>" alt="" width="1600" height="900" loading="lazy" decoding="async">
+            <?php endif; ?>
+            <span class="card__tag"><?= h($ev['categorie']) ?></span>
+            <?php if ($inAsteptare): ?>
+            <span class="card__stare">În așteptare de aprobare</span>
+            <?php endif; ?>
+          </div>
+          <div class="card__body">
+            <h3 class="card__title"><?= h($ev['titlu']) ?></h3>
+            <p class="card__excerpt"><?= h(inceputDeText((string) $ev['descriere'])) ?></p>
+            <div class="card__meta">
+              <time datetime="<?= h((string) $ev['data_eveniment']) ?>"><?= h(dataScurta($ev['data_eveniment'])) ?></time>
+              <span class="dot" aria-hidden="true"></span>
+              <span><?= h(inceputDeText((string) $ev['locatie'], 48)) ?></span>
+            </div>
+          </div>
+        </article>
+        <?php endforeach; ?>
+      </div>
+
+      <?php if (count($evenimenteProfil) > EVENIMENTE_VIZIBILE): ?>
+      <div class="vezi-mai-mult">
+        <button class="btn btn--ghost" type="button" id="evenimente-mai-mult">Vezi mai mult…</button>
+      </div>
+      <?php endif; ?>
+      <?php endif; ?>
+
     </section>
 
     <!-- =========================== FEEDBACK ============================= -->

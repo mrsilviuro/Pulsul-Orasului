@@ -8,6 +8,13 @@
 --  vin separat.
 -- =========================================================================
 
+-- E singura migrare care aduce și text cu diacritice („Cultură", „Muzică").
+-- Fără rândul ăsta, un client care se conectează pe latin1 — clientul din
+-- linia de comandă o face implicit pe multe sisteme — citește octeții UTF-8 ai
+-- fișierului ca latin1 și îi mai încodează o dată: în bază ajunge „CulturÄƒ",
+-- și de acolo pe site. Nu se vede la rulare, se vede peste o săptămână.
+SET NAMES utf8mb4;
+
 -- -------------------------------------------------------------------------
 --  categorii
 --

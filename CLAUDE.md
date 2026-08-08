@@ -107,7 +107,8 @@ inc/
   bootstrap.php     → config, conexiune DB, sesiune, CSRF
   validare.php      → toate verificările server-side (fără atingere DB)
   imagini.php       → procesare/validare poze de profil ȘI coperți de eveniment
-  evenimente.php    → categorii, regula „un eveniment activ", salvarea
+  evenimente.php    → categorii, regula „un eveniment activ", lista de pe
+                      profil, salvarea
   email.php         → șablon unic pentru toate email-urile (table-based, inline style)
   google.php        → OAuth Google (authorization code flow + PKCE)
   buton-google.php  → butonul de login Google
@@ -168,9 +169,12 @@ assets/css/style.css, assets/js/main.js, assets/img/
 ## Ce e neterminat (roadmap)
 
 - Pagina publică a unui eveniment (slugul se generează deja la salvare, dar
-  nu duce nicăieri)
-- Moderarea: fiecare eveniment intră cu `stare_moderare = 'in_asteptare'` și nu
-  se vede nicăieri; nu există interfață de aprobare
+  nu duce nicăieri; de aceea cartonașele de pe profil n-au link)
+- Butonul „Vezi mai mult…" de pe profil: cartonașele peste primele patru sunt
+  deja în pagină cu clasa `.ascuns`, dar nimic nu le arată încă
+- Moderarea: fiecare eveniment intră cu `stare_moderare = 'in_asteptare'`; se
+  vede doar organizatorului, pe profilul lui; nu există interfață de aprobare
+- Adresele frumoase de profil: acum e `profil.php?m=<permalink>`
 - Editarea și încheierea manuală a unui eveniment (încheierea automată, din ziua
   următoare datei, funcționează deja — se calculează la citire, fără cron)
 - Paginile de categorie (slugurile sunt în tabelul `categorii`)
