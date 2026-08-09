@@ -545,6 +545,72 @@
     };
   });
 
+  /* --- Copierea linkului evenimentului -------------------------------------
+     Facebook și WhatsApp sunt linkuri obișnuite, deci merg fără JavaScript.
+     Copierea nu are cum: are nevoie de clipboard.
+
+     navigator.clipboard cere pagină sigură (https, sau localhost). Pe http
+     simplu — cum e site-ul în dezvoltare — pur și simplu nu există, așa că
+     avem și calea veche: un câmp de text ținut în afara ecranului, selectat
+     și copiat cu document.execCommand. E scoasă din uz, dar merge peste tot
+     unde cealaltă nu.
+  */
+  var butonCopiaza = document.getElementById('copiaza-link');
+
+  if (butonCopiaza) {
+    /** Calea veche, pentru unde nu există Clipboard API. Întoarce true/false. */
+    function copiazaPeVechi(text) {
+      var camp = document.createElement('textarea');
+      camp.value = text;
+
+      // Scos din ecran, nu ascuns: un câmp cu `display:none` nu se poate
+      // selecta, deci nici copia. `readOnly` oprește tastatura de pe telefon.
+      camp.setAttribute('readonly', '');
+      camp.style.position = 'fixed';
+      camp.style.top = '-1000px';
+      camp.style.opacity = '0';
+
+      document.body.appendChild(camp);
+      camp.select();
+      camp.setSelectionRange(0, text.length);
+
+      var reusit = false;
+      try { reusit = document.execCommand('copy'); } catch (e) {}
+
+      document.body.removeChild(camp);
+      return reusit;
+    }
+
+    var ceasCopiat = null;
+
+    function aratatCopiat() {
+      toast('Link copiat!');
+      butonCopiaza.classList.add('s-a-copiat');
+      clearTimeout(ceasCopiat);
+      ceasCopiat = setTimeout(function () {
+        butonCopiaza.classList.remove('s-a-copiat');
+      }, 1600);
+    }
+
+    butonCopiaza.addEventListener('click', function () {
+      var text = butonCopiaza.getAttribute('data-copiaza') || window.location.href;
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text)
+          .then(aratatCopiat)
+          .catch(function () {
+            // Permisiunea poate fi refuzată chiar și pe https.
+            if (copiazaPeVechi(text)) { aratatCopiat(); }
+            else { toast('Nu am putut copia linkul. Copiază-l din bara de adrese.'); }
+          });
+        return;
+      }
+
+      if (copiazaPeVechi(text)) { aratatCopiat(); }
+      else { toast('Nu am putut copia linkul. Copiază-l din bara de adrese.'); }
+    });
+  }
+
   /* --- Butoanele de participare -------------------------------------------
      „Mă interesează" e o însemnare: se trimite pe loc. „Voi participa" e o
      hotărâre care dă numele și numărul de telefon mai departe, deci trece
