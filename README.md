@@ -918,6 +918,45 @@ goale și fără nicio eroare. Omul, care completase tot, ar fi primit
 „completează câmpurile". Comparăm `CONTENT_LENGTH` cu limita și spunem ce s-a
 întâmplat de fapt.
 
+**După trimitere, panoul de „gata" duce la eveniment**, nu pe prima pagină:
+„Vezi pagina evenimentului". La editare adresa se știe de când se tipărește
+pagina; la un anunț nou nu, fiindcă slugul se naște abia la salvare — de aceea
+`salveazaEveniment()` întoarce slugul, `api/eveniment.php` îl trimite înapoi ca
+`url`, iar `main.js` umple linkul. Fără el, butonul rămâne ascuns.
+
+Cine are deja un eveniment activ nu primește formularul, ci pagina care-i
+spune de ce. Ieșirea de acolo e **„Înapoi"**, adică fix pagina de unde s-a
+apăsat „+ Eveniment nou". Saltul îl face `history.back()`, dar numai dacă
+`document.referrer` e de pe site-ul nostru: altfel cine ajunge aici dintr-un
+link de pe alt site ar fi trimis înapoi acolo. Când nu e, linkul rămâne cum a
+venit din HTML și duce pe prima pagină — merge și fără JS.
+
+### Orele: câmpuri de text, nu `type="time"`
+
+Ceasul nativ al browserului se scrie cu AM/PM sau fără **după limba în care e
+pus browserul, nu după limba paginii**. `lang="ro"` pe input n-are niciun
+efect — verificat în Chromium, cu `lang` și pe element, și pe `<html>`. Un om
+cu Chrome în engleză ar fi văzut „07:30 PM" pe un site românesc, lângă o dată
+scrisă tot în formatul lui.
+
+Așa că orele sunt `<input type="text" class="camp-ora">`, cu
+`inputmode="numeric"` (tastatura de cifre pe telefon) și
+`pattern="([01][0-9]|2[0-3]):[0-5][0-9]"` — exact tiparul cerut și de
+`verificaEveniment()`. Cele două puncte le pune `main.js`: cât scrie omul nu-l
+corectăm (altfel „930" ar sări la „09:3" sub degete), iar la ieșirea din câmp
+se îndreaptă — „9" → „09:00", „930" → „09:30", „1930" → „19:30". Se pierde
+selectorul nativ de oră; se câștigă faptul că toată lumea vede același lucru.
+
+Câmpul de dată a rămas `type="date"`, cu aceeași meteahnă: cine are browserul
+în engleză vede „mm/dd/yyyy". O dată are mai multe piese decât o oră, deci
+înlocuirea ei cere mai mult decât o mască de patru cifre — deocamdată nu e
+făcută.
+
+Bifa **„Nu se știe până când ține" pornește pusă** la un formular gol: ora de
+început se știe mereu, cea de sfârșit aproape niciodată. Cine o știe scoate
+bifa și scrie ora — o mișcare, în loc de una pe care ar fi trebuit s-o facă
+toți ceilalți. La editare urmează ce e în bază, ca toate celelalte bife.
+
 ### Un singur eveniment activ
 
 Regula e „un eveniment activ per om", dar nu e scrisă `1` în cod: e citită din
@@ -949,6 +988,14 @@ primită e mai mică de-atât, e **respinsă** și se cere alta — o poză de 8
 să publici ceva încețoșat. Măsurarea se face **după** rotirea EXIF: un telefon
 ținut vertical trimite adesea imaginea culcată, cu orientarea într-o etichetă,
 iar altfel am fi respins poze bune.
+
+Calitatea JPEG e mai apăsată decât la poza de profil: `COPERTA_CALITATE = 80`,
+față de `POZA_CALITATE = 82`. Coperta e de zece ori mai mare decât un chip de
+512 px și se încarcă pe prima pagină de câte ori intră cineva, adesea pe date
+mobile; cele două trepte scad fișierul cu vreo 8%, iar la mărire de două ori
+deosebirea nu se vede — nici pe cer, care e locul unde pătrățelele apar prima
+dată. Poza de profil rămâne unde era: e mică, se încarcă o dată, n-are ce
+economisi.
 
 Cadrul îl alege omul: aceeași ramă de mutat și mărit ca la poza de profil, doar
 lată în loc de pătrată. Motorul din spate (`faDecupator()` din `main.js`) e
@@ -985,7 +1032,30 @@ unități UTF-16.
 
 Paragrafele se păstrează: `curataTextPeRanduri()` normalizează rândurile și
 strânge trei sau mai multe rânduri goale la unul singur, dar nu turtește textul
-într-un bloc. **În bază intră textul curat, neescapat.** Escaparea se face la
+într-un bloc.
+
+**Contorul numără exact ce numără serverul.** Nu e de la sine înțeles, și a
+fost un bug adevărat: contorul spunea „300 din 300", iar serverul răspundea
+„ai 299". Serverul măsoară textul *după* `curataTextPeRanduri()` — care taie
+spațiile de la capete și strânge rândurile goale — iar contorul îl măsura pe
+cel brut, așa că un singur rând gol la coadă era de ajuns ca omul să fie
+trimis înapoi la un formular care-i spunea că totul e în regulă. În
+`assets/js/main.js` stă acum `curataTextPeRanduri()`, oglinda mișcare cu
+mișcare a celei din `inc/validare.php` (inclusiv lista de caractere tăiate de
+`trim()` din PHP, care nu e aceeași cu a lui `String.trim()` din JS), iar
+contorul numără rezultatul ei.
+
+Un emoji simplu (😀) e un caracter de amândouă părțile. Unul lipit din mai
+multe bucăți (👨‍👩‍👧‍👦 = patru chipuri și trei U+200D) se numără ca șapte — nu ce
+vede ochiul, dar **același număr** aici și acolo, ceea ce era toată problema.
+Numerele astea sunt fixate în `teste/test-validare.php`, secțiunea „câte
+caractere are descrierea": dacă se schimbă vreunul, s-a rupt oglinda.
+
+Din același motiv, textarea **nu are `maxlength`**: el numără în unități
+UTF-16, deci ar fi tăiat un text cu emoji cam la jumătatea limitei ținute de
+server. Oprirea la `DESCRIERE_MAX` o face JS, numărând caractere; limitele
+ajung la el prin `data-min` / `data-max`, ca să nu existe o a doua copie a
+constantelor PHP. **În bază intră textul curat, neescapat.** Escaparea se face la
 randare, cu `h()`. Invers — escapat la salvare — ar fi însemnat `&amp;amp;` la
 a doua editare și un text pe care nu-l mai poți căuta sau exporta.
 
@@ -1009,6 +1079,15 @@ apucat să ne uităm.
 Deasupra titlului, eticheta mică se schimbă după cine se uită: „Ce pui la
 cale" pe profilul propriu, „Ce pune la cale" pe al altcuiva. Aceeași condiție
 (`$eProfilulMeu`) hotărăște și mesajele de mai jos, când nu e nimic de arătat.
+
+**„+ Eveniment nou" e mereu la îndemână pe profilul propriu.** Înainte apărea
+doar în locul gol — adică exact la cine n-avea niciun eveniment, și niciodată
+la cine tocmai s-a obișnuit să publice. Acum stă în capul secțiunii când lista
+are ceva în ea, și rămâne în invitația din locul gol când n-are: unul singur,
+oricum ar fi, fiindcă două butoane care spun același lucru unul sub altul nu
+ajută pe nimeni. Pe profilul altcuiva nu apare deloc. Cine are deja un
+eveniment activ ajunge pe pagina care-i spune asta, iar „Înapoi" de acolo îl
+aduce fix înapoi pe profil.
 
 Cele în așteptare stau primele și poartă eticheta „În așteptare de aprobare",
 cu chenar punctat galben și poza mai stinsă — sunt treaba ta, nu a
@@ -1204,6 +1283,17 @@ confidențialitate, filă redeschisă după ce poza a fost deja luată — în l
 imaginii rămâne o vorbă limpede: „Nu am putut încărca previzualizarea pozei…".
 Restul previzualizării (titlu, detalii, descriere) se vede normal; nu se
 încearcă alt drum pentru poză și nu se ascunde nimic pe tăcute.
+
+### Ieșirea din previzualizare
+
+La capătul paginii stă **„Închide previzualizarea"**. Fila s-a deschis cu
+`window.open` din formular, deci `window.close()` are voie s-o închidă.
+
+Când n-are — filă redeschisă din istoric, adresă lipită de mână — apelul pur
+și simplu nu face nimic, fără eroare de prins și fără vreun fel de a ști
+dinainte. De aceea nota „Poți închide această filă" apare **imediat după
+apăsare**: dacă fila chiar s-a închis, n-o mai citește nimeni; dacă a rămas,
+omul află ce are de făcut.
 
 ## Schimbarea unui eveniment
 

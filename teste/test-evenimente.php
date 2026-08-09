@@ -259,6 +259,37 @@ $pagina = cerere($baza . '/adauga_eveniment.php', $c);
 verifica('logat: pagina se deschide', 200, $pagina['stare']);
 verifica('are formularul', true, str_contains($pagina['corp'], 'id="eveniment-form"'));
 verifica('are token CSRF', true, str_contains($pagina['corp'], 'name="csrf"'));
+
+/**
+ * Orele sunt câmpuri de text, nu `type="time"`.
+ *
+ * Ceasul nativ se scrie cu AM/PM sau fără după limba în care e pus browserul,
+ * nu după limba paginii — `lang` pe input n-are niciun efect. Ora o scriem
+ * noi, deci e mereu de 24 de ore, iar `pattern` cere din browser exact ce cere
+ * și serverul.
+ */
+verifica('ora de început nu e ceasul browserului', false,
+    str_contains($pagina['corp'], 'type="time" id="ev-ora-inceput"'));
+verifica('e câmp de text', true,
+    str_contains($pagina['corp'], 'type="text" id="ev-ora-inceput"'));
+verifica('cu tiparul de 24 de ore', 2,
+    substr_count($pagina['corp'], 'pattern="([01][0-9]|2[0-3]):[0-5][0-9]"'));
+
+/**
+ * `maxlength` nu mai stă pe descriere: el numără în unități UTF-16, deci ar
+ * tăia un text cu emoji la jumătatea limitei ținute de server. Limitele pleacă
+ * spre JS ca date, iar oprirea o face el, numărând caractere.
+ */
+verifica('descrierea n-are maxlength', false,
+    preg_match('/<textarea id="ev-descriere"[^>]*maxlength/', $pagina['corp']) === 1);
+verifica('dar poartă limitele ca date', true,
+    str_contains($pagina['corp'], 'data-min="' . DESCRIERE_MIN . '" data-max="' . DESCRIERE_MAX . '"'));
+
+// Panoul de după trimitere duce la eveniment, nu pe prima pagină.
+verifica('panoul de gata trimite la eveniment', true,
+    str_contains($pagina['corp'], 'id="ev-done-link"'));
+verifica('și nu mai zice „prima pagină"', false,
+    str_contains($pagina['corp'], 'Mergi pe prima pagină'));
 /**
  * Câte opțiuni are lista de categorii — numărate chiar din ea, nu scăzând din
  * toate opțiunile paginii ce nu e categorie. Scăderea aia se strica de fiecare
@@ -284,6 +315,8 @@ verifica('fără oră de sfârșit → NULL', null, $ev['ora_sfarsit']);
 verifica('participanți nespecificați → NULL', null, $ev['participanti_min']);
 verifica('are slug', true, preg_match('/^[a-z0-9-]+-[0-9a-f]{6}$/', (string) $ev['slug']) === 1);
 verifica('slugul e făcut din titlu', true, str_starts_with((string) $ev['slug'], 'cursa-de-seara'));
+verifica('răspunsul aduce adresa paginii lui',
+    'event.php?slug=' . $ev['slug'], $r['url'] ?? '');
 
 echo "\n=== UN SINGUR EVENIMENT ACTIV ===\n";
 
@@ -296,6 +329,15 @@ verifica('n-a ajuns în bază', 1, cateEvenimente());
 $pagina = cerere($baza . '/adauga_eveniment.php', $c);
 verifica('pagina arată de ce, nu formularul', false, str_contains($pagina['corp'], 'id="eveniment-form"'));
 verifica('și îi spune care e evenimentul', true, str_contains($pagina['corp'], 'Cursa de seară'));
+
+/**
+ * Ieșirea de aici e „Înapoi", adică fix pe pagina de unde s-a apăsat
+ * „+ Eveniment nou". Saltul îl face main.js; „href" rămâne prima pagină,
+ * pentru cine ajunge aici fără nimic în urmă.
+ */
+verifica('are butonul „Înapoi"', true, str_contains($pagina['corp'], 'id="ev-inapoi"'));
+verifica('nu mai trimite direct pe prima pagină', false,
+    str_contains($pagina['corp'], 'Înapoi pe prima pagină'));
 
 // Îl împingem în trecut: de mâine încolo, evenimentul de ieri e încheiat.
 db()->prepare('UPDATE evenimente SET data_eveniment = ? WHERE membru_id = ?')
@@ -899,7 +941,9 @@ verifica('la unul nou nu apare butonul de anulare', false, str_contains($formula
 verifica('nici slugul ascuns', false, str_contains($formularNou, 'name="slug"'));
 verifica('titlul e gol', '', $valoarea('ev-titlu', $formularNou));
 verifica('„gratuit" bifat, ca înainte', true, $bifat('ev-gratuit', $formularNou));
-verifica('„nu se știe până când" NEbifat, ca înainte', false, $bifat('ev-fara-sfarsit', $formularNou));
+// Ora de început se știe mereu, cea de sfârșit aproape niciodată: bifa
+// pornește pusă, ca s-o scoată doar cine chiar are ce scrie acolo.
+verifica('„nu se știe până când" bifat din start', true, $bifat('ev-fara-sfarsit', $formularNou));
 verifica('„nespecificat" bifat, ca înainte', true, $bifat('ev-fara-min', $formularNou));
 
 /* --------------------------- salvarea --------------------------- */
@@ -931,6 +975,14 @@ verifica('și categoria', 3, (int) $dupa['categorie_id']);
  * seamănă cu titlul.
  */
 verifica('slugul rămâne cel dinainte', $slugDeSchimbat, $dupa['slug']);
+
+/**
+ * Răspunsul poartă adresa evenimentului, ca panoul de „gata" să aibă unde
+ * trimite omul. La un anunț nou e singura cale: slugul se naște la salvare,
+ * deci formularul n-avea de unde să-l știe când s-a tipărit.
+ */
+verifica('răspunsul spune și unde e evenimentul',
+    'event.php?slug=' . $slugDeSchimbat, $r['url'] ?? '');
 
 /**
  * Orice schimbare trece din nou pe la moderare. Altfel s-ar putea publica
@@ -1321,6 +1373,30 @@ $idAprobat = pune($idOrg, 'Cursa aprobată', 'aprobat', 7);
 $pagina = cerere($baza . '/profil.php', $c)['corp'];
 verifica('cartonașele de pe profil trimit la event.php', true,
     str_contains($pagina, 'href="event.php?slug=' . $slugul($idAprobat) . '"'));
+
+/* -------------- „+ Eveniment nou", pe profilul propriu ----------------- */
+
+/**
+ * Butonul se vedea doar în locul gol, adică exact la cine n-avea niciun
+ * eveniment. Acum stă în capul secțiunii și când lista are ceva în ea — dar
+ * tot numai pe profilul propriu, și tot unul singur.
+ */
+verifica('cu evenimente în listă, butonul e acolo', 1,
+    substr_count($pagina, 'href="adauga_eveniment.php"'));
+verifica('și stă în capul secțiunii', true,
+    preg_match('/<div class="section-head">.*?href="adauga_eveniment\.php".*?<\/div>\s*<\/div>/s', $pagina) === 1);
+
+verifica('pe profilul altcuiva, niciun buton', 0,
+    substr_count($paginaDinAfara = cerere($baza . '/profil.php?m=organizat02', $anonim)['corp'],
+                 'href="adauga_eveniment.php"'));
+
+// Fără niciun eveniment rămâne invitația din locul gol — tot un buton, nu doi.
+db()->exec('DELETE FROM evenimente');
+$paginaGoala = cerere($baza . '/profil.php', $c)['corp'];
+verifica('fără evenimente, tot un singur buton', 1,
+    substr_count($paginaGoala, 'href="adauga_eveniment.php"'));
+verifica('și e cel din invitație', true,
+    str_contains($paginaGoala, 'Nu organizezi nimic'));
 
 /* ---------------------------- curățenie -------------------------------- */
 

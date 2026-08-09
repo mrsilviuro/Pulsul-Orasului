@@ -75,13 +75,14 @@ $val = static function (string $camp, string $implicit = '') use ($ev): string {
 $copertaAcum = $eEditare ? urlCoperta($ev['coperta'] ?? null) : '';
 
 /**
- * Bifele: la editare urmează ce e în bază, la un formular gol rămân cum erau.
+ * Bifele: la editare urmează ce e în bază, la un formular gol pornesc bifate.
  *
- * „Nu se știe până când ține" face notă discordantă dinadins: la un eveniment
- * nou pornește NEbifată, ca omul să scrie ora dacă o știe, și se bifează
- * singură doar când editează unul care chiar n-are oră de sfârșit.
+ * „Nu se știe până când ține" bifată din start e adevărul pentru cele mai
+ * multe anunțuri: ora de început se știe mereu, cea de sfârșit aproape
+ * niciodată. Cine o știe scoate bifa și scrie ora — o mișcare, în loc de una
+ * pe care ar fi trebuit s-o facă toți ceilalți.
  */
-$faraOraSfarsit = $eEditare && ($ev['ora_sfarsit'] ?? null) === null;
+$faraOraSfarsit = !$eEditare || ($ev['ora_sfarsit'] ?? null) === null;
 
 /**
  * „Gratuit" înseamnă aici același lucru ca la afișare (costScris): și NULL, și
@@ -165,7 +166,13 @@ require __DIR__ . '/inc/antet.php';
         Până atunci, tot ce ai de făcut e să te ocupi de el.
       </p>
 
-      <a class="btn btn--ghost" href="index.php">Înapoi pe prima pagină</a>
+      <!--
+        „Înapoi" înseamnă exact înapoi: pe pagina de unde s-a apăsat
+        „+ Eveniment nou", de obicei profilul. Saltul îl face main.js cu
+        history.back(); „href" rămâne prima pagină, pentru cine ajunge aici
+        direct, cu un link, fără nimic în urmă.
+      -->
+      <a class="btn btn--ghost" id="ev-inapoi" href="index.php">Înapoi</a>
     </section>
 
     <?php else: ?>
@@ -314,7 +321,22 @@ require __DIR__ . '/inc/antet.php';
           <div class="field-row">
             <div class="field">
               <label for="ev-ora-inceput">Ora de început <span class="req" aria-hidden="true">*</span></label>
-              <input type="time" id="ev-ora-inceput" name="ora_inceput" required
+              <!--
+                Câmp de text, nu `type="time"`.
+
+                Ceasul browserului se scrie cu AM/PM sau fără după limba în
+                care e pus browserul, nu după limba paginii: `lang="ro"` pe
+                input n-are niciun efect, am încercat. Un om cu Chrome în
+                engleză ar fi văzut „07:30 PM" pe un site românesc. Aici
+                scriem noi ora, deci e mereu de 24 de ore.
+
+                Serverul cere oricum exact HH:MM (vezi verificaEveniment),
+                iar `pattern` spune același lucru și browserului.
+              -->
+              <input type="text" id="ev-ora-inceput" name="ora_inceput" required
+                     class="camp-ora" inputmode="numeric" autocomplete="off"
+                     maxlength="5" placeholder="19:30"
+                     pattern="([01][0-9]|2[0-3]):[0-5][0-9]"
                      value="<?= h(oraScurta($val('ora_inceput') ?: null)) ?>"
                      aria-describedby="err-ev-ora-inceput">
               <p class="field__error" id="err-ev-ora-inceput" hidden></p>
@@ -322,7 +344,10 @@ require __DIR__ . '/inc/antet.php';
 
             <div class="field">
               <label for="ev-ora-sfarsit">Ora de sfârșit</label>
-              <input type="time" id="ev-ora-sfarsit" name="ora_sfarsit"
+              <input type="text" id="ev-ora-sfarsit" name="ora_sfarsit"
+                     class="camp-ora" inputmode="numeric" autocomplete="off"
+                     maxlength="5" placeholder="22:00"
+                     pattern="([01][0-9]|2[0-3]):[0-5][0-9]"
                      value="<?= h(oraScurta($val('ora_sfarsit') ?: null)) ?>"
                      aria-describedby="err-ev-ora-sfarsit">
               <!-- Bifa stă sub câmpul pe care îl stinge, nu sub tot rândul:
@@ -438,8 +463,14 @@ require __DIR__ . '/inc/antet.php';
 
           <div class="field">
             <label for="ev-descriere">Descrierea evenimentului <span class="req" aria-hidden="true">*</span></label>
+            <!--
+              Limitele pleacă spre JS ca date, nu scrise a doua oară acolo.
+              `maxlength` lipsește dinadins: el numără în unități UTF-16, deci
+              ar fi tăiat un text cu emoji cu mult înainte de limita ținută de
+              server. Oprirea o face main.js, numărând caractere.
+            -->
             <textarea id="ev-descriere" name="descriere" rows="10"
-                      maxlength="<?= DESCRIERE_MAX ?>"
+                      data-min="<?= DESCRIERE_MIN ?>" data-max="<?= DESCRIERE_MAX ?>"
                       placeholder="Pornim din fața primăriei la ora 19:00…"
                       required aria-describedby="err-ev-descriere ev-numar"><?= h($val('descriere')) ?></textarea>
             <p class="field__hint" id="ev-numar" role="status">0 din <?= DESCRIERE_MIN ?> de caractere</p>
@@ -466,9 +497,11 @@ require __DIR__ . '/inc/antet.php';
         </div>
 
         <!-- Portița pentru browserele care nu lasă o filă să se deschidă
-             dintr-un răspuns venit mai târziu. Stă ascunsă până e nevoie. -->
-        <p class="ev-previz-link">
-          <a id="ev-previz-link" href="#" target="_blank" rel="noopener" hidden>Deschide previzualizarea</a>
+             dintr-un răspuns venit mai târziu. Stă ascunsă până e nevoie —
+             ascuns e paragraful întreg, nu doar linkul din el: un <p> gol tot
+             ocupă un rând și împingea linia de despărțire de mai jos. -->
+        <p class="ev-previz-link" id="ev-previz-rand" hidden>
+          <a id="ev-previz-link" href="#" target="_blank" rel="noopener">Deschide previzualizarea</a>
         </p>
 
         <?php if ($eEditare): ?>
@@ -522,13 +555,16 @@ require __DIR__ . '/inc/antet.php';
           Îl citim și, dacă e totul în regulă, apare pe site.
         </p>
         <div class="done__actions">
-          <?php if ($eEditare): ?>
-          <!-- La editare, cel mai firesc lucru e să te uiți cum a ieșit. -->
-          <a class="btn btn--primary" href="<?= h(urlEveniment((string) $ev['slug'])) ?>">Vezi evenimentul</a>
-          <a class="btn btn--ghost" href="index.php">Mergi pe prima pagină</a>
-          <?php else: ?>
-          <a class="btn btn--primary" href="index.php">Mergi pe prima pagină</a>
-          <?php endif; ?>
+          <!--
+            Cel mai firesc lucru după trimitere e să te uiți cum a ieșit, nu
+            să te întorci pe prima pagină. La editare știm adresa de pe acum;
+            la un eveniment nou o aflăm din răspunsul serverului, fiindcă
+            slugul se naște abia la salvare — de-aia „href" pleacă gol și îl
+            umple main.js. Fără el, butonul nu se arată deloc.
+          -->
+          <a class="btn btn--primary" id="ev-done-link"
+             href="<?= $eEditare ? h(urlEveniment((string) $ev['slug'])) : '' ?>"
+             <?= $eEditare ? '' : 'hidden' ?>>Vezi pagina evenimentului</a>
         </div>
       </div>
     </div>

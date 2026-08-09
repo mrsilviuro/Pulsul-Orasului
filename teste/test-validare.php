@@ -236,5 +236,36 @@ foreach ([
 verifica('nu se acceptă nici null', '', caleInterna(null));
 verifica('prea lungă → respinsă', '', caleInterna('/' . str_repeat('a', 400)));
 
+echo "\n=== CÂTE CARACTERE ARE DESCRIEREA ===\n";
+
+/**
+ * Contorul de sub casetă spunea „300 din 300", iar serverul răspundea „ai
+ * 299": el măsura textul curățat, contorul pe cel brut.
+ *
+ * Perechea lui în browser e numaraCaractere(curataTextPeRanduri(...)) din
+ * assets/js/main.js. Numerele de mai jos sunt exact ce trebuie să dea și
+ * acolo — dacă vreunul se schimbă aici, s-a rupt și oglinda.
+ */
+$cate = static fn (string $t): int => mb_strlen(curataTextPeRanduri($t), 'UTF-8');
+
+verifica('litere simple', 300, $cate(str_repeat('a', 300)));
+verifica('diacriticele sunt caractere, nu octeți', 300, $cate(str_repeat('ă', 300)));
+verifica('un emoji e un caracter, nu două', 300, $cate(str_repeat('a', 299) . '😀'));
+
+// Emoji lipit din mai multe bucăți: patru chipuri și trei lipituri
+// invizibile (U+200D). Se numără ca șapte — nu ce vede ochiul, dar exact
+// același număr ca în browser, iar asta era problema.
+verifica('familia e șapte caractere', 300, $cate(str_repeat('a', 293) . '👨‍👩‍👧‍👦'));
+verifica('steagul e patru', 300, $cate(str_repeat('a', 296) . '🏳️‍🌈'));
+
+verifica('spațiul de la coadă nu se numără', 299, $cate(str_repeat('a', 299) . ' '));
+verifica('nici rândurile goale de la coadă', 298, $cate(str_repeat('a', 298) . "\n\n"));
+verifica('nici cele de la început', 298, $cate("\n\n" . str_repeat('a', 298)));
+verifica('sfârșitul de rând Windows e unul singur', 3, $cate("a\r\nb"));
+verifica('cinci rânduri goale la mijloc devin unul', 302,
+    $cate(str_repeat('a', 150) . "\n\n\n\n\n" . str_repeat('a', 150)));
+verifica('caracterele de control cad', 300, $cate(str_repeat('a', 300) . "\x01\x7F"));
+verifica('dar tabul rămâne', 301, $cate(str_repeat('a', 150) . "\t" . str_repeat('a', 150)));
+
 printf("\n%s\nTOTAL: %d trecute, %d picate\n", str_repeat('=',60), $treceri, $picaturi);
 exit($picaturi > 0 ? 1 : 0);

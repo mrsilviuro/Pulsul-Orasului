@@ -86,6 +86,19 @@ const COPERTA_INALTIME = 900;
 const COPERTA_SURSA_MIN_LATIME  = 1600;
 const COPERTA_SURSA_MIN_INALTIME = 900;
 
+/**
+ * Calitatea JPEG a copertei — mai apăsată decât la poza de profil.
+ *
+ * Coperta e de zece ori mai mare decât un chip de 512 px și se încarcă pe
+ * prima pagină de câte ori intră cineva, adesea pe telefon. La 80 în loc de
+ * 82 fișierul scade cu vreo 8%, iar la mărire de două ori nu se vede
+ * deosebirea: nici pătrățele pe cer, care e locul unde ar apărea prima dată.
+ *
+ * Poza de profil rămâne la POZA_CALITATE: e mică, se încarcă o dată, n-are
+ * ce economisi.
+ */
+const COPERTA_CALITATE = 80;
+
 const COPERTA_DOSAR = 'assets/img/evenimente';
 
 /** Silueta arătată celor care nu și-au pus poză. */
@@ -524,7 +537,7 @@ function scrieDreptunghi(
 
         imageinterlace($tinta, true);
 
-        return imagejpeg($tinta, $cale, POZA_CALITATE);
+        return imagejpeg($tinta, $cale, COPERTA_CALITATE);
     } finally {
         imagedestroy($tinta);
     }

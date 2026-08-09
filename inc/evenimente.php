@@ -308,8 +308,12 @@ function evenimentDeEditat(string $slug, int $membruId): ?array
  * Slugul se încearcă de câteva ori: coada lui e întâmplătoare, deci o
  * potrivire e foarte puțin probabilă, dar „puțin probabil" nu e „imposibil",
  * iar indexul unic din bază e cel care are ultimul cuvânt.
+ *
+ * Înapoi vine slugul, nu id-ul: după salvare, singurul lucru de care are
+ * nevoie cine a chemat funcția e adresa paginii, ca omul să se poată duce
+ * direct la evenimentul lui.
  */
-function salveazaEveniment(int $membruId, array $curat, ?string $coperta): int
+function salveazaEveniment(int $membruId, array $curat, ?string $coperta): string
 {
     $sql = 'INSERT INTO evenimente
                 (membru_id, categorie_id, titlu, slug, coperta,
@@ -319,13 +323,15 @@ function salveazaEveniment(int $membruId, array $curat, ?string $coperta): int
             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)';
 
     for ($incercare = 1; $incercare <= 5; $incercare++) {
+        $slug = slugEveniment($curat['titlu']);
+
         try {
             $q = db()->prepare($sql);
             $q->execute([
                 $membruId,
                 $curat['categorie_id'],
                 $curat['titlu'],
-                slugEveniment($curat['titlu']),
+                $slug,
                 $coperta,
                 $curat['data_eveniment'],
                 $curat['ora_inceput'],
@@ -343,7 +349,7 @@ function salveazaEveniment(int $membruId, array $curat, ?string $coperta): int
                 acum(),
             ]);
 
-            return (int) db()->lastInsertId();
+            return $slug;
         } catch (PDOException $e) {
             // 23000 = a dat de un index unic. Singurul de aici e slugul.
             if ($e->getCode() !== '23000' || $incercare === 5) {
@@ -352,7 +358,7 @@ function salveazaEveniment(int $membruId, array $curat, ?string $coperta): int
         }
     }
 
-    return 0;
+    return '';
 }
 
 /**

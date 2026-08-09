@@ -241,6 +241,27 @@ require __DIR__ . '/inc/antet.php';
             <?= $eProfilulMeu ? 'Ce pui la cale' : 'Ce pune la cale' ?></p>
           <h2 class="section-title" id="evenimente-title">Evenimente organizate</h2>
         </div>
+
+        <?php if ($eProfilulMeu && $evenimenteProfil !== []): ?>
+        <!--
+          Pornirea unui eveniment nou stă la îndemână și când omul are deja
+          unele: până acum se vedea doar în locul gol, adică exact la cine
+          n-avea niciunul.
+
+          Doar pe profilul propriu, și doar când lista are ceva în ea — când
+          e goală, invitația de mai jos are deja butonul ei, iar două butoane
+          unul sub altul ar spune același lucru de două ori.
+
+          Cine are deja un eveniment în desfășurare ajunge pe pagina care i-o
+          spune; de acolo, „Înapoi" îl aduce fix aici.
+        -->
+        <a class="btn btn--primary btn--sm" href="adauga_eveniment.php">
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 5v14"/><path d="M5 12h14"/>
+          </svg>
+          <span>Eveniment nou</span>
+        </a>
+        <?php endif; ?>
       </div>
 
       <?php if ($evenimenteProfil === []): ?>

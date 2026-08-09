@@ -149,6 +149,7 @@ if (is_array($fisier) && (int) ($fisier['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLO
 try {
     if ($deEditat !== null) {
         actualizeazaEveniment((int) $deEditat['id'], $curat, $coperta);
+        $slug = (string) $deEditat['slug'];
 
         // Poza veche se șterge abia după ce rândul s-a schimbat cu bine.
         // Invers, o eroare la scriere ar lăsa evenimentul arătând spre un
@@ -157,7 +158,7 @@ try {
             stergeCopertaDeFisier($deEditat['coperta'] ?? null);
         }
     } else {
-        salveazaEveniment($membruId, $curat, $coperta);
+        $slug = salveazaEveniment($membruId, $curat, $coperta);
     }
 } catch (PDOException $e) {
     // Fișierul nou n-are de ce să rămână dacă rândul n-a intrat.
@@ -165,7 +166,11 @@ try {
     throw $e;
 }
 
+// Adresa pleacă înapoi ca panoul de „gata" să aibă unde trimite omul: la un
+// eveniment nou, pagina abia acum s-a născut, deci formularul n-avea de unde
+// să știe slugul când s-a tipărit.
 raspunsJson([
     'ok'    => true,
     'mesaj' => 'Evenimentul tău a fost trimis spre aprobare.',
+    'url'   => $slug !== '' ? urlEveniment($slug) : '',
 ]);
