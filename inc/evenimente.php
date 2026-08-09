@@ -74,10 +74,14 @@ function evenimenteActive(int $membruId): array
     [$unde, $azi] = filtruNeincheiat();
 
     $q = db()->prepare(
+        // Ce te împiedică să postezi altul: ce așteaptă moderarea și ce e
+        // aprobat. Nici respinsul, nici anulatul nu mai sunt evenimente —
+        // primul n-a ajuns să fie, al doilea a încetat să fie — și n-au voie
+        // să țină pe cineva blocat.
         'SELECT id, titlu, slug, data_eveniment, stare_moderare
            FROM evenimente
           WHERE membru_id = ?
-            AND stare_moderare <> \'respins\'
+            AND stare_moderare IN (\'in_asteptare\', \'aprobat\')
             AND ' . $unde . '
           ORDER BY data_eveniment'
     );
@@ -154,6 +158,12 @@ const EVENIMENTE_PE_PROFIL_MAX = 60;
  * Aceeași regulă de „încheiat" ca la limita de postare (filtruNeincheiat), și
  * pentru cele aprobate, și pentru cele în așteptare: mulțimea care te
  * împiedică să postezi altul e chiar mulțimea pe care o vezi pe profil.
+ *
+ * Anulatele nu apar nicăieri, nici măcar organizatorului — exact ca
+ * respinsele... nu: respinsul îl vede omul lui, ca să-l poată corecta. Un
+ * eveniment anulat nu mai are ce corectură să primească, deci iese din lista
+ * de stări cerute și nu mai apare pentru nimeni. Rămâne în bază pentru staff,
+ * până la curățenia finală.
  *
  * Ordinea: întâi cele în așteptare (sunt treaba ta, nu a vizitatorului), apoi
  * după dată, cea mai apropiată prima.
@@ -250,11 +260,20 @@ function evenimentDupaSlug(string $slug): ?array
  * organizatorul. Simetric dinadins: un anunț respins nu e o rușine de arătat
  * altora, e o treabă între noi și cel care l-a scris.
  *
+ * Anulat — doar staff. Nici măcar organizatorul, deși el l-a anulat: a spus ce
+ * avea de spus și a închis subiectul, iar o pagină care se mai deschide încă
+ * pentru el ar fi o promisiune că se mai poate face ceva. Rândul rămâne în
+ * bază pentru cine face curățenia și pentru e-mailurile care trebuie trimise.
+ *
  * $membruId e 0 pentru cine nu e conectat, deci nu poate nimeri peste
  * membru_id-ul nimănui.
  */
-function poateVedeaEvenimentul(array $eveniment, int $membruId): bool
+function poateVedeaEvenimentul(array $eveniment, int $membruId, bool $eStaff = false): bool
 {
+    if ($eveniment['stare_moderare'] === 'anulat') {
+        return $eStaff;
+    }
+
     if ((int) $eveniment['membru_id'] === $membruId && $membruId > 0) {
         return true;
     }
@@ -284,6 +303,11 @@ function urlEditareEveniment(string $slug): string
  *
  * Editează doar organizatorul — oricare ar fi starea de moderare. Un anunț
  * respins e tocmai cel care are cea mai mare nevoie de o corectură.
+ *
+ * Singura stare care iese din regulă e „anulat": acolo nu mai e nimic de
+ * corectat. Fără rândul ăsta, o editare ar întoarce evenimentul în
+ * „in_asteptare" (așa face actualizeazaEveniment) și l-ar readuce la viață pe
+ * lângă anularea pe care organizatorul tocmai o anunțase.
  */
 function evenimentDeEditat(string $slug, int $membruId): ?array
 {
@@ -294,6 +318,10 @@ function evenimentDeEditat(string $slug, int $membruId): ?array
     $eveniment = evenimentDupaSlug($slug);
 
     if ($eveniment === null || (int) $eveniment['membru_id'] !== $membruId) {
+        return null;
+    }
+
+    if ($eveniment['stare_moderare'] === 'anulat') {
         return null;
     }
 
@@ -362,31 +390,34 @@ function salveazaEveniment(int $membruId, array $curat, ?string $coperta): strin
 }
 
 /**
- * Anulează un eveniment: rândul iese din bază, coperta de pe disc.
+ * Anulează un eveniment: o stare nouă și un motiv, nu o ștergere.
  *
- * Ștergere adevărată, nu o stare nouă. Un eveniment anulat nu mai are ce
- * spune nimănui: nu-l mai caută nimeni, nu mai atârnă nimic de el, iar o
- * stare „anulat" ar fi însemnat un rând care se târăște prin toate
- * interogările fără să folosească cuiva. Contul e altă poveste — de el atârnă
- * evenimentele organizate, de-aia se anonimizează în loc să se șteargă.
+ * Ștergea rândul, la început. Era greșit: de un eveniment atârnă oameni care
+ * și-au făcut planuri, iar un rând șters nu mai poate spune nimănui de ce nu
+ * mai au unde să se ducă. Motivul scris de organizator e chiar textul care va
+ * pleca spre ei — de aceea e obligatoriu, și de aceea rămâne în bază.
  *
- * TODO: la implementarea sistemului de interese/participări, aici trebuie:
- *   1) trimis email tuturor celor interesați/confirmați despre anularea
- *      evenimentului;
- *   2) șterse toate înregistrările de interes/participare asociate acestui
- *      eveniment;
- *   3) șterse toate comentariile asociate acestui eveniment.
- * Momentan se șterge doar rândul din tabelul evenimente (plus coperta lui de
- * pe disc, ca să nu rămână un fișier de care nu mai știe nimeni).
+ * Coperta NU se șterge de pe disc. Cât timp rândul e acolo și staff-ul îl mai
+ * poate deschide, poza face parte din el; se duce odată cu el, la curățenie.
+ *
+ * TODO: la implementarea sistemului de interese/participări, ordinea e:
+ *   1) AICI, în clipa anulării: e-mail către toți cei interesați/confirmați,
+ *      cu textul din motiv_anulare. Ăsta e singurul pas automat.
+ *   2) MAI TÂRZIU, ca acțiune de staff, nu automat: curățenia finală —
+ *      ștergerea rândului anulat, a înscrierilor și a comentariilor lui, plus
+ *      coperta de pe disc (stergeCopertaDeFisier).
+ * Ordinea contează: dacă s-ar șterge întâi, n-ar mai avea cui trimite
+ * e-mailul și nici ce să scrie în el.
  */
-function anuleazaEveniment(array $eveniment): void
+function anuleazaEveniment(array $eveniment, string $motiv): void
 {
-    $q = db()->prepare('DELETE FROM evenimente WHERE id = ?');
-    $q->execute([(int) $eveniment['id']]);
+    $q = db()->prepare(
+        'UPDATE evenimente
+            SET stare_moderare = \'anulat\', motiv_anulare = ?, actualizat_la = ?
+          WHERE id = ?'
+    );
 
-    // Fișierul se șterge ABIA după ce rândul a ieșit. Invers, o eroare la
-    // ștergere ar fi lăsat un eveniment care arată spre o poză inexistentă.
-    stergeCopertaDeFisier($eveniment['coperta'] ?? null);
+    $q->execute([$motiv, acum(), (int) $eveniment['id']]);
 }
 
 /**

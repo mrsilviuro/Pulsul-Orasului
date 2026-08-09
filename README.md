@@ -851,10 +851,11 @@ Nu există încă niciun loc unde să citești mesajele din site. Se citesc din
 
 ## Evenimentele
 
-`sql/009-evenimente.sql` aduce `categorii` și `evenimente`, iar
+`sql/009-evenimente.sql` aduce `categorii` și `evenimente`,
 `sql/010-limita-evenimente.sql` coloana prin care se poate ridica, pentru un om
-anume, limita de evenimente active. Formularul de publicare e
-`adauga_eveniment.php`.
+anume, limita de evenimente active, iar `sql/011-anulare-eveniment.sql` starea
+`anulat`, coloana `motiv_anulare` și steagul `membri.este_staff`. Formularul de
+publicare e `adauga_eveniment.php`.
 
 Categoriile erau până acum scrise de mână în trei locuri: filtrele din
 `index.php`, eticheta de pe fiecare articol și lista din `despre.php`. De acum
@@ -931,7 +932,7 @@ apăsat „+ Eveniment nou". Saltul îl face `history.back()`, dar numai dacă
 link de pe alt site ar fi trimis înapoi acolo. Când nu e, linkul rămâne cum a
 venit din HTML și duce pe prima pagină — merge și fără JS.
 
-### Orele: câmpuri de text, nu `type="time"`
+### Data și orele: câmpuri de text, nu `type="date"` / `type="time"`
 
 Ceasul nativ al browserului se scrie cu AM/PM sau fără **după limba în care e
 pus browserul, nu după limba paginii**. `lang="ro"` pe input n-are niciun
@@ -947,10 +948,41 @@ corectăm (altfel „930" ar sări la „09:3" sub degete), iar la ieșirea din 
 se îndreaptă — „9" → „09:00", „930" → „09:30", „1930" → „19:30". Se pierde
 selectorul nativ de oră; se câștigă faptul că toată lumea vede același lucru.
 
-Câmpul de dată a rămas `type="date"`, cu aceeași meteahnă: cine are browserul
-în engleză vede „mm/dd/yyyy". O dată are mai multe piese decât o oră, deci
-înlocuirea ei cere mai mult decât o mască de patru cifre — deocamdată nu e
-făcută.
+**Data merge la fel, cu o cifră în plus:** `ZZ-LL-AAAA`, cum se scrie o dată în
+România. Câmpul vizibil e text, cu `pattern` și cu aceeași mască.
+
+Calendarul nu s-a pierdut. Lângă câmp stă un `type="date"` adevărat, ascuns și
+**fără `name`** (deci nimic din el nu pleacă spre server), pe care butonul din
+dreapta îl deschide cu `showPicker()`. Ce se alege acolo se scrie înapoi în
+câmpul vizibil, pe românește. Pe telefon rămâne astfel roata nativă de dată.
+`showPicker()` cere o apăsare a omului — apăsarea pe buton e; unde nu există,
+se încearcă un click pe câmpul ascuns, iar dacă nici acela nu deschide nimic nu
+se pierde nimic, fiindcă data se poate scrie oricând de mână. Câmpul ascuns nu
+e `display:none`: asta i-ar lua dreptul de a deschide selectorul.
+
+Traducerea între cele două formate se face **într-un singur loc**:
+`dataDinFormular()` („25-12-2026" → „2026-12-25") și perechea ei
+`dataPentruFormular()`, amândouă în `inc/validare.php`. Formatul e strict — nu
+se primește și `AAAA-LL-ZZ` „ca să fim îngăduitori": două formate acceptate
+înseamnă că într-o zi cineva trimite „01-02-2026" crezând una și noi înțelegem
+alta. `checkdate()` are ultimul cuvânt, fiindcă el știe că februarie are 29 de
+zile doar în anii bisecți; un `DateTime` cu „31-04" ar fi alunecat singur pe 1
+mai, în loc să spună că data e greșită.
+
+### Masca, într-un singur loc
+
+`mascaCifre(brut, grupe, semn)` din `main.js` e folosită și de dată (`[2,2,4]`,
+`-`), și de ore (`[2,2]`, `:`).
+
+Nu lucrează pe poziții absolute, ci pe bucăți, fiindcă omul poate pune și el
+semnele. Tăiat la poziții fixe, „5-3-2027" ar fi ieșit „53-20-27" — o dată care
+nu există, dintr-una care era limpede. Când o bucată e încheiată de om cu un
+semn și are o cifră în loc de două, primește zeroul pe loc: „5-" e ziua 05, iar
+„9:30" devine „09:30" în timp ce se scrie. Anul nu se completează niciodată cu
+zerouri — „27" nu înseamnă „0027".
+
+Cine scrie doar cifre nu e corectat cât scrie (altfel „930" ar sări la „09:3"
+sub degete); îndreptarea vine la ieșirea din câmp.
 
 Bifa **„Nu se știe până când ține" pornește pusă** la un formular gol: ora de
 început se știe mereu, cea de sfârșit aproape niciodată. Cine o știe scoate
@@ -1147,9 +1179,14 @@ momentan nimic." — pe primul prenume, cum i-ai spune în față.
 
 `profil.php?m=<permalink>` deschide profilul membrului cu adresa aia publică.
 Un permalink care nu duce nicăieri — cont șters, suspendat, sau o greșeală de
-tastare — nu e o eroare de arătat: pagina trimite omul pe prima pagină. E
-minimul de care avea nevoie secțiunea de mai sus ca să existe și pentru
-vizitatori; adresele frumoase, de forma `/membru/<permalink>`, vin mai târziu.
+tastare — nu e o eroare de arătat: pagina trimite omul pe prima pagină.
+Adresele frumoase, de forma `/membru/<permalink>`, vin mai târziu.
+
+**Niciun profil nu se mai deschide fără cont** — nici al altcuiva, nici al tău.
+Cine nu e conectat e trimis la `login.php` cu adresa de acum în buzunar, prin
+aceeași `cereIntrare()` pe care o folosește și `event.php`, așa că după
+conectare ajunge fix pe profilul pe care voia să-l vadă. Vezi „Întoarcerea după
+intrare", mai jos.
 
 ## Pagina unui eveniment
 
@@ -1166,11 +1203,12 @@ Pagina e **strict pentru cine e conectat**. Verificarea se face *înaintea*
 căutării în bază, dinadins: așa, cine nu are cont nu poate afla nici măcar dacă
 un slug duce undeva.
 
-| starea anunțului | organizatorul | alt membru conectat | nelogat |
-|---|---|---|---|
-| aprobat | vede | vede | trimis la login |
-| în așteptare | vede | prima pagină | trimis la login |
-| respins | vede | prima pagină | trimis la login |
+| starea anunțului | organizatorul | alt membru conectat | staff | nelogat |
+|---|---|---|---|---|
+| aprobat | vede | vede | vede | trimis la login |
+| în așteptare | vede | prima pagină | prima pagină | trimis la login |
+| respins | vede | prima pagină | prima pagină | trimis la login |
+| anulat | prima pagină | prima pagină | vede | trimis la login |
 
 **Un slug inexistent și unul interzis sfârșesc la fel: pe prima pagină.** Dacă
 „nu există" ar arăta altfel decât „nu ai voie", oricine ar putea afla, ghicind,
@@ -1199,6 +1237,14 @@ caracter de control, și o lungime cu capăt. Aceleași reguli sunt și în
 
 Paginile nu-și mai scriu singure antetul: `cereIntrare('/calea.php')` din
 `inc/auth.php` face redirecționarea și oprește pagina.
+
+**Profilurile cer și ele cont**, prin exact aceeași mișcare:
+`cereIntrare('/profil.php?m=<permalink>')`, tot înaintea căutării în bază, deci
+un permalink nu se poate încerca din afară nici măcar ca să se afle dacă duce
+undeva. Un profil spune vârsta, orașul, chipul și ce pune omul la cale — nu e
+ceva ce se lasă la vedere pe internet, unde poate fi cules de oricine.
+Linkurile spre profiluri au rămas peste tot cum erau; s-a schimbat doar cine
+poate deschide pagina.
 
 ### Ce se arată și ce nu
 
@@ -1346,33 +1392,93 @@ la editare — la un eveniment care încă nu există n-are ce anula.
 Confirmarea e **desenată de noi, în pagină**, nu cu `window.confirm()`: o
 fereastră a browserului arată altfel pe Windows, pe Android și pe iPhone, iar
 noi vrem aceeași interfață peste tot. Același tipar ca la ștergerea contului
-din setări — butonul își schimbă locul cu întrebarea, care numește evenimentul,
-spune că ștergerea e definitivă și că oamenii interesați vor fi înștiințați
+din setări — butonul își schimbă locul cu întrebarea, care numește evenimentul
+și spune că anunțul iese de pe site și că oamenii interesați vor fi înștiințați
 prin e-mail. Atenția pleacă pe „Renunță", nu pe „Da, anulează": cine apasă
-Enter din obișnuință n-are voie să șteargă din greșeală.
+Enter din obișnuință n-are voie să anuleze din greșeală.
 
-**Se șterge rândul, nu se pune o stare.** Un eveniment anulat nu mai are ce
-spune nimănui: nu-l mai caută nimeni, nu mai atârnă nimic de el, iar o stare
-„anulat" ar fi însemnat un rând care se târăște prin toate interogările fără
-să folosească cuiva. Contul e altă poveste — de el atârnă evenimentele
-organizate, de-aia se anonimizează în loc să se șteargă.
+#### Motivul e obligatoriu
 
-Coperta se duce odată cu rândul, altfel ar rămâne un fișier pe disc de care nu
-mai știe nimeni. Se șterge **după** ce rândul a ieșit: invers, o eroare la
-ștergere ar fi lăsat un eveniment arătând spre o poză inexistentă.
+Împreună cu întrebarea apare o casetă: **de ce anulezi?** Minimum
+`MOTIV_ANULARE_MIN` caractere (15), cel mult 1000, verificate pe server cu
+`verificaMotivAnulare()` din `inc/validare.php` și numărate cu aceeași
+numărătoare ca descrierea, deci contorul din pagină spune fix ce spune
+serverul.
+
+Nu e o formalitate: textul ăsta va pleca prin e-mail spre toți cei care voiau
+să vină. „Anulat" singur nu e o veste, e o ușă închisă în nas.
+
+Caseta stă înăuntrul formularului de eveniment, dar **fără `name` și fără
+`required`** — cu ele ar fi plecat odată cu „Trimite spre aprobare" și ar fi
+blocat trimiterea cât e goală. JS o citește după id și o trimite el, la
+anulare. Eroarea vine înapoi pe câmp, ca la orice alt câmp, nu într-un toast
+care se stinge singur.
+
+#### Nu se șterge nimic
+
+**Rândul rămâne, cu o stare nouă.** Prima variantă ștergea rândul; era greșit.
+De un eveniment atârnă oameni care și-au făcut planuri, iar un rând șters nu
+mai poate spune nimănui de ce nu mai au unde să se ducă — nici acum, nici la
+sfârșitul lunii, când cineva întreabă ce s-a întâmplat.
+
+Așa că `stare_moderare` devine `anulat` (valoare adusă de
+`sql/011-anulare-eveniment.sql`, pusă **la coada** ENUM-ului, fiindcă MySQL
+ține un ENUM ca numărul poziției — o valoare strecurată la mijloc ar fi
+prefăcut în tăcere fiecare „respins" în altceva), iar `motiv_anulare` ia textul
+organizatorului, neescapat, ca toate textele din site.
+
+„Anulat" e altceva decât „respins": respins înseamnă „noi n-am primit-o",
+anulat înseamnă „organizatorul s-a răzgândit". Pentru public amândouă sunt
+invizibile, dar în bază sunt două povești diferite.
+
+Coperta **nu** se șterge de pe disc. Cât timp rândul e acolo, poza face parte
+din el; se duce odată cu el, la curățenie.
+
+#### Cine mai vede un eveniment anulat
+
+| | pagina evenimentului | profil, prima pagină | formularul de editare |
+|---|---|---|---|
+| nelogat | nu (nici nu ajunge) | nu | nu |
+| oricine e conectat | nu | nu | nu |
+| organizatorul | **nu** | nu | **nu** |
+| staff | da | nu | nu |
+
+Nici măcar organizatorul: a spus ce avea de spus și a închis subiectul, iar o
+pagină care se mai deschide pentru el ar fi o promisiune că se mai poate face
+ceva. Editarea e închisă din același motiv, dar și pentru unul mecanic — o
+editare ar fi întors evenimentul în `in_asteptare` (așa face
+`actualizeazaEveniment()`) și l-ar fi readus la viață pe lângă anularea pe care
+tocmai o anunțase. Regula stă în `evenimentDeEditat()`.
+
+Un eveniment anulat **nu mai ține pe nimeni blocat**: iese din
+`evenimenteActive()`, deci organizatorul poate publica altul imediat. Nu se
+numără nici la „Evenimente organizate", și nu apare în nicio listă.
+
+**Staff** înseamnă `membri.este_staff = 1`, citit la fiecare cerere prin
+`esteStaff()` din `inc/auth.php` — ca starea contului, fiindcă un drept luat
+înapoi trebuie să dispară pe loc, nu la următoarea conectare. Nu există
+interfață prin care cineva să fie făcut staff; se pune de mână, ca limita de
+evenimente. Pe pagina lor, evenimentul poartă banda `stare-anunt--anulat` și,
+sub ea, motivul scris de organizator, citat întocmai (rândurile se păstrează
+prin `nl2br`, escaparea se face înainte — altfel `<br>` ar fi escapat și el).
 
 Cine anulează e verificat prin aceeași `evenimentDeEditat()` ca la editare, plus
 token CSRF. Punctul de intrare nu se bazează pe faptul că butonul s-a văzut în
-pagină: cererea poate veni de oriunde, cu orice slug.
+pagină: cererea poate veni de oriunde, cu orice slug. Și fiindcă
+`evenimentDeEditat()` refuză un eveniment deja anulat, a doua anulare nu are ce
+mai anula.
 
-După ștergere, omul ajunge pe profilul lui cu un „Evenimentul a fost anulat." —
+După anulare, omul ajunge pe profilul lui cu un „Evenimentul a fost anulat." —
 mesajul trece prin `$_SESSION['mesaj_bun']`, ca la intrarea cu Google, deci se
 arată o singură dată.
 
 **Niciun e-mail nu pleacă acum**, fiindcă n-are cui: „mă interesează" și „voi
-participa" nu există încă. În `anuleazaEveniment()` din `inc/evenimente.php` e
-un `TODO` cu ce va trebui făcut acolo când vor exista — e-mailurile, ștergerea
-înscrierilor și a comentariilor.
+participa" nu există încă. `TODO`-ul din `anuleazaEveniment()` scrie ordinea de
+atunci, și ordinea contează: **întâi** e-mailul cu textul din `motiv_anulare`,
+în clipa anulării — ăsta e singurul pas automat — și **abia mai târziu**,
+ca acțiune de staff, curățenia finală: ștergerea rândului anulat, a
+înscrierilor, a comentariilor și a copertei de pe disc. Invers, n-ar mai avea
+cui trimite e-mailul și nici ce să scrie în el.
 
 ### Ce nu e făcut
 

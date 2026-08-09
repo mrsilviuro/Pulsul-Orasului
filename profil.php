@@ -17,6 +17,24 @@ require_once __DIR__ . '/inc/evenimente.php';
  */
 $eu     = membruCurent();
 $cerut  = trim((string) ($_GET['m'] ?? ''));
+
+/**
+ * Profilurile sunt pentru cei din casă — de oriunde ar veni linkul.
+ *
+ * Un profil spune vârsta, orașul, chipul și ce pune omul la cale. Nu e ceva
+ * ce se lasă la vedere pe internet, unde poate fi cules de oricine. Cine nu e
+ * conectat pleacă spre login cu adresa asta în buzunar, ca după conectare să
+ * ajungă fix pe profilul pe care voia să-l vadă.
+ *
+ * Aceeași mișcare ca la event.php, cu aceeași funcție: verificarea e ÎNAINTEA
+ * căutării în bază, deci un permalink nu se poate încerca din afară nici măcar
+ * ca să se afle dacă duce undeva. Linkurile spre profiluri rămân peste tot
+ * cum erau — se schimbă doar cine poate deschide pagina.
+ */
+if ($eu === null) {
+    cereIntrare('/profil.php' . ($cerut !== '' ? '?m=' . urlencode($cerut) : ''));
+}
+
 $membruProfil = $eu;
 
 if ($cerut !== '') {

@@ -33,6 +33,8 @@ const DESCRIERE_MAX       = 8000;
 const COST_MAX            = 99999.99;
 const PARTICIPANTI_MAX    = 65535; // cât încape în SMALLINT UNSIGNED
 const ANI_INAINTE_MAX     = 2;     // cât de departe în viitor poate fi pus un eveniment
+const MOTIV_ANULARE_MIN   = 15;    // caractere, ca la descriere — vezi verificaMotivAnulare()
+const MOTIV_ANULARE_MAX   = 1000;
 
 /**
  * Aduce diacriticele românești la forma corectă (virgulă dedesubt).
@@ -381,14 +383,22 @@ function verificaEveniment(array $date, array $categoriiValide, ?DateTimeImmutab
     }
 
     /* ------------------------------ Data ------------------------------ */
-    $data = trim($citeste('data_eveniment'));
+    /**
+     * Din formular vine ZZ-LL-AAAA, cum se scrie o dată în România. În bază
+     * intră AAAA-LL-ZZ, cum o cere MySQL. Traducerea o face dataDinFormular(),
+     * într-un singur loc, ca nici pagina, nici baza să nu vadă vreodată
+     * formatul celeilalte.
+     */
+    $data = dataDinFormular($citeste('data_eveniment'));
 
-    if ($data === '') {
+    if (trim($citeste('data_eveniment')) === '') {
         $erori['data_eveniment'] = 'Alege data.';
+    } elseif ($data === '') {
+        $erori['data_eveniment'] = 'Data nu e validă. Scrie-o ca 25-12-2026.';
     } else {
         $d = DateTimeImmutable::createFromFormat('!Y-m-d', $data);
 
-        if ($d === false || $d->format('Y-m-d') !== $data) {
+        if ($d === false) {
             $erori['data_eveniment'] = 'Data nu e validă.';
         } elseif ($d < $azi) {
             $erori['data_eveniment'] = 'Data a trecut deja. Alege una de azi înainte.';
@@ -607,6 +617,103 @@ function dataLunga(?string $data): string
 function oraScurta(?string $ora): string
 {
     return ($ora !== null && preg_match('/^(\d{2}:\d{2})/', $ora, $m) === 1) ? $m[1] : '';
+}
+
+/* --------------------- Data, între pagină și bază ---------------------- */
+
+/**
+ * Data scrisă de om („25-12-2026") devine data cerută de bază („2026-12-25").
+ *
+ * Întoarce '' dacă nu e o dată adevărată — atunci cine a chemat funcția pune
+ * eroarea, fiindcă tot el știe cum se cheamă câmpul.
+ *
+ * Formatul e strict: exact ZZ-LL-AAAA, cu zerourile puse. Nu primim și
+ * AAAA-LL-ZZ „ca să fim îngăduitori": două formate acceptate înseamnă că
+ * într-o zi cineva va trimite „01-02-2026" crezând una și noi vom înțelege
+ * alta. Zerourile le pune oricum masca din main.js, iar cine trimite cererea
+ * de-a dreptul are de citit o singură regulă.
+ *
+ * checkdate() e cel care are ultimul cuvânt: el știe că februarie are 29 de
+ * zile doar în anii bisecți, iar un DateTime cu „31-04" ar fi alunecat singur
+ * pe 1 mai, în loc să spună că data e greșită.
+ */
+function dataDinFormular(?string $cerut): string
+{
+    if (!is_string($cerut)) {
+        return '';
+    }
+
+    $data = trim($cerut);
+
+    if (preg_match('/^(\d{2})-(\d{2})-(\d{4})$/', $data, $m) !== 1) {
+        return '';
+    }
+
+    [, $zi, $luna, $an] = $m;
+
+    if (!checkdate((int) $luna, (int) $zi, (int) $an)) {
+        return '';
+    }
+
+    return $an . '-' . $luna . '-' . $zi;
+}
+
+/**
+ * Drumul invers: data din bază, așa cum se scrie în câmpul din formular.
+ *
+ * Perechea lui dataDinFormular(). Stau una lângă alta ca să se vadă dintr-o
+ * privire că sunt oglinzi — dacă una se schimbă, cealaltă sare în ochi.
+ */
+function dataPentruFormular(?string $data): string
+{
+    if (!is_string($data) || preg_match('/^(\d{4})-(\d{2})-(\d{2})/', $data, $m) !== 1) {
+        return '';
+    }
+
+    return $m[3] . '-' . $m[2] . '-' . $m[1];
+}
+
+/* ------------------------ Motivul unei anulări ------------------------- */
+
+/**
+ * Ce a scris organizatorul când a anulat evenimentul.
+ *
+ * Întoarce ['eroare' => string, 'text' => string]: eroarea e '' când e bine,
+ * iar textul e cel curățat, gata de pus în bază.
+ *
+ * Motivul e OBLIGATORIU, și nu de formă. De un eveniment atârnă oameni care
+ * și-au făcut planuri; ei vor primi textul ăsta prin e-mail (vezi TODO-ul din
+ * anuleazaEveniment). „Anulat" singur nu e o veste, e o ușă închisă în nas.
+ *
+ * Se numără caractere, nu octeți — aceeași regulă ca la descriere, și același
+ * curățător de text pe mai multe rânduri, ca numărul de aici să fie fix cel pe
+ * care îl arată contorul din pagină.
+ */
+function verificaMotivAnulare($cerut): array
+{
+    $motiv = curataTextPeRanduri(is_string($cerut) ? $cerut : '');
+    $cate  = mb_strlen($motiv, 'UTF-8');
+
+    if ($motiv === '') {
+        return ['eroare' => 'Scrie de ce anulezi. Cei care voiau să vină vor primi textul ăsta.', 'text' => ''];
+    }
+
+    if ($cate < MOTIV_ANULARE_MIN) {
+        return [
+            'eroare' => 'Mai scrie puțin: ai ' . $cate . ' caractere din '
+                      . MOTIV_ANULARE_MIN . ' cerute.',
+            'text'   => '',
+        ];
+    }
+
+    if ($cate > MOTIV_ANULARE_MAX) {
+        return [
+            'eroare' => 'Motivul e prea lung (cel mult ' . MOTIV_ANULARE_MAX . ' de caractere).',
+            'text'   => '',
+        ];
+    }
+
+    return ['eroare' => '', 'text' => $motiv];
 }
 
 /**

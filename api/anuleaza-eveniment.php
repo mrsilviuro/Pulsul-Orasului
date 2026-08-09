@@ -4,9 +4,12 @@ declare(strict_types=1);
 /**
  * PulsulOrasului.Ro — anularea unui eveniment.
  *
- * Primește slugul, șterge evenimentul, răspunde cu unde să meargă omul mai
- * departe. Confirmarea s-a dat deja în pagină, în două trepte; aici se
- * verifică doar dacă are voie.
+ * Primește slugul și motivul, trece evenimentul în starea „anulat", răspunde
+ * cu unde să meargă omul mai departe. Nu se șterge nimic: rândul rămâne pentru
+ * staff și pentru e-mailurile care vor pleca spre cei înscriși.
+ *
+ * Confirmarea s-a dat deja în pagină, în două trepte; aici se verifică dacă
+ * are voie și dacă motivul e scris cum trebuie.
  */
 
 require_once __DIR__ . '/../inc/evenimente.php';
@@ -60,7 +63,23 @@ if ($eveniment === null) {
     ], 404);
 }
 
-anuleazaEveniment($eveniment);
+/**
+ * Motivul e obligatoriu, verificat pe server ca orice altceva.
+ *
+ * Nu e o formalitate: textul ăsta va pleca prin e-mail spre toți cei care
+ * voiau să vină (vezi TODO-ul din anuleazaEveniment). Un „ok" scris în grabă
+ * n-ar spune nimic nimănui, de-aia are și o lungime minimă.
+ */
+$motiv = verificaMotivAnulare($date['motiv'] ?? null);
+
+if ($motiv['eroare'] !== '') {
+    raspunsJson([
+        'ok'    => false,
+        'erori' => ['motiv' => $motiv['eroare']],
+    ], 422);
+}
+
+anuleazaEveniment($eveniment, $motiv['text']);
 
 // Mesajul îl citește inc/subsol.php pe pagina următoare și îl arată o
 // singură dată, ca la intrarea cu Google.

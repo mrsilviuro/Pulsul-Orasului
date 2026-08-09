@@ -215,7 +215,9 @@ function trimite(array &$cookies, array $peste = [], array $fisiere = []): array
         'titlu'            => 'Cursa de seară prin centrul vechi',
         'categorie_id'     => '1',
         'locatie'          => 'Piața Sfatului, lângă fântână',
-        'data_eveniment'   => date('Y-m-d', strtotime('+10 days')),
+        // Formularul trimite ZZ-LL-AAAA, cum se scrie o dată în România;
+        // traducerea spre AAAA-LL-ZZ o face dataDinFormular() pe server.
+        'data_eveniment'   => date('d-m-Y', strtotime('+10 days')),
         'ora_inceput'      => '19:00',
         'fara_ora_sfarsit' => '1',
         'gratuit'          => '1',
@@ -382,9 +384,13 @@ foreach ([
     ['categorie inexistentă',['categorie_id' => '99'],                       'categorie_id'],
     ['categorie negativă',   ['categorie_id' => '-1'],                       'categorie_id'],
     ['locație goală',        ['locatie' => ''],                              'locatie'],
-    ['dată în trecut',       ['data_eveniment' => date('Y-m-d', strtotime('-1 day'))], 'data_eveniment'],
-    ['dată imposibilă',      ['data_eveniment' => '2027-02-30'],             'data_eveniment'],
-    ['dată prea departe',    ['data_eveniment' => date('Y-m-d', strtotime('+5 years'))], 'data_eveniment'],
+    ['dată în trecut',       ['data_eveniment' => date('d-m-Y', strtotime('-1 day'))], 'data_eveniment'],
+    ['dată imposibilă',      ['data_eveniment' => '30-02-2027'],             'data_eveniment'],
+    ['29 februarie într-un an nebisect', ['data_eveniment' => '29-02-2027'], 'data_eveniment'],
+    ['dată în formatul bazei',['data_eveniment' => date('Y-m-d', strtotime('+10 days'))], 'data_eveniment'],
+    ['dată cu bare',         ['data_eveniment' => date('d/m/Y', strtotime('+10 days'))], 'data_eveniment'],
+    ['dată fără zerouri',    ['data_eveniment' => '5-3-2027'],               'data_eveniment'],
+    ['dată prea departe',    ['data_eveniment' => date('d-m-Y', strtotime('+5 years'))], 'data_eveniment'],
     ['oră de început lipsă', ['ora_inceput' => ''],                          'ora_inceput'],
     ['oră imposibilă',       ['ora_inceput' => '25:99'],                     'ora_inceput'],
     ['fără oră de sfârșit și fără bifă', ['fara_ora_sfarsit' => null, 'ora_sfarsit' => ''], 'ora_sfarsit'],
@@ -631,9 +637,24 @@ verifica('evenimentele altcuiva nu se amestecă', [], $titluri(evenimenteDePePro
 
 $catePe = static fn(string $corp, string $ce): int => substr_count($corp, $ce);
 
-$pagina = cerere($baza . '/profil.php?m=organizat02', $anonim)['corp'];
+/**
+ * „Vizitatorul" e de acum tot un om conectat: profilurile nu se mai deschid
+ * pentru cine n-are cont (vezi cereIntrare din profil.php). Ce se schimbă e
+ * doar cine se uită — al lui sau al altcuiva.
+ */
+$strain = [];
+intra($strain, EMAIL_ALTUL);
 
-verifica('vizitatorul primește patru cartonașe', 4, $catePe($pagina, '<article class="card'));
+$r = cerere($baza . '/profil.php?m=organizat02', $anonim);
+verifica('nelogatul nu deschide niciun profil', 302, $r['stare']);
+verifica('ci e trimis la intrare', true, str_contains($r['unde'], 'login.php'));
+verifica('cu întoarcere fix pe profilul cerut', true,
+    str_contains($r['unde'], urlencode('/profil.php?m=organizat02')));
+verifica('și nu se scurge nimic din pagină', false, str_contains($r['corp'], '<article class="card'));
+
+$pagina = cerere($baza . '/profil.php?m=organizat02', $strain)['corp'];
+
+verifica('un membru străin primește patru cartonașe', 4, $catePe($pagina, '<article class="card'));
 verifica('și citește „Ce pune la cale"', true, str_contains($pagina, 'Ce pune la cale'));
 verifica('nu „Ce pui la cale", că nu e al lui', false, str_contains($pagina, 'Ce pui la cale'));
 verifica('și niciunul în așteptare', 0, $catePe($pagina, 'card--in-asteptare'));
@@ -666,7 +687,7 @@ verifica('pe profilul propriu, o invitație', true,
 verifica('cu butonul care duce la formular', true,
     str_contains($pagina, 'href="adauga_eveniment.php"'));
 
-$pagina = cerere($baza . '/profil.php?m=organizat02', $anonim)['corp'];
+$pagina = cerere($baza . '/profil.php?m=organizat02', $strain)['corp'];
 verifica('pe profilul altuia, o constatare', true,
     str_contains($pagina, 'nu organizează momentan nimic'));
 verifica('cu prenumele omului, nu cu numele întreg', true,
@@ -892,7 +913,9 @@ $bifat = static function (string $id, string $html): bool {
 
 verifica('titlul e precompletat', 'Cum era la început', $valoarea('ev-titlu', $formular));
 verifica('locația', 'Piața Sfatului', $valoarea('ev-locatie', $formular));
-verifica('data', date('Y-m-d', strtotime('+12 days')), $valoarea('ev-data', $formular));
+// În formular data se scrie pe românește; în bază stă în formatul ei.
+verifica('data, în format românesc', date('d-m-Y', strtotime('+12 days')),
+    $valoarea('ev-data', $formular));
 verifica('ora de început, fără secunde', '19:00', $valoarea('ev-ora-inceput', $formular));
 verifica('ora de sfârșit', '21:30', $valoarea('ev-ora-sfarsit', $formular));
 verifica('costul, fără zerouri de prisos', '45.5', $valoarea('ev-cost', $formular));
@@ -1044,12 +1067,23 @@ echo "\n=== ANULAREA UNUI EVENIMENT ===\n";
 db()->exec('DELETE FROM evenimente');
 
 /** Cere anularea evenimentului cu slugul dat. */
-function anuleaza(array &$cookies, string $slug, ?string $token = null): array
+function anuleaza(array &$cookies, string $slug, ?string $token = null,
+                  ?string $motiv = null): array
 {
     return json_din(cerere($GLOBALS['baza'] . '/api/anuleaza-eveniment.php', $cookies, [
-        'csrf' => $token ?? csrf($cookies),
-        'slug' => $slug,
+        'csrf'  => $token ?? csrf($cookies),
+        'slug'  => $slug,
+        'motiv' => $motiv ?? 'S-a stricat vremea și nu avem unde ne adăposti.',
     ]));
+}
+
+/** Starea de moderare și motivul, direct din bază. */
+function stareaSiMotivul(int $id): array
+{
+    $q = db()->prepare('SELECT stare_moderare, motiv_anulare FROM evenimente WHERE id = ?');
+    $q->execute([$id]);
+
+    return $q->fetch() ?: [];
 }
 
 $idDeAnulat = pune($idOrg, 'Unul care se anulează', 'aprobat', 8);
@@ -1084,40 +1118,98 @@ verifica('prin GET → 405', 405,
 verifica('după toate încercările, evenimentul e neatins', 1, cateEvenimente());
 verifica('și coperta lui e pe disc', true, is_file($caleCoperta));
 
+/* --------------------- motivul e obligatoriu -------------------- */
+
+/**
+ * Motivul nu e o formalitate: el pleacă prin e-mail spre oamenii care voiau să
+ * vină. Un câmp gol, sau un „ok" scris în grabă, n-ar spune nimic nimănui.
+ */
+foreach ([
+    'gol'          => '',
+    'doar spații'  => '   ',
+    'prea scurt'   => 'ploua',
+    'rânduri goale'=> "\n\n\n",
+] as $ce => $motiv) {
+    $r = anuleaza($c, $slugDeAnulat, null, $motiv);
+    verifica('motiv ' . $ce . ' → refuzat', true, !empty($r['erori']['motiv']));
+}
+
+verifica('și evenimentul e neatins', 'aprobat', stareaSiMotivul($idDeAnulat)['stare_moderare']);
+
+$r = anuleaza($c, $slugDeAnulat, null, str_repeat('a', MOTIV_ANULARE_MAX + 1));
+verifica('motiv prea lung → refuzat', true, !empty($r['erori']['motiv']));
+
 /* ------------------------ organizatorul ------------------------ */
 
-$r = anuleaza($c, $slugDeAnulat);
+$r = anuleaza($c, $slugDeAnulat, null, "S-a stricat vremea.\n\nNe vedem la primăvară.");
 verifica('organizatorul îl poate anula', true, $r['ok'] ?? false);
 verifica('și e trimis pe profilul lui', 'profil.php', $r['redirect'] ?? '');
 verifica('cu mesajul cerut', 'Evenimentul a fost anulat.', $r['mesaj'] ?? '');
 
 /**
- * Ștergere adevărată, nu o stare nouă: rândul iese din bază cu totul. Contul e
- * altă poveste — de el atârnă evenimentele organizate, de-aia se anonimizează.
+ * NU se mai șterge nimic. Rândul rămâne, cu o stare nouă și cu motivul lângă
+ * el: de un eveniment atârnă oameni care și-au făcut planuri, iar un rând
+ * șters n-ar mai putea spune nimănui de ce nu mai are unde să se ducă.
  */
-verifica('rândul chiar a ieșit din bază', 0, cateEvenimente());
+$dupaAnulare = stareaSiMotivul($idDeAnulat);
+verifica('rândul rămâne în bază', 1, cateEvenimente());
+verifica('cu starea „anulat"', 'anulat', $dupaAnulare['stare_moderare']);
+verifica('și cu motivul scris de organizator',
+    "S-a stricat vremea.\n\nNe vedem la primăvară.", $dupaAnulare['motiv_anulare']);
 
-// Fișierul se duce odată cu rândul: altfel ar rămâne pe disc pentru totdeauna,
-// fără să mai știe cineva de el.
+// Coperta rămâne cât timp rămâne rândul: face parte din el, iar staff-ul mai
+// deschide pagina. Se duce odată cu el, la curățenia de mai târziu.
 clearstatcache();
-verifica('coperta nu rămâne orfană pe disc', false, is_file($caleCoperta));
+verifica('coperta rămâne pe disc, lângă rând', true, is_file($caleCoperta));
 
-verifica('pagina evenimentului nu se mai deschide', 302,
+/* ------------------ cine mai vede un eveniment anulat ------------------ */
+
+verifica('organizatorul nu mai deschide pagina', 302,
     cerere($baza . '/event.php?slug=' . urlencode($slugDeAnulat), $c)['stare']);
+verifica('nici un alt membru', 302,
+    cerere($baza . '/event.php?slug=' . urlencode($slugDeAnulat), $altul)['stare']);
 verifica('nici formularul lui de editare', 302,
     cerere($baza . '/adauga_eveniment.php?slug=' . urlencode($slugDeAnulat), $c)['stare']);
 
+// Staff: singurii care mai au ce căuta acolo.
+db()->prepare('UPDATE membri SET este_staff = 1 WHERE email = ?')->execute([EMAIL_ALTUL]);
+$rStaff = cerere($baza . '/event.php?slug=' . urlencode($slugDeAnulat), $altul);
+verifica('staff-ul deschide pagina', 200, $rStaff['stare']);
+verifica('cu banda de anulat', true, str_contains($rStaff['corp'], 'stare-anunt--anulat'));
+verifica('și cu motivul scris pe ea', true,
+    str_contains($rStaff['corp'], 'Ne vedem la primăvară'));
+verifica('rândurile motivului se păstrează', true,
+    str_contains($rStaff['corp'], '<br'));
+verifica('fără butonul de editare', false, str_contains($rStaff['corp'], 'post__editeaza'));
+db()->prepare('UPDATE membri SET este_staff = 0 WHERE email = ?')->execute([EMAIL_ALTUL]);
+
+verifica('iar fără steagul de staff, aceeași pagină se închide', 302,
+    cerere($baza . '/event.php?slug=' . urlencode($slugDeAnulat), $altul)['stare']);
+
+/* ------------- anulatul nu mai apare pe nicăieri ------------- */
+
+verifica('nu mai e pe profilul organizatorului', [], evenimenteDePeProfil($idOrg, true));
+verifica('nici pentru ceilalți', [], evenimenteDePeProfil($idOrg, false));
+verifica('nu se numără la „evenimente organizate"', 0, cateEvenimenteOrganizate($idOrg));
+verifica('și nu mai ține pe nimeni blocat', [], evenimenteActive($idOrg));
+
+$profilCorp = cerere($baza . '/profil.php', $c)['corp'];
+verifica('nu apare niciun cartonaș pe profil', 0, substr_count($profilCorp, '<article class="card'));
+
 // Mesajul e pus în sesiune și se arată o singură dată, pe pagina următoare.
-$profil = cerere($baza . '/profil.php', $c)['corp'];
 verifica('mesajul apare pe profil', true,
-    str_contains($profil, 'data-mesaj="Evenimentul a fost anulat."'));
+    str_contains($profilCorp, 'data-mesaj="Evenimentul a fost anulat."'));
 verifica('și nu se mai repetă la a doua încărcare', false,
     str_contains(cerere($baza . '/profil.php', $c)['corp'], 'Evenimentul a fost anulat.'));
 
-// Anularea nu e o cale de a scăpa de limită mai repede decât de drept: după ce
-// evenimentul a dispărut, se poate posta altul — ceea ce e și firesc.
+// Anularea nu e o cale de a scăpa de limită mai repede decât de drept, dar
+// nici nu te ține blocat cu un eveniment care nu mai are loc.
 verifica('după anulare se poate posta din nou', true, trimite($c)['ok'] ?? false);
-verifica('și e un singur eveniment', 1, cateEvenimente());
+verifica('și sunt două rânduri: cel anulat și cel nou', 2, cateEvenimente());
+
+// A doua anulare a aceluiași eveniment n-are ce mai anula.
+$r = anuleaza($c, $slugDeAnulat);
+verifica('un eveniment anulat nu se mai poate anula o dată', false, $r['ok'] ?? false);
 
 /* ------------- butonul apare doar unde trebuie ------------- */
 
@@ -1125,7 +1217,13 @@ $idAlt = pune($idOrg, 'Altul, tot al meu', 'aprobat', 9);
 $formular = cerere($baza . '/adauga_eveniment.php?slug=' . urlencode($slugul($idAlt)), $c)['corp'];
 verifica('la editare apare butonul de anulare', true, str_contains($formular, 'ev-anuleaza'));
 verifica('și întrebarea de confirmare, ascunsă', true, str_contains($formular, 'ev-anulare-sigur'));
-verifica('care spune că e definitiv', true, str_contains($formular, 'definitiv'));
+verifica('și caseta pentru motiv', true, str_contains($formular, 'id="ev-motiv"'));
+verifica('care nu pleacă odată cu formularul', false,
+    preg_match('/<textarea id="ev-motiv"[^>]*name=/', $formular) === 1);
+verifica('și nici nu-l blochează cât e goală', false,
+    preg_match('/<textarea id="ev-motiv"[^>]*required/', $formular) === 1);
+verifica('spune că anunțul nu mai poate fi adus înapoi', true,
+    str_contains($formular, 'nu mai poate fi adus înapoi'));
 verifica('și că oamenii sunt înștiințați', true, str_contains($formular, 'înștiințați prin e-mail'));
 
 db()->exec('DELETE FROM evenimente');
@@ -1147,7 +1245,9 @@ function previzualizeaza(array &$cookies, array $peste = []): array
         'titlu'            => 'Cursa de seară prin centrul vechi',
         'categorie_id'     => '1',
         'locatie'          => 'Piața Sfatului, lângă fântână',
-        'data_eveniment'   => date('Y-m-d', strtotime('+10 days')),
+        // Formularul trimite ZZ-LL-AAAA, cum se scrie o dată în România;
+        // traducerea spre AAAA-LL-ZZ o face dataDinFormular() pe server.
+        'data_eveniment'   => date('d-m-Y', strtotime('+10 days')),
         'ora_inceput'      => '19:00',
         'fara_ora_sfarsit' => '1',
         'gratuit'          => '1',
@@ -1361,7 +1461,7 @@ verifica('cifra din pagină e cea numărată', '4', $m[1] ?? '');
 // așteptare. Tocmai de-aia numărul nu se poate lua din lungimea ei.
 verifica('lista de dedesubt are trei cartonașe', 3, substr_count($pagina, '<article class="card'));
 
-$paginaDinAfara = cerere($baza . '/profil.php?m=organizat02', $anonim)['corp'];
+$paginaDinAfara = cerere($baza . '/profil.php?m=organizat02', $altul)['corp'];
 preg_match('/stat__value">(\d+)</', $paginaDinAfara, $m);
 verifica('din afară se vede aceeași cifră', '4', $m[1] ?? '');
 
@@ -1387,7 +1487,7 @@ verifica('și stă în capul secțiunii', true,
     preg_match('/<div class="section-head">.*?href="adauga_eveniment\.php".*?<\/div>\s*<\/div>/s', $pagina) === 1);
 
 verifica('pe profilul altcuiva, niciun buton', 0,
-    substr_count($paginaDinAfara = cerere($baza . '/profil.php?m=organizat02', $anonim)['corp'],
+    substr_count($paginaDinAfara = cerere($baza . '/profil.php?m=organizat02', $altul)['corp'],
                  'href="adauga_eveniment.php"'));
 
 // Fără niciun eveniment rămâne invitația din locul gol — tot un buton, nu doi.

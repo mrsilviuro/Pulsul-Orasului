@@ -57,6 +57,20 @@ function afiseazaEveniment(array $e, ?array $banda = null, ?callable $actiuni = 
           </svg>
           <span><?= h((string) $banda['text']) ?></span>
         </p>
+
+        <?php if (($banda['motiv'] ?? '') !== ''): ?>
+        <!--
+          Motivul anulării, scris de organizator. Stă sub bandă, nu în ea:
+          banda e o etichetă de o frază, iar asta e o explicație care poate
+          avea și trei rânduri. Rândurile lui se păstrează prin nl2br, iar
+          escaparea se face ÎNAINTE, ca la descriere — altfel <br> ar fi
+          escapat și el și s-ar vedea codul.
+        -->
+        <blockquote class="motiv-anulare">
+          <p class="motiv-anulare__eticheta">Motivul organizatorului</p>
+          <p><?= nl2br(h((string) $banda['motiv'])) ?></p>
+        </blockquote>
+        <?php endif; ?>
         <?php endif; ?>
 
         <div class="post__meta">

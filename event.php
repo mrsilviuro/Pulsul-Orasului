@@ -38,13 +38,16 @@ $eveniment = evenimentDupaSlug($slug);
  * decât „nu ai voie", oricine ar putea afla, ghicind sluguri, ce evenimente
  * așteaptă la moderare.
  */
-if ($eveniment === null || !poateVedeaEvenimentul($eveniment, (int) $membru['id'])) {
+$eStaff = esteStaff($membru);
+
+if ($eveniment === null || !poateVedeaEvenimentul($eveniment, (int) $membru['id'], $eStaff)) {
     header('Location: index.php');
     exit;
 }
 
 $eOrganizatorul = (int) $eveniment['membru_id'] === (int) $membru['id'];
 $eAprobat       = $eveniment['stare_moderare'] === 'aprobat';
+$eAnulat        = $eveniment['stare_moderare'] === 'anulat';
 
 /* --------------------------- ce se afișează --------------------------- */
 
@@ -94,13 +97,27 @@ require __DIR__ . '/inc/antet.php';
          */
         $banda = null;
 
-        if (!$eAprobat) {
+        if ($eAnulat) {
+            /**
+             * Anulat: pagina se deschide doar pentru staff, deci banda e
+             * pentru ei. Motivul merge alături — e textul organizatorului, cel
+             * care va pleca și spre oamenii înscriși, deci trebuie citit
+             * întocmai, nu rezumat de noi.
+             */
+            $banda = [
+                'fel'   => 'anulat',
+                'text'  => 'Anulat de organizator. Anunțul nu se mai vede pe site; pagina asta o deschide doar staff-ul.',
+                'motiv' => (string) ($eveniment['motiv_anulare'] ?? ''),
+            ];
+        } elseif (!$eAprobat) {
             $banda = $eveniment['stare_moderare'] === 'respins'
                 ? ['fel' => 'respins',   'text' => 'Anunțul nu a trecut de verificare. Îl vezi doar tu.']
                 : ['fel' => 'asteptare', 'text' => 'În așteptare de aprobare. Îl vezi doar tu, până îl citim.'];
         }
 
-        afiseazaEveniment(evenimentDinBaza($eveniment), $banda, $eOrganizatorul ? function () use ($eveniment) {
+        // Butonul „Editează" dispare la anulare: nu mai e nimic de corectat, iar
+        // evenimentDeEditat() oricum nu l-ar mai deschide.
+        afiseazaEveniment(evenimentDinBaza($eveniment), $banda, ($eOrganizatorul && !$eAnulat) ? function () use ($eveniment) {
             ?>
             <!-- Doar pentru cel care l-a scris. Slugul spune formularului ce
                  eveniment să încarce; acolo se verifică din nou al cui e. -->

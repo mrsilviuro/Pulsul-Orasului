@@ -236,6 +236,72 @@ foreach ([
 verifica('nu se acceptă nici null', '', caleInterna(null));
 verifica('prea lungă → respinsă', '', caleInterna('/' . str_repeat('a', 400)));
 
+echo "\n=== DATA, ÎNTRE PAGINĂ ȘI BAZĂ ===\n";
+
+// Din formular vine ZZ-LL-AAAA, cum se scrie o dată în România. În bază intră
+// AAAA-LL-ZZ, cum o cere MySQL.
+verifica('o dată obișnuită', '2026-12-25', dataDinFormular('25-12-2026'));
+verifica('prima zi a anului', '2026-01-01', dataDinFormular('01-01-2026'));
+verifica('cu spații în jur', '2026-12-25', dataDinFormular('  25-12-2026  '));
+
+// 2028 e bisect, 2027 nu. checkdate() e cel care știe asta, nu noi.
+verifica('29 februarie într-un an bisect', '2028-02-29', dataDinFormular('29-02-2028'));
+verifica('29 februarie într-un an nebisect → nu', '', dataDinFormular('29-02-2027'));
+verifica('31 aprilie → nu', '', dataDinFormular('31-04-2026'));
+verifica('luna 13 → nu', '', dataDinFormular('01-13-2026'));
+verifica('ziua 00 → nu', '', dataDinFormular('00-12-2026'));
+
+/**
+ * Formatul e strict. Mai ales AAAA-LL-ZZ nu se primește: două formate
+ * acceptate înseamnă că într-o zi cineva trimite „01-02-2026" crezând una și
+ * noi înțelegem alta.
+ */
+foreach ([
+    'formatul bazei'   => '2026-12-25',
+    'cu bare'          => '25/12/2026',
+    'cu puncte'        => '25.12.2026',
+    'fără zerouri'     => '5-3-2026',
+    'an din două cifre'=> '25-12-26',
+    'text'             => 'douăzeci și cinci',
+    'gol'              => '',
+    'doar cratime'     => '--',
+] as $ce => $valoare) {
+    verifica('respinsă: ' . $ce, '', dataDinFormular($valoare));
+}
+
+verifica('nici null', '', dataDinFormular(null));
+
+// Drumul invers, pentru câmpul din formular.
+verifica('din bază în formular', '25-12-2026', dataPentruFormular('2026-12-25'));
+verifica('merge și cu ora lipită', '25-12-2026', dataPentruFormular('2026-12-25 19:00:00'));
+verifica('dus-întors dă același lucru', '2026-12-25',
+    dataDinFormular(dataPentruFormular('2026-12-25')));
+verifica('o valoare stricată nu dă nimic', '', dataPentruFormular('mâine'));
+verifica('nici null', '', dataPentruFormular(null));
+
+echo "\n=== MOTIVUL ANULĂRII ===\n";
+
+$motiv = static fn ($t): string => verificaMotivAnulare($t)['eroare'] === ''
+    ? verificaMotivAnulare($t)['text'] : '';
+
+verifica('un motiv cumsecade trece', 'S-a stricat vremea rău de tot.',
+    $motiv('S-a stricat vremea rău de tot.'));
+verifica('rândurile se păstrează', "Prima parte.\n\nA doua.",
+    $motiv("Prima parte.\n\n\n\nA doua."));
+
+verifica('gol → eroare', true, verificaMotivAnulare('')['eroare'] !== '');
+verifica('doar spații → eroare', true, verificaMotivAnulare('    ')['eroare'] !== '');
+verifica('prea scurt → eroare', true, verificaMotivAnulare('ploua')['eroare'] !== '');
+verifica('nici null nu trece', true, verificaMotivAnulare(null)['eroare'] !== '');
+verifica('prea lung → eroare', true,
+    verificaMotivAnulare(str_repeat('a', MOTIV_ANULARE_MAX + 1))['eroare'] !== '');
+
+// Se numără caractere, nu octeți: exact la limită, scris cu diacritice.
+verifica('fix la limită, cu diacritice', true,
+    verificaMotivAnulare(str_repeat('ă', MOTIV_ANULARE_MIN))['eroare'] === '');
+verifica('cu unul mai puțin, nu', true,
+    verificaMotivAnulare(str_repeat('ă', MOTIV_ANULARE_MIN - 1))['eroare'] !== '');
+
 echo "\n=== CÂTE CARACTERE ARE DESCRIEREA ===\n";
 
 /**
