@@ -92,6 +92,25 @@ require __DIR__ . '/inc/antet.php';
       „Mergi la acest eveniment?" și comentariile lipsesc dinadins: sunt încă
       șablon, cu numere inventate, și n-ar spune nimic despre evenimentul ăsta.
     -->
+
+    <!--
+      Ieșirea din previzualizare, la capătul paginii: cine a citit până jos e
+      exact omul care vrea să se întoarcă la formular.
+
+      window.close() închide doar filele deschise cu window.open — a noastră
+      așa a venit. Dar dacă fila a fost redeschisă din istoric sau adresa a
+      fost lipită de mână, browserul nu lasă. Nu se poate afla dinainte dacă a
+      mers, așa că lămurirea de dedesubt apare după apăsare, iar dacă fila
+      chiar s-a închis n-o mai citește nimeni.
+    -->
+    <div class="previz-iesire">
+      <button class="btn btn--ghost" type="button" id="previz-inchide">
+        Închide previzualizarea
+      </button>
+      <p class="previz-iesire__nota" id="previz-nota" hidden>
+        Poți închide această filă.
+      </p>
+    </div>
   </div>
 </main>
 <?php require __DIR__ . '/inc/subsol.php'; ?>

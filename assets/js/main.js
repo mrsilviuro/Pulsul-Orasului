@@ -305,6 +305,61 @@
 
   var tiparEmail = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
+  /* --- Numărătoarea de caractere: aceleași reguli ca pe server ------------
+     Contorul de sub o casetă de text n-are voie să spună altceva decât
+     numără serverul. Spunea: „300 din 300" cu un rând gol la coadă, iar
+     serverul răspundea „ai 298". Două deosebiri erau la mijloc, iar amândouă
+     se văd la fel de urât — omul crede că a terminat și e trimis înapoi.
+
+     1. Serverul curăță textul înainte să-l măsoare (curataTextPeRanduri din
+        inc/validare.php): sfârșiturile de rând Windows devin unul singur,
+        caracterele de control cad, șirurile de rânduri goale se scurtează la
+        unul, iar spațiile de la capete se taie. Contorul măsura textul brut.
+        Funcția de mai jos e oglinda ei, mișcare cu mișcare.
+
+     2. Se numără caractere Unicode, nu unități UTF-16: „😀" e UN caracter,
+        deși în memoria browserului ocupă două locuri. [...sir] rupe șirul pe
+        caractere, exact ca mb_strlen pe server. `.length` simplu ar fi numărat
+        două, iar `maxlength` din HTML — care numără tot în unități UTF-16 —
+        de aceea nici nu se mai folosește la descriere.
+
+     Un emoji din mai multe bucăți lipite („👨‍👩‍👧‍👦" = patru chipuri și trei
+     lipituri) se numără ca șapte în amândouă părțile. Nu e ce vede ochiul,
+     dar e același număr aici și acolo, iar asta era problema. */
+
+  /** Oglinda lui curataTextPeRanduri() din inc/validare.php. */
+  function curataTextPeRanduri(text) {
+    return String(text)
+      .replace(/\r\n|\r/g, '\n')
+      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+      .replace(/\n{3,}/g, '\n\n')
+      // trim() din PHP taie exact " \t\n\r\0\x0B", nu orice spațiu Unicode;
+      // cel din JS ar fi tăiat și spațiul neîntrerupt, deci ar fi numărat
+      // altfel decât serverul.
+      .replace(/^[ \t\n\r\0\x0B]+|[ \t\n\r\0\x0B]+$/g, '');
+  }
+
+  /** Câte caractere are textul — la fel ca mb_strlen($text, 'UTF-8'). */
+  function numaraCaractere(text) {
+    return [...String(text)].length;
+  }
+
+  /** Taie textul la atâtea caractere, fără să rupă un emoji în două. */
+  function taieLaCaractere(text, cate) {
+    var litere = [...String(text)];
+    return litere.length > cate ? litere.slice(0, cate).join('') : String(text);
+  }
+
+  /** Pagina dinainte e tot de pe site-ul nostru? */
+  function dinaintePeSite() {
+    if (!document.referrer) return false;
+    try {
+      return new URL(document.referrer).origin === window.location.origin;
+    } catch (e) {
+      return false;
+    }
+  }
+
   function campul(id) {
     var input = document.getElementById(id);
     return input ? input.closest('.field') : null;
@@ -2380,6 +2435,27 @@
 
   /* ------------------ 11. PUBLICAREA UNUI EVENIMENT --------------------- */
 
+  /*
+    „Înapoi", de pe panoul „ai deja un eveniment în desfășurare". Omul a
+    apăsat „+ Eveniment nou" de undeva — de pe profil, de pe prima pagină —
+    și acolo vrea să se întoarcă, nu într-un loc ales de noi.
+
+    Se cer două lucruri deodată: fila să aibă un „înainte de asta"
+    (history.length > 1) și pagina dinainte să fie de la noi. A doua condiție
+    e cea care contează: fără ea, cine ajunge aici dintr-un link de pe alt
+    site ar fi trimis înapoi acolo, adică afară din PulsulOrasului. Când
+    lipsește vreuna, linkul rămâne cum a venit din HTML și duce pe prima
+    pagină.
+  */
+  var evInapoi = document.getElementById('ev-inapoi');
+
+  if (evInapoi && window.history.length > 1 && dinaintePeSite()) {
+    evInapoi.addEventListener('click', function (e) {
+      e.preventDefault();
+      window.history.back();
+    });
+  }
+
   var evForm = document.getElementById('eveniment-form');
 
   if (evForm) {
@@ -2423,6 +2499,36 @@
       potriveste();
     });
 
+    /* --- orele: scrise de mână, mereu de 24 de ore --- */
+    /*
+      Câmpurile sunt de text (vezi lămurirea din adauga_eveniment.php), deci
+      două puncte le punem noi. Cât scrie omul, nu-l corectăm — altfel „930"
+      ar sări la „09:3" sub degetele lui. Îndreptarea vine la ieșirea din
+      câmp: „9" → „09:00", „930" → „09:30", „1930" → „19:30".
+    */
+    ['ev-ora-inceput', 'ev-ora-sfarsit'].forEach(function (id) {
+      var camp = document.getElementById(id);
+      if (!camp) return;
+
+      camp.addEventListener('input', function () {
+        var cifre = camp.value.replace(/\D/g, '').slice(0, 4);
+        camp.value = cifre.length > 2
+          ? cifre.slice(0, 2) + ':' + cifre.slice(2)
+          : cifre;
+      });
+
+      camp.addEventListener('blur', function () {
+        var cifre = camp.value.replace(/\D/g, '');
+        if (cifre === '') { camp.value = ''; return; }
+
+        // Una sau două cifre = ora fixă; trei = o cifră de oră și minutele.
+        if (cifre.length <= 2) { cifre = ('0' + cifre).slice(-2) + '00'; }
+        else if (cifre.length === 3) { cifre = '0' + cifre; }
+
+        camp.value = cifre.slice(0, 2) + ':' + cifre.slice(2, 4);
+      });
+    });
+
     var evFaraSfarsit = document.getElementById('ev-fara-sfarsit');
     var evOraSfarsit  = document.getElementById('ev-ora-sfarsit');
 
@@ -2436,15 +2542,35 @@
     }
 
     /* --- numărătoarea de caractere --- */
+    /*
+      Numerele vin din HTML, iar în HTML vin din constantele PHP: dacă
+      DESCRIERE_MIN se schimbă vreodată, nu rămâne o copie uitată aici.
+
+      Se numără textul curățat, nu cel brut — vezi numaraCaractere() și
+      lămurirea de lângă ea. Așa contorul spune fix ce va spune serverul.
+    */
     var evDescriere = document.getElementById('ev-descriere');
     var evNumar     = document.getElementById('ev-numar');
-    var minCaractere = 300;
 
     if (evDescriere && evNumar) {
+      var minCaractere = parseInt(evDescriere.getAttribute('data-min'), 10) || 300;
+      var maxCaractere = parseInt(evDescriere.getAttribute('data-max'), 10) || 8000;
+
       var numara = function () {
-        // [...sir].length numără caractere, nu unități UTF-16 — la fel ca
-        // mb_strlen pe server. Cu .length simplu, un emoji ar conta ca două.
-        var cate = [...evDescriere.value].length;
+        /**
+         * Oprirea la limita de sus o facem noi, nu `maxlength`: acela numără
+         * în unități UTF-16, deci ar fi tăiat textul cu emoji la jumătatea
+         * limitei pe care o ține serverul. Se taie textul brut, fiindcă cel
+         * curățat e mereu mai scurt — așa serverul primește sigur ceva ce-i
+         * încape.
+         */
+        if (numaraCaractere(evDescriere.value) > maxCaractere) {
+          var pozitie = evDescriere.selectionStart;
+          evDescriere.value = taieLaCaractere(evDescriere.value, maxCaractere);
+          try { evDescriere.setSelectionRange(pozitie, pozitie); } catch (e) {}
+        }
+
+        var cate = numaraCaractere(curataTextPeRanduri(evDescriere.value));
         evNumar.textContent = cate + ' din ' + minCaractere + ' de caractere';
         evNumar.classList.toggle('e-gata', cate >= minCaractere);
       };
@@ -2660,6 +2786,14 @@
         document.getElementById('ev-block').hidden = true;
         var done = document.getElementById('ev-done');
         done.hidden = false;
+
+        // La un eveniment nou, adresa paginii vine abia acum, din răspuns.
+        var spreEveniment = document.getElementById('ev-done-link');
+        if (spreEveniment && c.url) {
+          spreEveniment.href = c.url;
+          spreEveniment.hidden = false;
+        }
+
         var panou = done.querySelector('.done');
         if (panou) panou.focus();
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -2825,9 +2959,10 @@
            */
           if (!fila) {
             var link = document.getElementById('ev-previz-link');
-            if (link) {
+            var rand = document.getElementById('ev-previz-rand');
+            if (link && rand) {
               link.href = 'previzualizare.php?p=' + encodeURIComponent(c.cheie);
-              link.hidden = false;
+              rand.hidden = false;
             }
             toast('Deschide previzualizarea din linkul de sub buton.');
           }
@@ -2889,6 +3024,26 @@
           + 'încearcă din nou sau verifică setările de confidențialitate ale browserului.';
       }
     }
+  }
+
+  /* --- ieșirea din previzualizare --- */
+  /*
+    Fila s-a deschis din formular cu window.open, deci window.close() are voie
+    s-o închidă. Când n-are — fila redeschisă din istoric, adresa lipită de
+    mână, browser care nu vrea — nu se află de dinainte și nu se prinde nicio
+    eroare: apelul pur și simplu nu face nimic.
+
+    De aceea nota apare imediat după apăsare. Dacă fila chiar s-a închis, n-o
+    mai vede nimeni; dacă a rămas, omul află ce are de făcut.
+  */
+  var previzInchide = document.getElementById('previz-inchide');
+
+  if (previzInchide) {
+    previzInchide.addEventListener('click', function () {
+      var nota = document.getElementById('previz-nota');
+      window.close();
+      if (nota) nota.hidden = false;
+    });
   }
 
 

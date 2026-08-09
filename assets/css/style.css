@@ -1615,6 +1615,26 @@ a.info-item__value:hover { color: var(--brand); }
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ff4d3d' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3.5' y='5' width='17' height='16' rx='3'/%3E%3Cpath d='M8 3v4M16 3v4M3.5 10h17'/%3E%3C/svg%3E");
 }
 
+/* Câmpul de oră.
+   Nu e `type="time"`, fiindcă ceasul nativ se scrie cu AM/PM după limba
+   browserului, nu după cea a paginii. E un câmp de text în care scriem noi
+   cele două puncte, deci trebuie să arate ca vecinul lui de dată: aceeași
+   înălțime, aceeași iconiță în dreapta. Cifrele sunt tabulare, ca ora să nu
+   se clatine cât o scrii. */
+.field input.camp-ora {
+  height: var(--field-h);
+  padding: 0 42px 0 14px;
+  font-variant-numeric: tabular-nums;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238b95a3' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7v5.2l3.4 2'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 18px;
+}
+
+.field input.camp-ora:focus {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ff4d3d' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7v5.2l3.4 2'/%3E%3C/svg%3E");
+}
+
 /* parolă cu buton de afișare */
 .input-pass { position: relative; }
 .input-pass input { padding-right: 46px; }
@@ -2802,12 +2822,16 @@ body { overscroll-behavior-y: none; }
   color: var(--text-faint);
 }
 
-/* Anularea evenimentului. Despărțită de restul formularului printr-o linie și
-   prin distanță: e singura apăsare de aici care nu se poate lua înapoi, deci
-   n-are voie să stea lipită de „Trimite spre aprobare". */
+/* Anularea evenimentului. Despărțită de restul formularului printr-o linie:
+   e singura apăsare de aici care nu se poate lua înapoi, deci n-are voie să
+   stea lipită de „Trimite spre aprobare".
+
+   Marginea de sus e mică dinadins. Zona vine la capătul formularului, care e
+   o grilă, deci între ea și butoane e deja spațiul dintre rândurile grilei;
+   adunate, făceau un gol cât o secțiune goală. */
 .zona-anulare {
-  margin-top: 34px;
-  padding-top: 26px;
+  margin-top: 8px;
+  padding-top: 16px;
   border-top: 1px solid var(--border);
 }
 
@@ -2823,6 +2847,21 @@ body { overscroll-behavior-y: none; }
 /* Portița pentru browserele care blochează fila nouă. Ascunsă până e nevoie. */
 .ev-previz-link { margin: 12px 0 0; text-align: center; font-size: 14px; }
 .ev-previz-link a { color: var(--brand); font-weight: 700; text-decoration: underline; }
+
+/* Ieșirea de la capătul previzualizării. Centrată și despărțită de text
+   printr-o linie: e limpede că nu mai face parte din anunț. */
+.previz-iesire {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+  text-align: center;
+}
+
+.previz-iesire__nota {
+  margin: 10px 0 0;
+  color: var(--text-faint);
+  font-size: 14px;
+}
 
 /* Banda de sus a previzualizării: nu e o avertizare, e o lămurire. */
 .stare-anunt--previzualizare {
