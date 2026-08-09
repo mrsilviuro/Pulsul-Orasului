@@ -51,7 +51,7 @@ $membruId = (int) $membru['id'];
  * Nu o copie „mai îngăduitoare": dacă previzualizarea ar trece peste ceva ce
  * salvarea refuză, omul ar vedea o pagină frumoasă și apoi un teanc de erori.
  */
-$rezultat = verificaEveniment($_POST, idCategoriiValide());
+$rezultat = verificaEveniment($_POST, idCategoriiValide(), oraseDisponibile());
 
 if ($rezultat['erori'] !== []) {
     raspunsJson(['ok' => false, 'erori' => $rezultat['erori']], 422);
@@ -123,6 +123,7 @@ $_SESSION['previzualizari'][$cheie] = [
     'date'  => [
         'titlu'            => $curat['titlu'],
         'categorie'        => $categorie,
+        'oras'             => $curat['oras'],
         'locatie'          => $curat['locatie'],
         'descriere'        => $curat['descriere'],
         'data_eveniment'   => $curat['data_eveniment'],

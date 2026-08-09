@@ -212,6 +212,29 @@ require __DIR__ . '/inc/antet.php';
           </div>
 
           <div class="field">
+            <label for="ev-oras">Oraș <span class="req" aria-hidden="true">*</span></label>
+            <!--
+              Lista vine din inc/config.php (cheia „orase"), prin
+              oraseDisponibile() — nu e scrisă aici. Un oraș nou înseamnă un
+              rând în config, iar formularul și verificarea de pe server se
+              schimbă amândouă odată, fiindcă citesc din același loc.
+
+              Prima opțiune e goală și `disabled`, ca la categorie: nimic nu e
+              ales dinainte, nici măcar când e un singur oraș în listă. Omul
+              trebuie să spună el unde are loc, ca să nu publice din greșeală
+              în alt oraș în ziua în care lista are mai multe.
+            -->
+            <select id="ev-oras" name="oras" required aria-describedby="err-ev-oras">
+              <option value="" <?= $val('oras') === '' ? 'selected' : '' ?> disabled>Selectează orașul</option>
+              <?php foreach (oraseDisponibile() as $oras): ?>
+              <option value="<?= h($oras) ?>"
+                      <?= $val('oras') === $oras ? 'selected' : '' ?>><?= h($oras) ?></option>
+              <?php endforeach; ?>
+            </select>
+            <p class="field__error" id="err-ev-oras" hidden></p>
+          </div>
+
+          <div class="field">
             <label for="ev-locatie">Unde are loc <span class="req" aria-hidden="true">*</span></label>
             <input type="text" id="ev-locatie" name="locatie" maxlength="<?= LOCATIE_MAX ?>"
                    value="<?= h($val('locatie')) ?>"

@@ -214,6 +214,7 @@ function trimite(array &$cookies, array $peste = [], array $fisiere = []): array
         'csrf'             => csrf($cookies),
         'titlu'            => 'Cursa de seară prin centrul vechi',
         'categorie_id'     => '1',
+        'oras'             => 'Roman',
         'locatie'          => 'Piața Sfatului, lângă fântână',
         // Formularul trimite ZZ-LL-AAAA, cum se scrie o dată în România;
         // traducerea spre AAAA-LL-ZZ o face dataDinFormular() pe server.
@@ -278,6 +279,33 @@ verifica('cu tiparul de 24 de ore', 2,
     substr_count($pagina['corp'], 'pattern="([01][0-9]|2[0-3]):[0-5][0-9]"'));
 
 /**
+ * Orașul: listă, nu text liber, iar lista vine din inc/config.php prin
+ * oraseDisponibile() — nu e scrisă în formular. Nimic nu e ales dinainte:
+ * prima opțiune e goală și `disabled`, ca la categorie.
+ */
+preg_match('/<select id="ev-oras".*?<\/select>/s', $pagina['corp'], $listaOrase);
+$selectOrase = $listaOrase[0] ?? '';
+
+verifica('câmpul de oraș e o listă', true, $selectOrase !== '');
+verifica('e obligatoriu', true, str_contains($selectOrase, 'required'));
+verifica('are un rând pentru fiecare oraș din config, plus placeholderul',
+    count(oraseDisponibile()) + 1, substr_count($selectOrase, '<option'));
+
+foreach (oraseDisponibile() as $orasDinConfig) {
+    verifica('„' . $orasDinConfig . '" e în listă', true,
+        str_contains($selectOrase, 'value="' . h($orasDinConfig) . '"'));
+}
+
+verifica('placeholderul e gol și needitabil', true,
+    preg_match('/<option value=""[^>]*disabled>Selectează orașul</', $selectOrase) === 1);
+verifica('și e cel ales la un formular gol', true,
+    preg_match('/<option value="" selected disabled>/', $selectOrase) === 1);
+verifica('deci niciun oraș nu e bifat dinainte', 0,
+    preg_match_all('/<option value="[^"]+"[^>]*selected/', $selectOrase));
+verifica('câmpul de oraș stă deasupra celui de locație', true,
+    strpos($pagina['corp'], 'id="ev-oras"') < strpos($pagina['corp'], 'id="ev-locatie"'));
+
+/**
  * `maxlength` nu mai stă pe descriere: el numără în unități UTF-16, deci ar
  * tăia un text cu emoji la jumătatea limitei ținute de server. Limitele pleacă
  * spre JS ca date, iar oprirea o face el, numărând caractere.
@@ -313,6 +341,32 @@ preg_match('/<select id="ev-categorie".*?<\/select>/s', $pagina['corp'], $listaC
 verifica('categoriile vin din bază (toate cinci)', 5,
     substr_count($listaCat[0] ?? '', '<option value="') - 1);   // minus „Alege…"
 
+echo "\n=== LISTA DE ORAȘE, DIN CONFIG ===\n";
+
+/**
+ * oraseDisponibile() e singurul loc de unde își iau lista și formularul, și
+ * verificarea de pe server. Aici i se dau, pe rând, felurile în care poate
+ * arăta cheia „orase" din inc/config.php după ce a umblat cineva la ea.
+ */
+$configOriginal = $config['orase'] ?? null;
+
+foreach ([
+    ['un oraș',                ['Roman'],                        ['Roman']],
+    ['mai multe',              ['Roman', 'Piatra-Neamț'],        ['Roman', 'Piatra-Neamț']],
+    ['spațiile din jur cad',   ['  Roman  '],                    ['Roman']],
+    ['rândurile goale cad',    ['Roman', '', '   '],             ['Roman']],
+    ['duplicatele cad',        ['Roman', 'Roman'],               ['Roman']],
+    ['ce nu e text cade',      ['Roman', 42, null, ['x']],       ['Roman']],
+    ['lista goală rămâne goală', [],                             []],
+    ['o valoare care nu e listă', 'Roman',                       []],
+] as [$ce, $pus, $asteptat]) {
+    $config['orase'] = $pus;
+    verifica($ce, $asteptat, oraseDisponibile());
+}
+
+$config['orase'] = $configOriginal;
+verifica('configul adevărat are cel puțin un oraș', true, oraseDisponibile() !== []);
+
 echo "\n=== UN EVENIMENT BUN ===\n";
 
 $r = trimite($c);
@@ -327,6 +381,7 @@ verifica('fără copertă → NULL', null, $ev['coperta']);
 verifica('gratuit → NULL, nu 0.00', null, $ev['cost']);
 verifica('fără oră de sfârșit → NULL', null, $ev['ora_sfarsit']);
 verifica('participanți nespecificați → NULL', null, $ev['participanti_min']);
+verifica('orașul ajunge în bază așa cum e în config', 'Roman', $ev['oras']);
 verifica('are slug', true, preg_match('/^[a-z0-9-]+-[0-9a-f]{6}$/', (string) $ev['slug']) === 1);
 verifica('slugul e făcut din titlu', true, str_starts_with((string) $ev['slug'], 'cursa-de-seara'));
 verifica('răspunsul aduce adresa paginii lui',
@@ -396,6 +451,10 @@ foreach ([
     ['categorie inexistentă',['categorie_id' => '99'],                       'categorie_id'],
     ['categorie negativă',   ['categorie_id' => '-1'],                       'categorie_id'],
     ['locație goală',        ['locatie' => ''],                              'locatie'],
+    ['oraș gol',             ['oras' => ''],                                 'oras'],
+    ['oraș din afara listei', ['oras' => 'București'],                       'oras'],
+    ['oraș cu literă mică',  ['oras' => 'roman'],                            'oras'],
+    ['oraș cu spații în plus, dar altul', ['oras' => 'Roman Nou'],           'oras'],
     ['dată în trecut',       ['data_eveniment' => date('d-m-Y', strtotime('-1 day'))], 'data_eveniment'],
     ['dată imposibilă',      ['data_eveniment' => '30-02-2027'],             'data_eveniment'],
     ['29 februarie într-un an nebisect', ['data_eveniment' => '29-02-2027'], 'data_eveniment'],
@@ -803,6 +862,20 @@ verifica('fără iconițe de share', false, str_contains($pagina, 'post__share')
 verifica('și fără butonul de copiat linkul', false, str_contains($pagina, 'copy-link'));
 verifica('locația', true, str_contains($pagina, 'Piața Sfatului'));
 verifica('costul lipsă înseamnă gratuit', true, str_contains($pagina, 'Gratuit'));
+
+/**
+ * Orașul se vede pentru toată lumea, înaintea locului, în același rând:
+ * „Roman · Piața Sfatului". Un rând al lui ar fi repetat același cuvânt la
+ * fiecare eveniment, cât timp orașul e unul singur.
+ */
+verifica('orașul se vede, înaintea locului', true,
+    str_contains($pagina, '<strong>Roman · Piața Sfatului</strong>'));
+
+// Un eveniment de dinaintea coloanei (oraș gol) nu lasă un punct rătăcit.
+db()->prepare('UPDATE evenimente SET oras = ? WHERE id = ?')->execute(['', $idAprobat]);
+verifica('fără oraș, se scrie doar locul', true,
+    str_contains(cerere($laEveniment($idAprobat), $c)['corp'], '<strong>Piața Sfatului</strong>'));
+db()->prepare('UPDATE evenimente SET oras = ? WHERE id = ?')->execute(['Roman', $idAprobat]);
 verifica('organizatorul, cu link spre profilul lui', true,
     str_contains($pagina, 'profil.php?m=organizat02'));
 
@@ -925,6 +998,12 @@ $bifat = static function (string $id, string $html): bool {
 
 verifica('titlul e precompletat', 'Cum era la început', $valoarea('ev-titlu', $formular));
 verifica('locația', 'Piața Sfatului', $valoarea('ev-locatie', $formular));
+
+// La editare, orașul salvat e cel bifat — și numai el.
+verifica('orașul salvat e ales', true,
+    preg_match('/<option value="Roman"\s*selected/', $formular) === 1);
+verifica('placeholderul nu mai e ales', false,
+    preg_match('/<option value="" selected/', $formular) === 1);
 // În formular data se scrie pe românește; în bază stă în formatul ei.
 verifica('data, în format românesc', date('d-m-Y', strtotime('+12 days')),
     $valoarea('ev-data', $formular));
@@ -1003,6 +1082,7 @@ $dupa = $dupa->fetch();
 
 verifica('titlul s-a schimbat', 'Titlul de după schimbare', $dupa['titlu']);
 verifica('și categoria', 3, (int) $dupa['categorie_id']);
+verifica('orașul se scrie și la editare', 'Roman', $dupa['oras']);
 
 /**
  * Slugul NU se schimbă odată cu titlul: adresa poate fi deja dată mai
@@ -1259,6 +1339,7 @@ function previzualizeaza(array &$cookies, array $peste = []): array
         'csrf'             => csrf($cookies),
         'titlu'            => 'Cursa de seară prin centrul vechi',
         'categorie_id'     => '1',
+        'oras'             => 'Roman',
         'locatie'          => 'Piața Sfatului, lângă fântână',
         // Formularul trimite ZZ-LL-AAAA, cum se scrie o dată în România;
         // traducerea spre AAAA-LL-ZZ o face dataDinFormular() pe server.
@@ -1290,6 +1371,16 @@ verifica('cu exact același mesaj ca la trimitere',
 $rPreviz = previzualizeaza($c, ['titlu' => 'ab', 'locatie' => '']);
 verifica('titlul scurt, la fel', true, !empty($rPreviz['erori']['titlu']));
 verifica('și locația lipsă', true, !empty($rPreviz['erori']['locatie']));
+
+// Orașul trece prin aceeași verificare: previzualizarea nu e o portiță.
+$rPreviz = previzualizeaza($c, ['oras' => 'București']);
+verifica('un oraș din afara listei e oprit și la previzualizare', true,
+    !empty($rPreviz['erori']['oras']));
+verifica('cu același mesaj ca la trimitere',
+    trimite($c, ['oras' => 'București'])['erori']['oras'] ?? 'x',
+    $rPreviz['erori']['oras'] ?? 'y');
+$rPreviz = previzualizeaza($c, ['oras' => '']);
+verifica('și unul gol, la fel', true, !empty($rPreviz['erori']['oras']));
 verifica('când sunt erori, nu se dă nicio cheie', true, empty($rPreviz['cheie']));
 
 verifica('nimic în bază, oricâte greșeli', 0, cateEvenimente());
@@ -1307,6 +1398,9 @@ verifica('pagina se deschide', 200, $pagina['stare']);
 verifica('cu titlul din formular', true,
     str_contains($pagina['corp'], 'Cursa de seară prin centrul vechi'));
 verifica('cu categoria pe nume, nu pe id', true, str_contains($pagina['corp'], 'Sport'));
+// Orașul înaintea locului, în același rând: „Roman · Piața Sfatului…".
+verifica('cu orașul înaintea locului', true,
+    str_contains($pagina['corp'], 'Roman · Piața Sfatului, lângă fântână'));
 verifica('spune limpede că nu e publicat', true,
     str_contains($pagina['corp'], 'nu e publicat nimic'));
 verifica('și nu se lasă indexată', true, str_contains($pagina['corp'], 'name="robots"'));

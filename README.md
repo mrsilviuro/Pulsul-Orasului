@@ -853,9 +853,10 @@ Nu există încă niciun loc unde să citești mesajele din site. Se citesc din
 
 `sql/009-evenimente.sql` aduce `categorii` și `evenimente`,
 `sql/010-limita-evenimente.sql` coloana prin care se poate ridica, pentru un om
-anume, limita de evenimente active, iar `sql/011-anulare-eveniment.sql` starea
-`anulat`, coloana `motiv_anulare` și steagul `membri.este_staff`. Formularul de
-publicare e `adauga_eveniment.php`.
+anume, limita de evenimente active, `sql/011-anulare-eveniment.sql` starea
+`anulat`, coloana `motiv_anulare` și steagul `membri.este_staff`, iar
+`sql/012-oras-eveniment.sql` coloana `oras`. Formularul de publicare e
+`adauga_eveniment.php`.
 
 Categoriile erau până acum scrise de mână în trei locuri: filtrele din
 `index.php`, eticheta de pe fiecare articol și lista din `despre.php`. De acum
@@ -931,6 +932,55 @@ apăsat „+ Eveniment nou". Saltul îl face `history.back()`, dar numai dacă
 `document.referrer` e de pe site-ul nostru: altfel cine ajunge aici dintr-un
 link de pe alt site ar fi trimis înapoi acolo. Când nu e, linkul rămâne cum a
 venit din HTML și duce pe prima pagină — merge și fără JS.
+
+### Orașul
+
+Site-ul a pornit pentru un singur oraș, Roman, așa că orașul nu se scria
+nicăieri: se subînțelegea. Acum se scrie, ca ziua în care apare al doilea oraș
+să fie o linie în plus în config, nu o migrare pe un tabel plin de evenimente
+despre care nimeni nu mai știe unde au avut loc.
+
+**Lista trăiește în `inc/config.php`**, cheia `orase`:
+
+```php
+'orase' => ['Roman'],
+```
+
+Un oraș nou înseamnă un rând în plus acolo, atât. **Nu există tabel în bază**
+pentru ea — ar fi fost un tabel cu un rând și o pagină de administrare pentru
+ceva ce se schimbă o dată pe an.
+
+`oraseDisponibile()` din `inc/bootstrap.php` e singurul loc de unde o citesc și
+formularul, și verificarea de pe server; altfel s-ar putea alege în pagină un
+oraș pe care serverul îl refuză, sau invers. Tot ea o curăță de valorile goale
+și de duplicate, ca o virgulă în plus în config să nu ajungă o opțiune fără
+nume în listă.
+
+În formular e o listă, nu text liber, așezată **deasupra locației**. Prima
+opțiune e goală și `disabled`, ca la categorie: nimic nu e ales dinainte, nici
+măcar când e un singur oraș în listă — omul trebuie să spună el unde are loc,
+ca să nu publice din greșeală în alt oraș în ziua în care lista are mai multe.
+
+Pe server, `verificaEveniment()` primește lista ca argument (ca
+`$categoriiValide`, și din același motiv: `inc/validare.php` nu deschide nici
+baza, nici configul, ca să poată fi probat singur) și cere ca valoarea să fie
+**exact** una dintre ele — `in_array` strict, deci „roman" cu literă mică nu
+trece. Cine trimite „București" cu mâna lui, ocolind pagina, primește o eroare
+de câmp, nu un eveniment strecurat într-un oraș în care nu suntem. Aceeași
+verificare rulează și la previzualizare.
+
+Coloana e `VARCHAR(80) NOT NULL DEFAULT 'Roman'`, lângă `locatie`: numele intră
+ca text, exact cum e scris în config. Evenimentele de dinaintea migrării au
+primit toate `'Roman'` — e adevărul, fiindcă până atunci n-a existat altul.
+Dacă mâine un oraș iese din listă, evenimentele lui rămân cu numele scris în
+bază; nu se pierde nimic, doar nu se mai poate alege, iar la o editare
+organizatorul va fi nevoit să aleagă altul.
+
+Pe pagina evenimentului, orașul stă **înaintea locului, în același rând**:
+„Roman · Piața Roman-Vodă". Un rând al lui, cu eticheta „Oraș", ar fi repetat
+același cuvânt la fiecare eveniment cât timp orașul e unul singur — iar când
+vor fi mai multe, tot lângă adresă e locul lui, fiindcă asta e: prima ei
+jumătate.
 
 ### Data și orele: câmpuri de text, nu `type="date"` / `type="time"`
 
@@ -1253,6 +1303,11 @@ ocupă locul unuia care ar fi spus. Vârsta, participanții și genul apar doar
 când sunt completate. Ora de sfârșit lipsă nu se pomenește deloc — scrie doar
 „19:00", nu „19:00 — nedeterminat": o mențiune despre ce nu se știe ocupă un
 rând ca să nu spună nimic. `cost` gol sau zero devine „Gratuit".
+
+Rândul „Locul" scrie orașul înaintea adresei, despărțite printr-un punct
+ridicat: „Roman · Piața Roman-Vodă". Evenimentele de dinaintea coloanei `oras`
+n-au ce pune acolo, deci se scrie doar adresa — fără un punct rătăcit la
+început. Vezi „Orașul", mai sus.
 
 Descrierea e **escapată la randare, nu la salvare** — se escapează întâi și se
 pun etichetele după, altfel `<p>` și `<br>` ar fi escapate și ele, iar omul ar

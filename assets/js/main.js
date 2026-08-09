@@ -2841,7 +2841,8 @@
     function arataErorile(erori) {
       var primul = null;
 
-      [['titlu', 'ev-titlu'], ['categorie_id', 'ev-categorie'], ['locatie', 'ev-locatie'],
+      [['titlu', 'ev-titlu'], ['categorie_id', 'ev-categorie'],
+       ['oras', 'ev-oras'], ['locatie', 'ev-locatie'],
        ['data_eveniment', 'ev-data'], ['ora_inceput', 'ev-ora-inceput'],
        ['ora_sfarsit', 'ev-ora-sfarsit'], ['cost', 'ev-cost'],
        ['varsta_minima', 'ev-varsta'], ['gen_participanti', 'ev-gen'],

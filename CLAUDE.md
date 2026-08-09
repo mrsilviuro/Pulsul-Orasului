@@ -129,7 +129,7 @@ cron/               → scripturi rulate din cron (doar CLI, .htaccess le bloche
 sql/                → schema.sql + migrări numerotate (002, 003, 004, 005-google,
                       006-tine-minte, 007-setari, 008-mesaje-contact,
                       009-evenimente, 010-limita-evenimente,
-                      011-anulare-eveniment)
+                      011-anulare-eveniment, 012-oras-eveniment)
 teste/              → test-validare.php (verificările din inc/validare.php)
                       test-tine-minte.php, test-setari.php, test-contact.php,
                       test-evenimente.php
@@ -141,6 +141,9 @@ assets/css/style.css, assets/js/main.js, assets/img/
 ## Config
 
 - `inc/config.example.php` → copiezi la `inc/config.php` (gitignored, nu urcă pe GitHub)
+- `orase => ['Roman']` — orașele în care se pot pune evenimente. Un oraș nou =
+  un rând aici, atât: lista se citește prin `oraseDisponibile()` și de formular,
+  și de `verificaEveniment()`. Nu există tabel în bază pentru ea.
 - `dezvoltare => true/false` — în dev, linkurile de confirmare apar direct în pagină +
   log în `private/`. Pe producție OBLIGATORIU `false`.
 - `fus_orar => 'Europe/Bucharest'`

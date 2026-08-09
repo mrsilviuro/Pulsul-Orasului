@@ -24,7 +24,7 @@ require_once __DIR__ . '/validare.php';
 /**
  * Cheile pe care le citește afiseazaEveniment():
  *
- *   titlu, categorie, locatie, descriere          — text
+ *   titlu, categorie, oras, locatie, descriere    — text
  *   data_eveniment                                 — 'AAAA-LL-ZZ'
  *   ora_inceput, ora_sfarsit                       — 'HH:MM[:SS]' sau null
  *   cost                                           — number|string|null
@@ -135,7 +135,22 @@ function afiseazaEveniment(array $e, ?array $banda = null, ?callable $actiuni = 
           <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M12 21s7-5.6 7-11a7 7 0 1 0-14 0c0 5.4 7 11 7 11Z"/><circle cx="12" cy="10" r="2.6"/>
           </svg>
-          <div><span>Locul</span><strong><?= h((string) ($e['locatie'] ?? '')) ?></strong></div>
+          <div><span>Locul</span><strong><?php
+            /**
+             * Orașul înaintea locului, despărțite printr-un punct ridicat:
+             * „Roman · Piața Roman-Vodă". Un rând al lui, cu eticheta „Oraș",
+             * ar fi spus același cuvânt la fiecare eveniment din caseta asta,
+             * cât timp orașul e unul singur — iar când vor fi mai multe, tot
+             * lângă adresă e locul lui, fiindcă asta e: prima ei jumătate.
+             *
+             * Evenimentele de dinaintea coloanei n-au oraș; atunci se scrie
+             * doar locul, fără punct rătăcit la început.
+             */
+            $orasul = trim((string) ($e['oras'] ?? ''));
+            $locul  = (string) ($e['locatie'] ?? '');
+
+            echo h($orasul !== '' ? $orasul . ' · ' . $locul : $locul);
+          ?></strong></div>
         </div>
 
         <div class="event-box__item">
@@ -234,6 +249,7 @@ function evenimentDinBaza(array $rand): array
     return [
         'titlu'            => $rand['titlu'] ?? '',
         'categorie'        => $rand['categorie'] ?? '',
+        'oras'             => $rand['oras'] ?? '',
         'locatie'          => $rand['locatie'] ?? '',
         'descriere'        => $rand['descriere'] ?? '',
         'data_eveniment'   => $rand['data_eveniment'] ?? null,

@@ -19,6 +19,23 @@ declare(strict_types=1);
  */
 
 return [
+    // --------------------------------------------------------------- orașe
+    /**
+     * Orașele în care se pot pune evenimente.
+     *
+     * Un oraș nou înseamnă un rând în plus aici, atât: lista se vede în
+     * formular (`adauga_eveniment.php`) și e chiar lista pe care o acceptă
+     * verificarea de pe server (`verificaEveniment`). Nu există tabel în bază
+     * pentru ea — ar fi fost un tabel cu un rând și o pagină de administrare
+     * pentru ceva ce se schimbă o dată pe an.
+     *
+     * Numele se scrie exact cum vrei să apară pe site: el ajunge ca atare în
+     * coloana `evenimente.oras`. Un oraș scos de aici nu șterge evenimentele
+     * de acolo — ele rămân cu orașul scris în bază, dar nu se mai pot alege
+     * și, la o editare, organizatorul va fi nevoit să aleagă altul.
+     */
+    'orase' => ['Roman'],
+
     // ---------------------------------------------------------------- baza
     'db' => [
         /**
