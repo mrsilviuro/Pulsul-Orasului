@@ -1251,23 +1251,66 @@ ghicitul să nu ducă undeva.
 
 ### Cine intră
 
-Pagina e **strict pentru cine e conectat**. Verificarea se face *înaintea*
-căutării în bază, dinadins: așa, cine nu are cont nu poate afla nici măcar dacă
-un slug duce undeva.
+**Un anunț publicat se vede de oricine, fără cont.**
+
+A fost o vreme închisă și pagina asta, ca profilurile. Dar un anunț public are
+altă treabă decât un profil: e făcut ca să fie dat mai departe, pus pe
+Facebook, trimis pe WhatsApp. O ușă la intrare l-ar fi oprit tocmai pe cel
+căruia i s-a trimis linkul, și l-ar fi ținut și în afara căutărilor Google.
 
 | starea anunțului | organizatorul | alt membru conectat | staff | nelogat |
 |---|---|---|---|---|
-| aprobat | vede | vede | vede | trimis la login |
-| în așteptare | vede | prima pagină | prima pagină | trimis la login |
-| respins | vede | prima pagină | prima pagină | trimis la login |
-| anulat | prima pagină | prima pagină | vede | trimis la login |
+| aprobat | vede | vede | vede | **vede** |
+| în așteptare | vede | prima pagină | prima pagină | prima pagină |
+| respins | vede | prima pagină | prima pagină | prima pagină |
+| anulat | prima pagină | prima pagină | vede | prima pagină |
+
+**Restricționată e interacțiunea, nu privitul.** Butoanele „Mă interesează" și
+„Voi participa" se văd, dar apăsarea duce la `login.php` cu întoarcere pe
+eveniment, iar `api/interes.php` cere cont oricum. Pentru un vizitator nu se
+scrie nici token CSRF, nici caseta de confirmare: n-are ce face cu ele.
 
 **Un slug inexistent și unul interzis sfârșesc la fel: pe prima pagină.** Dacă
 „nu există" ar arăta altfel decât „nu ai voie", oricine ar putea afla, ghicind,
-ce evenimente așteaptă la moderare.
+ce evenimente așteaptă la moderare. (Nu e un 404 adevărat, fiindcă site-ul n-are
+pagină de 404; redirecționarea ascunde deosebirea la fel de bine.)
 
-Organizatorul vede în plus o bandă cu starea anunțului și butonul „Editează"
-(care duce la formular — modul de editare se construiește separat).
+De aici încolo `$membru` poate fi null, iar `$membruId` e 0 pentru cine nu e
+conectat — un id peste care nu nimerește niciun rând din bază, deci
+`interesulMeu()` și celelalte răspund fără să fie nevoie de ocolișuri.
+
+`cereIntrare()` rămâne folosit de restul paginilor închise (profil, setări,
+formularul de eveniment); doar `event.php` nu-l mai cheamă la intrare.
+
+Organizatorul vede în plus o bandă cu starea anunțului și butonul „Editează".
+
+### Distribuirea
+
+Trei iconițe între detaliile evenimentului și „Mergi la acest eveniment?":
+Facebook, WhatsApp și copierea linkului. Aceleași desene ca cele scoase
+odinioară de lângă numele organizatorului — acolo erau lipite de un om, aici
+sunt la locul lor: după ce s-a citit despre ce e vorba și înainte de hotărâre.
+
+Numai la un anunț publicat. N-are rost să dai mai departe ceva ce nu poate
+deschide nimeni.
+
+Adresa se scrie **întreagă**, cu `url_site` din config: „event.php?slug=…"
+singur n-ar duce nicăieri de pe telefonul altcuiva. Primele două sunt linkuri
+obișnuite (`target="_blank" rel="noopener noreferrer"`), deci merg și fără
+JavaScript.
+
+Copierea nu poate: are nevoie de `navigator.clipboard`, care există doar pe
+pagini sigure (https, sau localhost). Pe http simplu — cum e site-ul în
+dezvoltare — pur și simplu nu e, așa că există și calea veche: un câmp de text
+ținut în afara ecranului, selectat și copiat cu `document.execCommand`. Scoasă
+din uz, dar merge unde cealaltă nu; și e încercată și atunci când Clipboard API
+există, dar refuză permisiunea. Confirmarea e dublă: un toast „Link copiat!" și
+iconița care se face verde pentru o clipă — un toast singur, jos de tot, se
+pierde.
+
+Textul de copiat stă gata scris într-un atribut (`data-copiaza`), escapat cu
+`h()`, nu lipit din bucăți în JS: un titlu cu ghilimele sau cu „&" n-are cum
+să strice nimic.
 
 ### Întoarcerea după intrare
 
@@ -1297,6 +1340,11 @@ undeva. Un profil spune vârsta, orașul, chipul și ce pune omul la cale — nu
 ceva ce se lasă la vedere pe internet, unde poate fi cules de oricine.
 Linkurile spre profiluri au rămas peste tot cum erau; s-a schimbat doar cine
 poate deschide pagina.
+
+**Pagina unui eveniment nu-l mai cheamă la intrare** — vezi „Cine intră", mai
+sus. Îl folosesc în continuare profilul, setările, poza și formularul de
+eveniment; pe event.php a rămas doar la apăsarea butoanelor de participare,
+făcută din JS.
 
 ### Ce se arată și ce nu
 

@@ -795,18 +795,36 @@ $slugul = static function (int $id): string {
 
 $laEveniment = static fn(int $id): string => $baza . '/event.php?slug=' . urlencode($slugul($id));
 
-/* -------------------- fără cont nu se intră deloc -------------------- */
+/* ------------------ un anunț publicat se vede de oricine ---------------- */
 
+/**
+ * Pagina a fost o vreme închisă, ca profilurile. Un anunț public are însă altă
+ * treabă: e făcut ca să fie dat mai departe. O ușă la intrare l-ar fi oprit
+ * tocmai pe cel căruia i s-a trimis linkul, și l-ar fi ținut și în afara
+ * căutărilor Google.
+ */
 $r = cerere($laEveniment($idAprobat), $anonim);
-verifica('nelogat → trimis la login', 302, $r['stare']);
-verifica('spre login, nu în altă parte', true, str_contains($r['unde'], 'login.php'));
-verifica('și adus înapoi la eveniment după intrare', true,
-    str_contains($r['unde'], 'redirect=' . urlencode('/event.php?slug=' . $slugul($idAprobat))));
+verifica('nelogatul deschide un eveniment aprobat', 200, $r['stare']);
+verifica('și chiar îi vede titlul', true, str_contains($r['corp'], 'Cursa aprobată'));
+verifica('fără să fie trimis nicăieri', '', $r['unde']);
+verifica('iar pagina se lasă indexată', false, str_contains($r['corp'], 'name="robots"'));
 
-// Un slug care nu există trebuie să arate EXACT ca unul care există: altfel,
-// cine nu are cont ar putea afla ce sluguri sunt bune.
+// Butoanele se văd, dar nu sunt de apăsat fără cont: JS trimite la login, iar
+// api/interes.php cere cont oricum. Tokenul CSRF nu se scrie degeaba.
+verifica('vede și butoanele de participare', true, str_contains($r['corp'], 'id="btn-going"'));
+verifica('dar fără token CSRF, că n-are ce face cu el', false,
+    str_contains($r['corp'], 'data-csrf'));
+verifica('și fără caseta de confirmare', false, str_contains($r['corp'], 'id="rsvp-confirm"'));
+
+// Ce nu e publicat rămâne închis, și pentru nelogați, și pentru ceilalți. Un
+// slug care nu există arată EXACT la fel: altfel s-ar putea afla, ghicind, ce
+// evenimente așteaptă la moderare.
+$rAsteptare  = cerere($laEveniment($idAsteapta), $anonim);
 $rInexistent = cerere($baza . '/event.php?slug=nu-exista-abc123', $anonim);
-verifica('nelogat, slug inexistent: același răspuns', $r['stare'], $rInexistent['stare']);
+verifica('nelogatul NU vede ce așteaptă moderarea', 302, $rAsteptare['stare']);
+verifica('nici ce a fost respins', 302, cerere($laEveniment($idRespins), $anonim)['stare']);
+verifica('slug inexistent: același răspuns', $rAsteptare['stare'], $rInexistent['stare']);
+verifica('și aceeași destinație', $rAsteptare['unde'], $rInexistent['unde']);
 
 /* ------------------------- cine ce poate vedea ------------------------ */
 
@@ -857,9 +875,34 @@ verifica('ora de început, singură', true, str_contains($pagina, '<strong>19:00
 verifica('fără vorbe despre sfârșitul care lipsește', false,
     str_contains($pagina, 'nedeterminat'));
 
-// Nici urmă de butoanele de distribuire: au fost scoase de tot.
-verifica('fără iconițe de share', false, str_contains($pagina, 'post__share'));
-verifica('și fără butonul de copiat linkul', false, str_contains($pagina, 'copy-link'));
+/**
+ * Butoanele de distribuire. Au fost cândva lipite de numele organizatorului,
+ * de unde au și fost scoase; acum stau între detalii și „Mergi la acest
+ * eveniment?" — după ce omul a citit despre ce e vorba.
+ *
+ * Adresa care pleacă spre Facebook și WhatsApp e ÎNTREAGĂ, cu url_site din
+ * config: „event.php?slug=…" singur n-ar duce nicăieri de pe telefonul
+ * altcuiva.
+ */
+$adresaIntreaga = rtrim((string) ($config['url_site'] ?? ''), '/')
+                . '/event.php?slug=' . $slugul($idAprobat);
+
+verifica('are zona de distribuire', true, str_contains($pagina, 'post__share'));
+verifica('cu link de Facebook, pe adresa întreagă', true,
+    str_contains($pagina, 'facebook.com/sharer/sharer.php?u=' . h(urlencode($adresaIntreaga))));
+verifica('cu link de WhatsApp', true, str_contains($pagina, 'wa.me/?text='));
+verifica('care poartă și titlul, nu doar adresa', true,
+    str_contains($pagina, urlencode('Uite ce eveniment am găsit: Cursa aprobată')));
+verifica('și cu butonul de copiat', true, str_contains($pagina, 'id="copiaza-link"'));
+verifica('care are textul gata scris, escapat', true,
+    str_contains($pagina, 'data-copiaza="Uite ce eveniment am găsit: Cursa aprobată '
+                        . h($adresaIntreaga) . '"'));
+verifica('cele două linkuri se deschid în altă filă', 2,
+    preg_match_all('/class="icon-btn"[^>]*target="_blank"[^>]*rel="noopener noreferrer"/', $pagina));
+verifica('zona stă înaintea butoanelor de participare', true,
+    strpos($pagina, 'post__share') < strpos($pagina, 'id="rsvp"'));
+verifica('și după caseta cu detalii', true,
+    strpos($pagina, 'event-box') < strpos($pagina, 'post__share'));
 verifica('locația', true, str_contains($pagina, 'Piața Sfatului'));
 verifica('costul lipsă înseamnă gratuit', true, str_contains($pagina, 'Gratuit'));
 
@@ -1805,6 +1848,9 @@ verifica('fără cercuri goale', false, str_contains($pustiu, 'class="facepile"'
 $asteapta = cerere($baza . '/event.php?slug=' . urlencode($slugul($idAstept)), $c)['corp'];
 verifica('la un eveniment neaprobat, secțiunea nici nu apare', false,
     str_contains($asteapta, 'id="rsvp"'));
+// Nici butoanele de distribuire: n-are rost să dai mai departe un anunț pe
+// care nu-l poate deschide nimeni.
+verifica('nici butoanele de distribuire', false, str_contains($asteapta, 'post__share'));
 
 db()->prepare('DELETE FROM membri WHERE email = ?')->execute(['al-treilea@exemplu-test.ro']);
 

@@ -93,7 +93,9 @@ Site live: https://pulsulorasului.ro
     „ă" ocupă doi octeți, deci o limită pe octeți ar avantaja pe cine scrie fără
     diacritice. În JS la fel: `[...text].length`, nu `.length`.
 
-11. **O pagină numai pentru cine e conectat cheamă `cereIntrare('/calea.php')`**,
+11. **O pagină numai pentru cine e conectat cheamă `cereIntrare('/calea.php')`**
+    (profil, setări, poza, formularul de eveniment — dar NU `event.php`: un
+    anunț publicat se vede de oricine, restricționată e doar interacțiunea),
     nu-și scrie singură antetul de redirecționare. Calea de întoarcere trece
     mereu prin `caleInterna()` — o verificare scrisă de mână lasă să treacă
     „/\alt-site.ro", pe care browserul îl îndreaptă în „//alt-site.ro".

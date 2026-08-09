@@ -16,18 +16,22 @@ require_once __DIR__ . '/inc/interese.php';
 $slug = trim((string) ($_GET['slug'] ?? ''));
 
 /**
- * Fără cont nu se intră deloc — de oriunde ar veni linkul.
+ * Un eveniment publicat se vede de oricine, fără cont.
  *
- * Verificarea e ÎNAINTEA căutării în bază, dinadins: așa, cine nu e conectat
- * nu poate afla nici măcar dacă un slug duce undeva. Și tot de aici se pleacă
- * spre login cu adresa de acum în buzunar, ca după conectare omul să ajungă
- * fix la evenimentul pe care voia să-l vadă, nu pe prima pagină.
+ * A fost o vreme închisă și pagina asta, ca profilurile. Dar un anunț public
+ * are altă treabă decât un profil: e făcut ca să fie dat mai departe, pus pe
+ * Facebook, trimis pe WhatsApp. O ușă la intrare l-ar fi oprit tocmai pe cel
+ * căruia i s-a trimis linkul, și l-ar fi ținut și în afara căutărilor Google.
+ *
+ * Restricționată rămâne INTERACȚIUNEA, nu privitul: butoanele de mai jos duc
+ * spre login la apăsare, iar api/interes.php cere cont oricum.
+ *
+ * $membru poate fi null de aici încolo. Tot ce urmează îl citește cu grijă,
+ * iar $membruId e 0 pentru cine nu e conectat — un id peste care nu nimerește
+ * niciun rând din bază.
  */
-$membru = membruCurent();
-
-if ($membru === null) {
-    cereIntrare('/event.php' . ($slug !== '' ? '?slug=' . urlencode($slug) : ''));
-}
+$membru   = membruCurent();
+$membruId = (int) ($membru['id'] ?? 0);
 
 $eveniment = evenimentDupaSlug($slug);
 
@@ -41,12 +45,12 @@ $eveniment = evenimentDupaSlug($slug);
  */
 $eStaff = esteStaff($membru);
 
-if ($eveniment === null || !poateVedeaEvenimentul($eveniment, (int) $membru['id'], $eStaff)) {
+if ($eveniment === null || !poateVedeaEvenimentul($eveniment, $membruId, $eStaff)) {
     header('Location: index.php');
     exit;
 }
 
-$eOrganizatorul = (int) $eveniment['membru_id'] === (int) $membru['id'];
+$eOrganizatorul = $membruId > 0 && (int) $eveniment['membru_id'] === $membruId;
 $eAprobat       = $eveniment['stare_moderare'] === 'aprobat';
 $eAnulat        = $eveniment['stare_moderare'] === 'anulat';
 
@@ -62,14 +66,15 @@ $eAnulat        = $eveniment['stare_moderare'] === 'anulat';
  */
 $evenimentId  = (int) $eveniment['id'];
 $numarInterese = numaraInterese($evenimentId);
-$stareaMea     = interesulMeu($evenimentId, (int) $membru['id']);
+$stareaMea     = interesulMeu($evenimentId, $membruId);
 $maiSuntLocuri = maiSuntLocuri($eveniment, $numarInterese['participant']);
 
 /**
  * Numărul de telefon i se cere doar cui nu l-a dat încă — și niciodată
  * organizatorului: al lui e, n-are cui să și-l dea.
  */
-$imiCereTelefon = !$eOrganizatorul && telefonulMembrului((int) $membru['id']) === '';
+$eLogat         = $membru !== null;
+$imiCereTelefon = $eLogat && !$eOrganizatorul && telefonulMembrului($membruId) === '';
 
 /* --------------------------- ce se afișează --------------------------- */
 
@@ -156,6 +161,52 @@ require __DIR__ . '/inc/antet.php';
       ?>
 
       <?php if ($eAprobat): ?>
+      <!-- ========================== DISTRIBUIRE ===========================
+        Trei iconițe, între detalii și „Mergi la acest eveniment?". Aceleași
+        desene ca cele scoase odinioară de lângă organizator — acolo erau
+        lipite de numele cuiva, aici sunt la locul lor: după ce omul a citit
+        despre ce e vorba și înainte să hotărască dacă vine.
+
+        Numai la un eveniment publicat: n-are rost să dai mai departe un anunț
+        pe care nu-l poate deschide nimeni.
+
+        Adresa se scrie ÎNTREAGĂ, cu url_site din config. Facebook și WhatsApp
+        primesc un link, nu o cale — „event.php?slug=…" singur n-ar duce
+        nicăieri de pe telefonul altcuiva.
+      ================================================================== -->
+      <?php
+        $adresaEveniment = rtrim((string) ($config['url_site'] ?? ''), '/')
+                         . '/' . urlEveniment((string) $eveniment['slug']);
+
+        // Textul care pleacă pe WhatsApp și în clipboard. Scurt dinadins:
+        // pe WhatsApp intră în căsuța de scris, iar omul îl termină cum vrea.
+        $textDistribuire = 'Uite ce eveniment am găsit: ' . $eveniment['titlu'];
+      ?>
+      <div class="post__share" role="group" aria-label="Distribuie evenimentul">
+        <a class="icon-btn" target="_blank" rel="noopener noreferrer"
+           href="https://www.facebook.com/sharer/sharer.php?u=<?= h(urlencode($adresaEveniment)) ?>"
+           aria-label="Distribuie pe Facebook" title="Distribuie pe Facebook">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 8.5V7a1.5 1.5 0 0 1 1.5-1.5H17V3h-2.2A3.8 3.8 0 0 0 11 6.8v1.7H9V11h2v10h3V11h2.2l.4-2.5H14Z" fill="currentColor" stroke="none"/></svg>
+        </a>
+
+        <a class="icon-btn" target="_blank" rel="noopener noreferrer"
+           href="https://wa.me/?text=<?= h(urlencode($textDistribuire . ' ' . $adresaEveniment)) ?>"
+           aria-label="Trimite pe WhatsApp" title="Trimite pe WhatsApp">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11.5a8 8 0 0 1-11.9 7L4 20l1.6-4A8 8 0 1 1 20 11.5Z"/><path d="M9 9.5c.4 2 1.6 3.2 3.6 3.6l.9-1.2 1.7.8-.4 1.4c-2.9.3-5.8-2.6-5.5-5.5l1.4-.4.8 1.7z" fill="currentColor" stroke="none"/></svg>
+        </a>
+
+        <!--
+          Copierea o face JS. Textul stă într-un atribut, nu se lipește în JS
+          din bucăți: aici e escapat de h(), iar un titlu cu ghilimele sau cu
+          „&" nu poate strica nimic.
+        -->
+        <button class="icon-btn" type="button" id="copiaza-link"
+                data-copiaza="<?= h($textDistribuire . ' ' . $adresaEveniment) ?>"
+                aria-label="Copiază linkul" title="Copiază linkul">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3A4 4 0 0 0 13 5.3l-1.4 1.4"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3A4 4 0 0 0 11 18.7l1.4-1.4"/></svg>
+        </button>
+      </div>
+
       <!-- =========================== PARTICIPARE ==========================
         Numai la un eveniment publicat. Cât e în așteptare, respins sau
         anulat, pagina se deschide doar pentru organizator sau pentru staff —
@@ -165,9 +216,16 @@ require __DIR__ . '/inc/antet.php';
         fiecare apăsare, iar la reîncărcare vine de la server. Retragerea n-are
         buton al ei: apăsarea pe starea în care ești deja o stinge.
       ================================================================== -->
+      <!--
+        Tokenul CSRF se scrie DOAR pentru cine e conectat: un vizitator n-are
+        ce face cu el, fiindcă butoanele îl duc la login înainte de orice
+        cerere. (Sesiunea tot se deschide — membruCurent() o cere pe fiecare
+        pagină, ca peste tot pe site — dar un token în plus în HTML, pentru
+        cineva care nu-l poate folosi, n-are de ce să existe.)
+      -->
       <section class="rsvp" id="rsvp" aria-labelledby="rsvp-title"
                data-slug="<?= h((string) $eveniment['slug']) ?>"
-               data-csrf="<?= h(tokenCsrf()) ?>">
+               <?= $eLogat ? 'data-csrf="' . h(tokenCsrf()) . '"' : '' ?>>
         <div class="rsvp__head">
           <h2 id="rsvp-title">Mergi la acest eveniment?</h2>
           <p>Spune-le și celorlalți — apari în lista de mai jos.</p>
@@ -214,6 +272,7 @@ require __DIR__ . '/inc/antet.php';
           Se deschide din JS și se verifică din nou pe server: fără
           `confirmat`, api/interes.php nu scrie nimic.
         -->
+        <?php if ($eLogat): ?>
         <div class="rsvp__confirm" id="rsvp-confirm" hidden>
           <p class="rsvp__confirm-titlu"><strong>Confirmi participarea?</strong></p>
 
@@ -251,6 +310,7 @@ require __DIR__ . '/inc/antet.php';
             <button class="btn btn--ghost" type="button" id="rsvp-confirm-nu">Renunță</button>
           </div>
         </div>
+        <?php endif; ?>
 
         <!--
           Chipurile și vorba de dedesubt se desenează într-un singur loc,
