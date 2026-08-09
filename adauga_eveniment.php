@@ -306,15 +306,47 @@ require __DIR__ . '/inc/antet.php';
           <div class="field">
             <label for="ev-data">Data <span class="req" aria-hidden="true">*</span></label>
             <!--
-              La editare, „min" e ziua evenimentului dacă ea a trecut deja:
-              altfel browserul ar arăta ca greșită o dată pe care omul nici
-              n-a atins-o. Verificarea adevărată e oricum pe server.
+              Data se scrie ZZ-LL-AAAA, cum se scrie o dată în România.
+
+              Câmpul vizibil e de text, ca la ore și din același motiv:
+              `type="date"` se desenează după limba browserului, nu a paginii,
+              deci cine are Chrome în engleză vedea „mm/dd/yyyy" pe un site
+              românesc. Cratimele le pune main.js, cifră cu cifră.
+
+              Calendarul nu s-a pierdut: lângă câmp stă un `type="date"`
+              adevărat, ascuns, pe care butonul îl deschide cu showPicker().
+              El poartă „min" și „max" (în formatul lui, AAAA-LL-ZZ), iar ce se
+              alege acolo se scrie înapoi în câmpul vizibil, pe românește. Pe
+              telefon rămâne astfel roata nativă de dată.
+
+              „min" e ziua evenimentului dacă ea a trecut deja: altfel
+              browserul ar arăta ca greșită o dată pe care omul n-a atins-o.
+              Verificarea adevărată e oricum pe server.
+
+              Câmpul ascuns NU are „name": nimic din el nu pleacă spre server,
+              ca să nu existe două date în aceeași cerere.
             -->
-            <input type="date" id="ev-data" name="data_eveniment"
-                   value="<?= h($val('data_eveniment')) ?>"
-                   min="<?= h(min(date('Y-m-d'), $val('data_eveniment', date('Y-m-d')))) ?>"
-                   max="<?= h(date('Y-m-d', strtotime('+' . ANI_INAINTE_MAX . ' years'))) ?>"
-                   required aria-describedby="err-ev-data">
+            <div class="camp-data">
+              <input type="text" id="ev-data" name="data_eveniment" required
+                     class="camp-data__text" inputmode="numeric" autocomplete="off"
+                     maxlength="10" placeholder="25-12-2026"
+                     pattern="(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-[0-9]{4}"
+                     value="<?= h(dataPentruFormular($val('data_eveniment') ?: null)) ?>"
+                     aria-describedby="err-ev-data">
+
+              <button type="button" class="camp-data__buton" id="ev-data-calendar"
+                      aria-label="Alege data din calendar">
+                <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
+                  <rect x="3.5" y="5" width="17" height="16" rx="3"/>
+                  <path d="M8 3v4M16 3v4M3.5 10h17"/>
+                </svg>
+              </button>
+
+              <input type="date" id="ev-data-nativ" class="camp-data__nativ"
+                     tabindex="-1" aria-hidden="true"
+                     min="<?= h(min(date('Y-m-d'), $val('data_eveniment', date('Y-m-d')))) ?>"
+                     max="<?= h(date('Y-m-d', strtotime('+' . ANI_INAINTE_MAX . ' years'))) ?>">
+            </div>
             <p class="field__error" id="err-ev-data" hidden></p>
           </div>
 
@@ -525,10 +557,30 @@ require __DIR__ . '/inc/antet.php';
               <strong>Sigur anulezi „<?= h(inceputDeText((string) $ev['titlu'], 60)) ?>"?</strong>
             </p>
             <p class="card-set__lead">
-              Evenimentul se șterge definitiv și nu mai poate fi adus înapoi.
+              Anunțul iese de pe site și nu mai poate fi adus înapoi de tine.
               Oamenii care și-au arătat interesul sau au spus că vin vor fi
-              înștiințați prin e-mail că nu mai are loc.
+              înștiințați prin e-mail că nu mai are loc — și vor citi exact ce
+              scrii mai jos.
             </p>
+
+            <!--
+              Motivul e obligatoriu, și nu de formă: e chiar textul care pleacă
+              spre oamenii care își făcuseră planuri. Se verifică pe server, ca
+              tot restul; contorul de dedesubt numără la fel ca el.
+            -->
+            <div class="field">
+              <label for="ev-motiv">De ce anulezi? <span class="req" aria-hidden="true">*</span></label>
+              <!-- Fără „name" și fără „required": caseta stă înăuntrul
+                   formularului de eveniment, iar cu ele ar pleca odată cu
+                   trimiterea spre aprobare și ar bloca-o cât e goală. JS o
+                   citește după id și o trimite singur, la anulare. -->
+              <textarea id="ev-motiv" rows="3"
+                        data-min="<?= MOTIV_ANULARE_MIN ?>" data-max="<?= MOTIV_ANULARE_MAX ?>"
+                        placeholder="S-a stricat vremea și nu avem unde ne adăposti."
+                        aria-describedby="err-ev-motiv ev-motiv-numar"></textarea>
+              <p class="field__hint" id="ev-motiv-numar" role="status">0 din <?= MOTIV_ANULARE_MIN ?> de caractere</p>
+              <p class="field__error" id="err-ev-motiv" hidden></p>
+            </div>
 
             <div class="stergere-confirm__actiuni">
               <button class="btn btn--rau" type="button" id="ev-anulare-da">Da, anulează</button>

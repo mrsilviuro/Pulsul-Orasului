@@ -79,9 +79,11 @@ function membruCurent(): ?array
     $_SESSION['ultima_activitate'] = time();
 
     $q = db()->prepare(
+        // este_staff se citește de fiecare dată, ca și starea contului: un
+        // drept luat înapoi trebuie să dispară pe loc, nu la următoarea intrare.
         'SELECT id, permalink, nume, prenume, email, sex, data_nasterii,
                 localitate, poza, poza_actualizata_la, stare, creat_la,
-                parola_schimbata_la
+                parola_schimbata_la, este_staff
            FROM membri
           WHERE id = ?
           LIMIT 1'
@@ -149,6 +151,27 @@ function cereIntrare(string $inapoiLa = ''): void
 function esteLogat(): bool
 {
     return membruCurent() !== null;
+}
+
+/**
+ * E om de-al casei?
+ *
+ * Deocamdată singurul lucru pe care îl deschide e pagina unui eveniment
+ * anulat: cineva trebuie să poată citi de ce s-a anulat și să facă la timpul
+ * lui curățenia. Când va exista pagina de moderare, tot de aici va atârna.
+ *
+ * Se citește din bază la fiecare cerere, nu din sesiune — aceeași regulă ca la
+ * starea contului. Un drept luat înapoi trebuie să dispară imediat, nu la
+ * următoarea conectare.
+ *
+ * Nu există interfață prin care cineva să fie făcut staff; se pune de mână în
+ * `membri.este_staff`, ca limita de evenimente. Vezi sql/011-anulare-eveniment.sql.
+ */
+function esteStaff(?array $membru = null): bool
+{
+    $membru ??= membruCurent();
+
+    return $membru !== null && (int) ($membru['este_staff'] ?? 0) === 1;
 }
 
 /**

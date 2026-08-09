@@ -350,6 +350,52 @@
     return litere.length > cate ? litere.slice(0, cate).join('') : String(text);
   }
 
+  /**
+   * Masca de scriere pentru ore și date: cifrele omului, semnele noastre.
+   *
+   * `grupe` spune din câte cifre e fiecare bucată — [2,2] la oră, [2,2,4] la
+   * dată — iar `semn` e ce se pune între ele.
+   *
+   * Nu se lucrează pe poziții absolute, ci pe bucăți, fiindcă omul poate pune
+   * și el semnele. „5-3-2027", tăiat la poziții fixe, ar fi ieșit „53-20-27" —
+   * o dată care nu există, dintr-una care era limpede. Când o bucată e
+   * încheiată de om cu un semn și are o cifră în loc de două, îi punem noi
+   * zeroul: „5-" înseamnă ziua 5, adică 05.
+   */
+  function mascaCifre(brut, grupe, semn) {
+    // Semnele de la început se scot întâi: altfel prima bucată ar fi una
+    // goală, iar „goală, urmată de semn" ar căpăta zerouri din senin.
+    var bucati = String(brut).replace(/^\D+/, '').split(/\D+/);
+    var cifre  = '';
+
+    for (var i = 0; i < bucati.length; i++) {
+      var grup = bucati[i];
+
+      // Numai bucățile de două cifre (zi, lună, oră, minut) capătă zeroul.
+      // La an, „27" nu înseamnă „0027".
+      if (i < bucati.length - 1 && i < grupe.length && grupe[i] <= 2) {
+        while (grup.length < grupe[i]) { grup = '0' + grup; }
+      }
+
+      cifre += grup;
+    }
+
+    var incap = 0;
+    for (var g = 0; g < grupe.length; g++) { incap += grupe[g]; }
+    cifre = cifre.slice(0, incap);
+
+    var scris = '';
+    var luat  = 0;
+
+    for (var k = 0; k < grupe.length && luat < cifre.length; k++) {
+      if (k > 0) { scris += semn; }
+      scris += cifre.substr(luat, grupe[k]);
+      luat  += grupe[k];
+    }
+
+    return scris;
+  }
+
   /** Pagina dinainte e tot de pe site-ul nostru? */
   function dinaintePeSite() {
     if (!document.referrer) return false;
@@ -2499,22 +2545,92 @@
       potriveste();
     });
 
+    /* --- data: ZZ-LL-AAAA, scrisă de mână sau aleasă din calendar --- */
+    /*
+      Aceeași poveste ca la ore, cu o cifră în plus: câmpul vizibil e de text,
+      fiindcă `type="date"` se desenează după limba browserului („mm/dd/yyyy"
+      la cine îl are în engleză), iar cratimele le punem noi.
+
+      Calendarul nu s-a pierdut. Lângă câmp stă un `type="date"` adevărat,
+      ascuns, fără „name", deci nimic din el nu pleacă spre server. Butonul îl
+      deschide cu showPicker(), iar ce se alege acolo se scrie înapoi în
+      câmpul vizibil, pe românește. Pe telefon se deschide roata nativă.
+    */
+    var evData       = document.getElementById('ev-data');
+    var evDataNativ  = document.getElementById('ev-data-nativ');
+    var evDataButon  = document.getElementById('ev-data-calendar');
+
+    if (evData) {
+      /** „25-12-2026" → „2026-12-25", sau '' dacă nu e o dată adevărată. */
+      var dataPentruBaza = function (scrisa) {
+        var m = /^(\d{2})-(\d{2})-(\d{4})$/.exec(scrisa);
+        if (!m) return '';
+
+        var zi = +m[1], luna = +m[2], an = +m[3];
+        var d = new Date(an, luna - 1, zi);
+
+        // Data „31-04-2026" ar aluneca singură pe 1 mai; o prindem întrebând
+        // calendarul dacă a rămas ce i-am dat. Tot el știe de ani bisecți.
+        if (d.getFullYear() !== an || d.getMonth() !== luna - 1 || d.getDate() !== zi) {
+          return '';
+        }
+
+        return m[3] + '-' + m[2] + '-' + m[1];
+      };
+
+      // Zi, lună, an. Cratimele le pune mascaCifre(), care respectă și
+      // cratimele puse de om: „5-3-2027" devine „05-03-2027" pe loc.
+      evData.addEventListener('input', function () {
+        evData.value = mascaCifre(evData.value, [2, 2, 4], '-');
+      });
+    }
+
+    if (evData && evDataNativ && evDataButon) {
+      evDataButon.addEventListener('click', function () {
+        // Calendarul se deschide pe data deja scrisă, dacă e una bună.
+        evDataNativ.value = dataPentruBaza(evData.value.trim());
+
+        /**
+         * showPicker() cere o apăsare a omului — apăsarea asta e. Unde nu
+         * există (browsere mai vechi), încercăm o apăsare pe câmpul ascuns;
+         * dacă nici aia nu deschide nimic, nu se pierde nimic: data se poate
+         * scrie oricând de mână, iar câmpul de text e cel care contează.
+         */
+        try {
+          if (typeof evDataNativ.showPicker === 'function') {
+            evDataNativ.showPicker();
+          } else {
+            evDataNativ.click();
+          }
+        } catch (e) {}
+      });
+
+      evDataNativ.addEventListener('change', function () {
+        var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(evDataNativ.value);
+        if (!m) return;
+
+        evData.value = m[3] + '-' + m[2] + '-' + m[1];
+        evData.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+    }
+
     /* --- orele: scrise de mână, mereu de 24 de ore --- */
     /*
       Câmpurile sunt de text (vezi lămurirea din adauga_eveniment.php), deci
-      două puncte le punem noi. Cât scrie omul, nu-l corectăm — altfel „930"
-      ar sări la „09:3" sub degetele lui. Îndreptarea vine la ieșirea din
-      câmp: „9" → „09:00", „930" → „09:30", „1930" → „19:30".
+      două puncte le punem noi, cu mascaCifre() — aceeași funcție ca la dată.
+      Cine scrie el două puncte („9:30") e ascultat: bucata de dinaintea lor
+      capătă zeroul pe loc.
+
+      Cine scrie doar cifre nu e corectat cât scrie — altfel „930" ar sări la
+      „09:3" sub degetele lui. Îndreptarea vine la ieșirea din câmp:
+      „9" → „09:00", „930" → „09:30", „1930" → „19:30".
     */
     ['ev-ora-inceput', 'ev-ora-sfarsit'].forEach(function (id) {
       var camp = document.getElementById(id);
       if (!camp) return;
 
       camp.addEventListener('input', function () {
-        var cifre = camp.value.replace(/\D/g, '').slice(0, 4);
-        camp.value = cifre.length > 2
-          ? cifre.slice(0, 2) + ':' + cifre.slice(2)
-          : cifre;
+        camp.value = mascaCifre(camp.value, [2, 2], ':');
       });
 
       camp.addEventListener('blur', function () {
@@ -2840,6 +2956,37 @@
       }
     }
 
+    /* --- motivul anulării: obligatoriu, numărat ca pe server --- */
+    /*
+      Aceeași numărătoare ca la descriere — vezi numaraCaractere() și oglinda
+      lui curataTextPeRanduri(). Motivul ăsta pleacă prin e-mail spre oamenii
+      care voiau să vină, deci contorul n-are voie să spună altceva decât
+      acceptă serverul.
+    */
+    var evMotiv      = document.getElementById('ev-motiv');
+    var evMotivNumar = document.getElementById('ev-motiv-numar');
+
+    if (evMotiv && evMotivNumar) {
+      var motivMin = parseInt(evMotiv.getAttribute('data-min'), 10) || 15;
+      var motivMax = parseInt(evMotiv.getAttribute('data-max'), 10) || 1000;
+
+      var numaraMotivul = function () {
+        // Cât scrie omul, eroarea de dinainte nu mai are ce spune.
+        setError('ev-motiv', 'err-ev-motiv', '');
+
+        if (numaraCaractere(evMotiv.value) > motivMax) {
+          evMotiv.value = taieLaCaractere(evMotiv.value, motivMax);
+        }
+
+        var cate = numaraCaractere(curataTextPeRanduri(evMotiv.value));
+        evMotivNumar.textContent = cate + ' din ' + motivMin + ' de caractere';
+        evMotivNumar.classList.toggle('e-gata', cate >= motivMin);
+      };
+
+      evMotiv.addEventListener('input', numaraMotivul);
+      numaraMotivul();
+    }
+
     if (evAnulareDa) {
       evAnulareDa.addEventListener('click', function () {
         var slugAscuns = evForm.querySelector('[name="slug"]');
@@ -2860,13 +3007,23 @@
           credentials: 'same-origin',
           body: JSON.stringify({
             csrf: (evForm.querySelector('[name="csrf"]') || {}).value || '',
-            slug: slugAscuns.value
+            slug: slugAscuns.value,
+            motiv: evMotiv ? evMotiv.value : ''
           })
         })
         .then(citesteRaspuns)
         .then(function (rez) {
           if (!rez.corp) { gata(); toast(mesajRaspunsNeasteptat(rez)); return; }
           var c = rez.corp;
+
+          // Motivul lipsă sau prea scurt: eroarea stă sub casetă, ca la orice
+          // alt câmp, nu într-un toast care se stinge singur.
+          if (c.erori) {
+            gata();
+            setError('ev-motiv', 'err-ev-motiv', c.erori.motiv || 'Scrie de ce anulezi.');
+            if (evMotiv) evMotiv.focus();
+            return;
+          }
 
           if (!c.ok) { gata(); toast(c.mesaj || 'Nu am putut anula evenimentul.'); return; }
 

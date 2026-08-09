@@ -128,7 +128,8 @@ api/                → endpoint-uri JSON apelate din JS (fetch); eveniment.php 
 cron/               → scripturi rulate din cron (doar CLI, .htaccess le blochează)
 sql/                → schema.sql + migrări numerotate (002, 003, 004, 005-google,
                       006-tine-minte, 007-setari, 008-mesaje-contact,
-                      009-evenimente, 010-limita-evenimente)
+                      009-evenimente, 010-limita-evenimente,
+                      011-anulare-eveniment)
 teste/              → test-validare.php (verificările din inc/validare.php)
                       test-tine-minte.php, test-setari.php, test-contact.php,
                       test-evenimente.php
@@ -183,10 +184,17 @@ assets/css/style.css, assets/js/main.js, assets/img/
 - Moderarea: fiecare eveniment intră cu `stare_moderare = 'in_asteptare'`; se
   vede doar organizatorului, pe profilul lui și pe pagina evenimentului; nu
   există interfață de aprobare
+- Staff: există doar steagul `membri.este_staff` (se pune de mână, din
+  phpMyAdmin) și funcția `esteStaff()`. Singurul lucru pe care îl deschide e
+  pagina unui eveniment anulat. Nu există pagină de administrare
+- Curățenia evenimentelor anulate: rândul cu `stare_moderare = 'anulat'` rămâne
+  în bază pentru totdeauna. Ștergerea lui (cu tot cu coperta de pe disc,
+  înscrieri și comentarii) e o acțiune viitoare de staff — vezi `TODO`-ul din
+  `anuleazaEveniment()`
 - Adresele frumoase: acum sunt `profil.php?m=<permalink>` și `event.php?slug=…`
 - Interesele/participările și comentariile: nu există tabele pentru ele. Când
   vor exista, vezi `TODO`-ul din `anuleazaEveniment()` — la anulare trebuie
-  trimise e-mailuri și șterse înscrierile și comentariile evenimentului
+  trimis e-mail cu textul din `motiv_anulare`, ÎNAINTE de orice ștergere
 - Încheierea manuală a unui eveniment (cea automată, din ziua următoare datei,
   funcționează deja — se calculează la citire, fără cron)
 - Paginile de categorie (slugurile sunt în tabelul `categorii`)
