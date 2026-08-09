@@ -505,7 +505,10 @@ require __DIR__ . '/inc/antet.php';
                       data-min="<?= DESCRIERE_MIN ?>" data-max="<?= DESCRIERE_MAX ?>"
                       placeholder="Pornim din fața primăriei la ora 19:00…"
                       required aria-describedby="err-ev-descriere ev-numar"><?= h($val('descriere')) ?></textarea>
-            <p class="field__hint" id="ev-numar" role="status">0 din <?= DESCRIERE_MIN ?> de caractere</p>
+            <!-- „din minim 300", nu „din 300": 300 e pragul de la care se
+                 poate trimite, nu o cotă de umplut. Scris fără „minim", un
+                 contor care arăta „633 din 300" părea o greșeală. -->
+            <p class="field__hint contor-caractere" id="ev-numar" role="status">0 din minim <?= DESCRIERE_MIN ?> caractere</p>
             <p class="field__error" id="err-ev-descriere" hidden></p>
           </div>
         </section>
@@ -578,7 +581,7 @@ require __DIR__ . '/inc/antet.php';
                         data-min="<?= MOTIV_ANULARE_MIN ?>" data-max="<?= MOTIV_ANULARE_MAX ?>"
                         placeholder="S-a stricat vremea și nu avem unde ne adăposti."
                         aria-describedby="err-ev-motiv ev-motiv-numar"></textarea>
-              <p class="field__hint" id="ev-motiv-numar" role="status">0 din <?= MOTIV_ANULARE_MIN ?> de caractere</p>
+              <p class="field__hint contor-caractere" id="ev-motiv-numar" role="status">0 din minim <?= MOTIV_ANULARE_MIN ?> caractere</p>
               <p class="field__error" id="err-ev-motiv" hidden></p>
             </div>
 

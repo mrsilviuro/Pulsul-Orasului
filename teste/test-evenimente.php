@@ -287,6 +287,18 @@ verifica('descrierea n-are maxlength', false,
 verifica('dar poartă limitele ca date', true,
     str_contains($pagina['corp'], 'data-min="' . DESCRIERE_MIN . '" data-max="' . DESCRIERE_MAX . '"'));
 
+/**
+ * Contorul spune „din minim 300", nu „din 300": 300 e pragul de la care se
+ * poate trimite, nu o cotă de umplut, iar „633 din 300" arăta ca o greșeală.
+ *
+ * Textul e scris în două locuri — aici, de PHP, și în main.js, la fiecare
+ * tastă. Proba asta prinde doar jumătatea dinspre PHP; dacă se schimbă una,
+ * trebuie schimbată și cealaltă, altfel se preface la prima literă scrisă.
+ */
+verifica('contorul descrierii spune că e un minim',
+    '0 din minim ' . DESCRIERE_MIN . ' caractere',
+    preg_match('/id="ev-numar"[^>]*>([^<]*)</', $pagina['corp'], $mc) === 1 ? trim($mc[1]) : '');
+
 // Panoul de după trimitere duce la eveniment, nu pe prima pagină.
 verifica('panoul de gata trimite la eveniment', true,
     str_contains($pagina['corp'], 'id="ev-done-link"'));
@@ -1218,6 +1230,9 @@ $formular = cerere($baza . '/adauga_eveniment.php?slug=' . urlencode($slugul($id
 verifica('la editare apare butonul de anulare', true, str_contains($formular, 'ev-anuleaza'));
 verifica('și întrebarea de confirmare, ascunsă', true, str_contains($formular, 'ev-anulare-sigur'));
 verifica('și caseta pentru motiv', true, str_contains($formular, 'id="ev-motiv"'));
+verifica('cu contorul care spune că e un minim',
+    '0 din minim ' . MOTIV_ANULARE_MIN . ' caractere',
+    preg_match('/id="ev-motiv-numar"[^>]*>([^<]*)</', $formular, $mm) === 1 ? trim($mm[1]) : '');
 verifica('care nu pleacă odată cu formularul', false,
     preg_match('/<textarea id="ev-motiv"[^>]*name=/', $formular) === 1);
 verifica('și nici nu-l blochează cât e goală', false,

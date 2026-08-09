@@ -2687,7 +2687,10 @@
         }
 
         var cate = numaraCaractere(curataTextPeRanduri(evDescriere.value));
-        evNumar.textContent = cate + ' din ' + minCaractere + ' de caractere';
+        // „din minim 300" — vezi lămurirea de lângă contor, în
+        // adauga_eveniment.php. Textul de aici trebuie să spună exact ce
+        // spune și cel tipărit de PHP, altfel se schimbă la prima tastă.
+        evNumar.textContent = cate + ' din minim ' + minCaractere + ' caractere';
         evNumar.classList.toggle('e-gata', cate >= minCaractere);
       };
       evDescriere.addEventListener('input', numara);
@@ -2979,7 +2982,7 @@
         }
 
         var cate = numaraCaractere(curataTextPeRanduri(evMotiv.value));
-        evMotivNumar.textContent = cate + ' din ' + motivMin + ' de caractere';
+        evMotivNumar.textContent = cate + ' din minim ' + motivMin + ' caractere';
         evMotivNumar.classList.toggle('e-gata', cate >= motivMin);
       };
 

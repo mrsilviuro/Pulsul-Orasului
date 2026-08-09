@@ -2724,6 +2724,16 @@ body { overscroll-behavior-y: none; }
 .field__hint.e-gata { color: #16a34a; font-weight: 600; }
 [data-theme="dark"] .field__hint.e-gata { color: #6ee7a0; }
 
+/* Contorul e ultimul lucru dinaintea butoanelor, și e singurul rând de
+   lămurire care se schimbă sub ochii omului — dacă stă lipit de ele, ochiul îl
+   citește ca pe o etichetă a butonului de dedesubt. De-aia are aer dedesubt,
+   nu doar deasupra, cum au toate celelalte lămuriri. */
+.contor-caractere { margin-bottom: 10px; }
+
+/* În caseta de anulare, între contor și „Da, anulează" nu era nimic: acolo
+   butoanele vin imediat, fără marginea unei secțiuni care să despartă. */
+.stergere-confirm .contor-caractere { margin-bottom: 18px; }
+
 /* Lista evenimentelor active, când omul nu mai poate publica încă unul. */
 .lista-simpla { display: grid; gap: 8px; margin: 0 0 16px; }
 .lista-simpla li {
