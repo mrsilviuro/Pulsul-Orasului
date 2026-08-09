@@ -985,6 +985,65 @@ main { padding-block: 46px 64px; }
 .facepile img:first-child { margin-left: 0; }
 .rsvp__note { font-size: 13.5px; color: var(--text-soft); }
 
+/* Numele scrise pe litere duc la profiluri; restul frazei rămâne text. */
+.rsvp__note a { color: inherit; text-decoration: none; }
+.rsvp__note a:hover { color: var(--brand); text-decoration: underline; }
+
+/* Nimeni încă. Nu se arată un cerc gol și un „0 persoane", ci ceva ce se
+   poate face. */
+.rsvp__note--gol { margin: 0; }
+
+/* Butonul de participare stins, când s-au ocupat locurile. */
+.rsvp__btn[disabled] {
+  opacity: .5;
+  cursor: not-allowed;
+}
+.rsvp__btn[disabled]:hover { transform: none; box-shadow: none; }
+
+.rsvp__plin {
+  margin: 14px 0 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #a3272a;
+}
+[data-theme="dark"] .rsvp__plin { color: #f2a3a4; }
+
+/* ----------------- Confirmarea participării -----------------
+   „Mă interesează" e o însemnare; „voi participa" dă numele și numărul de
+   telefon mai departe. Treapta asta e locul în care omul află asta înainte,
+   nu după — de aceea e o casetă în pagină, cu marginea ei, nu un rând de text
+   pierdut între butoane. Scrisă la stânga: e de citit, nu de privit. */
+.rsvp__confirm {
+  margin-top: 18px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  text-align: left;
+}
+
+.rsvp__confirm-titlu { margin: 0 0 8px; font-size: 15px; }
+
+.rsvp__confirm-text {
+  margin: 0 0 10px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-soft);
+}
+
+.rsvp__confirm-text a { color: var(--brand); font-weight: 600; }
+
+.rsvp__confirm .field { margin: 14px 0 4px; }
+
+.rsvp__confirm-actiuni {
+  display: flex; flex-wrap: wrap; gap: 10px;
+  margin-top: 14px;
+}
+
+@media (max-width: 520px) {
+  .rsvp__confirm-actiuni .btn { flex: 1 1 auto; }
+}
+
 /* --------------------- 11. TABURI & COMENTARII -------------------------- */
 .tabs-section { margin-top: 46px; }
 

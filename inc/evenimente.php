@@ -378,13 +378,35 @@ function salveazaEveniment(int $membruId, array $curat, ?string $coperta): strin
                 acum(),
             ]);
 
-            return $slug;
+            $idNou = (int) db()->lastInsertId();
         } catch (PDOException $e) {
             // 23000 = a dat de un index unic. Singurul de aici e slugul.
             if ($e->getCode() !== '23000' || $incercare === 5) {
                 throw $e;
             }
+
+            // Slugul s-a lovit de altul; se încearcă cu altă coadă.
+            continue;
         }
+
+        /**
+         * Cine pune un eveniment la cale vine la el. Rândul se scrie singur,
+         * fără ca organizatorul să apese ceva — se poate retrage mai târziu,
+         * ca oricine altcineva.
+         *
+         * AFARĂ din `try`, dinadins. Înăuntru, o eroare de aici cu codul
+         * 23000 (o cheie străină, de pildă) ar fi fost luată drept „slugul s-a
+         * lovit de altul" și ar fi pornit încă o rundă — adică un al doilea
+         * eveniment, din senin.
+         *
+         * Funcția stă în inc/interese.php, care cere fișierul ăsta; de-aia se
+         * cere aici, la folosire, și nu sus, printre celelalte: două fișiere
+         * care se cer unul pe altul de la început ar fi o buclă.
+         */
+        require_once __DIR__ . '/interese.php';
+        faOrganizatorulParticipant($idNou, $membruId);
+
+        return $slug;
     }
 
     return '';

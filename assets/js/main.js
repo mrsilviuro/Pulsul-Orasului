@@ -545,8 +545,23 @@
     };
   });
 
-  /* --- Butoanele de participare --- */
-  var rsvpButtons = document.querySelectorAll('[data-rsvp]');
+  /* --- Butoanele de participare -------------------------------------------
+     „Mă interesează" e o însemnare: se trimite pe loc. „Voi participa" e o
+     hotărâre care dă numele și numărul de telefon mai departe, deci trece
+     întâi printr-o treaptă de confirmare.
+
+     Nimic nu se socotește aici. Numerele și rândul de sub butoane vin de la
+     server, după fiecare apăsare: între două apăsări ale omului nostru pot
+     intra alți zece, iar un număr crescut cu unu în browser ar fi rămas greșit
+     până la următoarea reîncărcare.
+
+     Retragerea n-are buton al ei — se apasă pe starea în care ești deja. Nici
+     asta nu se hotărăște aici: spre server pleacă butonul apăsat, iar el știe
+     starea adevărată. O filă rămasă deschisă de ieri n-are cum să ne pună să
+     facem altceva decât se cuvine.
+  */
+  var rsvpSectiune = document.getElementById('rsvp');
+  var rsvpButtons  = document.querySelectorAll('[data-rsvp]');
 
   // Actualizează toate locurile unde apare numărul (buton, tab, text din panou).
   function setRsvpCount(kind, value) {
@@ -555,38 +570,159 @@
     });
   }
 
-  rsvpButtons.forEach(function (btn) {
-    var kind = btn.getAttribute('data-rsvp');
-    var base = parseInt(btn.getAttribute('data-count'), 10) || 0;
+  if (rsvpSectiune && rsvpButtons.length) {
+    var rsvpConfirm   = document.getElementById('rsvp-confirm');
+    var rsvpConfirmDa = document.getElementById('rsvp-confirm-da');
+    var rsvpConfirmNu = document.getElementById('rsvp-confirm-nu');
+    var rsvpTelefon   = document.getElementById('rsvp-telefon');
+    var rsvpOameni    = document.getElementById('rsvp-people');
+    var rsvpPlin      = rsvpSectiune.querySelector('.rsvp__plin');
 
-    btn.addEventListener('click', function () {
-      if (!isLoggedIn()) {
-        toast('Intră în cont ca să te adaugi pe listă.');
-        setTimeout(goToLogin, 900);
-        return;
+    /** Ce s-a schimbat după o apăsare reușită. */
+    function rsvpPotriveste(c) {
+      setRsvpCount('interesat', c.numar.interesat);
+      setRsvpCount('participant', c.numar.participant);
+
+      rsvpButtons.forEach(function (b) {
+        b.setAttribute('aria-pressed', String(b.getAttribute('data-rsvp') === c.stare));
+      });
+
+      /**
+       * Chipurile și vorba vin gata desenate de pe server, din aceeași funcție
+       * care le scrie la încărcarea paginii (randeazaOameniInteresati). De
+       * aceea se pun cu innerHTML: e HTML făcut de noi, escapat cu h(), nu
+       * text venit de la cine a apăsat.
+       */
+      if (rsvpOameni && typeof c.oameni === 'string') {
+        rsvpOameni.innerHTML = c.oameni;
       }
 
-      var on = btn.getAttribute('aria-pressed') === 'true';
-      btn.setAttribute('aria-pressed', String(!on));
-      setRsvpCount(kind, base + (!on ? 1 : 0));
+      // Cine tocmai a intrat pe listă nu mai are de ce să vadă „nu mai sunt
+      // locuri", iar cine s-a retras poate găsi ușa închisă la loc.
+      if (rsvpPlin) rsvpPlin.hidden = c.stare === 'participant';
 
-      // „Particip" implică „mă interesează": bifând unul, îl scoatem pe celălalt.
-      if (!on) {
-        rsvpButtons.forEach(function (other) {
-          if (other === btn || other.getAttribute('aria-pressed') !== 'true') return;
-          var otherKind = other.getAttribute('data-rsvp');
-          other.setAttribute('aria-pressed', 'false');
-          setRsvpCount(otherKind, parseInt(other.getAttribute('data-count'), 10) || 0);
-        });
+      var btnGoing = document.getElementById('btn-going');
+      if (btnGoing && rsvpPlin) btnGoing.disabled = !rsvpPlin.hidden;
+    }
+
+    /** Trimite apăsarea. `confirmat` și `telefon` doar la participare. */
+    function rsvpTrimite(stare, extra, buton) {
+      /**
+       * „Se trimite…" se scrie doar pe butoanele care sunt numai text —
+       * „Da, particip". Butoanele mari de deasupra au înăuntru o iconiță, o
+       * etichetă și numărul, iar `textContent` le-ar fi șters pe toate trei și
+       * le-ar fi înlocuit cu un șir. Pe ele e de ajuns că se sting.
+       */
+      var doarText   = buton && buton.children.length === 0;
+      var textInitial = doarText ? buton.textContent : '';
+
+      if (buton) { buton.disabled = true; }
+      if (doarText) { buton.textContent = 'Se trimite…'; }
+
+      function gata() {
+        if (buton) { buton.disabled = false; }
+        if (doarText) { buton.textContent = textInitial; }
       }
 
-      toast(!on
-        ? (kind === 'going' ? 'Te-am trecut pe lista de participanți.' : 'Te-am trecut la interesați.')
-        : 'Te-am scos de pe listă.');
+      var trup = {
+        csrf:  rsvpSectiune.getAttribute('data-csrf') || '',
+        slug:  rsvpSectiune.getAttribute('data-slug') || '',
+        stare: stare
+      };
 
-      // TODO: aici va veni cererea către server (fetch POST cu id-ul evenimentului).
+      Object.keys(extra || {}).forEach(function (k) { trup[k] = extra[k]; });
+
+      fetch('api/interes.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify(trup)
+      })
+      .then(citesteRaspuns)
+      .then(function (rez) {
+        gata();
+
+        if (!rez.corp) { toast(mesajRaspunsNeasteptat(rez)); return; }
+        var c = rez.corp;
+
+        // Sesiunea s-a stins între încărcarea paginii și apăsare.
+        if (rez.stare === 401) {
+          toast('Intră în cont ca să te adaugi pe listă.');
+          setTimeout(goToLogin, 900);
+          return;
+        }
+
+        if (c.erori) {
+          setError('rsvp-telefon', 'err-rsvp-telefon',
+            c.erori.telefon || 'Verifică numărul.');
+          if (rsvpTelefon) rsvpTelefon.focus();
+          return;
+        }
+
+        if (!c.ok) { toast(c.mesaj || 'Nu am putut trimite răspunsul.'); return; }
+
+        if (rsvpConfirm) rsvpConfirm.hidden = true;
+        rsvpPotriveste(c);
+        toast(c.mesaj || 'Gata.');
+      })
+      .catch(function () {
+        gata();
+        toast(mesajFaraLegatura());
+      });
+    }
+
+    rsvpButtons.forEach(function (btn) {
+      var kind = btn.getAttribute('data-rsvp');
+
+      btn.addEventListener('click', function () {
+        // Pagina evenimentului oricum nu se deschide fără cont, dar dacă
+        // sesiunea a expirat sub ochii omului, îl trimitem înapoi la intrare
+        // cu adresa de acum în buzunar.
+        if (!isLoggedIn()) {
+          toast('Intră în cont ca să te adaugi pe listă.');
+          setTimeout(goToLogin, 900);
+          return;
+        }
+
+        var apasat = btn.getAttribute('aria-pressed') === 'true';
+
+        // Participarea: dacă omul nu e deja înăuntru, întâi confirmarea.
+        // Retragerea nu cere nimic — pleacă de pe listă, n-are ce confirma.
+        if (kind === 'participant' && !apasat && rsvpConfirm) {
+          rsvpConfirm.hidden = false;
+          setError('rsvp-telefon', 'err-rsvp-telefon', '');
+          (rsvpTelefon || rsvpConfirmNu || rsvpConfirm).focus();
+          return;
+        }
+
+        rsvpTrimite(kind, {}, btn);
+      });
     });
-  });
+
+    if (rsvpConfirmNu && rsvpConfirm) {
+      rsvpConfirmNu.addEventListener('click', function () {
+        rsvpConfirm.hidden = true;
+        var btnGoing = document.getElementById('btn-going');
+        if (btnGoing) btnGoing.focus();
+      });
+    }
+
+    if (rsvpConfirmDa) {
+      rsvpConfirmDa.addEventListener('click', function () {
+        rsvpTrimite('participant', {
+          confirmat: true,
+          telefon: rsvpTelefon ? rsvpTelefon.value : ''
+        }, rsvpConfirmDa);
+      });
+    }
+
+    // Cât scrie omul numărul, eroarea de dinainte nu mai are ce spune.
+    if (rsvpTelefon) {
+      rsvpTelefon.addEventListener('input', function () {
+        setError('rsvp-telefon', 'err-rsvp-telefon', '');
+      });
+    }
+  }
 
   /* --- Comentarii: like --- */
   document.querySelectorAll('[data-like]').forEach(function (btn) {
