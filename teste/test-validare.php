@@ -279,6 +279,62 @@ verifica('dus-întors dă același lucru', '2026-12-25',
 verifica('o valoare stricată nu dă nimic', '', dataPentruFormular('mâine'));
 verifica('nici null', '', dataPentruFormular(null));
 
+echo "\n=== ORAȘUL EVENIMENTULUI ===\n";
+
+/**
+ * Lista de orașe vine ca argument, nu din config: fișierul ăsta nu deschide
+ * nici baza, nici configul, tocmai ca să poată fi probat singur. Aici o
+ * inventăm, ca proba să nu depindă de ce scrie azi în inc/config.php.
+ */
+$orase = ['Roman', 'Piatra-Neamț'];
+$categorii = [1, 2, 3];
+
+$campuriBune = static fn (array $peste = []): array => array_merge([
+    'titlu'            => 'Cursa de seară prin centrul vechi',
+    'categorie_id'     => '1',
+    'oras'             => 'Roman',
+    'locatie'          => 'Piața Roman-Vodă, lângă fântână',
+    'data_eveniment'   => date('d-m-Y', strtotime('+10 days')),
+    'ora_inceput'      => '19:00',
+    'fara_ora_sfarsit' => '1',
+    'gratuit'          => '1',
+    'varsta_minima'    => 'nespecificat',
+    'gen_participanti' => 'nespecificat',
+    'fara_participanti_min' => '1',
+    'fara_participanti_max' => '1',
+    'descriere'        => str_repeat('Pornim din fața primăriei și mergem agale. ', 8),
+], $peste);
+
+$erOras = static fn ($valoare): string => verificaEveniment(
+    $campuriBune(['oras' => $valoare]), $categorii, $orase
+)['erori']['oras'] ?? '';
+
+verifica('un oraș din listă trece', '', $erOras('Roman'));
+verifica('și al doilea, cu diacritice', '', $erOras('Piatra-Neamț'));
+verifica('spațiile din jur nu strică', '', $erOras('  Roman  '));
+
+verifica('oraș gol → eroare', true, $erOras('') !== '');
+verifica('oraș din afara listei → eroare', true, $erOras('București') !== '');
+verifica('literă mică → eroare (comparația e exactă)', true, $erOras('roman') !== '');
+verifica('fără diacritice → eroare', true, $erOras('Piatra-Neamt') !== '');
+verifica('un nume care doar începe la fel → eroare', true, $erOras('Roman Nou') !== '');
+verifica('câmpul lipsă cu totul → eroare', true,
+    !empty(verificaEveniment(
+        array_diff_key($campuriBune(), ['oras' => 1]), $categorii, $orase
+    )['erori']['oras']));
+
+// Lista goală (config fără orașe) refuză orice — inclusiv un nume plauzibil.
+verifica('cu lista goală nu trece nimic', true,
+    !empty(verificaEveniment($campuriBune(), $categorii, [])['erori']['oras']));
+
+// Orașul bun ajunge curat mai departe, fără spațiile din jur.
+verifica('orașul curat pleacă spre bază', 'Roman',
+    verificaEveniment($campuriBune(['oras' => '  Roman  ']), $categorii, $orase)['curat']['oras'] ?? '');
+
+// Și, cu totul bun, nu rămâne nicio eroare.
+verifica('un formular întreg nu are erori', [],
+    verificaEveniment($campuriBune(), $categorii, $orase)['erori']);
+
 echo "\n=== MOTIVUL ANULĂRII ===\n";
 
 $motiv = static fn ($t): string => verificaMotivAnulare($t)['eroare'] === ''

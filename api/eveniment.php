@@ -92,7 +92,7 @@ if ($deEditat === null) {
 
 /* ========================= 3. Câmpurile ============================== */
 
-$rezultat = verificaEveniment($_POST, idCategoriiValide());
+$rezultat = verificaEveniment($_POST, idCategoriiValide(), oraseDisponibile());
 
 if ($rezultat['erori'] !== []) {
     raspunsJson(['ok' => false, 'erori' => $rezultat['erori']], 422);

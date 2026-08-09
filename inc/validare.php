@@ -340,12 +340,17 @@ function inceputDeText(string $text, int $caractere = 160): string
 /**
  * Formularul de eveniment, verificat pe server.
  *
+ * $categoriiValide vine din bază, $oraseValide din inc/config.php — amândouă
+ * ca argumente, fiindcă fișierul ăsta nu deschide nici baza, nici configul:
+ * așa poate fi probat singur, cu `php teste/test-validare.php`.
+ *
  * $azi se poate da din teste, ca verificarea datei să nu depindă de ziua în
  * care se rulează.
  *
  * Întoarce ['erori' => [...], 'curat' => [...]].
  */
-function verificaEveniment(array $date, array $categoriiValide, ?DateTimeImmutable $azi = null): array
+function verificaEveniment(array $date, array $categoriiValide, array $oraseValide = [],
+                           ?DateTimeImmutable $azi = null): array
 {
     $azi   = $azi ?? new DateTimeImmutable('today');
     $erori = [];
@@ -444,6 +449,26 @@ function verificaEveniment(array $date, array $categoriiValide, ?DateTimeImmutab
             // se poate termina la 02:00. Ar fi o „greșeală" care nu e greșeală.
             $curat['ora_sfarsit'] = $sfarsit . ':00';
         }
+    }
+
+    /* ------------------------------ Orașul ---------------------------- */
+    /**
+     * Nu e text liber: trebuie să fie unul dintre orașele din inc/config.php.
+     *
+     * Aceeași regulă ca la categorie, și din același motiv — lista vine din
+     * altă parte decât formularul, deci cine trimite „Bucuresti" cu mâna lui,
+     * ocolind pagina, nu poate strecura un eveniment într-un oraș în care nu
+     * suntem. Comparația e exactă, cu in_array strict: „roman" cu literă mică
+     * nu e același lucru cu „Roman", fiindcă în bază intră exact ce e aici.
+     */
+    $oras = trim($citeste('oras'));
+
+    if ($oras === '') {
+        $erori['oras'] = 'Alege orașul.';
+    } elseif (!in_array($oras, $oraseValide, true)) {
+        $erori['oras'] = 'Alege un oraș din listă.';
+    } else {
+        $curat['oras'] = $oras;
     }
 
     /* ----------------------------- Locația ---------------------------- */

@@ -2687,7 +2687,10 @@
         }
 
         var cate = numaraCaractere(curataTextPeRanduri(evDescriere.value));
-        evNumar.textContent = cate + ' din ' + minCaractere + ' de caractere';
+        // „din minim 300" — vezi lămurirea de lângă contor, în
+        // adauga_eveniment.php. Textul de aici trebuie să spună exact ce
+        // spune și cel tipărit de PHP, altfel se schimbă la prima tastă.
+        evNumar.textContent = cate + ' din minim ' + minCaractere + ' caractere';
         evNumar.classList.toggle('e-gata', cate >= minCaractere);
       };
       evDescriere.addEventListener('input', numara);
@@ -2838,7 +2841,8 @@
     function arataErorile(erori) {
       var primul = null;
 
-      [['titlu', 'ev-titlu'], ['categorie_id', 'ev-categorie'], ['locatie', 'ev-locatie'],
+      [['titlu', 'ev-titlu'], ['categorie_id', 'ev-categorie'],
+       ['oras', 'ev-oras'], ['locatie', 'ev-locatie'],
        ['data_eveniment', 'ev-data'], ['ora_inceput', 'ev-ora-inceput'],
        ['ora_sfarsit', 'ev-ora-sfarsit'], ['cost', 'ev-cost'],
        ['varsta_minima', 'ev-varsta'], ['gen_participanti', 'ev-gen'],
@@ -2979,7 +2983,7 @@
         }
 
         var cate = numaraCaractere(curataTextPeRanduri(evMotiv.value));
-        evMotivNumar.textContent = cate + ' din ' + motivMin + ' de caractere';
+        evMotivNumar.textContent = cate + ' din minim ' + motivMin + ' caractere';
         evMotivNumar.classList.toggle('e-gata', cate >= motivMin);
       };
 

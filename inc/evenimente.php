@@ -345,10 +345,10 @@ function salveazaEveniment(int $membruId, array $curat, ?string $coperta): strin
 {
     $sql = 'INSERT INTO evenimente
                 (membru_id, categorie_id, titlu, slug, coperta,
-                 data_eveniment, ora_inceput, ora_sfarsit, locatie,
+                 data_eveniment, ora_inceput, ora_sfarsit, oras, locatie,
                  cost, varsta_minima, participanti_min, participanti_max,
                  descriere, gen_participanti, stare_moderare, creat_la, actualizat_la)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)';
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)';
 
     for ($incercare = 1; $incercare <= 5; $incercare++) {
         $slug = slugEveniment($curat['titlu']);
@@ -364,6 +364,7 @@ function salveazaEveniment(int $membruId, array $curat, ?string $coperta): strin
                 $curat['data_eveniment'],
                 $curat['ora_inceput'],
                 $curat['ora_sfarsit'],
+                $curat['oras'],
                 $curat['locatie'],
                 $curat['cost'],
                 $curat['varsta_minima'],
@@ -444,6 +445,7 @@ function actualizeazaEveniment(int $id, array $curat, ?string $copertaNoua): voi
         'data_eveniment'   => $curat['data_eveniment'],
         'ora_inceput'      => $curat['ora_inceput'],
         'ora_sfarsit'      => $curat['ora_sfarsit'],
+        'oras'             => $curat['oras'],
         'locatie'          => $curat['locatie'],
         'cost'             => $curat['cost'],
         'varsta_minima'    => $curat['varsta_minima'],

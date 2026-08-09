@@ -60,6 +60,38 @@ $config = require $caleConfig;
  */
 date_default_timezone_set($config['fus_orar'] ?? 'Europe/Bucharest');
 
+/**
+ * Orașele în care se pot pune evenimente, din inc/config.php.
+ *
+ * Un singur loc de unde le ia și formularul, și verificarea de pe server:
+ * altfel s-ar putea alege în pagină un oraș pe care serverul îl refuză, sau
+ * invers. Se curăță aici de valorile goale, ca o virgulă în plus în config să
+ * nu ajungă o opțiune fără nume în listă.
+ *
+ * Lista goală nu e o greșeală de oprit: înseamnă doar că nu se poate publica
+ * nimic până nu se scrie un oraș în config, iar formularul spune asta.
+ */
+function oraseDisponibile(): array
+{
+    global $config;
+
+    $orase = $config['orase'] ?? [];
+
+    if (!is_array($orase)) {
+        return [];
+    }
+
+    $curate = [];
+
+    foreach ($orase as $oras) {
+        if (is_string($oras) && trim($oras) !== '') {
+            $curate[] = trim($oras);
+        }
+    }
+
+    return array_values(array_unique($curate));
+}
+
 /** Momentul de acum, în formatul cu care lucrează coloanele DATETIME. */
 function acum(): string
 {
