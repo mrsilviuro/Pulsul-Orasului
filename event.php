@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/inc/evenimente.php';
 require_once __DIR__ . '/inc/afisare-eveniment.php';
+require_once __DIR__ . '/inc/interese.php';
 
 $slug = trim((string) ($_GET['slug'] ?? ''));
 
@@ -48,6 +49,27 @@ if ($eveniment === null || !poateVedeaEvenimentul($eveniment, (int) $membru['id'
 $eOrganizatorul = (int) $eveniment['membru_id'] === (int) $membru['id'];
 $eAprobat       = $eveniment['stare_moderare'] === 'aprobat';
 $eAnulat        = $eveniment['stare_moderare'] === 'anulat';
+
+/* ------------------------ „Mergi la acest eveniment?" ------------------ */
+
+/**
+ * Cine s-a adunat în jurul evenimentului, și unde stă omul care se uită.
+ *
+ * Se citește o dată, aici, și se folosește în toată secțiunea de mai jos.
+ * Numerele astea sunt o veste, nu o rezervare: între încărcarea paginii și
+ * apăsare pot intra alții, de aceea locurile se numără din nou în
+ * api/interes.php, în clipa apăsării.
+ */
+$evenimentId  = (int) $eveniment['id'];
+$numarInterese = numaraInterese($evenimentId);
+$stareaMea     = interesulMeu($evenimentId, (int) $membru['id']);
+$maiSuntLocuri = maiSuntLocuri($eveniment, $numarInterese['participant']);
+
+/**
+ * Numărul de telefon i se cere doar cui nu l-a dat încă — și niciodată
+ * organizatorului: al lui e, n-are cui să și-l dea.
+ */
+$imiCereTelefon = !$eOrganizatorul && telefonulMembrului((int) $membru['id']) === '';
 
 /* --------------------------- ce se afișează --------------------------- */
 
@@ -133,12 +155,19 @@ require __DIR__ . '/inc/antet.php';
         } : null);
       ?>
 
-      <!-- =========================== PARTICIPARE ========================== -->
-      <!--
-        Butoanele au data-count = numărul din baza de date. Cât timp
-        body[], click-ul trimite spre login.php.
-      -->
-      <section class="rsvp" id="rsvp" aria-labelledby="rsvp-title">
+      <?php if ($eAprobat): ?>
+      <!-- =========================== PARTICIPARE ==========================
+        Numai la un eveniment publicat. Cât e în așteptare, respins sau
+        anulat, pagina se deschide doar pentru organizator sau pentru staff —
+        și n-are rost o listă de participanți la ceva ce nu se vede pe site.
+
+        `aria-pressed` spune în ce stare e omul chiar acum; JS îl schimbă după
+        fiecare apăsare, iar la reîncărcare vine de la server. Retragerea n-are
+        buton al ei: apăsarea pe starea în care ești deja o stinge.
+      ================================================================== -->
+      <section class="rsvp" id="rsvp" aria-labelledby="rsvp-title"
+               data-slug="<?= h((string) $eveniment['slug']) ?>"
+               data-csrf="<?= h(tokenCsrf()) ?>">
         <div class="rsvp__head">
           <h2 id="rsvp-title">Mergi la acest eveniment?</h2>
           <p>Spune-le și celorlalți — apari în lista de mai jos.</p>
@@ -146,37 +175,94 @@ require __DIR__ . '/inc/antet.php';
 
         <div class="rsvp__actions">
           <button class="rsvp__btn rsvp__btn--interested" type="button"
-                  id="btn-interested" data-rsvp="interested" data-count="128" aria-pressed="false">
+                  id="btn-interested" data-rsvp="interesat"
+                  aria-pressed="<?= $stareaMea === 'interesat' ? 'true' : 'false' ?>">
             <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
               <path d="m12 3.8 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.5 10l5.9-.9L12 3.8Z"/>
             </svg>
             <span class="rsvp__label">Mă interesează</span>
-            <span class="rsvp__count" data-count-for="interested">128</span>
+            <span class="rsvp__count" data-count-for="interesat"><?= (int) $numarInterese['interesat'] ?></span>
           </button>
 
+          <!--
+            Butonul de participare se stinge când s-au ocupat toate locurile —
+            dar numai pentru cine nu e deja înăuntru: cel care e pe listă
+            trebuie să se poată retrage oricând. Oprirea adevărată e pe server,
+            unde locurile se numără din nou în clipa apăsării.
+          -->
           <button class="rsvp__btn rsvp__btn--going" type="button"
-                  id="btn-going" data-rsvp="going" data-count="86" aria-pressed="false">
+                  id="btn-going" data-rsvp="participant"
+                  aria-pressed="<?= $stareaMea === 'participant' ? 'true' : 'false' ?>"
+                  <?= (!$maiSuntLocuri && $stareaMea !== 'participant') ? 'disabled' : '' ?>>
             <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
               <circle cx="12" cy="12" r="9"/><path d="m8.2 12.3 2.6 2.6 5-5.2"/>
             </svg>
             <span class="rsvp__label">Voi participa</span>
-            <span class="rsvp__count" data-count-for="going">86</span>
+            <span class="rsvp__count" data-count-for="participant"><?= (int) $numarInterese['participant'] ?></span>
           </button>
         </div>
 
-        <div class="rsvp__people">
-          <div class="facepile" aria-hidden="true">
-            <img src="assets/img/avatars/ioana.svg" alt="" width="96" height="96">
-            <img src="assets/img/avatars/vlad.svg" alt="" width="96" height="96">
-            <img src="assets/img/avatars/diana.svg" alt="" width="96" height="96">
-            <img src="assets/img/avatars/mihai.svg" alt="" width="96" height="96">
-            <img src="assets/img/avatars/raluca.svg" alt="" width="96" height="96">
-          </div>
-          <p class="rsvp__note">
-            <strong>Ioana</strong>, <strong>Vlad</strong> și încă 84 de persoane vor participa.
+        <?php if (!$maiSuntLocuri && $stareaMea !== 'participant'): ?>
+        <p class="rsvp__plin">Nu mai sunt locuri disponibile la acest eveniment.</p>
+        <?php endif; ?>
+
+        <!-- ------------------- confirmarea participării -------------------
+          „Mă interesează" e o însemnare; „voi participa" e o hotărâre care
+          dă datele omului mai departe. De aceea treapta asta există, și de
+          aceea spune pe față ce se întâmplă înainte, nu după.
+
+          Se deschide din JS și se verifică din nou pe server: fără
+          `confirmat`, api/interes.php nu scrie nimic.
+        -->
+        <div class="rsvp__confirm" id="rsvp-confirm" hidden>
+          <p class="rsvp__confirm-titlu"><strong>Confirmi participarea?</strong></p>
+
+          <p class="rsvp__confirm-text">
+            Numele tău complet și numărul de telefon vor fi văzute de
+            organizator, care te poate suna sau scrie pe WhatsApp ca să
+            reconfirme înainte de eveniment.
           </p>
+
+          <p class="rsvp__confirm-text">
+            Confirmând, spui că ai citit și ești de acord cu
+            <a href="#">Termenii și condițiile</a> platformei.
+          </p>
+
+          <?php if ($imiCereTelefon): ?>
+          <!--
+            Numărul se cere o singură dată: la confirmare se salvează în cont,
+            ca la setări, cu aceeași verificare. A doua oară nu se mai întreabă.
+          -->
+          <div class="field">
+            <label for="rsvp-telefon">Numărul tău de telefon <span class="req" aria-hidden="true">*</span></label>
+            <input type="tel" id="rsvp-telefon" name="telefon" inputmode="tel"
+                   autocomplete="tel" maxlength="20" placeholder="0722334455"
+                   aria-describedby="err-rsvp-telefon rsvp-telefon-hint">
+            <p class="field__hint" id="rsvp-telefon-hint">
+              Se salvează în contul tău, ca să nu-l mai scrii data viitoare.
+              Îl poți schimba oricând din <a href="setari.php">setări</a>.
+            </p>
+            <p class="field__error" id="err-rsvp-telefon" hidden></p>
+          </div>
+          <?php endif; ?>
+
+          <div class="rsvp__confirm-actiuni">
+            <button class="btn btn--primary" type="button" id="rsvp-confirm-da">Da, particip</button>
+            <button class="btn btn--ghost" type="button" id="rsvp-confirm-nu">Renunță</button>
+          </div>
+        </div>
+
+        <!--
+          Chipurile și vorba de dedesubt se desenează într-un singur loc,
+          randeazaOameniInteresati() din inc/interese.php — de acolo vin și la
+          încărcarea paginii, și după fiecare apăsare, prin api/interes.php.
+          Scrise în două locuri, ar fi început să difere de la prima corectură.
+        -->
+        <div class="rsvp__people" id="rsvp-people">
+          <?= randeazaOameniInteresati($evenimentId) ?>
         </div>
       </section>
+      <?php endif; ?>
 
       <!-- ====================== TABURI: DISCUȚII ========================== -->
       <section class="tabs-section" aria-labelledby="tabs-title">
@@ -198,7 +284,7 @@ require __DIR__ . '/inc/antet.php';
               <path d="m12 3.8 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.5 10l5.9-.9L12 3.8Z"/>
             </svg>
             <span>Interesați</span>
-            <span class="tab__count" data-count-for="interested">128</span>
+            <span class="tab__count" data-count-for="interesat"><?= (int) $numarInterese['interesat'] ?></span>
           </button>
 
           <button class="tab" type="button" role="tab" id="tab-going"
@@ -207,7 +293,7 @@ require __DIR__ . '/inc/antet.php';
               <circle cx="12" cy="12" r="9"/><path d="m8.2 12.3 2.6 2.6 5-5.2"/>
             </svg>
             <span>Participă</span>
-            <span class="tab__count" data-count-for="going">86</span>
+            <span class="tab__count" data-count-for="participant"><?= (int) $numarInterese['participant'] ?></span>
           </button>
         </div>
 
@@ -400,7 +486,7 @@ require __DIR__ . '/inc/antet.php';
         <!-- ------------------------ PANOU: INTERESAȚI --------------------- -->
         <div class="panel" id="panel-interested" role="tabpanel" aria-labelledby="tab-interested" tabindex="0" hidden>
           <p class="panel__intro">
-            <strong><span data-count-for="interested">128</span> persoane</strong> sunt interesate de acest eveniment.
+            <strong><span data-count-for="interesat"><?= (int) $numarInterese['interesat'] ?></span> persoane</strong> sunt interesate de acest eveniment.
           </p>
 
           <ul class="people">
@@ -456,7 +542,7 @@ require __DIR__ . '/inc/antet.php';
         <!-- ------------------------ PANOU: PARTICIPĂ ---------------------- -->
         <div class="panel" id="panel-going" role="tabpanel" aria-labelledby="tab-going" tabindex="0" hidden>
           <p class="panel__intro">
-            <strong><span data-count-for="going">86</span> persoane</strong> au confirmat că vor participa.
+            <strong><span data-count-for="participant"><?= (int) $numarInterese['participant'] ?></span> persoane</strong> au confirmat că vor participa.
           </p>
 
           <ul class="people">

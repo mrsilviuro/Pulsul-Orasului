@@ -1607,6 +1607,207 @@ verifica('fără evenimente, tot un singur buton', 1,
 verifica('și e cel din invitație', true,
     str_contains($paginaGoala, 'Nu organizezi nimic'));
 
+
+echo "\n=== MERGI LA ACEST EVENIMENT? ===\n";
+
+require_once dirname(__DIR__) . '/inc/interese.php';
+
+db()->exec('DELETE FROM evenimente');
+
+/** Apasă un buton de pe pagina evenimentului. */
+function apasa(array &$cookies, string $slug, string $stare, array $peste = []): array
+{
+    return json_din(cerere($GLOBALS['baza'] . '/api/interes.php', $cookies, array_merge([
+        'csrf'  => csrf($cookies),
+        'slug'  => $slug,
+        'stare' => $stare,
+    ], $peste)));
+}
+
+/** Starea unui om față de un eveniment, citită de-a dreptul din bază. */
+function stareaDinBaza(int $evId, int $membruId): ?string
+{
+    $q = db()->prepare('SELECT stare FROM interese_evenimente WHERE eveniment_id=? AND membru_id=?');
+    $q->execute([$evId, $membruId]);
+    $s = $q->fetchColumn();
+
+    return is_string($s) ? $s : null;
+}
+
+// Limita de evenimente active i-ar sta în cale mai jos, unde publică prin
+// formular peste unul pus de mână. Aici nu ea se probează.
+db()->prepare('UPDATE membri SET limita_evenimente_active = 5 WHERE id = ?')->execute([$idOrg]);
+
+$idEv   = pune($idOrg, 'Unul la care se vine', 'aprobat', 15);
+$slugEv = $slugul($idEv);
+
+/* ------------------- organizatorul intră singur ------------------- */
+
+verifica('organizatorul unui eveniment pus de mână n-are rând', null,
+    stareaDinBaza($idEv, $idOrg));
+
+// …dar unul publicat prin formular, da.
+$r = trimite($c, ['titlu' => 'Publicat ca lumea, prin formular']);
+verifica('evenimentul nou trece', true, $r['ok'] ?? false);
+$idNou = (int) db()->query('SELECT id FROM evenimente ORDER BY id DESC LIMIT 1')->fetchColumn();
+verifica('organizatorul e trecut singur ca participant', 'participant',
+    stareaDinBaza($idNou, $idOrg));
+verifica('fără să apese nimic', 1, (int) db()->query(
+    'SELECT COUNT(*) FROM interese_evenimente WHERE eveniment_id = ' . $idNou)->fetchColumn());
+db()->prepare('DELETE FROM evenimente WHERE id = ?')->execute([$idNou]);
+verifica('iar ștergerea evenimentului îi ia rândul cu el', 0, (int) db()->query(
+    'SELECT COUNT(*) FROM interese_evenimente WHERE eveniment_id = ' . $idNou)->fetchColumn());
+
+/* --------------------------- „Mă interesează" -------------------------- */
+
+$r = apasa($altul, $slugEv, 'interesat');
+verifica('„mă interesează" merge din prima, fără confirmări', true, $r['ok'] ?? false);
+verifica('starea e cea apăsată', 'interesat', $r['stare'] ?? '');
+verifica('și în bază la fel', 'interesat', stareaDinBaza($idEv, $idAltul));
+verifica('numărul de interesați a crescut', 1, $r['numar']['interesat'] ?? -1);
+verifica('cel de participanți nu', 0, $r['numar']['participant'] ?? -1);
+
+$r = apasa($altul, $slugEv, 'interesat');
+verifica('a doua apăsare pe același buton îl scoate', true, $r['ok'] ?? false);
+// „??" ar fi înlocuit un null adevărat cu ce e după el, deci se citește direct.
+verifica('fără stare', true, array_key_exists('stare', $r) && $r['stare'] === null);
+verifica('și fără rând în bază', null, stareaDinBaza($idEv, $idAltul));
+verifica('numărul a scăzut la loc', 0, $r['numar']['interesat'] ?? -1);
+
+/* --------------------------- „Voi participa" --------------------------- */
+
+$r = apasa($altul, $slugEv, 'participant');
+verifica('participarea fără confirmare e oprită', false, $r['ok'] ?? true);
+verifica('cu mesajul cerut', 'Confirmă întâi participarea.', $r['mesaj'] ?? '');
+verifica('și nimic în bază', null, stareaDinBaza($idEv, $idAltul));
+
+// Fără telefon în cont, se cere acum.
+db()->prepare('UPDATE membri SET telefon = NULL WHERE id = ?')->execute([$idAltul]);
+$r = apasa($altul, $slugEv, 'participant', ['confirmat' => '1']);
+verifica('fără telefon în cont, se cere', true, !empty($r['erori']['telefon']));
+verifica('tot nimic în bază', null, stareaDinBaza($idEv, $idAltul));
+
+$r = apasa($altul, $slugEv, 'participant', ['confirmat' => '1', 'telefon' => 'nu-i telefon']);
+verifica('un număr stricat e refuzat', true, !empty($r['erori']['telefon']));
+
+$r = apasa($altul, $slugEv, 'participant', ['confirmat' => '1', 'telefon' => '+40 722 33 44 55']);
+verifica('un număr bun trece', true, $r['ok'] ?? false);
+verifica('starea e „participant"', 'participant', stareaDinBaza($idEv, $idAltul));
+
+$q = db()->prepare('SELECT telefon FROM membri WHERE id = ?');
+$q->execute([$idAltul]);
+verifica('numărul s-a salvat în cont, adus la o singură formă', '0722334455', $q->fetchColumn());
+
+// A doua oară nu se mai cere: e deja în cont.
+apasa($altul, $slugEv, 'participant');                       // se retrage
+$r = apasa($altul, $slugEv, 'participant', ['confirmat' => '1']);
+verifica('a doua oară nu se mai cere numărul', true, $r['ok'] ?? false);
+
+/* ------------------ trecerea dintr-o stare în alta ------------------ */
+
+apasa($altul, $slugEv, 'participant');                       // curat
+apasa($altul, $slugEv, 'interesat');
+$q = db()->prepare('SELECT id, creat_la FROM interese_evenimente WHERE eveniment_id=? AND membru_id=?');
+$q->execute([$idEv, $idAltul]);
+$inainte = $q->fetch();
+
+$r = apasa($altul, $slugEv, 'participant', ['confirmat' => '1']);
+$q->execute([$idEv, $idAltul]);
+$dupa = $q->fetch();
+
+verifica('trecerea la „particip" schimbă rândul', $inainte['id'], $dupa['id']);
+verifica('nu adaugă altul', 1, (int) db()->query(
+    'SELECT COUNT(*) FROM interese_evenimente WHERE eveniment_id = ' . $idEv)->fetchColumn());
+verifica('și ține minte când a intrat prima dată', $inainte['creat_la'], $dupa['creat_la']);
+
+/* ---------------------------- locurile ---------------------------- */
+
+db()->prepare('UPDATE evenimente SET participanti_max = 1 WHERE id = ?')->execute([$idEv]);
+
+$alTreilea = faMembru('al-treilea@exemplu-test.ro', 'trei02');
+db()->prepare('UPDATE membri SET telefon = ? WHERE id = ?')->execute(['0733445566', $alTreilea]);
+$c3 = [];
+intra($c3, 'al-treilea@exemplu-test.ro');
+
+$r = apasa($c3, $slugEv, 'participant', ['confirmat' => '1']);
+verifica('locul e ocupat, deci e oprit', false, $r['ok'] ?? true);
+verifica('cu mesajul cerut', 'Nu mai sunt locuri disponibile la acest eveniment.', $r['mesaj'] ?? '');
+verifica('și cu semnul că e plin', true, $r['plin'] ?? false);
+verifica('nimic în bază', null, stareaDinBaza($idEv, $alTreilea));
+
+verifica('dar „mă interesează" merge oricum', true,
+    apasa($c3, $slugEv, 'interesat')['ok'] ?? false);
+
+// Cine e înăuntru se poate retrage oricând, chiar dacă e plin.
+verifica('cel dinăuntru se poate retrage', true,
+    apasa($altul, $slugEv, 'participant')['ok'] ?? false);
+verifica('iar locul eliberat se poate ocupa', true,
+    apasa($c3, $slugEv, 'participant', ['confirmat' => '1'])['ok'] ?? false);
+
+// „nespecificat" nu oprește pe nimeni.
+db()->prepare('UPDATE evenimente SET participanti_max = NULL WHERE id = ?')->execute([$idEv]);
+verifica('fără limită, intră și al doilea', true,
+    apasa($altul, $slugEv, 'participant', ['confirmat' => '1'])['ok'] ?? false);
+
+/* --------------------------- cine n-are voie --------------------------- */
+
+$gol = [];
+verifica('nelogatul e refuzat', false, apasa($gol, $slugEv, 'interesat')['ok'] ?? true);
+verifica('fără CSRF bun, nimic', false,
+    json_din(cerere($baza . '/api/interes.php', $altul, [
+        'csrf' => 'gresit', 'slug' => $slugEv, 'stare' => 'interesat',
+    ]))['ok'] ?? true);
+verifica('o stare inventată e refuzată', false,
+    apasa($altul, $slugEv, 'ma-gandesc')['ok'] ?? true);
+verifica('un slug inexistent, la fel', false,
+    apasa($altul, 'nu-exista-nicaieri', 'interesat')['ok'] ?? true);
+verifica('prin GET → 405', 405,
+    cerere($baza . '/api/interes.php', $altul)['stare']);
+
+// La un eveniment neaprobat nu se înscrie nimeni — nici organizatorul.
+$idAstept = pune($idOrg, 'Încă nu s-a aprobat', 'in_asteptare', 11);
+$r = apasa($c, $slugul($idAstept), 'interesat');
+verifica('la un eveniment neaprobat nu se înscrie nimeni', false, $r['ok'] ?? true);
+
+/* ------------------------ ce se vede în pagină ------------------------ */
+
+$pagina = cerere($baza . '/event.php?slug=' . urlencode($slugEv), $altul)['corp'];
+
+verifica('pagina arată numerele adevărate', true,
+    preg_match('/data-count-for="participant"[^>]*>2</', $pagina) === 1);
+verifica('și butonul apăsat e însemnat ca atare', true,
+    preg_match('/id="btn-going"[^>]*aria-pressed="true"/s', $pagina) === 1);
+verifica('caseta de confirmare e în pagină, ascunsă', true,
+    preg_match('/id="rsvp-confirm"[^>]*hidden/', $pagina) === 1);
+verifica('spune ce vede organizatorul', true,
+    str_contains($pagina, 'văzute de'));
+verifica('și pomenește WhatsApp', true, str_contains($pagina, 'WhatsApp'));
+verifica('cu trimitere la termeni', true, str_contains($pagina, 'Termenii și condițiile'));
+verifica('cine are telefon în cont nu mai e întrebat', false,
+    str_contains($pagina, 'id="rsvp-telefon"'));
+
+// Vorba de sub butoane: se numără interesații ȘI participanții.
+verifica('vorba adună toată lumea', true,
+    preg_match('/(este interesat|sunt interesa)/u', $pagina) === 1);
+verifica('cu nume care duc la profiluri', true,
+    preg_match('/rsvp__note[^>]*>.*?profil\.php\?m=/s', $pagina) === 1);
+verifica('și cu chipuri, fără link', true,
+    preg_match('/<div class="facepile"[^>]*>\s*<img/s', $pagina) === 1);
+
+// La un eveniment fără nimeni, se spune altceva.
+$idPustiu = pune($idOrg, 'La care nu vine nimeni', 'aprobat', 16);
+$pustiu = cerere($baza . '/event.php?slug=' . urlencode($slugul($idPustiu)), $altul)['corp'];
+verifica('fără nimeni, o invitație', true,
+    str_contains($pustiu, 'Fii primul interesat de acest eveniment!'));
+verifica('fără cercuri goale', false, str_contains($pustiu, 'class="facepile"'));
+
+// La unul neaprobat, secțiunea lipsește cu totul.
+$asteapta = cerere($baza . '/event.php?slug=' . urlencode($slugul($idAstept)), $c)['corp'];
+verifica('la un eveniment neaprobat, secțiunea nici nu apare', false,
+    str_contains($asteapta, 'id="rsvp"'));
+
+db()->prepare('DELETE FROM membri WHERE email = ?')->execute(['al-treilea@exemplu-test.ro']);
+
 /* ---------------------------- curățenie -------------------------------- */
 
 db()->exec('DELETE FROM evenimente');

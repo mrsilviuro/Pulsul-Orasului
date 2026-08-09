@@ -120,6 +120,26 @@ CREATE TABLE IF NOT EXISTS interese_evenimente (
   COLLATE=utf8mb4_unicode_ci;
 
 -- -------------------------------------------------------------------------
+--  Organizatorii evenimentelor de până acum
+--
+--  Cine pune un eveniment la cale vine la el — de aceea organizatorul intră
+--  automat ca participant, fără să apese nimic (vezi salveazaEveniment din
+--  inc/evenimente.php). Evenimentele scrise înainte de tabelul ăsta n-au avut
+--  cine să le pună rândul, așa că li-l punem aici.
+--
+--  IGNORE și nu INSERT simplu: dacă migrarea se rulează a doua oară, rândurile
+--  care există deja sunt sărite în loc să oprească totul cu o eroare de cheie
+--  unică.
+--
+--  Se sare peste cele anulate: acolo nu mai vine nimeni, nici organizatorul.
+-- -------------------------------------------------------------------------
+INSERT IGNORE INTO interese_evenimente
+       (eveniment_id, membru_id, stare, creat_la, actualizat_la)
+SELECT id, membru_id, 'participant', creat_la, creat_la
+  FROM evenimente
+ WHERE stare_moderare <> 'anulat';
+
+-- -------------------------------------------------------------------------
 --  Cum se va folosi (aici doar scris, nu implementat)
 --
 --  Apasă „Mă interesează" sau „Voi participa" — o singură cerere, care scrie

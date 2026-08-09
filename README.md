@@ -855,7 +855,9 @@ Nu există încă niciun loc unde să citești mesajele din site. Se citesc din
 `sql/010-limita-evenimente.sql` coloana prin care se poate ridica, pentru un om
 anume, limita de evenimente active, `sql/011-anulare-eveniment.sql` starea
 `anulat`, coloana `motiv_anulare` și steagul `membri.este_staff`, iar
-`sql/012-oras-eveniment.sql` coloana `oras`. Formularul de publicare e
+`sql/012-oras-eveniment.sql` coloana `oras`, iar
+`sql/013-interese-evenimente.sql` tabelul `interese_evenimente`. Formularul de
+publicare e
 `adauga_eveniment.php`.
 
 Categoriile erau până acum scrise de mână în trei locuri: filtrele din
@@ -1396,6 +1398,127 @@ dinainte. De aceea nota „Poți închide această filă" apare **imediat după
 apăsare**: dacă fila chiar s-a închis, n-o mai citește nimeni; dacă a rămas,
 omul află ce are de făcut.
 
+## „Mergi la acest eveniment?"
+
+Două butoane sub anunț — **„Mă interesează"** și **„Voi participa"** — și un
+singur rând în `interese_evenimente` pentru fiecare om și fiecare eveniment.
+Codul stă în `inc/interese.php`, apăsarea trece prin `api/interes.php`.
+
+Nu două tabele și nici două bife: cele două stări se exclud. Cine spune „voi
+participa" nu mai e „interesat", e mai mult de-atât. Cu două bife ar fi fost
+posibil un om bifat în amândouă, iar întrebarea „câți vin?" ar fi avut două
+răspunsuri.
+
+### Cine hotărăște ce se întâmplă
+
+Spre server pleacă **butonul apăsat**, nu fapta de făcut. El știe starea
+adevărată și alege:
+
+| starea de acum | s-a apăsat | ce se întâmplă |
+|---|---|---|
+| nimic | „mă interesează" | rând nou, `interesat` |
+| nimic | „voi participa" | rând nou, `participant` (după confirmare) |
+| `interesat` | „voi participa" | **același rând**, stare schimbată |
+| `interesat` | „mă interesează" | rândul se șterge |
+| `participant` | „mă interesează" | același rând, stare schimbată |
+| `participant` | „voi participa" | rândul se șterge |
+
+Retragerea n-are buton al ei: se apasă pe starea în care ești deja. O filă
+rămasă deschisă de ieri n-are cum să ne pună să facem altceva decât se cuvine,
+fiindcă nu ea hotărăște.
+
+`creat_la` nu se atinge la schimbare — cine s-a arătat interesat acum o lună nu
+e același lucru cu cine a intrat aseară. `DELETE`-ul are condiție și pe
+`stare`, ca butonul să stingă doar starea pe care o arată.
+
+Scrierea e un singur `INSERT ... ON DUPLICATE KEY UPDATE`, nu „citesc, apoi
+scriu": între citire și scriere încape o a doua apăsare, iar atunci una dintre
+ele ar fi dat peste indexul unic și ar fi aruncat o eroare în fața omului.
+
+### „Voi participa" trece printr-o treaptă
+
+„Mă interesează" e o însemnare: se trimite din prima. „Voi participa" e o
+hotărâre care **dă datele omului mai departe**, deci se deschide întâi o casetă
+care spune, înainte și nu după, că numele complet și numărul de telefon vor fi
+văzute de organizator, care poate suna sau scrie pe WhatsApp ca să reconfirme.
+Tot acolo se cere acordul cu termenii și condițiile.
+
+Confirmarea se verifică **pe server**, nu doar în JS: fără `confirmat`,
+`api/interes.php` nu scrie nimic. Altfel cineva ar fi putut ajunge pe lista de
+participanți fără să fi văzut vreodată ce dă din el.
+
+**Numărul de telefon** se cere doar cui nu l-a dat încă, printr-un câmp în
+aceeași casetă, și se salvează în cont — nu se ține doar pentru evenimentul
+ăsta. Trece prin `verificaTelefon()` din `inc/validare.php`, aceeași funcție ca
+la setări și la contact, deci „+40 722 33 44 55" ajunge în bază „0722334455".
+A doua oară nu se mai întreabă.
+
+Organizatorului nu i se cere niciodată: e numărul lui, n-are cui să și-l dea.
+
+### Locurile
+
+Dacă evenimentul are `participanti_max`, se numără participanții și, la limită,
+butonul se stinge cu un rând de lămurire. `participanti_max` gol înseamnă „câți
+or veni" — atunci nu se numără nimic și nu se oprește nimeni.
+
+Numărul de pe ecran e o **veste, nu o rezervare**: între încărcarea paginii și
+apăsare pot intra alții, de aceea locurile se numără din nou în clipa apăsării.
+Butonul stins e un semn, oprirea adevărată e pe server.
+
+Cine e deja înăuntru se poate retrage oricând, chiar dacă evenimentul e plin —
+tocmai eliberează un loc. De aceea butonul rămâne apăsabil pentru el.
+
+Organizatorul intră și el în socoteală: un eveniment de zece persoane înseamnă
+organizatorul plus nouă.
+
+### Organizatorul vine la ce pune la cale
+
+`salveazaEveniment()` îi scrie rândul de `participant` fără ca el să apese
+nimic. Se poate retrage ca oricine altcineva, iar dacă se răzgândește nu i se
+cere numărul.
+
+Evenimentele de dinaintea tabelului au primit rândul la migrare
+(`INSERT IGNORE ... SELECT`), fără cele anulate — acolo nu mai vine nimeni.
+
+### Rândul de sub butoane
+
+Chipurile și vorba se desenează într-un singur loc,
+`randeazaOameniInteresati()`, folosit și de pagină la încărcare, și de
+`api/interes.php` după fiecare apăsare. Scrise în două locuri, ar fi început să
+difere de la prima corectură.
+
+Se adună **toți** — și interesații, și participanții: dedesubt se spune câți
+sunt cu totul, nu cine ce a apăsat. Cel mult cinci chipuri și două nume, luate
+la întâmplare, dintr-**o singură** alegere: altfel s-ar fi văzut cinci chipuri
+și dedesubt două nume care nu sunt ale niciunuia dintre ele, iar ochiul caută
+fără să vrea potrivirea. Numele duc la profiluri; chipurile nu, sunt un grup de
+cercuri, nu o listă de legături.
+
+Acordul se face după câți sunt: unul singur („**X** este interesat**ă** de
+acest eveniment.", după `sex`), doi, sau doi plus restul. Când nu e nimeni, nu
+se arată un cerc gol și un „0 persoane", ci „Fii primul interesat de acest
+eveniment!".
+
+### Cine se numără
+
+Peste tot — numere, nume, chipuri, locuri — se numără **doar conturile
+active**. Un cont șters se anonimizează, nu dispare din bază (vezi
+`inc/stergere.php`), deci rândurile lui rămân; dar omul a plecat de pe site,
+n-are ce căuta în „încă 84 de persoane" și n-are de ce să țină un loc ocupat.
+Aceeași bucată de SQL peste tot (`INTERESE_DOAR_ACTIVI`), ca numărul de pe
+buton, numele de dedesubt și socoteala locurilor să nu spună trei lucruri
+diferite.
+
+### Ce nu e făcut încă
+
+Panourile din taburile „Interesați" și „Participanți" sunt tot șablonul vechi,
+cu oameni inventați — numerele de pe taburi sunt însă adevărate. Evenimentele
+la care merge cineva nu apar pe profilul lui. Nu pleacă niciun e-mail la aceste
+apăsări.
+
+**Pagina de termeni și condiții nu există** — linkul din casetă e `href="#"`,
+ca toate celelalte trimiteri spre termeni de pe site (înregistrare, subsol).
+
 ## Schimbarea unui eveniment
 
 `adauga_eveniment.php?slug=…` — **același formular** ca la publicare, doar
@@ -1537,9 +1660,10 @@ cui trimite e-mailul și nici ce să scrie în el.
 
 ### Ce nu e făcut
 
-„Mergi la acest eveniment?" și comentariile de sub el sunt încă șablonul, cu
-numere și oameni inventați — se leagă de bază separat. Cât timp sunt acolo, un
-eveniment adevărat arată sub el 128 de „interesați" care nu există.
+Comentariile de sub eveniment sunt încă șablonul, cu oameni inventați. La fel
+și panourile din taburile „Interesați" și „Participanți" — numerele de pe
+taburi vin acum din bază, listele dinăuntru nu. „Mergi la acest eveniment?"
+merge de-a binelea; vezi secțiunea lui, mai sus.
 
 Nu există încă interfață de aprobare și nici încheiere manuală. Evenimentul
 intră cu `stare_moderare = 'in_asteptare'` și nu se vede pe prima pagină; omul

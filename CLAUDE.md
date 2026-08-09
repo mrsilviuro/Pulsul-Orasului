@@ -114,6 +114,8 @@ inc/
   imagini.php       → procesare/validare poze de profil ȘI coperți de eveniment
   evenimente.php    → categorii, regula „un eveniment activ", lista de pe
                       profil, pagina unui eveniment, salvarea
+  interese.php      → „Mergi la acest eveniment?" — cine e interesat, cine
+                      vine, numărătoarea, locurile, rândul cu chipuri
   afisare-eveniment.php → CUM ARATĂ un eveniment pe ecran (antet, copertă,
                       caseta cu detalii, descrierea). Folosit și de event.php,
                       și de previzualizare.php — schimbă aici, nu în pagini
@@ -129,7 +131,8 @@ cron/               → scripturi rulate din cron (doar CLI, .htaccess le bloche
 sql/                → schema.sql + migrări numerotate (002, 003, 004, 005-google,
                       006-tine-minte, 007-setari, 008-mesaje-contact,
                       009-evenimente, 010-limita-evenimente,
-                      011-anulare-eveniment, 012-oras-eveniment)
+                      011-anulare-eveniment, 012-oras-eveniment,
+                      013-interese-evenimente)
 teste/              → test-validare.php (verificările din inc/validare.php)
                       test-tine-minte.php, test-setari.php, test-contact.php,
                       test-evenimente.php
@@ -180,8 +183,11 @@ assets/css/style.css, assets/js/main.js, assets/img/
 
 ## Ce e neterminat (roadmap)
 
-- „Mergi la acest eveniment?" și comentariile de pe `event.php` — încă șablon,
-  cu numere și oameni inventați sub un eveniment adevărat
+- Comentariile de pe `event.php` — încă șablon, cu oameni inventați sub un
+  eveniment adevărat. La fel și panourile din taburile „Interesați" și
+  „Participanți": numerele de pe taburi sunt adevărate, listele dinăuntru nu
+- Pagina de termeni și condiții nu există. Linkurile spre ea sunt `href="#"`
+  peste tot (înregistrare, subsol, confirmarea participării)
 - Prima pagină (`index.php`) e tot cu articole scrise de mână; linkurile duc la
   `event.php` fără slug, deci se întorc pe `index.php`
 - Moderarea: fiecare eveniment intră cu `stare_moderare = 'in_asteptare'`; se
@@ -195,9 +201,11 @@ assets/css/style.css, assets/js/main.js, assets/img/
   înscrieri și comentarii) e o acțiune viitoare de staff — vezi `TODO`-ul din
   `anuleazaEveniment()`
 - Adresele frumoase: acum sunt `profil.php?m=<permalink>` și `event.php?slug=…`
-- Interesele/participările și comentariile: nu există tabele pentru ele. Când
-  vor exista, vezi `TODO`-ul din `anuleazaEveniment()` — la anulare trebuie
-  trimis e-mail cu textul din `motiv_anulare`, ÎNAINTE de orice ștergere
+- Comentariile: nu există tabel pentru ele. Interesele/participările există
+  (`interese_evenimente`), dar nimeni nu e înștiințat de nimic: vezi `TODO`-ul
+  din `anuleazaEveniment()` — la anulare trebuie trimis e-mail cu textul din
+  `motiv_anulare`, ÎNAINTE de ștergerea făcută de staff
+- Evenimentele la care merge cineva nu apar pe profilul lui
 - Încheierea manuală a unui eveniment (cea automată, din ziua următoare datei,
   funcționează deja — se calculează la citire, fără cron)
 - Paginile de categorie (slugurile sunt în tabelul `categorii`)
