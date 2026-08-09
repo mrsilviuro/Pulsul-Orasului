@@ -69,6 +69,23 @@ function filtruNeincheiat(): array
     return ['data_eveniment >= ?', date('Y-m-d')];
 }
 
+/**
+ * S-a încheiat evenimentul ăsta?
+ *
+ * Aceeași regulă ca filtruNeincheiat(), scrisă pentru un singur rând, nu
+ * pentru o interogare — pagina evenimentului are deja rândul în mână și n-are
+ * de ce să mai întrebe baza. Perechea ei stă lipită de ea dinadins: dacă una
+ * se schimbă, cealaltă sare în ochi. Dacă ar socoti altfel, un eveniment ar
+ * putea arăta „încheiat" pe pagina lui și ar bloca în același timp postarea
+ * altuia.
+ */
+function evenimentIncheiat(array $eveniment): bool
+{
+    $data = (string) ($eveniment['data_eveniment'] ?? '');
+
+    return $data !== '' && $data < date('Y-m-d');
+}
+
 function evenimenteActive(int $membruId): array
 {
     [$unde, $azi] = filtruNeincheiat();

@@ -636,6 +636,17 @@
     });
   }
 
+  /**
+   * La un eveniment încheiat nu se leagă nimic.
+   *
+   * Butoanele vin deja stinse din pagină; fără rândul ăsta, codul de mai jos
+   * le-ar fi putut aprinde la loc după o cerere (vezi `gata()`), iar aici nu
+   * mai e nimic de aprins. Oprirea adevărată e oricum în api/interes.php.
+   */
+  if (rsvpSectiune && rsvpSectiune.getAttribute('data-incheiat') === '1') {
+    rsvpButtons = [];
+  }
+
   if (rsvpSectiune && rsvpButtons.length) {
     var rsvpConfirm   = document.getElementById('rsvp-confirm');
     var rsvpConfirmDa = document.getElementById('rsvp-confirm-da');

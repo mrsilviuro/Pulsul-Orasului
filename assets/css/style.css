@@ -2972,6 +2972,19 @@ body { overscroll-behavior-y: none; }
 .stare-anunt--respins .ico { color: #e0393b; }
 [data-theme="dark"] .stare-anunt--respins { color: #f2a3a4; }
 
+/* Încheiat: cenușiu, nu galben și nici roșu.
+   Culorile alea sunt pentru ce n-a mers bine — un anunț neaprobat, unul
+   respins. Aici n-a greșit nimeni, doar a trecut ziua, iar banda spune un
+   fapt, nu o veste proastă. */
+.stare-anunt--incheiat {
+  border-color: var(--border);
+  background: var(--surface-2);
+  color: var(--text-soft);
+  font-weight: 600;
+}
+.stare-anunt--incheiat .ico { color: var(--text-faint); }
+[data-theme="dark"] .stare-anunt--incheiat { color: var(--text-soft); }
+
 /* Anulat: aceeași cerneală ca respinsul — amândouă înseamnă „nu mai are ce se
    întâmpla" — dar fără culoare de fundal, ci cu o linie groasă la stânga.
    Pagina asta o deschide doar staff-ul, iar sub bandă vine motivul scris de

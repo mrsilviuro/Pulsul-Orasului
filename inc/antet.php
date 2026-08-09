@@ -13,6 +13,12 @@ declare(strict_types=1);
  *   $noindex   — true dacă pagina nu trebuie indexată
  *   $bodyAttr  — atribute suplimentare pe <body>
  *
+ *   $ogTitlu     — ce scrie în cartonașul de pe Facebook/WhatsApp
+ *   $ogDescriere — textul de sub el
+ *   $ogImagine   — poza din cartonaș, ca ADRESĂ ÎNTREAGĂ
+ *   $ogUrl       — adresa întreagă a paginii
+ *   $ogTip       — 'website' peste tot, 'article' unde are rost
+ *
  * Meniul se construiește o singură dată, aici. Când se schimbă ceva în el,
  * se schimbă pe tot site-ul.
  */
@@ -25,6 +31,33 @@ $descriere = $descriere ?? 'Evenimente locale, sport, cultură și tot ce mișc�
 $pagina    = $pagina    ?? '';
 $noindex   = $noindex   ?? false;
 $bodyAttr  = $bodyAttr  ?? '';
+
+/* ------------------------- Cartonașul de distribuire ------------------ */
+
+/**
+ * Ce se vede când cineva pune linkul pe WhatsApp sau pe Facebook.
+ *
+ * Implicit, aceleași lucruri ca titlul și descrierea paginii — atât are de
+ * spus o pagină obișnuită. Cine are mai mult (pagina unui eveniment, cu
+ * coperta ei) le schimbă înainte de `require`.
+ *
+ * Adresele trebuie să fie ÎNTREGI, cu tot cu „https://…". WhatsApp și
+ * Facebook nu se uită la pagină din browserul omului: o cer ele, de pe alt
+ * server, iar o cale de forma „assets/img/…" n-are față de ce să se
+ * socotească. De aceea se lipesc de `url_site` din config, aici, într-un
+ * singur loc — și de aceea `url_site` trebuie să fie corect pe producție.
+ */
+$ogTitlu     = $ogTitlu     ?? $titlu;
+$ogDescriere = $ogDescriere ?? $descriere;
+$ogTip       = $ogTip       ?? 'website';
+$ogImagine   = $ogImagine   ?? '';
+
+// Adresa paginii de acum, dacă n-a dat-o nimeni. REQUEST_URI vine de la
+// browser, deci nu se lipește ca atare: se ia doar calea din ea, fără
+// interogare și fără ce-o mai fi lipit acolo.
+$ogUrl = $ogUrl ?? urlIntreg((string) parse_url(
+    (string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH
+));
 
 $membru = membruCurent();
 $logat  = $membru !== null;
@@ -102,11 +135,32 @@ if ($logat) {
 <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0d1015" media="(prefers-color-scheme: dark)">
 
+<!-- Cartonașul de pe WhatsApp, Facebook și celelalte. Adresele sunt întregi;
+     vezi lămurirea de sus. Fără og:image, WhatsApp arată doar titlu și text —
+     de-aia lipsea coperta evenimentelor. -->
+<meta property="og:site_name" content="PulsulOrasului.Ro">
+<meta property="og:locale" content="ro_RO">
+<meta property="og:type" content="<?= h($ogTip) ?>">
+<meta property="og:title" content="<?= h($ogTitlu) ?>">
+<meta property="og:description" content="<?= h($ogDescriere) ?>">
+<meta property="og:url" content="<?= h($ogUrl) ?>">
+<?php if ($ogImagine !== ''): ?>
+<meta property="og:image" content="<?= h($ogImagine) ?>">
+<!-- Coperțile sunt 1600×900. Spuse dinainte, cartonașul nu mai sare cât se
+     încarcă poza. -->
+<meta property="og:image:width" content="<?= (int) COPERTA_LATIME ?>">
+<meta property="og:image:height" content="<?= (int) COPERTA_INALTIME ?>">
+<?php endif; ?>
+
+<!-- Twitter/X citește og:*, dar are nevoie de un cuvânt al lui ca să arate
+     poza mare în loc de o miniatură lipită în stânga. -->
+<meta name="twitter:card" content="<?= $ogImagine !== '' ? 'summary_large_image' : 'summary' ?>">
+
 <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/css/style.css?v=38">
+<link rel="stylesheet" href="assets/css/style.css?v=39">
 
 <!-- Setează tema ÎNAINTE de randare, ca să nu apară un flash alb pe dark mode -->
 <script>
