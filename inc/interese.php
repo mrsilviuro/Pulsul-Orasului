@@ -219,16 +219,21 @@ function maiSuntLocuri(array $eveniment, int $catiParticipanti): bool
  * încarcă, și api/interes.php, după fiecare apăsare. Scris în două locuri, ar
  * fi început să difere de la prima corectură.
  */
-function randeazaOameniInteresati(int $evenimentId): string
+function randeazaOameniInteresati(int $evenimentId, bool $incheiat = false): string
 {
     $numar  = numaraInterese($evenimentId);
     $total  = $numar['interesat'] + $numar['participant'];
     $oameni = $total > 0 ? oameniiInteresati($evenimentId) : [];
 
     if ($total === 0 || $oameni === []) {
-        // Nimeni încă. Nu se arată un cerc gol și un „0 persoane": se spune
-        // ceva ce se poate face.
-        return '<p class="rsvp__note rsvp__note--gol">Fii primul interesat de acest eveniment!</p>';
+        /**
+         * Nimeni. Nu se arată un cerc gol și un „0 persoane": se spune ceva ce
+         * se poate face — dar numai dacă mai e ceva de făcut. La un eveniment
+         * trecut, „fii primul interesat" ar fi o invitație la ceva imposibil.
+         */
+        return '<p class="rsvp__note rsvp__note--gol">'
+             . ($incheiat ? 'Nu s-a înscris nimeni.' : 'Fii primul interesat de acest eveniment!')
+             . '</p>';
     }
 
     /* ----------------------------- chipurile --------------------------- */

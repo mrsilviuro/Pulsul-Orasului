@@ -85,6 +85,24 @@ if ($eveniment['stare_moderare'] !== 'aprobat') {
     ], 409);
 }
 
+/**
+ * Ce s-a încheiat nu se mai schimbă.
+ *
+ * În pagină butoanele sunt deja stinse, dar asta e o purtare frumoasă, nu o
+ * regulă: cererea poate veni de oriunde, iar o filă deschisă alaltăieri, pe
+ * când evenimentul era încă în față, arată butoanele vii.
+ *
+ * Nici retragerea nu se mai poate. Listele de la un eveniment trecut sunt
+ * istorie: cine a fost pe ele a fost, iar organizatorul care se uită peste ele
+ * a doua zi trebuie să vadă ce a fost, nu ce a mai rămas.
+ */
+if (evenimentIncheiat($eveniment)) {
+    raspunsJson([
+        'ok'    => false,
+        'mesaj' => 'Evenimentul s-a încheiat.',
+    ], 409);
+}
+
 /* ====================== 2. Pe ce buton s-a apăsat ==================== */
 
 $apasat = (string) ($date['stare'] ?? '');

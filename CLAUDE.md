@@ -62,6 +62,10 @@ Site live: https://pulsulorasului.ro
    <?php require __DIR__ . '/inc/subsol.php'; ?>
    ```
    `inc/antet.php` = head, meniu, antete de siguranță. `inc/subsol.php` = footer, scripturi.
+   Pentru cartonașul de pe WhatsApp/Facebook se pot pune, tot înainte de
+   `require`: `$ogTitlu`, `$ogDescriere`, `$ogImagine` (ADRESĂ ÎNTREAGĂ, prin
+   `urlIntreg()`), `$ogUrl`, `$ogTip`. Fără ele, se folosesc titlul și
+   descrierea paginii.
 
 4. **Verificările din browser sunt doar confort. Validarea reală e mereu server-side**,
    în `inc/validare.php`. Niciodată nu te bazezi doar pe `required` din HTML sau pe JS.

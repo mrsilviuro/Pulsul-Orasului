@@ -1854,6 +1854,125 @@ verifica('nici butoanele de distribuire', false, str_contains($asteapta, 'post__
 
 db()->prepare('DELETE FROM membri WHERE email = ?')->execute(['al-treilea@exemplu-test.ro']);
 
+
+echo "\n=== CARTONAȘUL DE PE WHATSAPP (Open Graph) ===\n";
+
+/**
+ * Fără og:image, WhatsApp arată doar titlu și text — de-aia lipsea coperta.
+ * Adresele trebuie să fie ÎNTREGI: WhatsApp și Facebook cer pagina de pe alt
+ * server, iar o cale de forma „assets/img/…" n-are acolo față de ce să se
+ * socotească.
+ */
+$idOg = pune($idOrg, 'Un eveniment de dat mai departe', 'aprobat', 9);
+$slugOg = $slugul($idOg);
+$numeCopertaOg = bin2hex(random_bytes(16));
+$caleCopertaOg = dirname(__DIR__) . '/' . COPERTA_DOSAR . '/' . $numeCopertaOg . '.jpg';
+file_put_contents($caleCopertaOg, pozaDeProba(1600, 900));
+db()->prepare('UPDATE evenimente SET coperta = ? WHERE id = ?')->execute([$numeCopertaOg, $idOg]);
+
+$og = static function (string $corp, string $cheie): string {
+    $atribut = str_starts_with($cheie, 'twitter:') ? 'name' : 'property';
+    return preg_match('/<meta ' . $atribut . '="' . preg_quote($cheie, '/')
+                    . '" content="([^"]*)"/', $corp, $m) === 1 ? $m[1] : '';
+};
+
+$paginaOg = cerere($baza . '/event.php?slug=' . urlencode($slugOg), $anonim)['corp'];
+$siteOg   = rtrim((string) ($config['url_site'] ?? ''), '/');
+
+verifica('og:title e titlul evenimentului', 'Un eveniment de dat mai departe',
+    $og($paginaOg, 'og:title'));
+verifica('og:type e „article"', 'article', $og($paginaOg, 'og:type'));
+verifica('og:url e adresa întreagă a paginii',
+    $siteOg . '/event.php?slug=' . $slugOg, $og($paginaOg, 'og:url'));
+verifica('og:image e adresa întreagă a copertei',
+    $siteOg . '/' . COPERTA_DOSAR . '/' . $numeCopertaOg . '.jpg',
+    $og($paginaOg, 'og:image'));
+verifica('și e o adresă absolută, nu o cale', true,
+    str_starts_with($og($paginaOg, 'og:image'), 'http'));
+verifica('cu mărimea spusă dinainte', ['1600', '900'],
+    [$og($paginaOg, 'og:image:width'), $og($paginaOg, 'og:image:height')]);
+verifica('twitter cere poza mare', 'summary_large_image', $og($paginaOg, 'twitter:card'));
+
+$descriereOg = $og($paginaOg, 'og:description');
+verifica('og:description e din descrierea evenimentului', true,
+    str_starts_with(html_entity_decode($descriereOg), 'Povestea evenimentului.'));
+verifica('scurtată, nu întreagă', true, mb_strlen($descriereOg) <= 200);
+verifica('și fără etichete', false, str_contains(html_entity_decode($descriereOg), '<'));
+
+// Fără copertă și fără imagine de categorie pe disc: mai bine nicio poză decât
+// una care duce la 404.
+db()->prepare('UPDATE evenimente SET coperta = NULL WHERE id = ?')->execute([$idOg]);
+$faraPoza = cerere($baza . '/event.php?slug=' . urlencode($slugOg), $anonim)['corp'];
+verifica('fără copertă, fără og:image', '', $og($faraPoza, 'og:image'));
+verifica('și twitter cere cartonașul mic', 'summary', $og($faraPoza, 'twitter:card'));
+
+// Restul paginilor primesc valorile obișnuite, fără să ceară nimic.
+$paginaDespre = cerere($baza . '/despre.php', $anonim)['corp'];
+verifica('o pagină obișnuită are og:type „website"', 'website', $og($paginaDespre, 'og:type'));
+verifica('cu titlul ei', true, str_contains($og($paginaDespre, 'og:title'), 'Despre'));
+verifica('și cu adresa ei întreagă', $siteOg . '/despre.php', $og($paginaDespre, 'og:url'));
+verifica('fără poză, că n-are ce arăta', '', $og($paginaDespre, 'og:image'));
+
+@unlink($caleCopertaOg);
+
+echo "\n=== UN EVENIMENT CARE S-A ÎNCHEIAT ===\n";
+
+/**
+ * Ziua lui a trecut. Nu se ascunde și nu se închide — rămâne o pagină bună de
+ * citit și de trimis mai departe. Se schimbă doar ce se poate face pe ea.
+ */
+$idTrecut   = pune($idOrg, 'Ce a fost anul trecut', 'aprobat', -3);
+$slugTrecut = $slugul($idTrecut);
+$laTrecut   = $baza . '/event.php?slug=' . urlencode($slugTrecut);
+
+verifica('regula e aceeași ca la limita de postare', true,
+    evenimentIncheiat(evenimentDupaSlug($slugTrecut)));
+verifica('iar unul de azi NU e încheiat', false,
+    evenimentIncheiat(['data_eveniment' => date('Y-m-d')]));
+
+$paginaTrecut = cerere($laTrecut, $anonim);
+verifica('pagina se deschide ca oricare alta', 200, $paginaTrecut['stare']);
+verifica('și pentru cine nu are cont', true, str_contains($paginaTrecut['corp'], 'Ce a fost anul trecut'));
+
+verifica('are banda de încheiat', true,
+    str_contains($paginaTrecut['corp'], 'stare-anunt--incheiat'));
+verifica('care spune limpede ce s-a întâmplat', true,
+    str_contains($paginaTrecut['corp'], 'Acest eveniment s-a încheiat.'));
+verifica('și nu se împrumută din culorile de eroare', false,
+    str_contains($paginaTrecut['corp'], 'stare-anunt--respins'));
+
+verifica('butonul „mă interesează" e stins', true,
+    preg_match('/id="btn-interested".*?disabled/s', $paginaTrecut['corp']) === 1);
+verifica('și cel de participare', true,
+    preg_match('/id="btn-going".*?disabled/s', $paginaTrecut['corp']) === 1);
+verifica('caseta de confirmare nici nu se scrie', false,
+    str_contains($paginaTrecut['corp'], 'id="rsvp-confirm"'));
+verifica('JS-ul e prevenit prin atribut', true,
+    str_contains($paginaTrecut['corp'], 'data-incheiat="1"'));
+verifica('și nu-l mai cheamă să fie primul interesat', false,
+    str_contains($paginaTrecut['corp'], 'Fii primul interesat'));
+
+// Numărătoarea rămâne: e istoria evenimentului, nu o invitație.
+salveazaInteres($idTrecut, $idAltul, 'participant');
+$paginaTrecut = cerere($laTrecut, $anonim)['corp'];
+verifica('numărul celor care au fost rămâne afișat', true,
+    preg_match('/data-count-for="participant"[^>]*>1</', $paginaTrecut) === 1);
+verifica('și oamenii, la fel', true, str_contains($paginaTrecut, 'facepile'));
+
+/* -------- serverul nu se bazează pe butonul stins din pagină -------- */
+
+$r = apasa($altul, $slugTrecut, 'interesat');
+verifica('serverul refuză o cerere venită pe lângă interfață', false, $r['ok'] ?? true);
+verifica('cu mesajul cerut', 'Evenimentul s-a încheiat.', $r['mesaj'] ?? '');
+
+$r = apasa($altul, $slugTrecut, 'participant', ['confirmat' => '1']);
+verifica('și participarea, la fel', false, $r['ok'] ?? true);
+
+// Nici retragerea: listele unui eveniment trecut sunt istorie.
+verifica('nici retragerea nu se mai poate', false,
+    apasa($altul, $slugTrecut, 'participant')['ok'] ?? true);
+verifica('deci rândul e neatins', 'participant', stareaDinBaza($idTrecut, $idAltul));
+
 /* ---------------------------- curățenie -------------------------------- */
 
 db()->exec('DELETE FROM evenimente');

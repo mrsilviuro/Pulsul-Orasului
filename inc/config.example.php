@@ -71,7 +71,13 @@ return [
 
     // --------------------------------------------------------------- site
     /**
-     * Adresa de bază, folosită la construirea linkului de confirmare.
+     * Adresa de bază a site-ului.
+     *
+     * De ea atârnă linkurile din e-mailuri, adresa care pleacă spre Facebook
+     * și WhatsApp la distribuire, și `og:image` — poza din cartonașul care se
+     * vede când cineva pune linkul într-o conversație. WhatsApp cere poza aia
+     * de pe alt server, deci dacă adresa de aici e greșită, cartonașul rămâne
+     * fără poză, deși pe site totul arată bine.
      *
      * În XAMPP, dacă proiectul stă în htdocs/pulsulorasului:
      *     'http://localhost/pulsulorasului'

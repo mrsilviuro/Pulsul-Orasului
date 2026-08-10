@@ -92,6 +92,42 @@ function oraseDisponibile(): array
     return array_values(array_unique($curate));
 }
 
+/**
+ * Adresa site-ului, fără bară la coadă: „https://pulsulorasului.ro".
+ *
+ * Se cere ori de câte ori o cale trebuie să devină adresă întreagă — linkul
+ * de distribuire, poza din cartonașul de pe WhatsApp, linkurile din e-mailuri.
+ * Într-un singur loc, ca să nu existe cinci feluri de a tăia bara de la coadă.
+ */
+function urlSite(): string
+{
+    global $config;
+
+    return rtrim((string) ($config['url_site'] ?? ''), '/');
+}
+
+/**
+ * O cale de-a noastră („assets/img/…"), făcută adresă întreagă.
+ *
+ * Facebook și WhatsApp nu se uită la pagină din browserul omului: o cer ele,
+ * de pe alt server, iar o cale relativă n-are acolo față de ce să se
+ * socotească. Calea goală rămâne goală — cine cheamă funcția hotărăște ce face
+ * cu asta.
+ */
+function urlIntreg(string $cale): string
+{
+    if ($cale === '') {
+        return '';
+    }
+
+    // Ce e deja adresă întreagă se lasă în pace.
+    if (preg_match('#^https?://#i', $cale) === 1) {
+        return $cale;
+    }
+
+    return urlSite() . '/' . ltrim($cale, '/');
+}
+
 /** Momentul de acum, în formatul cu care lucrează coloanele DATETIME. */
 function acum(): string
 {

@@ -54,6 +54,17 @@ $eOrganizatorul = $membruId > 0 && (int) $eveniment['membru_id'] === $membruId;
 $eAprobat       = $eveniment['stare_moderare'] === 'aprobat';
 $eAnulat        = $eveniment['stare_moderare'] === 'anulat';
 
+/**
+ * Ziua lui a trecut.
+ *
+ * Nu-l ascunde și nu-l închide: un eveniment de acum două luni rămâne o
+ * pagină bună de citit și de trimis mai departe. Se schimbă doar ce se poate
+ * face pe ea — nimeni nu se mai poate înscrie la ceva ce s-a terminat.
+ *
+ * Aceeași regulă ca la limita de un eveniment activ, prin aceeași funcție.
+ */
+$eIncheiat = evenimentIncheiat($eveniment);
+
 /* ------------------------ „Mergi la acest eveniment?" ------------------ */
 
 /**
@@ -86,6 +97,47 @@ $descriere = inceputDeText((string) $eveniment['descriere'], 155);
 
 // Cât timp nu e aprobat, n-are ce căuta în motoarele de căutare.
 $noindex   = !$eAprobat;
+
+/* --------------------- Cartonașul de pe WhatsApp ---------------------- */
+
+/**
+ * Ce se vede când cineva pune linkul evenimentului într-o conversație.
+ *
+ * Titlul și descrierea le aveam deja. Lipsea poza: fără `og:image`, WhatsApp
+ * arată doar două rânduri de text, iar un anunț fără coperta lui nu spune
+ * mare lucru.
+ *
+ * Adresa pozei trebuie să fie ÎNTREAGĂ. WhatsApp și Facebook nu se uită la
+ * pagină din browserul omului: o cer ele, de pe alt server, iar o cale de
+ * forma „assets/img/…" n-are acolo față de ce să se socotească.
+ */
+$ogTitlu = (string) $eveniment['titlu'];
+$ogUrl   = urlIntreg(urlEveniment((string) $eveniment['slug']));
+$ogTip   = 'article';
+
+// Fără etichete: în bază intră text curat, dar dacă cineva a scris „<b>" cu
+// mâna lui, n-are ce căuta în cartonaș.
+$ogDescriere = inceputDeText(strip_tags((string) $eveniment['descriere']), 180);
+
+/**
+ * Coperta lui, iar dacă n-are, imaginea categoriei.
+ *
+ * Se verifică pe disc, nu doar în bază: coloana `categorii.imagine_default`
+ * există de mult, fișierele nu s-au urcat încă (vezi roadmapul din CLAUDE.md).
+ * O adresă care duce la 404 e mai rea decât niciuna — WhatsApp ar încerca s-o
+ * ia, n-ar găsi-o, și ar arăta un cartonaș ciuntit în loc de unul curat.
+ */
+$ogImagine = urlCoperta($eveniment['coperta'] ?? null);
+
+if ($ogImagine === '' && !empty($eveniment['imagine_default'])) {
+    $caleCategorie = 'assets/img/categorii/' . $eveniment['imagine_default'];
+
+    if (is_file(__DIR__ . '/' . $caleCategorie)) {
+        $ogImagine = $caleCategorie;
+    }
+}
+
+$ogImagine = urlIntreg($ogImagine);
 
 require __DIR__ . '/inc/antet.php';
 ?>
@@ -140,6 +192,16 @@ require __DIR__ . '/inc/antet.php';
             $banda = $eveniment['stare_moderare'] === 'respins'
                 ? ['fel' => 'respins',   'text' => 'Anunțul nu a trecut de verificare. Îl vezi doar tu.']
                 : ['fel' => 'asteptare', 'text' => 'În așteptare de aprobare. Îl vezi doar tu, până îl citim.'];
+        } elseif ($eIncheiat) {
+            /**
+             * Trecut, nu greșit. De aceea banda e cenușie, nu galbenă și nici
+             * roșie: culorile alea sunt pentru ce n-a mers bine, iar aici n-a
+             * greșit nimeni — doar a trecut ziua.
+             */
+            $banda = [
+                'fel'  => 'incheiat',
+                'text' => 'Acest eveniment s-a încheiat.',
+            ];
         }
 
         // Butonul „Editează" dispare la anulare: nu mai e nimic de corectat, iar
@@ -225,16 +287,25 @@ require __DIR__ . '/inc/antet.php';
       -->
       <section class="rsvp" id="rsvp" aria-labelledby="rsvp-title"
                data-slug="<?= h((string) $eveniment['slug']) ?>"
+               <?= $eIncheiat ? 'data-incheiat="1"' : '' ?>
                <?= $eLogat ? 'data-csrf="' . h(tokenCsrf()) . '"' : '' ?>>
         <div class="rsvp__head">
           <h2 id="rsvp-title">Mergi la acest eveniment?</h2>
+          <?php if ($eIncheiat): ?>
+          <p>A trecut. Mai jos e cine a fost pe listă.</p>
+          <?php else: ?>
           <p>Spune-le și celorlalți — apari în lista de mai jos.</p>
+          <?php endif; ?>
         </div>
 
         <div class="rsvp__actions">
+          <!-- La un eveniment încheiat, amândouă butoanele se sting: numerele
+               rămân de citit, dar nu se mai intră și nu se mai iese de pe
+               listă. Oprirea adevărată e în api/interes.php. -->
           <button class="rsvp__btn rsvp__btn--interested" type="button"
                   id="btn-interested" data-rsvp="interesat"
-                  aria-pressed="<?= $stareaMea === 'interesat' ? 'true' : 'false' ?>">
+                  aria-pressed="<?= $stareaMea === 'interesat' ? 'true' : 'false' ?>"
+                  <?= $eIncheiat ? 'disabled' : '' ?>>
             <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
               <path d="m12 3.8 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.5 10l5.9-.9L12 3.8Z"/>
             </svg>
@@ -251,7 +322,7 @@ require __DIR__ . '/inc/antet.php';
           <button class="rsvp__btn rsvp__btn--going" type="button"
                   id="btn-going" data-rsvp="participant"
                   aria-pressed="<?= $stareaMea === 'participant' ? 'true' : 'false' ?>"
-                  <?= (!$maiSuntLocuri && $stareaMea !== 'participant') ? 'disabled' : '' ?>>
+                  <?= ($eIncheiat || (!$maiSuntLocuri && $stareaMea !== 'participant')) ? 'disabled' : '' ?>>
             <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
               <circle cx="12" cy="12" r="9"/><path d="m8.2 12.3 2.6 2.6 5-5.2"/>
             </svg>
@@ -260,7 +331,7 @@ require __DIR__ . '/inc/antet.php';
           </button>
         </div>
 
-        <?php if (!$maiSuntLocuri && $stareaMea !== 'participant'): ?>
+        <?php if (!$eIncheiat && !$maiSuntLocuri && $stareaMea !== 'participant'): ?>
         <p class="rsvp__plin">Nu mai sunt locuri disponibile la acest eveniment.</p>
         <?php endif; ?>
 
@@ -272,7 +343,7 @@ require __DIR__ . '/inc/antet.php';
           Se deschide din JS și se verifică din nou pe server: fără
           `confirmat`, api/interes.php nu scrie nimic.
         -->
-        <?php if ($eLogat): ?>
+        <?php if ($eLogat && !$eIncheiat): ?>
         <div class="rsvp__confirm" id="rsvp-confirm" hidden>
           <p class="rsvp__confirm-titlu"><strong>Confirmi participarea?</strong></p>
 
@@ -319,7 +390,7 @@ require __DIR__ . '/inc/antet.php';
           Scrise în două locuri, ar fi început să difere de la prima corectură.
         -->
         <div class="rsvp__people" id="rsvp-people">
-          <?= randeazaOameniInteresati($evenimentId) ?>
+          <?= randeazaOameniInteresati($evenimentId, $eIncheiat) ?>
         </div>
       </section>
       <?php endif; ?>

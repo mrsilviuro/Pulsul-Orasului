@@ -1284,6 +1284,59 @@ formularul de eveniment); doar `event.php` nu-l mai cheamă la intrare.
 
 Organizatorul vede în plus o bandă cu starea anunțului și butonul „Editează".
 
+### Cartonașul de pe WhatsApp (Open Graph)
+
+Preview-ul care apare când cineva lipește linkul într-o conversație arăta
+titlul și puțin text, dar nu și coperta: lipseau meta-tagurile `og:*`.
+
+`inc/antet.php` le scrie acum pentru **toate** paginile, cu valori implicite
+luate din `$titlu` și `$descriere` — atât are de spus o pagină obișnuită. Cine
+are mai mult le schimbă înainte de `require`: `$ogTitlu`, `$ogDescriere`,
+`$ogImagine`, `$ogUrl`, `$ogTip`. `event.php` pune titlul evenimentului,
+primele 180 de caractere din descriere (fără etichete) și coperta lui.
+
+**Adresele trebuie să fie întregi.** WhatsApp și Facebook nu se uită la pagină
+din browserul omului: o cer ele, de pe alt server, iar o cale de forma
+`assets/img/…` n-are acolo față de ce să se socotească. De aceea există
+`urlIntreg()` în `inc/bootstrap.php`, care lipește o cale de `url_site` —
+și de aceea `url_site` trebuie să fie corect pe producție, altfel cartonașul
+rămâne fără poză deși pe site totul arată bine.
+
+Dacă evenimentul n-are copertă, se încearcă imaginea categoriei — dar **numai
+dacă fișierul chiar există pe disc**: coloana `categorii.imagine_default`
+există de mult, fișierele nu s-au urcat încă. O adresă care duce la 404 e mai
+rea decât niciuna, fiindcă WhatsApp ar încerca s-o ia și ar arăta un cartonaș
+ciuntit. Fără poză, `twitter:card` scade de la `summary_large_image` la
+`summary`.
+
+### Un eveniment care s-a încheiat
+
+Ziua lui a trecut. Nu se ascunde și nu se închide — rămâne o pagină bună de
+citit și de trimis mai departe, cu tot cu butoanele de distribuire. Se schimbă
+doar ce se poate face pe ea.
+
+Regula e aceeași ca la limita de un eveniment activ, prin `evenimentIncheiat()`
+din `inc/evenimente.php` — perechea lui `filtruNeincheiat()`, scrisă pentru un
+rând în loc de o interogare, și pusă lipită de ea dinadins: dacă una se
+schimbă, cealaltă sare în ochi. Altfel un eveniment ar putea arăta „încheiat"
+pe pagina lui și ar bloca în același timp postarea altuia.
+
+Ce se vede: o bandă **cenușie**, nu galbenă și nici roșie. Culorile alea sunt
+pentru ce n-a mers bine — un anunț neaprobat, unul respins. Aici n-a greșit
+nimeni, doar a trecut ziua.
+
+Ce nu se mai poate: butoanele „Mă interesează" și „Voi participa" sunt stinse,
+caseta de confirmare nici nu se scrie, iar „Fii primul interesat" devine „Nu
+s-a înscris nimeni" — o invitație la ceva imposibil e mai rea decât o
+constatare. Numerele și chipurile rămân: sunt istoria evenimentului.
+
+**Oprirea adevărată e pe server.** `api/interes.php` refuză cu „Evenimentul
+s-a încheiat.", fiindcă butonul stins e purtare frumoasă, nu regulă: o filă
+deschisă alaltăieri, pe când evenimentul era încă în față, arată butoanele vii.
+Nici retragerea nu se mai poate — listele unui eveniment trecut sunt istorie,
+iar organizatorul care se uită peste ele a doua zi trebuie să vadă ce a fost,
+nu ce a mai rămas.
+
 ### Distribuirea
 
 Trei iconițe între detaliile evenimentului și „Mergi la acest eveniment?":
