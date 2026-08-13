@@ -84,6 +84,26 @@ if (evenimentIncheiat($eveniment)) {
     ], 409);
 }
 
+/**
+ * Și doar DUPĂ ce a început — ziua și ora.
+ *
+ * Ce nu s-a petrecut încă nu se poate încheia: ar fi un eveniment care apare pe
+ * site ca și cum ar fi avut loc, deși nimeni n-a fost nicăieri. Ce vrea
+ * organizatorul atunci se cheamă anulare, are butonul lui în formularul de
+ * editare și cere un motiv — fiindcă oamenii înscriși trebuie înștiințați,
+ * ceea ce la o încheiere n-are rost.
+ *
+ * În pagină butonul nici nu se vede înainte de oră, dar asta e purtare
+ * frumoasă, nu regulă: cererea poate veni de oriunde, iar o filă lăsată
+ * deschisă peste noapte arată butoane vechi.
+ */
+if (!evenimentAInceput($eveniment)) {
+    raspunsJson([
+        'ok'    => false,
+        'mesaj' => 'Evenimentul n-a început încă. Îl poți doar anula, din formularul de editare.',
+    ], 409);
+}
+
 incheieEveniment($eveniment);
 
 // Mesajul îl citește inc/subsol.php pe pagina următoare și îl arată o singură

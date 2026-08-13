@@ -98,6 +98,33 @@ function evenimentIncheiat(array $eveniment): bool
 }
 
 /**
+ * A început deja?
+ *
+ * Ziua ȘI ora, nu doar ziua — spre deosebire de „încheiat", care se socotește
+ * pe zile. Aici e nevoie de ceas: un eveniment de azi de la 19:00 n-a început
+ * la ora 10 dimineața, iar organizatorul n-are ce încheia dintr-un lucru care
+ * nu s-a petrecut încă. Ce vrea el atunci se cheamă anulare, și are butonul
+ * lui, cu motiv cu tot.
+ *
+ * Se compară șiruri „AAAA-LL-ZZ HH:MM:SS", care se ordonează la fel ca
+ * momentele pe care le scriu. Ceasul e al PHP-ului, ca peste tot.
+ */
+function evenimentAInceput(array $eveniment): bool
+{
+    $data = (string) ($eveniment['data_eveniment'] ?? '');
+
+    if ($data === '') {
+        return false;
+    }
+
+    // Ora de început e obligatorie în formular, dar dacă printr-o scăpare
+    // lipsește, ziua începe la miezul nopții.
+    $ora = oraScurta($eveniment['ora_inceput'] ?? null);
+
+    return $data . ' ' . ($ora !== '' ? $ora : '00:00') . ':00' <= acum();
+}
+
+/**
  * E un anunț care se vede pe site?
  *
  * „aprobat" și „incheiat" — două stări, o singură purtare față de lume.
