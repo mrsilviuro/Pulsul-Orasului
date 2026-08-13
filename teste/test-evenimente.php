@@ -1943,6 +1943,8 @@ verifica('și nu se împrumută din culorile de eroare', false,
 
 verifica('butonul „mă interesează" e stins', true,
     preg_match('/id="btn-interested".*?disabled/s', $paginaTrecut['corp']) === 1);
+verifica('și eticheta lui e la trecut', true,
+    str_contains($paginaTrecut['corp'], '>Cine a fost interesat</span>'));
 verifica('și cel de participare', true,
     preg_match('/id="btn-going".*?disabled/s', $paginaTrecut['corp']) === 1);
 verifica('caseta de confirmare nici nu se scrie', false,
@@ -2008,6 +2010,46 @@ verifica('dar nu și celelalte', [false, false, false],
      evenimentPublicat(['stare_moderare' => 'respins']),
      evenimentPublicat(['stare_moderare' => 'anulat'])]);
 
+/* --------------- doar după ce a început: ziua ȘI ora ----------------- */
+
+/**
+ * Ce nu s-a petrecut încă nu se poate încheia — ar fi un eveniment care apare
+ * ca și cum ar fi avut loc, deși nimeni n-a fost nicăieri. Ce vrea
+ * organizatorul atunci se cheamă anulare, are butonul lui și cere un motiv.
+ *
+ * Ceasul e al PHP-ului, ca peste tot: MySQL e pe alt fus (aici, trei ore
+ * diferență), iar o probă scrisă cu NOW() ar fi „pus" ora peste două ore în
+ * trecut. Vezi regula ceasului unic din CLAUDE.md.
+ */
+verifica('unul de peste cinci zile n-a început', false,
+    evenimentAInceput(['data_eveniment' => date('Y-m-d', strtotime('+5 days')),
+                       'ora_inceput'    => '19:00:00']));
+verifica('nici cel de azi, peste două ore', false,
+    evenimentAInceput(['data_eveniment' => date('Y-m-d'),
+                       'ora_inceput'    => date('H:i:00', strtotime('+2 hours'))]));
+verifica('dar cel de azi, de acum o oră, da', true,
+    evenimentAInceput(['data_eveniment' => date('Y-m-d'),
+                       'ora_inceput'    => date('H:i:00', strtotime('-1 hour'))]));
+verifica('și unul de ieri', true,
+    evenimentAInceput(['data_eveniment' => date('Y-m-d', strtotime('-1 day')),
+                       'ora_inceput'    => '23:00:00']));
+
+// Evenimentul de probă e peste 12 zile, deci nu se poate încheia încă.
+$r = incheie($c, $slugInch);
+verifica('unul care n-a început nu se poate încheia', false, $r['ok'] ?? true);
+verifica('cu mesaj care îndrumă spre anulare', true,
+    str_contains($r['mesaj'] ?? '', 'Îl poți doar anula'));
+verifica('și starea e neatinsă', 'aprobat', $stareaLui($idInch));
+verifica('nici butonul nu se vede în pagină', false,
+    str_contains(cerere($laInch, $c)['corp'], 'id="ev-incheie"'));
+
+// Îl aducem la ziua de azi, cu ora trecută: de aici încolo se poate.
+db()->prepare('UPDATE evenimente SET data_eveniment = ?, ora_inceput = ? WHERE id = ?')
+    ->execute([date('Y-m-d'), date('H:i:00', strtotime('-1 hour')), $idInch]);
+
+verifica('după ora de început, butonul apare', true,
+    str_contains(cerere($laInch, $c)['corp'], 'id="ev-incheie"'));
+
 /* --------------------------- cine n-are voie -------------------------- */
 
 verifica('altcineva nu poate încheia evenimentul meu', false,
@@ -2047,6 +2089,17 @@ verifica('cu banda de încheiat', true,
     str_contains($paginaInch['corp'], 'stare-anunt--incheiat'));
 verifica('butoanele de participare sunt stinse', true,
     preg_match('/id="btn-going".*?disabled/s', $paginaInch['corp']) === 1);
+
+/**
+ * Și nu mai cer nimic, ci spun ce numără. „Mă interesează 12" sub un anunț
+ * trecut sună a invitație la ceva ce nu se mai poate.
+ */
+verifica('eticheta întâi devine „Cine a fost interesat"', true,
+    str_contains($paginaInch['corp'], '>Cine a fost interesat</span>'));
+verifica('a doua, „Cine a participat"', true,
+    str_contains($paginaInch['corp'], '>Cine a participat</span>'));
+verifica('fără prezent pe butoane', false,
+    str_contains($paginaInch['corp'], '>Mă interesează</span>'));
 verifica('iar butonul de încheiere a dispărut', false,
     str_contains(cerere($laInch, $c)['corp'], 'id="ev-incheie"'));
 

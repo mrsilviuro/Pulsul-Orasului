@@ -70,6 +70,17 @@ $eAnulat        = $eveniment['stare_moderare'] === 'anulat';
  */
 $eIncheiat = evenimentIncheiat($eveniment);
 
+/**
+ * Poate organizatorul să-l încheie chiar acum?
+ *
+ * Doar după ce a început — ziua ȘI ora. Un eveniment care nu s-a petrecut încă
+ * nu se „încheie": ce vrea omul atunci se cheamă anulare, are butonul lui în
+ * formularul de editare și cere un motiv, fiindcă oamenii înscriși trebuie
+ * înștiințați. Încheierea nu spune nimănui nimic, tocmai fiindcă evenimentul
+ * a avut loc.
+ */
+$poateIncheia = $eOrganizatorul && !$eIncheiat && evenimentAInceput($eveniment);
+
 /* ------------------------ „Mergi la acest eveniment?" ------------------ */
 
 /**
@@ -276,12 +287,13 @@ require __DIR__ . '/inc/antet.php';
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3A4 4 0 0 0 13 5.3l-1.4 1.4"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3A4 4 0 0 0 11 18.7l1.4-1.4"/></svg>
         </button>
 
-        <?php if ($eOrganizatorul && !$eIncheiat): ?>
+        <?php if ($poateIncheia): ?>
         <!--
-          „Încheie evenimentul" — doar pentru cel care l-a pus la cale, și doar
-          cât mai e ceva de încheiat. Un eveniment se termină oricum singur a
-          doua zi după data lui; butonul ăsta e pentru când se termină mai
-          devreme: s-au ocupat locurile, s-a stricat vremea la jumătate.
+          „Încheie evenimentul" — doar pentru cel care l-a pus la cale, doar
+          cât mai e ceva de încheiat, și doar DUPĂ ce a început. Un eveniment
+          se termină oricum singur a doua zi după data lui; butonul ăsta e
+          pentru când se termină mai devreme: s-au ocupat locurile, s-a
+          stricat vremea la jumătate, s-a strâns lumea și gata.
 
           Stă în dreapta iconițelor de distribuire, despărțit de ele — alea
           sunt pentru oricine, asta e a lui.
@@ -297,7 +309,7 @@ require __DIR__ . '/inc/antet.php';
         <?php endif; ?>
       </div>
 
-      <?php if ($eOrganizatorul && !$eIncheiat): ?>
+      <?php if ($poateIncheia): ?>
       <!--
         Confirmarea, desenată de noi în pagină, ca la anulare: o fereastră a
         browserului arată altfel pe Windows, pe Android și pe iPhone.
@@ -364,7 +376,10 @@ require __DIR__ . '/inc/antet.php';
             <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
               <path d="m12 3.8 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.5 10l5.9-.9L12 3.8Z"/>
             </svg>
-            <span class="rsvp__label">Mă interesează</span>
+            <!-- La un eveniment trecut butoanele nu mai cer nimic, ci spun ce
+                 numără: „Mă interesează 12" sub un anunț de acum trei luni
+                 sună a invitație la ceva ce nu se mai poate. -->
+            <span class="rsvp__label"><?= $eIncheiat ? 'Cine a fost interesat' : 'Mă interesează' ?></span>
             <span class="rsvp__count" data-count-for="interesat"><?= (int) $numarInterese['interesat'] ?></span>
           </button>
 
@@ -381,7 +396,7 @@ require __DIR__ . '/inc/antet.php';
             <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
               <circle cx="12" cy="12" r="9"/><path d="m8.2 12.3 2.6 2.6 5-5.2"/>
             </svg>
-            <span class="rsvp__label">Voi participa</span>
+            <span class="rsvp__label"><?= $eIncheiat ? 'Cine a participat' : 'Voi participa' ?></span>
             <span class="rsvp__count" data-count-for="participant"><?= (int) $numarInterese['participant'] ?></span>
           </button>
         </div>

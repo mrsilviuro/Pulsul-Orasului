@@ -1343,6 +1343,19 @@ spune ce a făcut omul pentru oraș, iar un eveniment încheiat e chiar dovada c
 a făcut. Ar fi fost pe dos să scadă exact în clipa în care a dus treaba la
 capăt.
 
+**Se poate încheia doar DUPĂ ce a început** — ziua *și* ora, prin
+`evenimentAInceput()`. Spre deosebire de „încheiat", care se socotește pe zile,
+aici e nevoie de ceas: un eveniment de azi de la 19:00 n-a început la ora 10
+dimineața. Ce nu s-a petrecut încă nu se poate „încheia" — ar apărea pe site ca
+și cum ar fi avut loc, deși nimeni n-a fost nicăieri. Ce vrea organizatorul
+atunci se cheamă **anulare**, are butonul lui în formularul de editare și cere
+un motiv, fiindcă oamenii înscriși trebuie înștiințați; la încheiere n-are
+rost, tocmai fiindcă evenimentul a avut loc.
+
+Ceasul e al PHP-ului, ca peste tot. (Proba din browser a căzut prima dată
+tocmai fiindcă era scrisă cu `NOW()` din MySQL, care aici e cu trei ore în
+urmă — exact capcana din CLAUDE.md, prinsă din nou.)
+
 Butonul „Încheie evenimentul" stă în dreapta iconițelor de distribuire, se vede
 doar organizatorului și doar cât mai e ceva de încheiat. Confirmarea e în două
 trepte, desenată în pagină ca la anulare — dar nu roșie: încheierea nu e o
@@ -1354,7 +1367,11 @@ Ce se vede: o bandă **cenușie**, nu galbenă și nici roșie. Culorile alea su
 pentru ce n-a mers bine — un anunț neaprobat, unul respins. Aici n-a greșit
 nimeni, doar a trecut ziua.
 
-Ce nu se mai poate: butoanele „Mă interesează" și „Voi participa" sunt stinse,
+**Butoanele nu mai cer, ci spun ce numără:** „Cine a fost interesat" și „Cine
+a participat". „Mă interesează 12" sub un anunț de acum trei luni sună a
+invitație la ceva ce nu se mai poate.
+
+Ce nu se mai poate: butoanele sunt stinse,
 caseta de confirmare nici nu se scrie, iar „Fii primul interesat" devine „Nu
 s-a înscris nimeni" — o invitație la ceva imposibil e mai rea decât o
 constatare. Numerele și chipurile rămân: sunt istoria evenimentului.
