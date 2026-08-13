@@ -94,9 +94,11 @@ merge fără modificări în JS.
 ### Taburi și comentarii
 
 Cele trei taburi (Comentarii / Interesați / Participă) sunt un `tablist`
-accesibil — merg și cu săgețile de la tastatură. Sub-comentariile stau într-un
-`<ul class="comment__replies">` în interiorul comentariului părinte; formularul
-de răspuns se generează din JS la click pe „Răspunde".
+accesibil — merg și cu săgețile de la tastatură. Comentariile nu mai sunt
+șablon: vin din bază, prin `inc/comentarii.php`. Sub-comentariile stau într-un
+`<ul class="comment__replies">` care e FRATE cu `<article class="comment__body">`,
+nu copil al lui — vezi secțiunea „Comentariile"; formularul de răspuns se
+generează din JS la click pe „Răspunde".
 
 ## Pagina de contact (`contact.html`)
 
@@ -1813,10 +1815,10 @@ cui trimite e-mailul și nici ce să scrie în el.
 
 ### Ce nu e făcut
 
-Comentariile de sub eveniment sunt încă șablonul, cu oameni inventați. La fel
-și panourile din taburile „Interesați" și „Participanți" — numerele de pe
-taburi vin acum din bază, listele dinăuntru nu. „Mergi la acest eveniment?"
-merge de-a binelea; vezi secțiunea lui, mai sus.
+Panourile din taburile „Interesați" și „Participanți" sunt încă șablonul, cu
+oameni inventați — numerele de pe taburi vin din bază, listele dinăuntru nu.
+„Mergi la acest eveniment?" și comentariile merg de-a binelea; vezi secțiunile
+lor.
 
 Nu există încă interfață de aprobare și nici încheiere manuală. Evenimentul
 intră cu `stare_moderare = 'in_asteptare'` și nu se vede pe prima pagină; omul
@@ -1829,6 +1831,187 @@ eveniment fără copertă rămâne fără poza mare.
 
 Verificările: `php teste/test-evenimente.php http://127.0.0.1:8126`
 (292 de cazuri, cere serverul pornit).
+
+
+## Comentariile
+
+Discuția de sub un eveniment. Se vede de oricine, se scrie doar cu cont.
+
+`sql/015-comentarii.sql`, `inc/comentarii.php`, `api/comentarii.php`, partea de
+jos a lui `event.php` și blocul „COMENTARII" din `assets/js/main.js`.
+
+### Două niveluri, și de ce nu trei
+
+Un comentariu e ori **principal** (`parinte_id` gol, stă direct sub eveniment),
+ori **secundar** (`parinte_id` = principalul sub care stă). Atât.
+
+Un răspuns dat unui secundar **nu** coboară pe al treilea nivel: se pune sub
+același principal și doar spune cui îi răspunde, prin `raspuns_la_id`. La al
+treilea nivel de indentare, pe un telefon, un comentariu are lățimea unui
+cuvânt — iar o discuție care se ramifică în copac nu se mai poate citi de sus
+în jos, fiindcă nimeni nu știe de unde s-o reia.
+
+Adâncimea n-o hotărăște cine apasă, ci locul. De aceea `salveazaComentariu()`
+nu primește „ce nivel", ci „la cine":
+
+```php
+$eSecundar   = $catre['parinte_id'] !== null;
+$parinteId   = $eSecundar ? (int) $catre['parinte_id'] : (int) $catre['id'];
+$raspunsLaId = $eSecundar ? (int) $catre['id'] : null;
+```
+
+Mențiunea „către X" apare numai la al doilea caz. Sub un principal, primul
+răspuns se vede de la sine pentru cine e; al doilea, nu.
+
+### Cum arată un om
+
+Numele e mereu prescurtat — „R. Ioana", prin `numeAfisat()`, aceeași funcție ca
+peste tot pe site — și duce la `profil.php?m=<permalink>`.
+
+Lângă el, insignele:
+
+| Insignă | Când |
+|---|---|
+| `Staff` | `membri.este_staff = 1` |
+| `Organizator` | comentariul e al celui care a pus evenimentul |
+| `Participant` | are rând `participant` în `interese_evenimente` |
+
+**Staff și Organizator se poartă amândouă** — sunt două lucruri diferite, iar
+cine le are pe amândouă le merită pe amândouă. „Participant" nu se mai scrie
+lângă „Organizator": cine pune evenimentul la cale vine la el, iar rândul lui
+de participant se scrie automat la salvare (vezi `faOrganizatorulParticipant()`).
+Ar fi fost o insignă care spune ce se înțelege oricum din cealaltă.
+
+Contul șters se anonimizează, nu dispare (vezi `inc/stergere.php`), iar
+comentariile lui rămân în discuție — sunt vorbele cuiva, iar restul discuției
+atârnă de ele. Dar omul a plecat: se scrie „Utilizator șters", fără chip, fără
+insigne și fără drum spre profil.
+
+### Aprecierile
+
+Anonime pe ecran — se vede doar numărul, niciodată cine. Atunci de ce un rând
+per om în `comentarii_aprecieri`, și nu un contor pe comentariu? Fiindcă altfel
+nimeni n-ar putea să-și ia aprecierea înapoi, iar același om ar putea apăsa de
+o sută de ori.
+
+Ca la „Mă interesează", serverul nu primește „ce să facem", ci „pe ce s-a
+apăsat" — el știe starea adevărată. Se încearcă întâi ștergerea; dacă n-a șters
+nimic, se pune acum:
+
+```php
+$sters->execute([$comentariuId, $membruId]);
+$apreciat = $sters->rowCount() === 0;
+```
+
+Așa nu există clipa dintre „citesc dacă există" și „scriu", în care ar încăpea
+a doua apăsare. Numărul de pe buton se citește din bază **după** schimbare, nu
+se socotește în browser: între două apăsări ale omului nostru pot intra alți
+zece.
+
+Vizitatorul neconectat vede butonul și numărul — e o veste bună pentru discuție
+— dar apăsarea îl duce la `login.php`, cu întoarcere fix pe evenimentul ăsta.
+
+### Ștergerea, și de ce nu e mereu o ștergere
+
+| Ce se șterge | Ce se întâmplă |
+|---|---|
+| principal **fără** răspunsuri | `DELETE`, se duce de tot |
+| principal **cu** răspunsuri | se golește: `sters = 1`, text gol |
+| orice secundar | `DELETE`, se duce de tot |
+
+Un principal cu răspunsuri nu poate să dispară: ar rămâne suspendate în aer
+răspunsurile la el, iar discuția n-ar mai avea început. Rândul rămâne ca piatră
+de mormânt — în locul numelui scrie **„Comentariu șters"**, în locul textului
+**„Acest comentariu a fost șters"**, iar chipul e cel implicit. Nu mai e al
+nimănui: nici staff-ul nu mai are ce-i face, iar la ea nu se mai răspunde.
+
+Aprecierile ei se șterg: erau pentru ce scria acolo, iar acolo nu mai scrie
+nimic.
+
+Și încă un pas, la sfârșit: dacă răspunsul tocmai șters era **ultimul** de sub
+o piatră de mormânt, se duce și ea. Rămăsese doar ca să țină discuția legată,
+iar discuția nu mai e.
+
+Legătura părinte→copil nu e cheie străină, dinadins: ar fi una care arată spre
+același tabel peste care trece deja cascada de la ștergerea evenimentului, iar
+două cascade care se întâlnesc pe un tabel sunt exact locul unde InnoDB nu mai
+garantează nimic. Ștergerea răspunsurilor odată cu principalul o face
+`stergeComentariu()`, într-o tranzacție.
+
+### Staff-ul
+
+Cine are `1` în `membri.este_staff` poate edita și șterge orice comentariu, ca
+și cum ar fi al lui. Aceeași funcție hotărăște și dacă butonul se desenează în
+pagină, și dacă cererea trece prin API:
+
+```php
+function poateModificaComentariul(array $comentariu, int $membruId, bool $eStaff): bool
+```
+
+În pagină e o purtare frumoasă; în `api/comentarii.php` e regula — cererea
+poate veni de oriunde, nu doar de pe butoanele noastre.
+
+### „Vezi mai multe comentarii"
+
+**Toate** comentariile intră în pagină de la prima încărcare. Butonul nu aduce
+nimic de pe server, doar dă la o parte: `main.js` lasă la vedere primele
+`COMENTARII_DEODATA` (15) și mai arată câte 15 la fiecare apăsare, scriind pe
+buton câte au rămas ascunse — „Vezi mai multe comentarii (încă 12)".
+
+De ce așa și nu cerute pe rând: aici discuția e scurtă — zeci de rânduri, nu
+mii — iar în schimbul câtorva kiloocteți în plus se câștigă un buton care
+răspunde pe loc, o pagină care se poate căuta cu Ctrl+F întreagă și comentarii
+pe care le vede și Google.
+
+Se numără la grămadă, principale și secundare la un loc, **în ordinea în care
+apar pe ecran**. Ordinea asta face ca primele 15 să fie mereu un început întreg
+de discuție: dacă un principal a rămas dincolo de tăietură, răspunsurile lui
+sunt și ele dincolo, deci nu se poate întâmpla să atârne un răspuns fără
+întrebarea lui.
+
+### Structura din pagină
+
+```html
+<li class="comment" data-comentariu="12">
+  <article class="comment__body">…</article>
+  <ul class="comment__replies">…</ul>      <!-- FRATE, nu copil -->
+</li>
+```
+
+Răspunsurile stau **lângă** `article`, nu în el. Așa se poate înlocui un
+comentariu editat sau golit — serverul întoarce doar `<article>` — fără să se
+ducă odată cu el discuția de dedesubt.
+
+Tot HTML-ul vine gata desenat din `inc/comentarii.php`, și la încărcarea
+paginii, și după fiecare apăsare. Nu se lipește din bucăți în JS: ar fi
+însemnat două locuri care desenează același lucru, iar al doilea ar fi rămas în
+urmă de la prima corectură — și ar fi însemnat text venit de la om lipit în
+pagină fără trecerea prin `h()`.
+
+### Ce mai verifică serverul
+
+- **CSRF** la fiecare cerere, ca peste tot.
+- **Cont**, altfel 401 — semnul după care `main.js` trimite omul la login.
+- **Evenimentul**: aceeași `poateVedeaEvenimentul()` ca la deschiderea paginii,
+  și același răspuns pentru „nu există" și „nu ai voie".
+- **Publicat**: sub unul în așteptare, respins sau anulat nu se discută. Un
+  eveniment **încheiat** rămâne însă deschis la comentarii, spre deosebire de
+  listele de participanți: acolo se închide o socoteală, aici oamenii spun cum
+  a fost — și asta se întâmplă mai ales după.
+- **Textul**: `verificaComentariu()`, între 2 și 2000 de caractere (nu octeți),
+  curățat cu `curataTextPeRanduri()`. În bază intră text curat, neescapat.
+- **Cât de des**: cel mult un comentariu la 15 secunde per om, numărat în
+  tabelul propriu al funcției. Nu ca să-l încetinească pe cel care are ceva de
+  spus, ci pentru cine ar vrea să umple o discuție dintr-un script.
+
+### Ce nu e făcut
+
+Nimeni nu e înștiințat de nimic: cine primește un răspuns nu află decât dacă se
+întoarce singur pe pagină. Nu există raportare și nici pagină de moderare —
+staff-ul umblă la comentarii de pe pagina evenimentului, ca oricare autor.
+
+Verificările: `php teste/test-comentarii.php` (75 de cazuri, cere baza de date,
+nu și serverul).
 
 
 ## E-mailurile

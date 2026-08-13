@@ -169,7 +169,7 @@ if ($logat) {
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/css/style.css?v=43">
+<link rel="stylesheet" href="assets/css/style.css?v=44">
 
 <!-- Setează tema ÎNAINTE de randare, ca să nu apară un flash alb pe dark mode -->
 <script>
@@ -186,6 +186,10 @@ if ($logat) {
 <body data-logat="<?= $logat ? 'true' : 'false' ?>"
 <?php if ($logat): ?>      data-user-nume="<?= h(numeAfisat($membru['nume'], $membru['prenume'])) ?>"
       data-user-initiala="<?= h(mb_substr($membru['prenume'], 0, 1, 'UTF-8')) ?>"
+      <?php /* Chipul propriu, pentru formularele desenate din JS (răspunsul la
+               un comentariu). Fără el, main.js avea o poză scrisă de mână în
+               cod, aceeași pentru toată lumea. */ ?>
+      data-user-poza="<?= h(urlPoza($membru['poza'] ?? null, true)) ?>"
 <?php endif; ?><?= $bodyAttr !== '' ? '      ' . $bodyAttr : '' ?>>
 
 <a class="skip-link" href="#main">Sari la conținut</a>

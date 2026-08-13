@@ -222,10 +222,13 @@
   // scrie data-logat pe <body> la fiecare încărcare de pagină.
   function isLoggedIn() { return body.getAttribute('data-logat') === 'true'; }
 
+  // Numele și chipul vin din sesiune, prin atributele scrise de inc/antet.php.
+  // Chipul era până acum scris de mână aici, același pentru toată lumea: cine
+  // răspundea la un comentariu se vedea pe sine cu poza altcuiva.
   function currentUser() {
     return {
       name:   body.getAttribute('data-user-nume') || 'Utilizator',
-      avatar: 'assets/img/avatars/cristi.svg'
+      avatar: body.getAttribute('data-user-poza') || 'assets/img/avatars/implicit.svg'
     };
   }
 
@@ -1008,101 +1011,610 @@
     }
   }
 
-  /* --- Comentarii: like --- */
-  document.querySelectorAll('[data-like]').forEach(function (btn) {
-    var counter = btn.querySelector('[data-like-count]');
-    var base = counter ? parseInt(counter.textContent, 10) || 0 : 0;
+  /* ------------------------------ COMENTARII ----------------------------
+     Discuția de sub un eveniment. Tot ce se vede aici vine gata desenat de pe
+     server, din inc/comentarii.php: se scrie un comentariu, se primește
+     înapoi `<li>`-ul lui, se pune în listă. Nu se lipește HTML din bucăți în
+     JS — ar fi însemnat două locuri care desenează același lucru, iar al
+     doilea ar fi rămas în urmă de la prima corectură.
 
-    btn.addEventListener('click', function () {
-      if (!isLoggedIn()) {
-        toast('Intră în cont ca să apreciezi un comentariu.');
-        setTimeout(goToLogin, 900);
-        return;
+     Ascunsul e singurul lucru care se face doar aici: toate comentariile
+     intră în pagină de la început, iar „Vezi mai multe" nu aduce nimic, doar
+     dă la o parte.
+  ------------------------------------------------------------------------ */
+
+  var panouComentarii = document.querySelector('[data-comentarii]');
+
+  if (panouComentarii) {
+    var listaComentarii = panouComentarii.querySelector('[data-lista-comentarii]');
+    var slugComentarii  = panouComentarii.getAttribute('data-slug') || '';
+    var golComentarii   = panouComentarii.querySelector('[data-comentarii-gol]');
+    var maiMulte        = panouComentarii.querySelector('[data-mai-multe]');
+    var maiMulteButon   = panouComentarii.querySelector('[data-mai-multe-buton]');
+    var contorComentarii = document.querySelector('[data-count-for="comentarii"]');
+
+    // Câte se arată deodată. Numărul vine din COMENTARII_DEODATA
+    // (inc/comentarii.php), ca să fie scris într-un singur loc.
+    var deodata  = parseInt(panouComentarii.getAttribute('data-deodata'), 10) || 15;
+    var vizibile = deodata;
+
+    /* --------------------------- ajutătoare ---------------------------- */
+
+    /** „3 zile", dar „21 de zile" — aceeași regulă ca numaratoare() din PHP. */
+    function numaratoare(cate, substantiv) {
+      var ultimele = cate % 100;
+      var direct = ultimele >= 1 && ultimele <= 19;
+      return cate + (direct ? ' ' : ' de ') + substantiv;
+    }
+
+    /** Toate comentariile, în ordinea în care apar pe ecran. */
+    function toateComentariile() {
+      if (!listaComentarii) return [];
+      return Array.prototype.slice.call(listaComentarii.querySelectorAll('.comment'));
+    }
+
+    /** Comentariul cu id-ul ăsta, oriunde ar fi în listă. */
+    function comentariulCu(id) {
+      if (!listaComentarii) return null;
+      return listaComentarii.querySelector('[data-comentariu="' + id + '"]');
+    }
+
+    /**
+     * Ascunde tot ce trece de câte se arată acum, și pune pe buton câte au
+     * rămas.
+     *
+     * Se merge pe comentarii în ordinea din pagină — principal, apoi
+     * răspunsurile lui, apoi următorul principal. Ordinea asta face ca
+     * primele N să fie mereu un început întreg de discuție: dacă un principal
+     * a rămas dincolo de tăietură, răspunsurile lui sunt și ele dincolo, deci
+     * nu se poate întâmpla să atârne un răspuns fără întrebarea lui.
+     */
+    function potrivesteAscunsul() {
+      var toate = toateComentariile();
+      var ascunse = 0;
+
+      // Fără mai puțin decât un teanc, oricâte s-ar fi șters între timp.
+      if (vizibile < deodata) vizibile = deodata;
+
+      toate.forEach(function (li, i) {
+        var deAscuns = i >= vizibile;
+        li.hidden = deAscuns;
+        if (deAscuns) ascunse++;
+      });
+
+      /**
+       * Un fir tăiat la mijloc: principalul se vede, dar toate răspunsurile
+       * lui au rămas dincolo. Lista lor are dungă și spațiu deasupra, deci
+       * goală s-ar fi văzut ca o cutie fără nimic în ea.
+       */
+      if (listaComentarii) {
+        listaComentarii.querySelectorAll('.comment__replies').forEach(function (ul) {
+          var vreunul = Array.prototype.some.call(ul.children, function (li) {
+            return !li.hidden;
+          });
+
+          ul.hidden = !vreunul;
+        });
       }
-      var on = btn.getAttribute('aria-pressed') === 'true';
-      btn.setAttribute('aria-pressed', String(!on));
-      if (counter) counter.textContent = base + (!on ? 1 : 0);
-    });
-  });
 
-  /* --- Comentarii: răspuns (sub-comentariu) --- */
-  document.querySelectorAll('[data-reply]').forEach(function (btn) {
-    btn.addEventListener('click', function () {
-      if (!isLoggedIn()) {
-        toast('Intră în cont ca să răspunzi.');
-        setTimeout(goToLogin, 900);
-        return;
+      if (maiMulte) {
+        maiMulte.hidden = ascunse === 0;
+
+        // Doar numărul în paranteză: „comentarii" e deja în eticheta
+        // butonului, iar „încă 12 comentarii" acolo l-ar fi spus de două ori.
+        if (maiMulteButon && ascunse > 0) {
+          maiMulteButon.textContent = 'Vezi mai multe comentarii (încă ' + ascunse + ')';
+        }
       }
 
-      var main = btn.closest('.comment__main');
-      var existing = main.querySelector(':scope > .reply-form');
+      if (golComentarii) golComentarii.hidden = toate.length > 0;
+    }
 
-      // al doilea click închide formularul
-      if (existing) { existing.remove(); btn.textContent = 'Răspunde'; return; }
+    /** Numărul de pe tabul „Comentarii", venit din bază după fiecare schimbare. */
+    function setContor(cate) {
+      if (contorComentarii && typeof cate === 'number') {
+        contorComentarii.textContent = cate;
+      }
+    }
 
+    /**
+     * Textul așa cum l-a scris omul, recules din pagină pentru caseta de
+     * editare.
+     *
+     * Se desface exact ce a împachetat textulComentariului() din PHP:
+     * paragrafele au devenit `<p>`, rândurile dinăuntru `<br>`, iar restul e
+     * text trecut prin h(). Nu se ține o a doua copie a textului într-un
+     * atribut: ar fi fost aceleași vorbe scrise de două ori în pagină.
+     */
+    function textulBrut(articol) {
+      var bucati = [];
+
+      articol.querySelectorAll('.comment__text').forEach(function (p) {
+        var cutie = document.createElement('div');
+        cutie.innerHTML = p.innerHTML.replace(/<br\s*\/?>/gi, '\n');
+        bucati.push(cutie.textContent);
+      });
+
+      return bucati.join('\n\n');
+    }
+
+    /** Caseta de eroare de sub un câmp, aprinsă sau stinsă. */
+    function aratErroarea(camp, text) {
+      if (!camp) return;
+      camp.textContent = text || '';
+      camp.hidden = !text;
+    }
+
+    /* ---------------------- vorbitul cu serverul ----------------------- */
+
+    /**
+     * O cerere către api/comentarii.php.
+     *
+     * `laReusit` primește corpul răspunsului. Tot ce înseamnă „a picat" —
+     * sesiune expirată, eroare de câmp, server mut — se rezolvă aici, o
+     * singură dată, nu la fiecare apăsare în parte.
+     */
+    function trimiteComentariu(trup, buton, campEroare, laReusit) {
+      /**
+       * „Se trimite…" se scrie doar pe butoanele care sunt numai text — ca la
+       * participare. Butonul de apreciere are înăuntru o iconiță și un număr,
+       * iar `textContent` le-ar fi șters pe amândouă și le-ar fi înlocuit cu
+       * un șir. Pe el e de ajuns că se stinge.
+       */
+      var doarText    = !!buton && buton.children.length === 0;
+      var textInitial = doarText ? buton.textContent : '';
+
+      if (buton) { buton.disabled = true; }
+      if (doarText) { buton.textContent = 'Se trimite…'; }
+
+      function gata() {
+        if (buton) { buton.disabled = false; }
+        if (doarText) { buton.textContent = textInitial; }
+      }
+
+      trup.csrf = panouComentarii.getAttribute('data-csrf') || '';
+      trup.slug = slugComentarii;
+
+      fetch('api/comentarii.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify(trup)
+      })
+      .then(citesteRaspuns)
+      .then(function (rez) {
+        gata();
+
+        if (!rez.corp) { toast(mesajRaspunsNeasteptat(rez)); return; }
+        var c = rez.corp;
+
+        // Sesiunea s-a stins între încărcarea paginii și apăsare.
+        if (rez.stare === 401) {
+          toast('Intră în cont ca să comentezi.');
+          setTimeout(goToLogin, 900);
+          return;
+        }
+
+        if (c.erori) {
+          aratErroarea(campEroare, c.erori.text || 'Verifică ce ai scris.');
+          return;
+        }
+
+        if (!c.ok) { toast(c.mesaj || 'Nu am putut trimite comentariul.'); return; }
+
+        aratErroarea(campEroare, '');
+        laReusit(c);
+      })
+      .catch(function () {
+        gata();
+        toast(mesajFaraLegatura());
+      });
+    }
+
+    /* ------------------------ comentariu nou --------------------------- */
+
+    var formComentariu = panouComentarii.querySelector('[data-comment-form]');
+
+    if (formComentariu) {
+      var campComentariu  = formComentariu.querySelector('textarea');
+      var eroareComentariu = formComentariu.querySelector('#err-comentariu');
+
+      formComentariu.addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        var text = campComentariu.value.trim();
+
+        if (!text) {
+          aratErroarea(eroareComentariu, 'Scrie ceva înainte de a trimite.');
+          campComentariu.focus();
+          return;
+        }
+
+        trimiteComentariu(
+          { fapta: 'adauga', text: text },
+          formComentariu.querySelector('button[type="submit"]'),
+          eroareComentariu,
+          function (c) {
+            campComentariu.value = '';
+            adaugaInLista(c);
+            toast(c.mesaj || 'Comentariul tău a fost publicat.');
+          }
+        );
+      });
+
+      // Cât scrie omul, eroarea de dinainte nu mai are ce spune.
+      campComentariu.addEventListener('input', function () {
+        aratErroarea(eroareComentariu, '');
+      });
+    }
+
+    /**
+     * Comentariul proaspăt, pus la locul lui.
+     *
+     * Principalele intră în capul listei — cel de acum o clipă are mai mult de
+     * spus decât cel de acum o lună. Răspunsurile intră la coada firului lor,
+     * fiindcă acolo e o discuție, iar o discuție se citește de la început.
+     *
+     * `vizibile` crește cu unu: fără asta, un comentariu nou ar fi împins
+     * ultimul comentariu vizibil dincolo de tăietură, și ar fi părut că
+     * scrisul cuiva face să dispară scrisul altcuiva.
+     */
+    function adaugaInLista(c) {
+      if (!listaComentarii) return;
+
+      var cutie = document.createElement('div');
+      cutie.innerHTML = c.html;
+
+      var nou = cutie.firstElementChild;
+      if (!nou) return;
+
+      if (c.parinte) {
+        var parinte = comentariulCu(c.parinte);
+        if (!parinte) return;
+
+        var raspunsuri = parinte.querySelector(':scope > .comment__replies');
+
+        if (!raspunsuri) {
+          raspunsuri = document.createElement('ul');
+          raspunsuri.className = 'comment__replies';
+          raspunsuri.setAttribute('data-raspunsuri', '');
+          parinte.appendChild(raspunsuri);
+        }
+
+        raspunsuri.appendChild(nou);
+      } else {
+        listaComentarii.insertBefore(nou, listaComentarii.firstChild);
+      }
+
+      /**
+       * Comentariul proaspăt trebuie să se vadă, oriunde ar fi căzut.
+       *
+       * Un principal intră în cap, deci e primul; un răspuns intră la coada
+       * firului lui, care poate fi tocmai lângă tăietură. „Încă unul" n-ar fi
+       * fost de-ajuns acolo — omul ar fi apăsat „Publică" și nu s-ar fi
+       * întâmplat nimic pe ecran.
+       */
+      var locul = toateComentariile().indexOf(nou);
+
+      vizibile = Math.max(vizibile + 1, locul + 1);
+
+      potrivesteAscunsul();
+      setContor(c.numar);
+
+      // Sub un fir lung, comentariul nou poate cădea sub marginea ecranului.
+      nou.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+
+    /* --------------------------- răspunsul ----------------------------- */
+
+    /**
+     * Caseta de răspuns, deschisă sub comentariul pe care s-a apăsat.
+     *
+     * Una singură pe pagină: a doua ar fi însemnat două texte începute și
+     * uitate. Apăsarea pe „Răspunde" la alt comentariu o mută, nu o dublează.
+     */
+    function inchideRaspunsul() {
+      var deschis = panouComentarii.querySelector('[data-reply-form]');
+
+      if (deschis) {
+        var butonul = deschis.__buton;
+        if (butonul) butonul.textContent = 'Răspunde';
+        deschis.remove();
+      }
+    }
+
+    function deschideRaspunsul(articol, buton) {
+      var li = articol.closest('.comment');
+      var id = li.getAttribute('data-comentariu');
+
+      // A doua apăsare pe același buton închide caseta.
+      var deschis = panouComentarii.querySelector('[data-reply-form]');
+      if (deschis && deschis.__buton === buton) { inchideRaspunsul(); return; }
+
+      inchideRaspunsul();
+
+      var numeleLui = articol.querySelector('.comment__author');
+      var numele = numeleLui ? numeleLui.textContent : 'acest comentariu';
       var user = currentUser();
+
       var form = document.createElement('form');
       form.className = 'reply-form';
+      form.setAttribute('data-reply-form', '');
+      form.__buton = buton;
+
       form.innerHTML =
         '<img class="reply-form__avatar" src="' + user.avatar + '" alt="" width="96" height="96">' +
         '<div class="reply-form__main">' +
+          '<p class="reply-form__catre">Îi răspunzi lui <strong></strong></p>' +
           '<textarea rows="2" placeholder="Scrie un răspuns…" aria-label="Scrie un răspuns"></textarea>' +
+          '<p class="field__error" data-eroare hidden></p>' +
           '<div class="reply-form__actions">' +
             '<button class="btn btn--primary btn--xs" type="submit">Trimite</button>' +
             '<button class="btn btn--text" type="button" data-cancel-reply>Renunță</button>' +
           '</div>' +
         '</div>';
 
-      // inserăm înaintea listei de răspunsuri, dacă există
-      var replies = main.querySelector(':scope > .comment__replies');
-      if (replies) main.insertBefore(form, replies);
-      else main.appendChild(form);
+      // Numele se pune ca TEXT, nu lipit în HTML: e numele altui om, iar acolo
+      // pot fi ghilimele sau semne care ar strica marcajul din jur.
+      form.querySelector('.reply-form__catre strong').textContent = numele;
 
-      btn.textContent = 'Anulează';
+      // Sub articol, nu în el: răspunsurile stau lângă `article`, iar caseta
+      // trebuie să rămână între comentariu și discuția de sub el.
+      articol.parentNode.insertBefore(form, articol.nextSibling);
+
+      buton.textContent = 'Anulează';
       form.querySelector('textarea').focus();
 
-      form.querySelector('[data-cancel-reply]').addEventListener('click', function () {
-        form.remove();
-        btn.textContent = 'Răspunde';
+      var eroare = form.querySelector('[data-eroare]');
+
+      form.querySelector('[data-cancel-reply]').addEventListener('click', inchideRaspunsul);
+
+      form.querySelector('textarea').addEventListener('input', function () {
+        aratErroarea(eroare, '');
       });
 
       form.addEventListener('submit', function (e) {
         e.preventDefault();
-        var text = form.querySelector('textarea').value.trim();
-        if (!text) return;
-        // TODO: trimitere către server; deocamdată doar confirmăm.
-        form.remove();
-        btn.textContent = 'Răspunde';
-        toast('Răspunsul tău a fost trimis.');
-      });
-    });
-  });
 
-  /* --- Formularul de comentariu nou --- */
-  document.querySelectorAll('[data-comment-form]').forEach(function (form) {
-    form.addEventListener('submit', function (e) {
-      e.preventDefault();
-      if (!isLoggedIn()) {
-        toast('Intră în cont ca să comentezi.');
-        setTimeout(goToLogin, 900);
+        var camp = form.querySelector('textarea');
+        var text = camp.value.trim();
+
+        if (!text) {
+          aratErroarea(eroare, 'Scrie ceva înainte de a trimite.');
+          camp.focus();
+          return;
+        }
+
+        trimiteComentariu(
+          { fapta: 'adauga', text: text, raspunde_la: id },
+          form.querySelector('button[type="submit"]'),
+          eroare,
+          function (c) {
+            inchideRaspunsul();
+            adaugaInLista(c);
+            toast(c.mesaj || 'Răspunsul tău a fost publicat.');
+          }
+        );
+      });
+    }
+
+    /* --------------------------- corectura ----------------------------- */
+
+    function inchideEditarea() {
+      var deschis = panouComentarii.querySelector('[data-edit-form]');
+
+      if (deschis) {
+        var articolul = deschis.closest('.comment__body');
+        if (articolul) articolul.classList.remove('is-editing');
+        deschis.remove();
+      }
+    }
+
+    function deschideEditarea(articol) {
+      var li = articol.closest('.comment');
+      var id = li.getAttribute('data-comentariu');
+
+      inchideEditarea();
+      inchideRaspunsul();
+
+      var form = document.createElement('form');
+      form.className = 'edit-form';
+      form.setAttribute('data-edit-form', '');
+
+      form.innerHTML =
+        '<label class="sr-only" for="edit-' + id + '">Editează comentariul</label>' +
+        '<textarea id="edit-' + id + '" rows="3"></textarea>' +
+        '<p class="field__error" data-eroare hidden></p>' +
+        '<div class="reply-form__actions">' +
+          '<button class="btn btn--primary btn--xs" type="submit">Salvează</button>' +
+          '<button class="btn btn--text" type="button" data-cancel-edit>Renunță</button>' +
+        '</div>';
+
+      var camp = form.querySelector('textarea');
+      camp.value = textulBrut(articol);
+
+      // Caseta se pune în locul textului, iar textul și uneltele se sting din
+      // CSS (`.is-editing`) — nu se scot din pagină. Așa se pot pune la loc
+      // întregi dacă omul se răzgândește.
+      articol.classList.add('is-editing');
+      articol.querySelector('.comment__main').appendChild(form);
+
+      camp.focus();
+      camp.setSelectionRange(camp.value.length, camp.value.length);
+
+      var eroare = form.querySelector('[data-eroare]');
+
+      form.querySelector('[data-cancel-edit]').addEventListener('click', inchideEditarea);
+
+      camp.addEventListener('input', function () { aratErroarea(eroare, ''); });
+
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        var text = camp.value.trim();
+
+        if (!text) {
+          aratErroarea(eroare, 'Scrie ceva înainte de a salva.');
+          camp.focus();
+          return;
+        }
+
+        trimiteComentariu(
+          { fapta: 'editeaza', id: id, text: text },
+          form.querySelector('button[type="submit"]'),
+          eroare,
+          function (c) {
+            inchideEditarea();
+            inlocuiesteArticolul(c.id, c.html);
+            toast(c.mesaj || 'Comentariul a fost salvat.');
+          }
+        );
+      });
+    }
+
+    /**
+     * Schimbă doar comentariul, nu și discuția de sub el.
+     *
+     * Se înlocuiește `<article>`, nu `<li>`-ul: răspunsurile stau în `<li>`,
+     * ca frați ai articolului, iar înlocuirea întregului `<li>` le-ar fi luat
+     * cu ea. De asta le-a despărțit inc/comentarii.php.
+     */
+    function inlocuiesteArticolul(id, html) {
+      var li = comentariulCu(id);
+      if (!li || !html) return;
+
+      var vechi = li.querySelector(':scope > .comment__body');
+      if (!vechi) return;
+
+      var cutie = document.createElement('div');
+      cutie.innerHTML = html;
+
+      var nou = cutie.firstElementChild;
+      if (nou) li.replaceChild(nou, vechi);
+    }
+
+    /* --------------------------- ștergerea ----------------------------- */
+
+    function stergeComentariul(articol) {
+      var li = articol.closest('.comment');
+      var id = li.getAttribute('data-comentariu');
+
+      if (!window.confirm('Ștergi comentariul? Nu se mai poate aduce înapoi.')) {
         return;
       }
-      var field = form.querySelector('textarea');
-      if (!field.value.trim()) return;
-      field.value = '';
-      toast('Comentariul tău a fost trimis.');
-    });
-  });
 
-  // Câmpurile care cer cont trimit spre login la focus, ca să nu scrie degeaba.
-  if (!isLoggedIn()) {
-    document.querySelectorAll('[data-comment-form] textarea').forEach(function (field) {
-      field.addEventListener('focus', function () {
-        field.blur();
-        toast('Intră în cont ca să comentezi.');
-        setTimeout(goToLogin, 900);
+      inchideEditarea();
+      inchideRaspunsul();
+
+      trimiteComentariu({ fapta: 'sterge', id: id }, null, null, function (c) {
+        if (c.fel === 'golit') {
+          /**
+           * Avea răspunsuri, deci rândul rămâne — gol, fără nume și fără chip.
+           * Scos de tot, ar fi lăsat răspunsurile la el atârnate în aer.
+           */
+          inlocuiesteArticolul(c.id, c.html);
+        } else {
+          var deScos = comentariulCu(c.id);
+          if (deScos) deScos.remove();
+
+          // Ultimul răspuns de sub o piatră de mormânt a plecat, deci pleacă
+          // și ea: rămăsese doar ca să țină discuția legată.
+          if (c.parinte_sters) {
+            var parintele = comentariulCu(c.parinte_sters);
+            if (parintele) parintele.remove();
+          }
+        }
+
+        potrivesteAscunsul();
+        setContor(c.numar);
+        toast(c.mesaj || 'Comentariul a fost șters.');
       });
+    }
+
+    /* -------------------------- aprecierea ----------------------------- */
+
+    function apreciaza(buton) {
+      var li = buton.closest('.comment');
+      var id = li.getAttribute('data-comentariu');
+      var contor = buton.querySelector('[data-like-count]');
+
+      /**
+       * Numărul nu se socotește în browser, ci se citește din bază după
+       * schimbare. Între două apăsări ale omului nostru pot intra alți zece,
+       * iar un contor crescut cu unu în browser ar fi rămas greșit până la
+       * următoarea reîncărcare — aceeași alegere ca la listele de participanți.
+       */
+      trimiteComentariu({ fapta: 'apreciaza', id: id }, buton, null, function (c) {
+        buton.setAttribute('aria-pressed', String(!!c.apreciat));
+        if (contor) contor.textContent = c.cate;
+      });
+    }
+
+    /* ------------------ o singură ureche pentru tot --------------------- */
+
+    /**
+     * Ascultarea e pe panou, nu pe fiecare buton.
+     *
+     * Comentariile apar și dispar sub ochii omului; ascultătorii puși pe
+     * butoane la încărcarea paginii n-ar fi știut nimic despre cele venite
+     * după. Așa, orice buton nou funcționează din clipa în care intră în
+     * pagină, fără să i se lege nimic de mână.
+     */
+    panouComentarii.addEventListener('click', function (e) {
+      var buton = e.target.closest('button');
+      if (!buton || !panouComentarii.contains(buton)) return;
+
+      /* --- „Vezi mai multe comentarii" --- */
+      if (buton.hasAttribute('data-mai-multe-buton')) {
+        vizibile += deodata;
+        potrivesteAscunsul();
+        return;
+      }
+
+      var articol = buton.closest('.comment__body');
+      if (!articol) return;
+
+      /* --- apreciere --- */
+      if (buton.hasAttribute('data-like')) {
+        // Fără cont nu se apreciază. Butonul nu se ascunde de vizitator —
+        // numărul de pe el e o veste bună pentru discuție — dar apăsarea lui
+        // duce la intrare, cu întoarcere fix aici.
+        if (!isLoggedIn()) {
+          toast('Intră în cont ca să apreciezi un comentariu.');
+          setTimeout(goToLogin, 900);
+          return;
+        }
+
+        apreciaza(buton);
+        return;
+      }
+
+      /* --- răspuns --- */
+      if (buton.hasAttribute('data-reply')) {
+        if (!isLoggedIn()) {
+          toast('Intră în cont ca să răspunzi.');
+          setTimeout(goToLogin, 900);
+          return;
+        }
+
+        deschideRaspunsul(articol, buton);
+        return;
+      }
+
+      /* --- corectură --- */
+      if (buton.hasAttribute('data-edit')) {
+        deschideEditarea(articol);
+        return;
+      }
+
+      /* --- ștergere --- */
+      if (buton.hasAttribute('data-delete')) {
+        stergeComentariul(articol);
+      }
     });
+
+    // Prima așezare: tot ce trece de primul teanc se dă la o parte.
+    potrivesteAscunsul();
   }
 
   /* --- Bara de progres a citirii --- */
