@@ -122,6 +122,9 @@ inc/
                       profil, pagina unui eveniment, salvarea
   interese.php      → „Mergi la acest eveniment?" — cine e interesat, cine
                       vine, numărătoarea, locurile, rândul cu chipuri
+  comentarii.php    → discuția de sub eveniment: cele două niveluri,
+                      aprecierile, ștergerea cu piatră de mormânt, ȘI cum
+                      arată pe ecran (HTML-ul se scrie doar aici)
   afisare-eveniment.php → CUM ARATĂ un eveniment pe ecran (antet, copertă,
                       caseta cu detalii, descrierea). Folosit și de event.php,
                       și de previzualizare.php — schimbă aici, nu în pagini
@@ -138,8 +141,10 @@ sql/                → schema.sql + migrări numerotate (002, 003, 004, 005-goo
                       006-tine-minte, 007-setari, 008-mesaje-contact,
                       009-evenimente, 010-limita-evenimente,
                       011-anulare-eveniment, 012-oras-eveniment,
-                      013-interese-evenimente, 014-incheiere-eveniment)
+                      013-interese-evenimente, 014-incheiere-eveniment,
+                      015-comentarii)
 teste/              → test-validare.php (verificările din inc/validare.php)
+                      test-comentarii.php (cere baza de date, nu și serverul)
                       test-tine-minte.php, test-setari.php, test-contact.php,
                       test-evenimente.php
                       (ultimele patru cer serverul pornit — vezi antetul lor)
@@ -189,9 +194,9 @@ assets/css/style.css, assets/js/main.js, assets/img/
 
 ## Ce e neterminat (roadmap)
 
-- Comentariile de pe `event.php` — încă șablon, cu oameni inventați sub un
-  eveniment adevărat. La fel și panourile din taburile „Interesați" și
-  „Participanți": numerele de pe taburi sunt adevărate, listele dinăuntru nu
+- Panourile din taburile „Interesați" și „Participanți" — încă șablon, cu
+  oameni inventați: numerele de pe taburi sunt adevărate, listele dinăuntru nu.
+  Comentariile NU mai sunt șablon (vezi `inc/comentarii.php`)
 - Pagina de termeni și condiții nu există. Linkurile spre ea sunt `href="#"`
   peste tot (înregistrare, subsol, confirmarea participării)
 - Prima pagină (`index.php`) e tot cu articole scrise de mână; linkurile duc la
@@ -207,10 +212,12 @@ assets/css/style.css, assets/js/main.js, assets/img/
   înscrieri și comentarii) e o acțiune viitoare de staff — vezi `TODO`-ul din
   `anuleazaEveniment()`
 - Adresele frumoase: acum sunt `profil.php?m=<permalink>` și `event.php?slug=…`
-- Comentariile: nu există tabel pentru ele. Interesele/participările există
-  (`interese_evenimente`), dar nimeni nu e înștiințat de nimic: vezi `TODO`-ul
-  din `anuleazaEveniment()` — la anulare trebuie trimis e-mail cu textul din
-  `motiv_anulare`, ÎNAINTE de ștergerea făcută de staff
+- Înștiințările: nimeni nu află nimic prin e-mail. Cine primește un răspuns la
+  comentariu nu vede decât dacă se întoarce singur pe pagină, iar la anularea
+  unui eveniment vezi `TODO`-ul din `anuleazaEveniment()` — trebuie trimis
+  e-mail cu textul din `motiv_anulare`, ÎNAINTE de ștergerea făcută de staff
+- Comentariile: nu există raportare și nici pagină de moderare. Staff-ul umblă
+  la ele de pe pagina evenimentului, ca oricare autor
 - Evenimentele la care merge cineva nu apar pe profilul lui
 - Paginile de categorie (slugurile sunt în tabelul `categorii`)
 - Imaginile implicite de categorie (`categorii.imagine_default`) — coloana

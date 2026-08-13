@@ -36,6 +36,10 @@ const ANI_INAINTE_MAX     = 2;     // cât de departe în viitor poate fi pus un
 const MOTIV_ANULARE_MIN   = 15;    // caractere, ca la descriere — vezi verificaMotivAnulare()
 const MOTIV_ANULARE_MAX   = 1000;
 
+/* Comentarii */
+const COMENTARIU_MIN = 2;    // caractere — vezi verificaComentariu()
+const COMENTARIU_MAX = 2000;
+
 /**
  * Aduce diacriticele românești la forma corectă (virgulă dedesubt).
  *
@@ -754,6 +758,37 @@ function verificaMotivAnulare($cerut): array
 }
 
 /**
+ * Un comentariu de sub un eveniment.
+ *
+ * Se numără caractere, nu octeți, și se trece prin același curățător de text
+ * pe mai multe rânduri ca descrierea: omul poate scrie două paragrafe, dar nu
+ * își poate împinge vorba mai jos în pagină cu cincizeci de Enter-uri.
+ *
+ * Minimul e mic dinadins. „Da." e un comentariu întreg într-o discuție, iar o
+ * limită de zece caractere l-ar fi oprit tocmai pe cel care răspunde scurt și
+ * la obiect. Ce se apără aici e doar comentariul gol, trimis din greșeală.
+ */
+function verificaComentariu($cerut): array
+{
+    $text = curataTextPeRanduri(is_string($cerut) ? $cerut : '');
+    $cate = mb_strlen($text, 'UTF-8');
+
+    if ($text === '' || $cate < COMENTARIU_MIN) {
+        return ['eroare' => 'Scrie ceva înainte de a trimite.', 'text' => ''];
+    }
+
+    if ($cate > COMENTARIU_MAX) {
+        return [
+            'eroare' => 'Comentariul e prea lung: ai ' . $cate . ' caractere din '
+                      . COMENTARIU_MAX . ' câte încap.',
+            'text'   => '',
+        ];
+    }
+
+    return ['eroare' => '', 'text' => $text];
+}
+
+/**
  * Costul, scris pe românește.
  *
  * NULL înseamnă „gratuit", iar 0 înseamnă „am scris eu zero" — la afișare sunt
@@ -1139,6 +1174,94 @@ function dataScurta(?string $data): string
     $luna = numeleLunilor()[(int) $moment->format('n')];
 
     return $moment->format('j') . ' ' . mb_substr($luna, 0, 3, 'UTF-8') . ' ' . $moment->format('Y');
+}
+
+/**
+ * „acum 6 ore", „ieri", „3 aug 2026" — cât de demult s-a scris ceva.
+ *
+ * Sub o săptămână se spune în cuvinte, fiindcă atât ține mintea: „acum 20 de
+ * minute" se înțelege dintr-o privire, „13 aug 2026, 14:32" cere socoteală.
+ * Peste o săptămână se întoarce la data scurtă — „acum 43 de zile" nu mai
+ * spune nimănui nimic, iar în pagină apare oricum ora exactă, în `datetime`.
+ *
+ * Ceasul e PHP (`time()`), niciodată NOW() din MySQL — regula 5 din CLAUDE.md.
+ * Aici s-ar simți imediat: o oră diferență între cele două ceasuri ar face ca
+ * fiecare comentariu proaspăt să se nască „acum o oră".
+ */
+function timpRelativ(?string $moment): string
+{
+    if ($moment === null || $moment === '') {
+        return '';
+    }
+
+    $clipa = strtotime($moment);
+
+    if ($clipa === false) {
+        return '';
+    }
+
+    $secunde = time() - $clipa;
+
+    // Viitor. Nu se întâmplă firesc, dar un ceas dat înapoi pe server sau un
+    // rând scris de mână în phpMyAdmin ar da „acum -3 minute".
+    if ($secunde < 0) {
+        return 'chiar acum';
+    }
+
+    if ($secunde < 60) {
+        return 'acum câteva secunde';
+    }
+
+    $minute = (int) floor($secunde / 60);
+
+    if ($minute < 60) {
+        return $minute === 1 ? 'acum un minut' : 'acum ' . numaratoare($minute, 'minute');
+    }
+
+    $ore = (int) floor($minute / 60);
+
+    if ($ore < 24) {
+        return $ore === 1 ? 'acum o oră' : 'acum ' . numaratoare($ore, 'ore');
+    }
+
+    /**
+     * „Ieri" se socotește pe zile de calendar, nu pe 24 de ore.
+     *
+     * Ceva scris aseară la 23:00 e „ieri" și azi-dimineață la 8, deși între
+     * ele sunt nouă ore. Invers, ceva scris alaltăieri la 23:00 nu mai e
+     * „ieri" azi la 22:00, deși între ele n-au trecut nici două zile.
+     */
+    $azi  = new DateTimeImmutable('today');
+    $ziua = (new DateTimeImmutable('@' . $clipa))
+        ->setTimezone($azi->getTimezone())
+        ->setTime(0, 0);
+
+    $zile = (int) $azi->diff($ziua)->days;
+
+    if ($zile === 1) {
+        return 'ieri';
+    }
+
+    if ($zile < 7) {
+        return 'acum ' . numaratoare($zile, 'zile');
+    }
+
+    return dataScurta($moment);
+}
+
+/**
+ * „3 zile", dar „21 de zile".
+ *
+ * În română, de la 20 în sus numărul cere „de" înaintea substantivului — cu
+ * excepția celor care se termină în 01…19 („101 zile", nu „101 de zile").
+ * Regula scrisă o dată aici, ca să nu fie ghicită de fiecare dată.
+ */
+function numaratoare(int $cate, string $substantiv): string
+{
+    $ultimele = $cate % 100;
+    $direct   = $ultimele >= 1 && $ultimele <= 19;
+
+    return $cate . ($direct ? ' ' : ' de ') . $substantiv;
 }
 
 /**

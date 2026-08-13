@@ -399,5 +399,69 @@ verifica('cinci rânduri goale la mijloc devin unul', 302,
 verifica('caracterele de control cad', 300, $cate(str_repeat('a', 300) . "\x01\x7F"));
 verifica('dar tabul rămâne', 301, $cate(str_repeat('a', 150) . "\t" . str_repeat('a', 150)));
 
+echo "\n=== COMENTARII ===\n";
+
+/**
+ * Minimul e mic dinadins: „Da." e un comentariu întreg într-o discuție.
+ * Ce se apără e doar comentariul gol, trimis din greșeală.
+ */
+verifica('un comentariu obișnuit trece', '', verificaComentariu('Bună idee, venim și noi.')['eroare']);
+verifica('două caractere sunt de-ajuns', '', verificaComentariu('Da')['eroare']);
+verifica('gol, respins', true, verificaComentariu('')['eroare'] !== '');
+verifica('doar spații, respins', true, verificaComentariu("   \n\n  ")['eroare'] !== '');
+verifica('o singură literă, respinsă', true, verificaComentariu('a')['eroare'] !== '');
+verifica('altceva decât text, respins', true, verificaComentariu(['a'])['eroare'] !== '');
+
+// Ca la descriere: se numără caractere, nu octeți, iar textul se curăță
+// înainte — altfel „ă" ar cântări dublu, iar cine scrie cu diacritice ar avea
+// mai puțin loc decât cine scrie fără.
+verifica('fix la limită, cu diacritice', '', verificaComentariu(str_repeat('ă', COMENTARIU_MAX))['eroare']);
+verifica('cu unul peste, nu', true, verificaComentariu(str_repeat('ă', COMENTARIU_MAX + 1))['eroare'] !== '');
+
+verifica('spațiile din jur se taie', 'Vin și eu', verificaComentariu('  Vin și eu  ')['text']);
+verifica('paragrafele omului rămân', "Unu\n\nDoi", verificaComentariu("Unu\n\n\n\nDoi")['text']);
+verifica('sfârșitul de rând Windows se îndreaptă', "a\nb", verificaComentariu("a\r\nb")['text']);
+
+// În bază intră text curat, neescapat — regula 9 din CLAUDE.md. Escaparea e
+// la randare, cu h(); dacă s-ar face aici, „&" ar ajunge „&amp;" în bază și
+// s-ar escapa a doua oară la afișare.
+verifica('textul nu se escapează la salvare', 'Dinamo & Rapid', verificaComentariu('Dinamo & Rapid')['text']);
+verifica('nici etichetele scrise de om', '<b>tare</b>', verificaComentariu('<b>tare</b>')['text']);
+
+echo "\n=== NUMĂRĂTOAREA CU DE ===\n";
+verifica('3 zile', '3 zile', numaratoare(3, 'zile'));
+verifica('19 zile, tot fără „de"', '19 zile', numaratoare(19, 'zile'));
+verifica('20 de zile', '20 de zile', numaratoare(20, 'zile'));
+verifica('100 de zile', '100 de zile', numaratoare(100, 'zile'));
+verifica('101 zile, iar fără', '101 zile', numaratoare(101, 'zile'));
+verifica('119 zile', '119 zile', numaratoare(119, 'zile'));
+verifica('120 de zile', '120 de zile', numaratoare(120, 'zile'));
+
+echo "\n=== CÂT DE DEMULT ===\n";
+$acumaz = static fn (int $secunde): string => timpRelativ(
+    date('Y-m-d H:i:s', time() - $secunde)
+);
+
+verifica('adineauri', 'acum câteva secunde', $acumaz(5));
+verifica('un minut', 'acum un minut', $acumaz(60));
+verifica('cinci minute', 'acum 5 minute', $acumaz(5 * 60));
+verifica('douăzeci de minute', 'acum 20 de minute', $acumaz(20 * 60));
+verifica('o oră', 'acum o oră', $acumaz(60 * 60));
+verifica('șase ore', 'acum 6 ore', $acumaz(6 * 60 * 60));
+verifica('gol rămâne gol', '', timpRelativ(''));
+verifica('null la fel', '', timpRelativ(null));
+
+// Ceasul dat înapoi pe server, sau un rând scris de mână în phpMyAdmin.
+verifica('viitorul nu iese cu minus', 'chiar acum', timpRelativ(date('Y-m-d H:i:s', time() + 300)));
+
+// „Ieri" se socotește pe zile de calendar, nu pe 24 de ore: ceva scris aseară
+// la 23:00 e „ieri" și azi-dimineață la 8.
+verifica('ieri, la aceeași oră', 'ieri', timpRelativ(date('Y-m-d H:i:s', strtotime('-1 day'))));
+verifica('acum trei zile', 'acum 3 zile', timpRelativ(date('Y-m-d H:i:s', strtotime('-3 days'))));
+
+// Peste o săptămână se întoarce la data scurtă: „acum 43 de zile" nu mai
+// spune nimănui nimic.
+verifica('mai demult, data scurtă', dataScurta('2020-03-15'), timpRelativ('2020-03-15 10:00:00'));
+
 printf("\n%s\nTOTAL: %d trecute, %d picate\n", str_repeat('=',60), $treceri, $picaturi);
 exit($picaturi > 0 ? 1 : 0);

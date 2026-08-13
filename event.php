@@ -12,6 +12,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/inc/evenimente.php';
 require_once __DIR__ . '/inc/afisare-eveniment.php';
 require_once __DIR__ . '/inc/interese.php';
+require_once __DIR__ . '/inc/comentarii.php';
 
 $slug = trim((string) ($_GET['slug'] ?? ''));
 
@@ -102,6 +103,46 @@ $maiSuntLocuri = maiSuntLocuri($eveniment, $numarInterese['participant']);
  */
 $eLogat         = $membru !== null;
 $imiCereTelefon = $eLogat && !$eOrganizatorul && telefonulMembrului($membruId) === '';
+
+/* ------------------------------ Discuția ------------------------------ */
+
+/**
+ * Comentariile, toate deodată.
+ *
+ * Toate, până la ultimul: ascunsul e treaba lui main.js, care lasă la vedere
+ * primele COMENTARII_DEODATA și le arată pe celelalte la apăsarea butonului,
+ * fără să mai întrebe serverul. Aici discuția e scurtă — zeci de rânduri, nu
+ * mii — iar în schimbul câtorva kiloocteți în plus se câștigă un buton care
+ * răspunde pe loc, o pagină care se poate căuta cu Ctrl+F întreagă și
+ * comentarii pe care le vede și Google.
+ *
+ * Se scrie sub un eveniment publicat, fie el și încheiat. Listele de
+ * participanți se închid odată cu evenimentul, discuția nu: acolo se închide o
+ * socoteală, aici oamenii spun cum a fost — și asta se întâmplă mai ales după.
+ */
+$randuriComentarii = comentariileEvenimentului($evenimentId, $membruId);
+$fireComentarii    = grupeazaComentarii($randuriComentarii);
+$cateComentarii    = 0;
+
+foreach ($randuriComentarii as $randComentariu) {
+    // Cele golite nu se numără: pe ecran sunt o piatră de mormânt, nu o vorbă.
+    $cateComentarii += (int) $randComentariu['sters'] === 1 ? 0 : 1;
+}
+
+/**
+ * „poate_scrie" nu întreabă dacă omul e conectat, ci dacă locul e deschis.
+ *
+ * Butonul „Răspunde" se vede și de vizitator, ca și cel de apreciere: apăsat,
+ * îl duce la intrare, cu întoarcere fix aici. Ascuns, i-ar fi arătat o
+ * discuție la care pare că n-are cum să ia parte.
+ */
+$contextComentarii = [
+    'organizator_id' => (int) $eveniment['membru_id'],
+    'membru_id'      => $membruId,
+    'e_staff'        => $eStaff,
+    'poate_scrie'    => $ePublicat,
+    'nume'           => numeleComentatorilor($randuriComentarii),
+];
 
 /* --------------------------- ce se afișează --------------------------- */
 
@@ -493,7 +534,7 @@ require __DIR__ . '/inc/antet.php';
               <path d="M20.5 12.5c0 4-3.8 7-8.5 7-1 0-2-.1-2.9-.4L4 21l1.3-3.4A7.4 7.4 0 0 1 3.5 12.5c0-4 3.8-7 8.5-7s8.5 3 8.5 7Z"/>
             </svg>
             <span>Comentarii</span>
-            <span class="tab__count">7</span>
+            <span class="tab__count" data-count-for="comentarii"><?= $cateComentarii ?></span>
           </button>
 
           <button class="tab" type="button" role="tab" id="tab-interested"
@@ -516,188 +557,85 @@ require __DIR__ . '/inc/antet.php';
         </div>
 
         <!-- ------------------------ PANOU: COMENTARII --------------------- -->
-        <div class="panel is-active" id="panel-comments" role="tabpanel" aria-labelledby="tab-comments" tabindex="0">
+        <!--
+          Tokenul CSRF se scrie DOAR pentru cine e conectat, ca la secțiunea de
+          participare: un vizitator n-are ce face cu el, fiindcă vede o
+          invitație la intrare în locul casetei de scris.
 
-          <!-- formular comentariu nou -->
+          `data-deodata` vine din COMENTARII_DEODATA (inc/comentarii.php), ca
+          numărul să fie scris într-un singur loc și schimbat într-unul singur.
+        -->
+        <div class="panel is-active" id="panel-comments" role="tabpanel"
+             aria-labelledby="tab-comments" tabindex="0"
+             data-comentarii
+             data-slug="<?= h((string) $eveniment['slug']) ?>"
+             data-deodata="<?= COMENTARII_DEODATA ?>"
+             <?= $eLogat ? 'data-csrf="' . h(tokenCsrf()) . '"' : '' ?>>
+
+          <?php if ($eLogat && $ePublicat): ?>
+          <!--
+            Formularul de comentariu nou. Numai pentru cine e conectat: mai jos
+            e varianta pentru vizitatori, care nu are unde să scrie, ci unde să
+            intre în cont.
+          -->
           <form class="comment-form" data-comment-form>
-            <img class="comment-form__avatar" src="assets/img/avatars/cristi.svg" alt="" width="96" height="96">
+            <img class="comment-form__avatar" src="<?= h(urlPoza($membru['poza'] ?? null, true)) ?>"
+                 alt="" width="96" height="96">
             <div class="comment-form__main">
               <label class="sr-only" for="new-comment">Scrie un comentariu</label>
-              <textarea id="new-comment" rows="3" placeholder="Scrie un comentariu…"></textarea>
+              <textarea id="new-comment" name="text" rows="3" maxlength="<?= COMENTARIU_MAX ?>"
+                        placeholder="Scrie un comentariu…"
+                        aria-describedby="err-comentariu"></textarea>
+              <p class="field__error" id="err-comentariu" hidden></p>
               <div class="comment-form__actions">
                 <p class="comment-form__hint">Fii civilizat. Comentariile jignitoare se șterg.</p>
                 <button class="btn btn--primary btn--sm" type="submit">Publică</button>
               </div>
             </div>
           </form>
+          <?php elseif ($ePublicat): ?>
+          <!--
+            Vizitatorul nu primește o casetă în care să scrie degeaba: ar fi
+            aflat abia la apăsarea butonului că trebuie cont, cu textul scris
+            deja. Primește direct ușa, cu întoarcere fix aici.
+          -->
+          <p class="comment-form__intra">
+            <a class="btn btn--primary btn--sm"
+               href="login.php?redirect=<?= h(urlencode('/' . urlEveniment((string) $eveniment['slug']))) ?>">Intră în cont</a>
+            <span>ca să lași un comentariu.</span>
+          </p>
+          <?php endif; ?>
 
-          <!-- lista de comentarii; sub-comentariile stau în .comment__replies -->
-          <ul class="comments">
+          <!--
+            Lista de comentarii. Fiecare `<li class="comment">` are înăuntru
+            `<article class="comment__body">` și, dacă e principal cu discuție
+            sub el, `<ul class="comment__replies">` — ca frate al articolului,
+            nu în el. Așa main.js poate înlocui un comentariu editat sau golit
+            fără să șteargă odată cu el răspunsurile de dedesubt.
 
-            <li class="comment">
-              <article class="comment__body">
-                <img class="comment__avatar" src="assets/img/avatars/ioana.svg" alt="" width="96" height="96" loading="lazy">
-                <div class="comment__main">
-                  <div class="comment__head">
-                    <a class="comment__author" href="profil.php">Ioana Rusu</a>
-                    <span class="badge">Organizator</span>
-                    <span class="dot" aria-hidden="true"></span>
-                    <time datetime="2026-08-04T10:12">acum 6 ore</time>
-                  </div>
-                  <p>
-                    Foarte bună decizia de a reveni în centrul vechi. Anul trecut traseul de pe
-                    faleză era frumos, dar prea puțin public. Sper să fie și anul ăsta muzică la
-                    kilometrul 15!
-                  </p>
-                  <div class="comment__tools">
-                    <button class="comment__tool" type="button" data-like aria-pressed="false">
-                      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="M7 20V9.5l4.2-6a1.6 1.6 0 0 1 2.9 1.2L13.3 9H19a2 2 0 0 1 2 2.4l-1.4 6.4A2.6 2.6 0 0 1 17 20Z"/>
-                        <path d="M7 9.8H4.2A1.2 1.2 0 0 0 3 11v7.8c0 .7.5 1.2 1.2 1.2H7"/>
-                      </svg>
-                      <span data-like-count>12</span>
-                    </button>
-                    <button class="comment__tool" type="button" data-reply>Răspunde</button>
-                  </div>
-
-                  <ul class="comment__replies">
-                    <li class="comment">
-                      <article class="comment__body">
-                        <img class="comment__avatar" src="assets/img/avatars/andrei.svg" alt="" width="96" height="96" loading="lazy">
-                        <div class="comment__main">
-                          <div class="comment__head">
-                            <a class="comment__author" href="profil.php">Andrei Munteanu</a>
-                            <span class="badge badge--author">Autor</span>
-                            <span class="dot" aria-hidden="true"></span>
-                            <time datetime="2026-08-04T11:03">acum 5 ore</time>
-                          </div>
-                          <p>Confirmat, la kilometrul 15 va fi din nou scena cu fanfara. Am întrebat organizatorii ieri.</p>
-                          <div class="comment__tools">
-                            <button class="comment__tool" type="button" data-like aria-pressed="false">
-                              <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
-                                <path d="M7 20V9.5l4.2-6a1.6 1.6 0 0 1 2.9 1.2L13.3 9H19a2 2 0 0 1 2 2.4l-1.4 6.4A2.6 2.6 0 0 1 17 20Z"/>
-                                <path d="M7 9.8H4.2A1.2 1.2 0 0 0 3 11v7.8c0 .7.5 1.2 1.2 1.2H7"/>
-                              </svg>
-                              <span data-like-count>8</span>
-                            </button>
-                            <button class="comment__tool" type="button" data-reply>Răspunde</button>
-                          </div>
-                        </div>
-                      </article>
-                    </li>
-
-                    <li class="comment">
-                      <article class="comment__body">
-                        <img class="comment__avatar" src="assets/img/avatars/elena.svg" alt="" width="96" height="96" loading="lazy">
-                        <div class="comment__main">
-                          <div class="comment__head">
-                            <a class="comment__author" href="profil.php">Elena Neagu</a>
-                            <span class="dot" aria-hidden="true"></span>
-                            <time datetime="2026-08-04T12:40">acum 3 ore</time>
-                          </div>
-                          <p>Super, atunci venim și noi să încurajăm. Se poate ajunge cu căruciorul până la scenă?</p>
-                          <div class="comment__tools">
-                            <button class="comment__tool" type="button" data-like aria-pressed="false">
-                              <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
-                                <path d="M7 20V9.5l4.2-6a1.6 1.6 0 0 1 2.9 1.2L13.3 9H19a2 2 0 0 1 2 2.4l-1.4 6.4A2.6 2.6 0 0 1 17 20Z"/>
-                                <path d="M7 9.8H4.2A1.2 1.2 0 0 0 3 11v7.8c0 .7.5 1.2 1.2 1.2H7"/>
-                              </svg>
-                              <span data-like-count>3</span>
-                            </button>
-                            <button class="comment__tool" type="button" data-reply>Răspunde</button>
-                          </div>
-                        </div>
-                      </article>
-                    </li>
-                  </ul>
-                </div>
-              </article>
-            </li>
-
-            <li class="comment">
-              <article class="comment__body">
-                <img class="comment__avatar" src="assets/img/avatars/mihai.svg" alt="" width="96" height="96" loading="lazy">
-                <div class="comment__main">
-                  <div class="comment__head">
-                    <a class="comment__author" href="profil.php">Mihai Constantin</a>
-                    <span class="dot" aria-hidden="true"></span>
-                    <time datetime="2026-08-04T09:20">acum 7 ore</time>
-                  </div>
-                  <p>
-                    Cineva știe dacă se mai pot face înscrieri la cursa de 21 km? La 10 km s-au
-                    închis, dar pe site apare încă butonul activ la semimaraton.
-                  </p>
-                  <div class="comment__tools">
-                    <button class="comment__tool" type="button" data-like aria-pressed="false">
-                      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="M7 20V9.5l4.2-6a1.6 1.6 0 0 1 2.9 1.2L13.3 9H19a2 2 0 0 1 2 2.4l-1.4 6.4A2.6 2.6 0 0 1 17 20Z"/>
-                        <path d="M7 9.8H4.2A1.2 1.2 0 0 0 3 11v7.8c0 .7.5 1.2 1.2 1.2H7"/>
-                      </svg>
-                      <span data-like-count>5</span>
-                    </button>
-                    <button class="comment__tool" type="button" data-reply>Răspunde</button>
-                  </div>
-
-                  <ul class="comment__replies">
-                    <li class="comment">
-                      <article class="comment__body">
-                        <img class="comment__avatar" src="assets/img/avatars/raluca.svg" alt="" width="96" height="96" loading="lazy">
-                        <div class="comment__main">
-                          <div class="comment__head">
-                            <a class="comment__author" href="profil.php">Raluca Grigore</a>
-                            <span class="dot" aria-hidden="true"></span>
-                            <time datetime="2026-08-04T09:55">acum 6 ore</time>
-                          </div>
-                          <p>Da, mai sunt locuri. Am prins unul aseară, dar cred că se închid în weekend.</p>
-                          <div class="comment__tools">
-                            <button class="comment__tool" type="button" data-like aria-pressed="false">
-                              <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
-                                <path d="M7 20V9.5l4.2-6a1.6 1.6 0 0 1 2.9 1.2L13.3 9H19a2 2 0 0 1 2 2.4l-1.4 6.4A2.6 2.6 0 0 1 17 20Z"/>
-                                <path d="M7 9.8H4.2A1.2 1.2 0 0 0 3 11v7.8c0 .7.5 1.2 1.2 1.2H7"/>
-                              </svg>
-                              <span data-like-count>4</span>
-                            </button>
-                            <button class="comment__tool" type="button" data-reply>Răspunde</button>
-                          </div>
-                        </div>
-                      </article>
-                    </li>
-                  </ul>
-                </div>
-              </article>
-            </li>
-
-            <li class="comment">
-              <article class="comment__body">
-                <img class="comment__avatar" src="assets/img/avatars/vlad.svg" alt="" width="96" height="96" loading="lazy">
-                <div class="comment__main">
-                  <div class="comment__head">
-                    <a class="comment__author" href="profil.php">Vlad Solomon</a>
-                    <span class="dot" aria-hidden="true"></span>
-                    <time datetime="2026-08-03T18:05">ieri</time>
-                  </div>
-                  <p>
-                    Ar fi utilă o hartă a traseului direct în articol. Pentru cei care stau pe
-                    Strada Veche, contează mult să știe pe unde pot ieși cu mașina dimineața.
-                  </p>
-                  <div class="comment__tools">
-                    <button class="comment__tool" type="button" data-like aria-pressed="false">
-                      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="M7 20V9.5l4.2-6a1.6 1.6 0 0 1 2.9 1.2L13.3 9H19a2 2 0 0 1 2 2.4l-1.4 6.4A2.6 2.6 0 0 1 17 20Z"/>
-                        <path d="M7 9.8H4.2A1.2 1.2 0 0 0 3 11v7.8c0 .7.5 1.2 1.2 1.2H7"/>
-                      </svg>
-                      <span data-like-count>9</span>
-                    </button>
-                    <button class="comment__tool" type="button" data-reply>Răspunde</button>
-                  </div>
-                </div>
-              </article>
-            </li>
-
+            Toate intră în pagină; ascunsul îl face main.js — vezi
+            randeazaComentarii() din inc/comentarii.php.
+          -->
+          <ul class="comments" data-lista-comentarii>
+            <?= randeazaComentarii($fireComentarii, $contextComentarii) ?>
           </ul>
 
-          <div class="load-more">
-            <button class="btn btn--ghost" type="button">Vezi mai multe comentarii</button>
+          <!--
+            Nicio vorbă încă. Se scrie mereu în pagină, nu doar când lista e
+            goală: dacă omul își șterge singurul comentariu, main.js are ce să
+            aprindă la loc, fără să lipească text din cod.
+          -->
+          <p class="comments__gol" data-comentarii-gol <?= $fireComentarii === [] ? '' : 'hidden' ?>>
+            <?= $ePublicat ? 'Niciun comentariu încă. Fii primul care spune ceva.' : 'Discuția se deschide după ce evenimentul e publicat.' ?>
+          </p>
+
+          <!--
+            Butonul se aprinde din JS, cu numărul celor rămase ascunse. Cât e
+            fără JS, e ascuns — toate comentariile sunt deja în pagină, deci
+            n-ar avea ce să mai aducă.
+          -->
+          <div class="load-more" data-mai-multe hidden>
+            <button class="btn btn--ghost" type="button" data-mai-multe-buton>Vezi mai multe comentarii</button>
           </div>
         </div>
 
