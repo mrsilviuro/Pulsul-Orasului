@@ -16,7 +16,7 @@ declare(strict_types=1);
 const NUME_MIN      = 2;
 const NUME_MAX      = 60;
 const EMAIL_MAX     = 190;   // cât încape în indexul din baza de date
-const VARSTA_MIN    = 13;
+const VARSTA_MIN    = 10;
 const VARSTA_MAX    = 120;
 const PAROLA_MIN    = 8;
 const PAROLA_MAX    = 72;    // bcrypt ignoră tot ce trece de 72 de octeți
@@ -103,26 +103,36 @@ function numeCuMajuscula(string $nume): string
 }
 
 /**
- * Verifică o dată de naștere scrisă ca AAAA-LL-ZZ.
+ * Verifică o dată de naștere scrisă ca ZZ-LL-AAAA, cum se scrie în România.
  *
- * Întoarce mesajul de eroare, sau șir gol dacă data e bună.
+ * Întoarce mesajul de eroare, sau șir gol dacă data e bună. Cine o primește
+ * bună o trece prin dataDinFormular() ca s-o ducă în bază — acolo datele stau
+ * tot în forma lor, AAAA-LL-ZZ.
+ *
+ * Formatul e același cu cel al datei de eveniment, și tot prin dataDinFormular()
+ * trece: un singur fel de a scrie o dată pe tot site-ul. Înainte aici se cerea
+ * AAAA-LL-ZZ, fiindcă atât trimitea `<input type="date">`; de când câmpul e de
+ * text (vezi inc/camp-data.php), scrisul omului ajunge nemijlocit la server.
  */
 function verificaDataNasterii(string $data, ?DateTimeImmutable $azi = null): string
 {
-    $azi = $azi ?? new DateTimeImmutable('today');
+    $azi  = $azi ?? new DateTimeImmutable('today');
+    $data = trim($data);
 
     if ($data === '') {
-        return 'Alege data nașterii.';
+        return 'Scrie data nașterii.';
     }
 
-    // Formatul trebuie să fie exact cel trimis de <input type="date">.
-    $d = DateTimeImmutable::createFromFormat('!Y-m-d', $data);
+    // dataDinFormular() ține și forma, și adevărul datei: „30-02-2000" nu trece,
+    // fiindcă în spate stă checkdate(), nu un DateTime care ar fi alunecat
+    // singur pe 2 martie.
+    $iso = dataDinFormular($data);
 
-    // Verificarea inversă prinde datele imposibile: createFromFormat acceptă
-    // „2026-02-30" și o mută singur pe 2 martie, fără să se plângă.
-    if ($d === false || $d->format('Y-m-d') !== $data) {
-        return 'Data nașterii nu are un format valid.';
+    if ($iso === '') {
+        return 'Data nașterii nu e validă. Scrie-o ca 25-12-1990.';
     }
+
+    $d = new DateTimeImmutable($iso);
 
     if ($d > $azi) {
         return 'Data nașterii nu poate fi în viitor.';
@@ -212,7 +222,9 @@ function verificaInregistrare(array $date, ?DateTimeImmutable $azi = null): arra
     if ($eroareData !== '') {
         $erori['data_nasterii'] = $eroareData;
     } else {
-        $curat['data_nasterii'] = $dataNasterii;
+        // Din formular vine ZZ-LL-AAAA, în bază intră AAAA-LL-ZZ — aceeași
+        // trecere ca la data evenimentului.
+        $curat['data_nasterii'] = dataDinFormular($dataNasterii);
     }
 
     /* -------------------------------- Sex ----------------------------- */

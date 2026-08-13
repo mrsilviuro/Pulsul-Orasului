@@ -326,52 +326,26 @@ require __DIR__ . '/inc/antet.php';
         <section class="card-set">
           <h2 class="card-set__titlu">Când</h2>
 
-          <div class="field">
-            <label for="ev-data">Data <span class="req" aria-hidden="true">*</span></label>
-            <!--
-              Data se scrie ZZ-LL-AAAA, cum se scrie o dată în România.
+          <!--
+            Data se scrie ZZ-LL-AAAA, cum se scrie o dată în România. De ce nu
+            e `type="date"` și cum se deschide totuși calendarul — scrie în
+            inc/camp-data.php. Același câmp îl folosește și data nașterii, la
+            înregistrare.
 
-              Câmpul vizibil e de text, ca la ore și din același motiv:
-              `type="date"` se desenează după limba browserului, nu a paginii,
-              deci cine are Chrome în engleză vedea „mm/dd/yyyy" pe un site
-              românesc. Cratimele le pune main.js, cifră cu cifră.
-
-              Calendarul nu s-a pierdut: lângă câmp stă un `type="date"`
-              adevărat, ascuns, pe care butonul îl deschide cu showPicker().
-              El poartă „min" și „max" (în formatul lui, AAAA-LL-ZZ), iar ce se
-              alege acolo se scrie înapoi în câmpul vizibil, pe românește. Pe
-              telefon rămâne astfel roata nativă de dată.
-
-              „min" e ziua evenimentului dacă ea a trecut deja: altfel
-              browserul ar arăta ca greșită o dată pe care omul n-a atins-o.
-              Verificarea adevărată e oricum pe server.
-
-              Câmpul ascuns NU are „name": nimic din el nu pleacă spre server,
-              ca să nu existe două date în aceeași cerere.
-            -->
-            <div class="camp-data">
-              <input type="text" id="ev-data" name="data_eveniment" required
-                     class="camp-data__text" inputmode="numeric" autocomplete="off"
-                     maxlength="10" placeholder="25-12-2026"
-                     pattern="(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-[0-9]{4}"
-                     value="<?= h(dataPentruFormular($val('data_eveniment') ?: null)) ?>"
-                     aria-describedby="err-ev-data">
-
-              <button type="button" class="camp-data__buton" id="ev-data-calendar"
-                      aria-label="Alege data din calendar">
-                <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
-                  <rect x="3.5" y="5" width="17" height="16" rx="3"/>
-                  <path d="M8 3v4M16 3v4M3.5 10h17"/>
-                </svg>
-              </button>
-
-              <input type="date" id="ev-data-nativ" class="camp-data__nativ"
-                     tabindex="-1" aria-hidden="true"
-                     min="<?= h(min(date('Y-m-d'), $val('data_eveniment', date('Y-m-d')))) ?>"
-                     max="<?= h(date('Y-m-d', strtotime('+' . ANI_INAINTE_MAX . ' years'))) ?>">
-            </div>
-            <p class="field__error" id="err-ev-data" hidden></p>
-          </div>
+            „min" e ziua evenimentului dacă ea a trecut deja: altfel browserul
+            ar arăta ca greșită o dată pe care omul n-a atins-o. Verificarea
+            adevărată e oricum pe server.
+          -->
+          <?php
+          $dataId      = 'ev-data';
+          $dataNume    = 'data_eveniment';
+          $dataText    = 'Data';
+          $dataStea    = true;
+          $dataValoare = $val('data_eveniment') ?: '';
+          $dataMin     = min(date('Y-m-d'), $val('data_eveniment', date('Y-m-d')));
+          $dataMax     = date('Y-m-d', strtotime('+' . ANI_INAINTE_MAX . ' years'));
+          require __DIR__ . '/inc/camp-data.php';
+          ?>
 
           <div class="field-row">
             <div class="field">

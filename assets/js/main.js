@@ -396,6 +396,119 @@
     return scris;
   }
 
+  /* ---------------------- Câmpul de dată, ZZ-LL-AAAA --------------------- */
+  /*
+    Perechea în JS a lui dataDinFormular()/dataPentruFormular() din PHP, plus
+    legătura dintre câmpul de text, butonul de calendar și `type="date"`-ul
+    ascuns de sub el. Stau aici, în partea de sus, fiindcă le folosesc trei
+    formulare: data evenimentului, data nașterii la înregistrare și aceeași
+    dată la finalizarea intrării cu Google.
+
+    Marcajul îl scrie inc/camp-data.php, care lămurește și de ce nu e
+    `type="date"` de-a dreptul.
+  */
+
+  /** „25-12-2026" → „2026-12-25", sau '' dacă nu e o dată adevărată. */
+  function dataPentruBaza(scrisa) {
+    var m = /^(\d{2})-(\d{2})-(\d{4})$/.exec(String(scrisa).trim());
+    if (!m) return '';
+
+    var zi = +m[1], luna = +m[2], an = +m[3];
+    var d = new Date(an, luna - 1, zi);
+
+    // Data „31-04-2026" ar aluneca singură pe 1 mai; o prindem întrebând
+    // calendarul dacă a rămas ce i-am dat. Tot el știe de ani bisecți.
+    if (d.getFullYear() !== an || d.getMonth() !== luna - 1 || d.getDate() !== zi) {
+      return '';
+    }
+
+    return m[3] + '-' + m[2] + '-' + m[1];
+  }
+
+  /**
+   * Ce a scris omul, adus la ZZ-LL-AAAA.
+   *
+   * De obicei e treaba lui mascaCifre(), care pune cratimele cifră cu cifră.
+   * Excepția e o dată lipită dintr-o bucată sau pusă de completarea automată a
+   * browserului (`autocomplete="bday"` dă „1990-05-20"): scrisă pe litere
+   * n-ar ajunge niciodată în forma asta, dar venită dintr-odată da — iar masca
+   * ar face din ea „19-90-0520". Așa că o întoarcem noi, pe românește.
+   */
+  function normalizeazaData(brut) {
+    var iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(brut).trim());
+    if (iso) return iso[3] + '-' + iso[2] + '-' + iso[1];
+
+    return mascaCifre(brut, [2, 2, 4], '-');
+  }
+
+  /**
+   * Leagă un câmp de dată: masca, butonul și calendarul nativ.
+   *
+   * Cele trei bucăți se caută după id: „<id>", „<id>-calendar" și
+   * „<id>-nativ", exact cum le scrie inc/camp-data.php. Dacă lipsesc butonul
+   * sau calendarul, câmpul rămâne bun de scris cu mâna.
+   */
+  function legaCampData(id) {
+    var camp = document.getElementById(id);
+    if (!camp) return;
+
+    var nativ = document.getElementById(id + '-nativ');
+    var buton = document.getElementById(id + '-calendar');
+
+    var potriveste = function () { camp.value = normalizeazaData(camp.value); };
+
+    // „change" prinde completarea automată a browserului, care umple câmpul
+    // fără să treacă prin „input".
+    camp.addEventListener('input', potriveste);
+    camp.addEventListener('change', potriveste);
+
+    if (!nativ || !buton) return;
+
+    /**
+     * Calendarul ascuns nu ține valoarea decât cât e deschis.
+     *
+     * Are „min" și „max", iar o dată din afara lor l-ar face `:invalid` — și
+     * atunci browserul ar opri trimiterea formularului arătând spre un câmp pe
+     * care nimeni nu-l vede. Așa că îi punem valoarea doar dacă intră între
+     * margini, și i-o luăm îndată ce omul a ales.
+     */
+    var incape = function (iso) {
+      if (iso === '') return false;
+      if (nativ.min && iso < nativ.min) return false;
+      if (nativ.max && iso > nativ.max) return false;
+      return true;
+    };
+
+    buton.addEventListener('click', function () {
+      // Calendarul se deschide pe data deja scrisă, dacă e una bună.
+      var iso = dataPentruBaza(camp.value);
+      nativ.value = incape(iso) ? iso : '';
+
+      /**
+       * showPicker() cere o apăsare a omului — apăsarea asta e. Unde nu
+       * există (browsere mai vechi), încercăm o apăsare pe câmpul ascuns;
+       * dacă nici aia nu deschide nimic, nu se pierde nimic: data se poate
+       * scrie oricând de mână, iar câmpul de text e cel care contează.
+       */
+      try {
+        if (typeof nativ.showPicker === 'function') {
+          nativ.showPicker();
+        } else {
+          nativ.click();
+        }
+      } catch (e) {}
+    });
+
+    nativ.addEventListener('change', function () {
+      var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(nativ.value);
+      nativ.value = '';
+      if (!m) return;
+
+      camp.value = m[3] + '-' + m[2] + '-' + m[1];
+      camp.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+  }
+
   /** Pagina dinainte e tot de pe site-ul nostru? */
   function dinaintePeSite() {
     if (!document.referrer) return false;
@@ -462,12 +575,18 @@
    * Rămâne doar o comoditate pentru cel care completează — adevărata verificare
    * se face pe server, în verificaDataNasterii().
    */
-  var VARSTA_MINIMA = 13;
+  var VARSTA_MINIMA = 10;
 
   function verificaDataNasteriiInPagina(v) {
-    if (!v) return 'Alege data nașterii.';
+    v = String(v || '').trim();
+    if (!v) return 'Scrie data nașterii.';
 
-    var born = new Date(v + 'T00:00:00');
+    // Din câmp vine ZZ-LL-AAAA, cum se scrie o dată în România; aceeași
+    // trecere o face și serverul, cu dataDinFormular().
+    var iso = dataPentruBaza(v);
+    if (!iso) return 'Data nașterii nu e validă. Scrie-o ca 25-12-1990.';
+
+    var born = new Date(iso + 'T00:00:00');
     if (isNaN(born.getTime())) return 'Data nu pare validă.';
 
     var today = new Date();
@@ -1471,6 +1590,9 @@
       btnInapoi.addEventListener('click', function () { arataPanou('login-block'); });
     }
 
+    /* --- Data nașterii: același câmp ca data evenimentului --- */
+    legaCampData('rg-birthdate');
+
     /* --- Puterea parolei --- */
     legIndicatorulDeParola('rg-password', 'pass-meter', 'pass-hint');
     var passInput = document.getElementById('rg-password');
@@ -1860,6 +1982,9 @@
   var finalForm = document.getElementById('final-form');
 
   if (finalForm) {
+    /* Data nașterii: același câmp ca la înregistrarea obișnuită. */
+    legaCampData('fn-birthdate');
+
     var reguliFinal = [
       {
         id: 'fn-lastname', error: 'err-fn-lastname',
@@ -2830,72 +2955,10 @@
 
     /* --- data: ZZ-LL-AAAA, scrisă de mână sau aleasă din calendar --- */
     /*
-      Aceeași poveste ca la ore, cu o cifră în plus: câmpul vizibil e de text,
-      fiindcă `type="date"` se desenează după limba browserului („mm/dd/yyyy"
-      la cine îl are în engleză), iar cratimele le punem noi.
-
-      Calendarul nu s-a pierdut. Lângă câmp stă un `type="date"` adevărat,
-      ascuns, fără „name", deci nimic din el nu pleacă spre server. Butonul îl
-      deschide cu showPicker(), iar ce se alege acolo se scrie înapoi în
-      câmpul vizibil, pe românește. Pe telefon se deschide roata nativă.
+      Masca, butonul și calendarul ascuns sunt aceleași pentru toate câmpurile
+      de dată de pe site — vezi legaCampData(), sus. Aici rămâne doar chemarea.
     */
-    var evData       = document.getElementById('ev-data');
-    var evDataNativ  = document.getElementById('ev-data-nativ');
-    var evDataButon  = document.getElementById('ev-data-calendar');
-
-    if (evData) {
-      /** „25-12-2026" → „2026-12-25", sau '' dacă nu e o dată adevărată. */
-      var dataPentruBaza = function (scrisa) {
-        var m = /^(\d{2})-(\d{2})-(\d{4})$/.exec(scrisa);
-        if (!m) return '';
-
-        var zi = +m[1], luna = +m[2], an = +m[3];
-        var d = new Date(an, luna - 1, zi);
-
-        // Data „31-04-2026" ar aluneca singură pe 1 mai; o prindem întrebând
-        // calendarul dacă a rămas ce i-am dat. Tot el știe de ani bisecți.
-        if (d.getFullYear() !== an || d.getMonth() !== luna - 1 || d.getDate() !== zi) {
-          return '';
-        }
-
-        return m[3] + '-' + m[2] + '-' + m[1];
-      };
-
-      // Zi, lună, an. Cratimele le pune mascaCifre(), care respectă și
-      // cratimele puse de om: „5-3-2027" devine „05-03-2027" pe loc.
-      evData.addEventListener('input', function () {
-        evData.value = mascaCifre(evData.value, [2, 2, 4], '-');
-      });
-    }
-
-    if (evData && evDataNativ && evDataButon) {
-      evDataButon.addEventListener('click', function () {
-        // Calendarul se deschide pe data deja scrisă, dacă e una bună.
-        evDataNativ.value = dataPentruBaza(evData.value.trim());
-
-        /**
-         * showPicker() cere o apăsare a omului — apăsarea asta e. Unde nu
-         * există (browsere mai vechi), încercăm o apăsare pe câmpul ascuns;
-         * dacă nici aia nu deschide nimic, nu se pierde nimic: data se poate
-         * scrie oricând de mână, iar câmpul de text e cel care contează.
-         */
-        try {
-          if (typeof evDataNativ.showPicker === 'function') {
-            evDataNativ.showPicker();
-          } else {
-            evDataNativ.click();
-          }
-        } catch (e) {}
-      });
-
-      evDataNativ.addEventListener('change', function () {
-        var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(evDataNativ.value);
-        if (!m) return;
-
-        evData.value = m[3] + '-' + m[2] + '-' + m[1];
-        evData.dispatchEvent(new Event('input', { bubbles: true }));
-      });
-    }
+    legaCampData('ev-data');
 
     /* --- orele: scrise de mână, mereu de 24 de ore --- */
     /*

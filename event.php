@@ -357,7 +357,10 @@ require __DIR__ . '/inc/antet.php';
                <?= $eIncheiat ? 'data-incheiat="1"' : '' ?>
                <?= $eLogat ? 'data-csrf="' . h(tokenCsrf()) . '"' : '' ?>>
         <div class="rsvp__head">
-          <h2 id="rsvp-title">Mergi la acest eveniment?</h2>
+          <!-- La un eveniment trecut întrebarea se pune la trecut: „Mergi?"
+               deasupra unei liste de oameni care au fost deja sună a invitație
+               la ceva ce s-a terminat. -->
+          <h2 id="rsvp-title"><?= $eIncheiat ? 'Cine a fost la acest eveniment?' : 'Mergi la acest eveniment?' ?></h2>
           <?php if ($eIncheiat): ?>
           <p>A trecut. Mai jos e cine a fost pe listă.</p>
           <?php else: ?>

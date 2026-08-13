@@ -258,12 +258,20 @@ require __DIR__ . '/inc/antet.php';
             </div>
 
             <div class="field-row">
-              <div class="field">
-                <label for="rg-birthdate">Data nașterii</label>
-                <input type="date" id="rg-birthdate" name="data_nasterii" autocomplete="bday"
-                       required aria-describedby="err-rg-birthdate">
-                <p class="field__error" id="err-rg-birthdate" hidden></p>
-              </div>
+              <!-- Același câmp de dată ca la eveniment: text scris ZZ-LL-AAAA,
+                   cu calendarul la un buton distanță. Lămurirea stă o singură
+                   dată, în inc/camp-data.php. Calendarul se deschide între
+                   marginile în care o dată de naștere are sens. -->
+              <?php
+              $dataId      = 'rg-birthdate';
+              $dataNume    = 'data_nasterii';
+              $dataText    = 'Data nașterii';
+              $dataExemplu = '25-12-1990';
+              $dataAuto    = 'bday';
+              $dataMin     = date('Y-m-d', strtotime('-' . VARSTA_MAX . ' years'));
+              $dataMax     = date('Y-m-d', strtotime('-' . VARSTA_MIN . ' years'));
+              require __DIR__ . '/inc/camp-data.php';
+              ?>
 
               <div class="field">
                 <label for="rg-gender">Sex</label>
