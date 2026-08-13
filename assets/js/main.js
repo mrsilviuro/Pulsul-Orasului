@@ -1264,9 +1264,14 @@
     /**
      * Comentariul proaspăt, pus la locul lui.
      *
-     * Principalele intră în capul listei — cel de acum o clipă are mai mult de
-     * spus decât cel de acum o lună. Răspunsurile intră la coada firului lor,
-     * fiindcă acolo e o discuție, iar o discuție se citește de la început.
+     * Principalele intră în capul listei, deși ordinea de pe server e după
+     * aprecieri, iar unul proaspăt are zero. Dinadins: omul tocmai a apăsat
+     * „Publică" și trebuie să-și vadă vorba, nu s-o caute printre cele
+     * ridicate de alții. La următoarea deschidere a paginii se așază la locul
+     * ei — vezi grupeazaComentarii() din inc/comentarii.php.
+     *
+     * Răspunsurile intră la coada firului lor, fiindcă acolo e o discuție, iar
+     * o discuție se citește de la început — și acolo locul e chiar ăsta.
      *
      * `vizibile` crește cu unu: fără asta, un comentariu nou ar fi împins
      * ultimul comentariu vizibil dincolo de tăietură, și ar fi părut că

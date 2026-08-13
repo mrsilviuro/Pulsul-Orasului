@@ -148,13 +148,70 @@ $alDoileaPrincipal = salveazaComentariu($evenimentId, $staff, 'Se poate ajunge c
 $fire = grupeazaComentarii(comentariileEvenimentului($evenimentId));
 
 verifica('două fire', 2, count($fire));
-verifica('principalele, de la nou la vechi', $alDoileaPrincipal, (int) $fire[0]['id']);
+verifica('fără aprecieri, principalele de la nou la vechi', $alDoileaPrincipal, (int) $fire[0]['id']);
 verifica('firul cu discuție e al doilea', $principal, (int) $fire[1]['id']);
 verifica('cu două răspunsuri', 2, count($fire[1]['raspunsuri']));
 verifica('răspunsurile, de la vechi la nou', $raspuns, (int) $fire[1]['raspunsuri'][0]['id']);
 verifica('nimic pe al treilea nivel', [], $fire[1]['raspunsuri'][0]['raspunsuri'] ?? []);
 
 verifica('numărul de pe tab', 4, numaraComentarii($evenimentId));
+
+/* ======================== 2b. ORDINEA LOR ========================== */
+
+echo "\n=== ORDINEA PRINCIPALELOR ===\n";
+
+/**
+ * Sus stă ce a ridicat lumea, iar la egalitate hotărăște vechimea.
+ *
+ * Cel de-al doilea principal e mai nou, deci stă primul cât timp amândouă au
+ * zero aprecieri. O singură apreciere pe cel vechi trebuie să-l ridice peste el.
+ */
+comutaApreciere($principal, $participant);
+
+$dupaAprecieri = grupeazaComentarii(comentariileEvenimentului($evenimentId));
+
+verifica('o apreciere ridică vechiul deasupra noului', $principal, (int) $dupaAprecieri[0]['id']);
+verifica('cel fără aprecieri coboară', $alDoileaPrincipal, (int) $dupaAprecieri[1]['id']);
+
+// Încă doi oameni pe cel nou: trece el în față.
+comutaApreciere($alDoileaPrincipal, $participant);
+comutaApreciere($alDoileaPrincipal, $strain);
+
+$dupaAprecieri = grupeazaComentarii(comentariileEvenimentului($evenimentId));
+
+verifica('două aprecieri bat una', $alDoileaPrincipal, (int) $dupaAprecieri[0]['id']);
+verifica('și cel cu una rămâne al doilea', $principal, (int) $dupaAprecieri[1]['id']);
+
+/**
+ * Răspunsurile NU se socotesc după aprecieri: acolo nu e o listă, e o discuție.
+ * Al doilea răspuns e cel care spune „La ce oră?" — o apreciere pe el n-are voie
+ * să-l ridice înaintea celui la care răspunde.
+ */
+comutaApreciere($alDoilea, $participant);
+comutaApreciere($alDoilea, $strain);
+comutaApreciere($alDoilea, $organizator);
+
+$fireAcum = grupeazaComentarii(comentariileEvenimentului($evenimentId));
+$firulCuDiscutie = null;
+
+foreach ($fireAcum as $fir) {
+    if ((int) $fir['id'] === $principal) {
+        $firulCuDiscutie = $fir;
+    }
+}
+
+verifica('răspunsurile rămân de la vechi la nou', $raspuns,
+    (int) $firulCuDiscutie['raspunsuri'][0]['id']);
+verifica('oricâte aprecieri ar avea cel de-al doilea', $alDoilea,
+    (int) $firulCuDiscutie['raspunsuri'][1]['id']);
+
+// Înapoi la zero, ca restul testului să pornească de unde pornea.
+comutaApreciere($principal, $participant);
+comutaApreciere($alDoileaPrincipal, $participant);
+comutaApreciere($alDoileaPrincipal, $strain);
+comutaApreciere($alDoilea, $participant);
+comutaApreciere($alDoilea, $strain);
+comutaApreciere($alDoilea, $organizator);
 
 /* =========================== 3. INSIGNE ============================= */
 
@@ -333,7 +390,7 @@ verifica('dar în bază a rămas curat', 'Dinamo & Rapid, la 18:00.',
  */
 verifica('răspunsul la un răspuns începe cu @numele lui',
     '<p class="comment__text"><a class="comment__mentiune" href="profil.php?m=tstcom-part">'
-    . '@N. Elena</a> Și eu.</p>',
+    . '<span class="comment__at">@</span>N. Elena</a> Și eu.</p>',
     (static function (string $html): string {
         preg_match('#<p class="comment__text"><a class="comment__mentiune".*?</p>#', $html, $g);
         return $g[0] ?? '';
@@ -345,11 +402,20 @@ verifica('primul răspuns, fără mențiune', 1, substr_count($html, 'comment__m
 // deci trebuie să vină cu ele la copierea textului.
 verifica('un spațiu între @nume și text', true, str_contains($html, '</a> Și eu.'));
 
-// „@" e în legătură, nu lipit lângă ea.
-verifica('@ intră în legătură', true, str_contains($html, '">@N. Elena</a>'));
+// „@" e în legătură, nu lipit lângă ea — și are învelișul lui, ca să poată fi
+// ridicat din CSS la rândul literelor de lângă.
+verifica('@ intră în legătură', true,
+    str_contains($html, '"><span class="comment__at">@</span>N. Elena</a>'));
 
 verifica('răspunsurile stau lângă articol, nu în el', true,
     str_contains($html, '</article><ul class="comment__replies"'));
+
+// Antetul, pe două rânduri: cine a scris, și dedesubt când. Punctul dintre ele
+// a plecat odată cu rândul comun.
+verifica('numele și insignele, într-un rând al lor', true,
+    str_contains($html, '<div class="comment__cine"><a class="comment__author"'));
+verifica('ora, pe rândul ei', true, str_contains($html, '<div class="comment__cand"><time'));
+verifica('fără punct de despărțire în antet', false, str_contains($html, '<span class="dot"'));
 
 verifica('organizatorul își vede uneltele', true,
     str_contains($html, 'data-edit') && str_contains($html, 'data-delete'));
