@@ -1132,7 +1132,20 @@
       articol.querySelectorAll('.comment__text').forEach(function (p) {
         var cutie = document.createElement('div');
         cutie.innerHTML = p.innerHTML.replace(/<br\s*\/?>/gi, '\n');
-        bucati.push(cutie.textContent);
+
+        /**
+         * „@N. Prenume" nu e al omului, e pus de noi.
+         *
+         * Stă în textul comentariului, dar nu vine din el: îl desenează
+         * randeazaComentariu() din `raspuns_la_id`. Lăsat aici, ar fi apărut
+         * în caseta de editare ca și cum l-ar fi scris omul — iar la salvare
+         * ar fi intrat de-a binelea în bază, ca text. La a doua corectură ar
+         * fi fost două.
+         */
+        var mentiune = cutie.querySelector('.comment__mentiune');
+        if (mentiune) mentiune.remove();
+
+        bucati.push(cutie.textContent.replace(/^\s+/, ''));
       });
 
       return bucati.join('\n\n');

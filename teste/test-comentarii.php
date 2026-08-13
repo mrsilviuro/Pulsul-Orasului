@@ -326,9 +326,27 @@ verifica('„&" se escapează la afișare', true, str_contains($html, 'Dinamo &a
 verifica('dar în bază a rămas curat', 'Dinamo & Rapid, la 18:00.',
     comentariuDupaId($unu)['text']);
 
-verifica('răspunsul la un răspuns spune către cine', true,
-    str_contains($html, 'către') && str_contains($html, '>N. Elena<'));
-verifica('primul răspuns, fără mențiune', 1, substr_count($html, 'comment__catre'));
+/**
+ * Mențiunea stă ÎN text, în capul primului paragraf — nu deasupra, lângă
+ * numele autorului. Acolo se citea ca încă o insignă a lui: „R. Ioana către
+ * N. Elena" pare o însușire a lui Ioana, nu începutul vorbei ei.
+ */
+verifica('răspunsul la un răspuns începe cu @numele lui',
+    '<p class="comment__text"><a class="comment__mentiune" href="profil.php?m=tstcom-part">'
+    . '@N. Elena</a> Și eu.</p>',
+    (static function (string $html): string {
+        preg_match('#<p class="comment__text"><a class="comment__mentiune".*?</p>#', $html, $g);
+        return $g[0] ?? '';
+    })($html));
+
+verifica('primul răspuns, fără mențiune', 1, substr_count($html, 'comment__mentiune'));
+
+// Spațiul dintre nume și vorbă e în HTML, nu în CSS: el desparte două cuvinte,
+// deci trebuie să vină cu ele la copierea textului.
+verifica('un spațiu între @nume și text', true, str_contains($html, '</a> Și eu.'));
+
+// „@" e în legătură, nu lipit lângă ea.
+verifica('@ intră în legătură', true, str_contains($html, '">@N. Elena</a>'));
 
 verifica('răspunsurile stau lângă articol, nu în el', true,
     str_contains($html, '</article><ul class="comment__replies"'));

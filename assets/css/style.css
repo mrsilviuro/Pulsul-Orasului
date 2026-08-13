@@ -1303,11 +1303,16 @@ main { padding-block: 46px 64px; }
 .comment__replies .comment__author { font-size: 14px; }
 .comment__replies .comment__main > p { font-size: 14.5px; }
 
-/* „către X" — numai la un răspuns dat altui răspuns, unde nu se mai vede din
-   poziție cui i se răspunde. */
-.comment__catre { color: var(--text-faint); }
-.comment__catre a { color: var(--text-soft); font-weight: 600; }
-.comment__catre a:hover { color: var(--brand); }
+/* „@N. Prenume" — numai la un răspuns dat altui răspuns, unde nu se mai vede
+   din poziție cui i se răspunde. Stă în text, ca o adresare, nu deasupra
+   lângă numele autorului: acolo se citea ca încă o insignă a lui. */
+.comment__mentiune {
+  color: var(--brand-link);
+  font-weight: 600;
+  transition: color .18s var(--ease);
+}
+.comment__mentiune:hover { color: var(--brand-link-hover); }
+[data-theme="dark"] .comment__mentiune { color: var(--brand); }
 
 /* „(editat)" — o lămurire, nu o rușine: altfel un răspuns care nu se mai
    potrivește cu întrebarea pare o neînțelegere. */

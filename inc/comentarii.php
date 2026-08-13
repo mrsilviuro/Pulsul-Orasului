@@ -443,8 +443,17 @@ function insigneleComentariului(array $c, int $organizatorId): string
  *
  * Escaparea se face ÎNAINTE de nl2br, ca la descrierea evenimentului: invers,
  * `<br>` ar fi fost și el escapat și s-ar fi citit pe ecran.
+ *
+ * $mentiune e „@N. Prenume", gata desenat, și intră ÎN text — lipit de primul
+ * cuvânt, ca o adresare. Nu deasupra, lângă numele celui care scrie: acolo
+ * arăta ca încă o etichetă a autorului, ca insignele, și se citea greșit —
+ * „R. Ioana către N. Elena" pare o însușire a lui Ioana, nu începutul vorbei
+ * ei. Așa cum e acum, se citește cum se și vorbește: „@N. Elena, la 18:00".
+ *
+ * În primul paragraf, nu într-unul al lui: un rând numai cu numele ar fi rupt
+ * răspunsul în două și ar fi împins vorba mai jos degeaba.
  */
-function textulComentariului(string $text): string
+function textulComentariului(string $text, string $mentiune = ''): string
 {
     $paragrafe = preg_split('/\n{2,}/', $text) ?: [];
     $html      = '';
@@ -454,7 +463,22 @@ function textulComentariului(string $text): string
             continue;
         }
 
-        $html .= '<p class="comment__text">' . nl2br(h($paragraf), false) . '</p>';
+        $html .= '<p class="comment__text">' . $mentiune . nl2br(h($paragraf), false) . '</p>';
+
+        // Doar o dată, la început. Un „@N. Elena" în capul fiecărui paragraf
+        // ar fi părut că i se strigă numele de trei ori.
+        $mentiune = '';
+    }
+
+    /**
+     * Text gol, dar cu mențiune.
+     *
+     * Nu se poate întâmpla — verificaComentariu() nu lasă să treacă un
+     * comentariu gol — dar dacă vreodată ar ajunge unul aici, numele celui
+     * căruia i se răspunde n-are de ce să se piardă.
+     */
+    if ($html === '' && $mentiune !== '') {
+        $html = '<p class="comment__text">' . $mentiune . '</p>';
     }
 
     return $html;
@@ -528,28 +552,35 @@ function randeazaComentariu(array $c, array $context): string
         ? ' <span class="comment__editat" title="Comentariul a fost editat">(editat)</span>'
         : '';
 
-    /* --------------------------- „către X" ---------------------------- */
+    /* -------------------------- „@N. Prenume" ------------------------- */
 
     /**
      * Numai la un răspuns dat altui răspuns. Sub un principal, primul răspuns
      * se vede de la sine pentru cine e; al doilea, nu.
      *
+     * Intră ÎN text, în capul primului paragraf, ca o adresare — nu deasupra,
+     * lângă numele celui care scrie. Vezi textulComentariului().
+     *
      * Dacă cel căruia i se răspundea a șters între timp, nu se scrie nimic:
      * mai bine fără mențiune decât cu una care duce în gol.
      */
-    $catre = '';
+    $mentiune = '';
 
     if ($c['raspuns_la_id'] !== null) {
         $tinta = $context['nume'][(int) $c['raspuns_la_id']] ?? null;
 
         if ($tinta !== null) {
-            $numeTinta = h($tinta['nume']);
+            // „@" lipit de nume, amândouă în aceeași legătură: e o adresare
+            // întreagă, nu un semn lângă un link.
+            $numeTinta = '@' . h($tinta['nume']);
 
-            $catre = '<span class="comment__catre">către '
-                   . ($tinta['permalink'] !== ''
-                        ? '<a href="profil.php?m=' . h($tinta['permalink']) . '">' . $numeTinta . '</a>'
-                        : $numeTinta)
-                   . '</span>';
+            $mentiune = ($tinta['permalink'] !== ''
+                    ? '<a class="comment__mentiune" href="profil.php?m=' . h($tinta['permalink']) . '">'
+                      . $numeTinta . '</a>'
+                    : '<span class="comment__mentiune">' . $numeTinta . '</span>')
+                // Spațiul stă AICI, nu în CSS: el desparte două cuvinte, iar
+                // la copierea textului trebuie să vină cu ele.
+                . ' ';
         }
     }
 
@@ -564,11 +595,10 @@ function randeazaComentariu(array $c, array $context): string
          . '<div class="comment__head">'
          . $autor
          . insigneleComentariului($c, (int) $context['organizator_id'])
-         . $catre
          . '<span class="dot" aria-hidden="true"></span>'
          . $ora . $editat
          . '</div>'
-         . textulComentariului((string) $c['text'])
+         . textulComentariului((string) $c['text'], $mentiune)
          . $unelte
          . '</div></article>';
 }
