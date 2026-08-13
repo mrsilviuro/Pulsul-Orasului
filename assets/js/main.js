@@ -747,17 +747,35 @@
   var evIncheieNu  = document.getElementById('ev-incheie-nu');
 
   if (evIncheie && evIncheieVb) {
+    /* Confirmarea stă agățată sub buton, în antetul anunțului, deci se poartă
+       ca orice panou plutitor: se închide și cu Escape, și cu o apăsare în
+       afara ei. Altfel ar rămâne peste text până se apasă „Renunță". */
+    var inchideIncheierea = function (inapoiPeButon) {
+      if (evIncheieVb.hidden) return;
+      evIncheieVb.hidden = true;
+      evIncheie.setAttribute('aria-expanded', 'false');
+      if (inapoiPeButon) evIncheie.focus();
+    };
+
     evIncheie.addEventListener('click', function () {
       evIncheieVb.hidden = false;
+      evIncheie.setAttribute('aria-expanded', 'true');
       if (evIncheieNu) evIncheieNu.focus();   // atenția pe ieșire, nu pe faptă
     });
 
     if (evIncheieNu) {
-      evIncheieNu.addEventListener('click', function () {
-        evIncheieVb.hidden = true;
-        evIncheie.focus();
-      });
+      evIncheieNu.addEventListener('click', function () { inchideIncheierea(true); });
     }
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') inchideIncheierea(true);
+    });
+
+    document.addEventListener('click', function (e) {
+      if (evIncheieVb.hidden) return;
+      if (evIncheieVb.contains(e.target) || evIncheie.contains(e.target)) return;
+      inchideIncheierea(false);
+    });
   }
 
   if (evIncheie && evIncheieDa) {

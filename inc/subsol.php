@@ -94,6 +94,6 @@ if (session_status() === PHP_SESSION_ACTIVE && !empty($_SESSION['mesaj_bun'])) {
 <div class="toast" id="toast" role="status" aria-live="polite"
      data-mesaj="<?= h($mesajTrecator) ?>"></div>
 
-<script src="assets/js/main.js?v=42"></script>
+<script src="assets/js/main.js?v=43"></script>
 </body>
 </html>

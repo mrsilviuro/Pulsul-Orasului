@@ -327,12 +327,28 @@ button { cursor: pointer; border: 0; background: none; }
                         stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
 .slideshow__arrow--prev { left: 14px; }
 .slideshow__arrow--next { right: 14px; }
+
+/* Săgețile se arată abia când mouse-ul e pe slide, și atunci discret: sunt o
+   portiță, nu ceva de privit. Poza e lucrul important, ele stau peste ea.
+
+   Cine chiar se duce cu mouse-ul pe una o vede întreagă — un buton pe care
+   pui degetul, dar nu-l vezi, e un buton de care nu ești sigur că l-ai
+   apăsat. La fel la tastatură, unde focusul trebuie să se vadă. */
 .slideshow:hover .slideshow__arrow,
-.slideshow:focus-within .slideshow__arrow { opacity: 1; }
+.slideshow:focus-within .slideshow__arrow { opacity: .2; }
+/* Selectoarele sunt scrise întregi, cu `.slideshow` în față, ca să bată regula
+   de deasupra: acolo `:hover` numără cât o clasă, deci ea cântărește (0,3,0),
+   iar un `.slideshow__arrow:hover` singur ar fi rămas dedesubt oricât de jos
+   l-ai pune în fișier. */
+.slideshow:hover .slideshow__arrow:hover,
+.slideshow:focus-within .slideshow__arrow:focus-visible { opacity: 1; }
 .slideshow__arrow:hover { background: #fff; transform: translateY(-50%) scale(1.08); }
 .slideshow__arrow:active { transform: translateY(-50%) scale(.96); }
 
-/* Puncte */
+/* Puncte.
+   Tot discrete, ca săgețile: spun pe al câtelea slide ești, nu cer nimic. Se
+   aprind când te duci cu mouse-ul pe ele sau când le prinde tastatura —
+   atunci nu mai sunt un semn, ci butoane pe care apeși. */
 .slideshow__dots {
   position: absolute;
   left: 50%; bottom: 14px;
@@ -342,8 +358,12 @@ button { cursor: pointer; border: 0; background: none; }
   border-radius: var(--radius-pill);
   background: rgba(14, 17, 22, .38);
   backdrop-filter: blur(10px);
+  opacity: .2;
+  transition: opacity .25s var(--ease);
   z-index: 2;
 }
+.slideshow__dots:hover,
+.slideshow__dots:focus-within { opacity: 1; }
 .slideshow__dot {
   width: 7px; height: 7px;
   border-radius: 50%;
@@ -352,9 +372,10 @@ button { cursor: pointer; border: 0; background: none; }
 }
 .slideshow__dot.is-active { width: 22px; border-radius: var(--radius-pill); background: #fff; }
 
-/* pe touch, săgețile rămân vizibile */
+/* Pe touch nu există „mouse-ul e deasupra", deci săgețile rămân pe ecran — dar
+   tot palide, ca pe desktop. Degetul le nimerește și fără să strige. */
 @media (hover: none) {
-  .slideshow__arrow { opacity: 1; background: rgba(255, 255, 255, .82); }
+  .slideshow__arrow { opacity: .2; background: rgba(255, 255, 255, .82); }
 }
 
 /* --------------------------- 6. CONȚINUT -------------------------------- */
@@ -870,16 +891,6 @@ main { padding-block: 46px 64px; }
 .icon-btn:focus-visible {
   outline: 2px solid var(--brand);
   outline-offset: 2px;
-}
-
-/* „Încheie evenimentul", în dreapta iconițelor de distribuire. `margin-left:
-   auto` îl împinge acolo și îl desparte de ele: alea sunt pentru oricine, asta
-   e a organizatorului. Pe ecran îngust trece pe rândul lui, întreg. */
-.post__incheie { margin-left: auto; }
-
-@media (max-width: 460px) {
-  .post__share { flex-wrap: wrap; }
-  .post__incheie { margin-left: 0; width: 100%; justify-content: center; }
 }
 
 /* Întrebarea de dinaintea încheierii. Nu e roșie — încheierea nu e o pierdere,
@@ -3058,10 +3069,52 @@ body { overscroll-behavior-y: none; }
   text-transform: uppercase;
 }
 
-/* Butonul de editare stă lângă butoanele de distribuire, pe același rând cu
-   organizatorul. `.post__by` are deja margin-right:auto, deci le împinge pe
-   amândouă la dreapta, una lângă alta. */
+/* Butoanele organizatorului stau pe același rând cu numele lui, sus în antetul
+   anunțului: „Editează" și „Încheie evenimentul". `.post__by` are deja
+   margin-right:auto, deci le împinge pe amândouă la dreapta.
+
+   Poziția relativă e pentru confirmarea de încheiere, care se deschide chiar
+   sub ele — întrebarea trebuie să fie lângă mâna care a apăsat, nu la celălalt
+   capăt al paginii. */
+.post__actiuni {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  flex: none;
+}
+
 .post__editeaza { flex: none; }
+
+.post__actiuni .incheiere-confirm {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 30;
+  width: min(360px, calc(100vw - 40px));
+  margin-top: 0;
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Pe ecran îngust, antetul se rupe pe rânduri și un panou agățat de colțul din
+   dreapta ar ieși din pagină. Acolo intră la rând, sub butoane.
+
+   `flex: 1 1 100%` nu e de frumusețe: fără el, panoul scos din poziția
+   absolută devine un element de flex ca oricare, iar lățimea lui firească —
+   textul întreg pe un rând — trage tot antetul la 1333px și pagina capătă o
+   bară de derulare pe orizontală. Cu rândul întreg dat dinainte, „100%" are
+   față de ce să se măsoare. */
+@media (max-width: 560px) {
+  .post__actiuni { flex: 1 1 100%; }
+
+  .post__actiuni .incheiere-confirm {
+    position: static;
+    width: 100%;
+    margin-top: 4px;
+    box-shadow: none;
+  }
+}
 
 /* --- Formularul în modul „schimbă un eveniment" ------------------------- */
 
