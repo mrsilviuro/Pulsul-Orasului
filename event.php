@@ -51,7 +51,12 @@ if ($eveniment === null || !poateVedeaEvenimentul($eveniment, $membruId, $eStaff
 }
 
 $eOrganizatorul = $membruId > 0 && (int) $eveniment['membru_id'] === $membruId;
-$eAprobat       = $eveniment['stare_moderare'] === 'aprobat';
+/**
+ * „Publicat" înseamnă aprobat SAU încheiat: două stări, o singură purtare față
+ * de lume. Un eveniment încheiat nu se ascunde — a avut loc, iar pagina lui
+ * rămâne de citit și de trimis mai departe.
+ */
+$ePublicat      = evenimentPublicat($eveniment);
 $eAnulat        = $eveniment['stare_moderare'] === 'anulat';
 
 /**
@@ -96,7 +101,7 @@ $titlu     = $eveniment['titlu'] . ' — PulsulOrasului.Ro';
 $descriere = inceputDeText((string) $eveniment['descriere'], 155);
 
 // Cât timp nu e aprobat, n-are ce căuta în motoarele de căutare.
-$noindex   = !$eAprobat;
+$noindex   = !$ePublicat;
 
 /* --------------------- Cartonașul de pe WhatsApp ---------------------- */
 
@@ -188,7 +193,7 @@ require __DIR__ . '/inc/antet.php';
                 'text'  => 'Anulat de organizator. Anunțul nu se mai vede pe site; pagina asta o deschide doar staff-ul.',
                 'motiv' => (string) ($eveniment['motiv_anulare'] ?? ''),
             ];
-        } elseif (!$eAprobat) {
+        } elseif (!$ePublicat) {
             $banda = $eveniment['stare_moderare'] === 'respins'
                 ? ['fel' => 'respins',   'text' => 'Anunțul nu a trecut de verificare. Îl vezi doar tu.']
                 : ['fel' => 'asteptare', 'text' => 'În așteptare de aprobare. Îl vezi doar tu, până îl citim.'];
@@ -204,9 +209,12 @@ require __DIR__ . '/inc/antet.php';
             ];
         }
 
-        // Butonul „Editează" dispare la anulare: nu mai e nimic de corectat, iar
-        // evenimentDeEditat() oricum nu l-ar mai deschide.
-        afiseazaEveniment(evenimentDinBaza($eveniment), $banda, ($eOrganizatorul && !$eAnulat) ? function () use ($eveniment) {
+        // Butonul „Editează" dispare la anulare și la încheiere: nu mai e
+        // nimic de corectat, iar evenimentDeEditat() oricum nu l-ar mai
+        // deschide.
+        $poateEdita = $eOrganizatorul && !$eAnulat && !$eIncheiat;
+
+        afiseazaEveniment(evenimentDinBaza($eveniment), $banda, $poateEdita ? function () use ($eveniment) {
             ?>
             <!-- Doar pentru cel care l-a scris. Slugul spune formularului ce
                  eveniment să încarce; acolo se verifică din nou al cui e. -->
@@ -222,7 +230,7 @@ require __DIR__ . '/inc/antet.php';
         } : null);
       ?>
 
-      <?php if ($eAprobat): ?>
+      <?php if ($ePublicat): ?>
       <!-- ========================== DISTRIBUIRE ===========================
         Trei iconițe, între detalii și „Mergi la acest eveniment?". Aceleași
         desene ca cele scoase odinioară de lângă organizator — acolo erau
@@ -267,7 +275,54 @@ require __DIR__ . '/inc/antet.php';
                 aria-label="Copiază linkul" title="Copiază linkul">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3A4 4 0 0 0 13 5.3l-1.4 1.4"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3A4 4 0 0 0 11 18.7l1.4-1.4"/></svg>
         </button>
+
+        <?php if ($eOrganizatorul && !$eIncheiat): ?>
+        <!--
+          „Încheie evenimentul" — doar pentru cel care l-a pus la cale, și doar
+          cât mai e ceva de încheiat. Un eveniment se termină oricum singur a
+          doua zi după data lui; butonul ăsta e pentru când se termină mai
+          devreme: s-au ocupat locurile, s-a stricat vremea la jumătate.
+
+          Stă în dreapta iconițelor de distribuire, despărțit de ele — alea
+          sunt pentru oricine, asta e a lui.
+        -->
+        <button class="btn btn--ghost btn--sm post__incheie" type="button" id="ev-incheie"
+                data-slug="<?= h((string) $eveniment['slug']) ?>"
+                data-csrf="<?= h(tokenCsrf()) ?>">
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="9"/><path d="m8.2 12.3 2.6 2.6 5-5.2"/>
+          </svg>
+          <span>Încheie evenimentul</span>
+        </button>
+        <?php endif; ?>
       </div>
+
+      <?php if ($eOrganizatorul && !$eIncheiat): ?>
+      <!--
+        Confirmarea, desenată de noi în pagină, ca la anulare: o fereastră a
+        browserului arată altfel pe Windows, pe Android și pe iPhone.
+
+        Nu e roșie — încheierea nu e o pierdere, e un lucru firesc la capătul
+        unui eveniment. Dar tot se cere o apăsare în plus: nu se poate lua
+        înapoi, iar butonul stă lângă altele pe care oricine le apasă din
+        curiozitate.
+      -->
+      <div class="incheiere-confirm" id="ev-incheie-sigur" hidden>
+        <p class="incheiere-confirm__titlu">
+          <strong>Sigur vrei să încheii evenimentul?</strong>
+        </p>
+        <p class="incheiere-confirm__text">
+          Anunțul rămâne pe site și se poate citi mai departe, dar nimeni nu se
+          mai poate înscrie, iar tu vei putea publica un eveniment nou. Nu se
+          mai poate lua înapoi.
+        </p>
+
+        <div class="incheiere-confirm__actiuni">
+          <button class="btn btn--primary btn--sm" type="button" id="ev-incheie-da">Da, încheie</button>
+          <button class="btn btn--ghost btn--sm" type="button" id="ev-incheie-nu">Renunță</button>
+        </div>
+      </div>
+      <?php endif; ?>
 
       <!-- =========================== PARTICIPARE ==========================
         Numai la un eveniment publicat. Cât e în așteptare, respins sau

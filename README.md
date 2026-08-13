@@ -856,7 +856,8 @@ Nu există încă niciun loc unde să citești mesajele din site. Se citesc din
 anume, limita de evenimente active, `sql/011-anulare-eveniment.sql` starea
 `anulat`, coloana `motiv_anulare` și steagul `membri.este_staff`, iar
 `sql/012-oras-eveniment.sql` coloana `oras`, iar
-`sql/013-interese-evenimente.sql` tabelul `interese_evenimente`. Formularul de
+`sql/013-interese-evenimente.sql` tabelul `interese_evenimente`, iar
+`sql/014-incheiere-eveniment.sql` starea `incheiat`. Formularul de
 publicare e
 `adauga_eveniment.php`.
 
@@ -1311,8 +1312,16 @@ ciuntit. Fără poză, `twitter:card` scade de la `summary_large_image` la
 
 ### Un eveniment care s-a încheiat
 
-Ziua lui a trecut. Nu se ascunde și nu se închide — rămâne o pagină bună de
-citit și de trimis mai departe, cu tot cu butoanele de distribuire. Se schimbă
+**Două feluri de a se încheia**, socotite amândouă la fiecare citire:
+
+- **i-a trecut ziua** — se întâmplă singur, fără cron;
+- **organizatorul a apăsat „Încheie evenimentul"** — `stare_moderare` devine
+  `incheiat` (`sql/014-incheiere-eveniment.sql`). E pentru când se termină mai
+  devreme: s-au ocupat locurile, s-a stricat vremea la jumătate, s-a strâns
+  lumea și nu mai are rost să se înscrie nimeni.
+
+Nu se ascunde și nu se închide — rămâne o pagină bună de citit și de trimis mai
+departe, cu tot cu butoanele de distribuire, și se lasă indexată. Se schimbă
 doar ce se poate face pe ea.
 
 Regula e aceeași ca la limita de un eveniment activ, prin `evenimentIncheiat()`
@@ -1320,6 +1329,26 @@ din `inc/evenimente.php` — perechea lui `filtruNeincheiat()`, scrisă pentru u
 rând în loc de o interogare, și pusă lipită de ea dinadins: dacă una se
 schimbă, cealaltă sare în ochi. Altfel un eveniment ar putea arăta „încheiat"
 pe pagina lui și ar bloca în același timp postarea altuia.
+
+**`incheiat` nu e o formă de `anulat`.** Anulat înseamnă „nu a mai avut loc" și
+se ascunde de toți în afară de staff; încheiat înseamnă „a avut loc, s-a
+terminat". De aceea `evenimentPublicat()` le pune la un loc pe `aprobat` și
+`incheiat`: două stări, o singură purtare față de lume.
+
+Ce se schimbă la încheiere: butonul dispare, „Editează" la fel (o editare ar fi
+întors evenimentul în `in_asteptare` și l-ar fi readus la viață), evenimentul
+iese din lista de active — deci organizatorul poate publica altul — și de pe
+profil. **Dar se numără mai departe la „Evenimente organizate":** cifra aia
+spune ce a făcut omul pentru oraș, iar un eveniment încheiat e chiar dovada că
+a făcut. Ar fi fost pe dos să scadă exact în clipa în care a dus treaba la
+capăt.
+
+Butonul „Încheie evenimentul" stă în dreapta iconițelor de distribuire, se vede
+doar organizatorului și doar cât mai e ceva de încheiat. Confirmarea e în două
+trepte, desenată în pagină ca la anulare — dar nu roșie: încheierea nu e o
+pierdere, e un lucru firesc la capătul unui eveniment. După ce merge, pagina se
+reîncarcă; asta nu e lene, ci felul în care banda, butoanele stinse și textul
+la trecut vin toate de la server, dintr-un singur loc.
 
 Ce se vede: o bandă **cenușie**, nu galbenă și nici roșie. Culorile alea sunt
 pentru ce n-a mers bine — un anunț neaprobat, unul respins. Aici n-a greșit
@@ -1329,6 +1358,12 @@ Ce nu se mai poate: butoanele „Mă interesează" și „Voi participa" sunt st
 caseta de confirmare nici nu se scrie, iar „Fii primul interesat" devine „Nu
 s-a înscris nimeni" — o invitație la ceva imposibil e mai rea decât o
 constatare. Numerele și chipurile rămân: sunt istoria evenimentului.
+
+Și vorba de sub butoane trece la trecut: „X a fost interesat sau a participat
+la acest eveniment", „X și Y au fost interesați sau au participat", „X, Y și
+încă N persoane au fost interesate sau au participat". „Sunt interesate de
+acest eveniment" sub un anunț de acum trei luni sună ca și cum s-ar mai putea
+veni. Că s-a încheiat o spune banda de sus, o dată — aici nu se repetă.
 
 **Oprirea adevărată e pe server.** `api/interes.php` refuză cu „Evenimentul
 s-a încheiat.", fiindcă butonul stins e purtare frumoasă, nu regulă: o filă

@@ -259,18 +259,32 @@ function randeazaOameniInteresati(int $evenimentId, bool $incheiat = false): str
 
     $restul = $total - count($legate);
 
+    /**
+     * Prezent cât timp mai e ceva de făcut, trecut după ce s-a terminat.
+     *
+     * „sunt interesate de acest eveniment" sub un anunț de acum trei luni sună
+     * ca și cum s-ar mai putea veni. După încheiere se spune ce a fost —
+     * fiindcă lista aia chiar asta e acum: istoria evenimentului.
+     *
+     * Că s-a încheiat o spune banda de sus, o dată; aici nu se mai repetă.
+     */
     if (count($legate) === 1) {
         // Un singur om: acordul se face după el, nu după „persoane".
-        $interesat = ($numiti[0]['sex'] ?? '') === 'F' ? 'interesată' : 'interesat';
-        $vorba = $legate[0] . ' este ' . $interesat . ' de acest eveniment.';
+        $eF = ($numiti[0]['sex'] ?? '') === 'F';
+
+        $vorba = $legate[0] . ($incheiat
+            ? ' a fost ' . ($eF ? 'interesată' : 'interesat') . ' sau a participat la acest eveniment.'
+            : ' este ' . ($eF ? 'interesată' : 'interesat') . ' de acest eveniment.');
     } elseif ($restul === 0) {
-        $vorba = $legate[0] . ' și ' . $legate[1] . ' sunt interesați de acest eveniment.';
-    } elseif ($restul === 1) {
-        $vorba = $legate[0] . ', ' . $legate[1]
-               . ' și încă o persoană sunt interesate de acest eveniment.';
+        $vorba = $legate[0] . ' și ' . $legate[1] . ($incheiat
+            ? ' au fost interesați sau au participat la acest eveniment.'
+            : ' sunt interesați de acest eveniment.');
     } else {
-        $vorba = $legate[0] . ', ' . $legate[1] . ' și încă ' . $restul
-               . ' persoane sunt interesate de acest eveniment.';
+        $cati = $restul === 1 ? 'o persoană' : $restul . ' persoane';
+
+        $vorba = $legate[0] . ', ' . $legate[1] . ' și încă ' . $cati . ($incheiat
+            ? ' au fost interesate sau au participat la acest eveniment.'
+            : ' sunt interesate de acest eveniment.');
     }
 
     return '<div class="facepile" aria-hidden="true">' . $chipuri . '</div>'

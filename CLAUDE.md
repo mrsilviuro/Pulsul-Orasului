@@ -138,7 +138,7 @@ sql/                → schema.sql + migrări numerotate (002, 003, 004, 005-goo
                       006-tine-minte, 007-setari, 008-mesaje-contact,
                       009-evenimente, 010-limita-evenimente,
                       011-anulare-eveniment, 012-oras-eveniment,
-                      013-interese-evenimente)
+                      013-interese-evenimente, 014-incheiere-eveniment)
 teste/              → test-validare.php (verificările din inc/validare.php)
                       test-tine-minte.php, test-setari.php, test-contact.php,
                       test-evenimente.php
@@ -212,8 +212,6 @@ assets/css/style.css, assets/js/main.js, assets/img/
   din `anuleazaEveniment()` — la anulare trebuie trimis e-mail cu textul din
   `motiv_anulare`, ÎNAINTE de ștergerea făcută de staff
 - Evenimentele la care merge cineva nu apar pe profilul lui
-- Încheierea manuală a unui eveniment (cea automată, din ziua următoare datei,
-  funcționează deja — se calculează la citire, fără cron)
 - Paginile de categorie (slugurile sunt în tabelul `categorii`)
 - Imaginile implicite de categorie (`categorii.imagine_default`) — coloana
   există, fișierele nu; se urcă de mână, nu prin `inc/imagini.php`
