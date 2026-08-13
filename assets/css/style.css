@@ -1234,11 +1234,22 @@ main { padding-block: 46px 64px; }
 .comment__avatar { width: 38px; height: 38px; border-radius: 50%; flex: none; }
 .comment__main { flex: 1; min-width: 0; }
 
+/* Antetul, pe două rânduri: cine a scris, și dedesubt când.
+   Toate pe un rând, ora venea după insigne — care sunt când una, când două,
+   când niciuna — deci pornea din alt loc la fiecare comentariu. Pe rândul ei
+   stă mereu sub nume, în același loc. */
 .comment__head {
-  display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
-  margin-bottom: 4px;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+  margin-bottom: 6px;
   font-size: 13px;
   color: var(--text-faint);
+}
+.comment__cine {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
+}
+.comment__cand {
+  display: flex; align-items: center; gap: 6px;
+  line-height: 1.3;
 }
 .comment__author { font-size: 14.5px; font-weight: 700; color: var(--text);
                    transition: color .18s var(--ease); }
@@ -1313,6 +1324,12 @@ main { padding-block: 46px 64px; }
 }
 .comment__mentiune:hover { color: var(--brand-link-hover); }
 [data-theme="dark"] .comment__mentiune { color: var(--brand); }
+
+/* „@" e desenat în jurul liniei de bază, nu deasupra ei — ca la mai toate
+   fonturile — așa că lângă litere pare căzut. Se ridică la rândul lor.
+   `position: relative` și nu `vertical-align`: mută semnul fără să atingă
+   înălțimea rândului, deci textul din jur rămâne pe loc. */
+.comment__at { position: relative; top: -0.07em; }
 
 /* „(editat)" — o lămurire, nu o rușine: altfel un răspuns care nu se mai
    potrivește cu întrebarea pare o neînțelegere. */

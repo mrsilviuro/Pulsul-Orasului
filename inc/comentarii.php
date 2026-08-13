@@ -87,11 +87,14 @@ function comentariileEvenimentului(int $evenimentId, int $membruId = 0): array
  * Întoarce o listă de principale, fiecare cu răspunsurile lui sub cheia
  * „raspunsuri".
  *
- * Principalele de la nou la vechi: un eveniment de mâine adună comentarii în
- * fiecare zi, iar cel de acum o oră are mai mult de spus decât cel de acum o
- * lună. Răspunsurile invers, de la vechi la nou: acolo e o discuție, iar o
- * discuție se citește de la început, altfel răspunsurile ajung înaintea
- * întrebărilor.
+ * Principalele după aprecieri, apoi de la nou la vechi. Sus stă ce a găsit
+ * lumea de cuviință să ridice, iar la egalitate — și mai ales la zero, unde
+ * sunt cele mai multe — hotărăște vechimea, ca la orice listă de noutăți.
+ *
+ * Răspunsurile, invers și fără socoteala aprecierilor: de la vechi la nou.
+ * Acolo nu e o listă, e o discuție, iar o discuție se citește de la început.
+ * Sortată după aprecieri, ar fi ajuns răspunsul înaintea întrebării la care
+ * răspunde.
  */
 function grupeazaComentarii(array $randuri): array
 {
@@ -117,7 +120,31 @@ function grupeazaComentarii(array $randuri): array
         }
     }
 
-    return array_reverse(array_values($principale));
+    $lista = array_values($principale);
+
+    /**
+     * Ordinea se face aici, în PHP, nu în SQL.
+     *
+     * Cererea aduce rândurile după id, adică în ordinea în care s-au scris —
+     * o singură trecere prin index, fără sortare. Aici sunt zeci de rânduri
+     * deja citite, iar cele două reguli sunt potrivnice (principalele într-un
+     * fel, răspunsurile în altul), deci n-ar fi încăput oricum într-un singur
+     * ORDER BY.
+     *
+     * Ordinea se socotește la fiecare încărcare, nu se ține minte nicăieri: o
+     * apreciere dată acum mută comentariul abia la următoarea deschidere a
+     * paginii. Dinadins — dacă s-ar rearanja sub ochii omului, ar fugi rândul
+     * pe care tocmai îl citea.
+     */
+    usort($lista, static function (array $a, array $b): int {
+        $dupaAprecieri = (int) ($b['aprecieri'] ?? 0) <=> (int) ($a['aprecieri'] ?? 0);
+
+        return $dupaAprecieri !== 0
+            ? $dupaAprecieri
+            : (int) $b['id'] <=> (int) $a['id'];
+    });
+
+    return $lista;
 }
 
 /**
@@ -570,9 +597,21 @@ function randeazaComentariu(array $c, array $context): string
         $tinta = $context['nume'][(int) $c['raspuns_la_id']] ?? null;
 
         if ($tinta !== null) {
-            // „@" lipit de nume, amândouă în aceeași legătură: e o adresare
-            // întreagă, nu un semn lângă un link.
-            $numeTinta = '@' . h($tinta['nume']);
+            /**
+             * „@" lipit de nume, amândouă în aceeași legătură: e o adresare
+             * întreagă, nu un semn lângă un link.
+             *
+             * Semnul are învelișul lui fiindcă în Plus Jakarta Sans stă vizibil
+             * mai jos decât literele de lângă el — e desenat în jurul liniei de
+             * bază, nu deasupra ei, ca la mai toate fonturile. Din CSS se ridică
+             * la rând cu numele; fără învelișul ăsta n-ar fi avut de ce să se
+             * agațe, ::first-letter neavând ce căuta pe un element din rând.
+             *
+             * Rămâne de citit cu voce tare, nu e ascuns de cititoarele de ecran:
+             * „at N. Elena" spune că e o adresare, pe când numele singur ar
+             * părea că răspunsul începe pur și simplu cu el.
+             */
+            $numeTinta = '<span class="comment__at">@</span>' . h($tinta['nume']);
 
             $mentiune = ($tinta['permalink'] !== ''
                     ? '<a class="comment__mentiune" href="profil.php?m=' . h($tinta['permalink']) . '">'
@@ -592,11 +631,23 @@ function randeazaComentariu(array $c, array $context): string
          . '<img class="comment__avatar" src="' . h($poza) . '" alt=""'
          . ' width="96" height="96" loading="lazy" decoding="async">'
          . '<div class="comment__main">'
+         /**
+          * Antetul, pe două rânduri: cine a scris, și dedesubt când.
+          *
+          * Toate pe un rând, ora venea după insigne — care sunt când una, când
+          * două, când niciuna — deci pornea din alt loc la fiecare comentariu,
+          * iar la unul cu nume lung se rupea singură pe rândul următor, aliniată
+          * aiurea. Pe rândul ei stă mereu în același loc, sub nume.
+          *
+          * Punctul dintre ele a plecat odată cu rândul comun: despărțea două
+          * lucruri care nu mai sunt unul lângă altul.
+          */
          . '<div class="comment__head">'
+         . '<div class="comment__cine">'
          . $autor
          . insigneleComentariului($c, (int) $context['organizator_id'])
-         . '<span class="dot" aria-hidden="true"></span>'
-         . $ora . $editat
+         . '</div>'
+         . '<div class="comment__cand">' . $ora . $editat . '</div>'
          . '</div>'
          . textulComentariului((string) $c['text'], $mentiune)
          . $unelte

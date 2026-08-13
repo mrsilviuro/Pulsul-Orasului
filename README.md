@@ -1866,9 +1866,16 @@ vede de la sine pentru cine e; al doilea, nu.
 Ea stă **în text**, lipită de primul cuvânt, ca o adresare:
 
 ```html
-<p class="comment__text"><a class="comment__mentiune"
-   href="profil.php?m=…">@N. Elena</a> Perfect, vă așteptăm.</p>
+<p class="comment__text"><a class="comment__mentiune" href="profil.php?m=…"
+   ><span class="comment__at">@</span>N. Elena</a> Perfect, vă așteptăm.</p>
 ```
+
+Semnul are învelișul lui fiindcă în Plus Jakarta Sans — ca la mai toate
+fonturile — „@" e desenat în jurul liniei de bază, nu deasupra ei, deci lângă
+litere pare căzut. `.comment__at` îl ridică `0.07em`, cu `position: relative`
+și nu `vertical-align`: așa se mută semnul fără să crească înălțimea rândului.
+Rămâne de citit cu voce tare — „at N. Elena" spune că e o adresare, pe când
+numele singur ar părea că răspunsul începe pur și simplu cu el.
 
 Nu deasupra, lângă numele celui care scrie — acolo arăta ca încă o etichetă a
 autorului, ca insignele, și se citea greșit: „R. Ioana către N. Elena" pare o
@@ -1885,6 +1892,28 @@ randare. De aceea `textulBrut()` din `main.js` o scoate din DOM înainte să
 umple caseta de editare: lăsată acolo, ar fi apărut ca și cum ar fi scris-o
 omul, iar la salvare ar fi intrat de-a binelea în text — la a doua corectură ar
 fi fost două.
+
+### Ordinea
+
+Principalele **după aprecieri**, apoi de la nou la vechi. Sus stă ce a găsit
+lumea de cuviință să ridice, iar la egalitate — și mai ales la zero, unde sunt
+cele mai multe — hotărăște vechimea, ca la orice listă de noutăți.
+
+Răspunsurile, **invers și fără socoteala aprecierilor**: de la vechi la nou.
+Acolo nu e o listă, e o discuție, iar o discuție se citește de la început.
+Sortate după aprecieri, ar fi ajuns răspunsul înaintea întrebării la care
+răspunde.
+
+Ordinea se face în `grupeazaComentarii()`, în PHP, nu în SQL. Cererea aduce
+rândurile după id — o singură trecere prin index, fără sortare — iar cele două
+reguli sunt potrivnice, deci n-ar fi încăput oricum într-un singur `ORDER BY`.
+
+Se socotește la fiecare încărcare și nu se ține minte nicăieri: o apreciere
+dată acum mută comentariul abia la următoarea deschidere a paginii. Dinadins —
+dacă lista s-ar rearanja sub ochii omului, ar fugi rândul pe care tocmai îl
+citea. Din același motiv, un comentariu proaspăt intră în capul listei deși are
+zero aprecieri: omul trebuie să-și vadă vorba, nu s-o caute printre cele
+ridicate de alții.
 
 ### Cum arată un om
 
@@ -1992,6 +2021,26 @@ de discuție: dacă un principal a rămas dincolo de tăietură, răspunsurile l
 sunt și ele dincolo, deci nu se poate întâmpla să atârne un răspuns fără
 întrebarea lui.
 
+### Antetul, pe două rânduri
+
+Cine a scris, și dedesubt când:
+
+```html
+<div class="comment__head">
+  <div class="comment__cine"><a class="comment__author">…</a><span class="badge">…</span></div>
+  <div class="comment__cand"><time datetime="…">acum 6 ore</time></div>
+</div>
+```
+
+Toate pe un rând, ora venea după insigne — care sunt când una, când două, când
+niciuna — deci pornea din alt loc la fiecare comentariu, iar la unul cu nume
+lung se rupea singură pe rândul următor, aliniată aiurea. Punctul care le
+despărțea a plecat odată cu rândul comun.
+
+Pe ecran scrie „acum 6 ore" (`timpRelativ()`), în `datetime` stă clipa exactă:
+prima e pentru om, a doua pentru browser și pentru cine citește pagina cu alt
+program decât ochii.
+
 ### Structura din pagină
 
 ```html
@@ -2033,7 +2082,7 @@ Nimeni nu e înștiințat de nimic: cine primește un răspuns nu află decât d
 întoarce singur pe pagină. Nu există raportare și nici pagină de moderare —
 staff-ul umblă la comentarii de pe pagina evenimentului, ca oricare autor.
 
-Verificările: `php teste/test-comentarii.php` (75 de cazuri, cere baza de date,
+Verificările: `php teste/test-comentarii.php` (86 de cazuri, cere baza de date,
 nu și serverul).
 
 
