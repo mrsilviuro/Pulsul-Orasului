@@ -1860,8 +1860,31 @@ $parinteId   = $eSecundar ? (int) $catre['parinte_id'] : (int) $catre['id'];
 $raspunsLaId = $eSecundar ? (int) $catre['id'] : null;
 ```
 
-Mențiunea „către X" apare numai la al doilea caz. Sub un principal, primul
-răspuns se vede de la sine pentru cine e; al doilea, nu.
+Mențiunea apare numai la al doilea caz. Sub un principal, primul răspuns se
+vede de la sine pentru cine e; al doilea, nu.
+
+Ea stă **în text**, lipită de primul cuvânt, ca o adresare:
+
+```html
+<p class="comment__text"><a class="comment__mentiune"
+   href="profil.php?m=…">@N. Elena</a> Perfect, vă așteptăm.</p>
+```
+
+Nu deasupra, lângă numele celui care scrie — acolo arăta ca încă o etichetă a
+autorului, ca insignele, și se citea greșit: „R. Ioana către N. Elena" pare o
+însușire a lui Ioana, nu începutul vorbei ei. Așa cum e acum, se citește cum se
+și vorbește.
+
+Numai în primul paragraf, nu în fiecare: un „@N. Elena" în capul tuturor ar fi
+părut că i se strigă numele de trei ori. Iar spațiul dintre nume și vorbă e în
+HTML, nu în CSS — el desparte două cuvinte, deci trebuie să vină cu ele la
+copierea textului.
+
+**Mențiunea nu e în bază.** Se desenează din `raspuns_la_id`, la fiecare
+randare. De aceea `textulBrut()` din `main.js` o scoate din DOM înainte să
+umple caseta de editare: lăsată acolo, ar fi apărut ca și cum ar fi scris-o
+omul, iar la salvare ar fi intrat de-a binelea în text — la a doua corectură ar
+fi fost două.
 
 ### Cum arată un om
 
