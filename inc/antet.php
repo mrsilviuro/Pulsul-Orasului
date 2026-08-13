@@ -146,10 +146,19 @@ if ($logat) {
 <meta property="og:url" content="<?= h($ogUrl) ?>">
 <?php if ($ogImagine !== ''): ?>
 <meta property="og:image" content="<?= h($ogImagine) ?>">
-<!-- Coperțile sunt 1600×900. Spuse dinainte, cartonașul nu mai sare cât se
-     încarcă poza. -->
+<?php if (str_starts_with($ogImagine, 'https://')): ?>
+<!-- Facebook cere adresa sigură într-un câmp al ei; fără el, uneori nu ia
+     poza deloc de pe un site cu certificat. -->
+<meta property="og:image:secure_url" content="<?= h($ogImagine) ?>">
+<?php endif; ?>
+<!-- Mărimea și tipul, spuse pe față.
+     Fără ele, Facebook hotărăște singur cum să taie poza — și taie pătrat.
+     Coperțile sunt mereu 1600×900 și mereu JPEG (vezi inc/imagini.php), deci
+     n-avem ce ghici nici noi. -->
+<meta property="og:image:type" content="image/jpeg">
 <meta property="og:image:width" content="<?= (int) COPERTA_LATIME ?>">
 <meta property="og:image:height" content="<?= (int) COPERTA_INALTIME ?>">
+<meta property="og:image:alt" content="<?= h($ogTitlu) ?>">
 <?php endif; ?>
 
 <!-- Twitter/X citește og:*, dar are nevoie de un cuvânt al lui ca să arate
@@ -160,7 +169,7 @@ if ($logat) {
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/css/style.css?v=39">
+<link rel="stylesheet" href="assets/css/style.css?v=40">
 
 <!-- Setează tema ÎNAINTE de randare, ca să nu apară un flash alb pe dark mode -->
 <script>

@@ -611,6 +611,76 @@
     });
   }
 
+  /* --- „Încheie evenimentul" ----------------------------------------------
+     Doar organizatorul îl vede, și doar cât mai e ceva de încheiat. În două
+     trepte, ca anularea: butonul își schimbă locul cu întrebarea. Confirmarea
+     e desenată de noi, nu de browser — window.confirm() arată altfel pe
+     fiecare sistem.
+
+     După ce merge, pagina se reîncarcă. Nu e lene: reîncărcarea e chiar
+     lucrul care arată banda de „s-a încheiat", butoanele stinse și textul la
+     trecut — toate vin de la server, dintr-un singur loc. Cusute de mână în
+     JS, ar fi început să difere de pagina adevărată de la prima corectură.
+  */
+  var evIncheie    = document.getElementById('ev-incheie');
+  var evIncheieVb  = document.getElementById('ev-incheie-sigur');
+  var evIncheieDa  = document.getElementById('ev-incheie-da');
+  var evIncheieNu  = document.getElementById('ev-incheie-nu');
+
+  if (evIncheie && evIncheieVb) {
+    evIncheie.addEventListener('click', function () {
+      evIncheieVb.hidden = false;
+      if (evIncheieNu) evIncheieNu.focus();   // atenția pe ieșire, nu pe faptă
+    });
+
+    if (evIncheieNu) {
+      evIncheieNu.addEventListener('click', function () {
+        evIncheieVb.hidden = true;
+        evIncheie.focus();
+      });
+    }
+  }
+
+  if (evIncheie && evIncheieDa) {
+    evIncheieDa.addEventListener('click', function () {
+      var textInitial = evIncheieDa.textContent;
+      evIncheieDa.disabled = true;
+      evIncheieDa.textContent = 'Se încheie…';
+
+      function gata() {
+        evIncheieDa.disabled = false;
+        evIncheieDa.textContent = textInitial;
+      }
+
+      fetch('api/incheie-eveniment.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          csrf: evIncheie.getAttribute('data-csrf') || '',
+          slug: evIncheie.getAttribute('data-slug') || ''
+        })
+      })
+      .then(citesteRaspuns)
+      .then(function (rez) {
+        if (!rez.corp) { gata(); toast(mesajRaspunsNeasteptat(rez)); return; }
+        var c = rez.corp;
+
+        if (!c.ok) { gata(); toast(c.mesaj || 'Nu am putut încheia evenimentul.'); return; }
+
+        // Butonul rămâne stins: nu mai e nimic de apăsat cât se reîncarcă.
+        toast(c.mesaj || 'Evenimentul a fost încheiat.');
+        setTimeout(function () {
+          window.location.href = c.redirect || window.location.href;
+        }, 700);
+      })
+      .catch(function () {
+        gata();
+        toast(mesajFaraLegatura());
+      });
+    });
+  }
+
   /* --- Butoanele de participare -------------------------------------------
      „Mă interesează" e o însemnare: se trimite pe loc. „Voi participa" e o
      hotărâre care dă numele și numărul de telefon mai departe, deci trece

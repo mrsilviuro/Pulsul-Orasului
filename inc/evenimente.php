@@ -4,8 +4,8 @@ declare(strict_types=1);
 /**
  * PulsulOrasului.Ro — evenimentele.
  *
- * Deocamdată doar publicarea: categoriile, regula „un eveniment activ" și
- * salvarea. Moderarea, editarea și încheierea manuală vin separat.
+ * Categoriile, regula „un eveniment activ", salvarea, editarea, anularea și
+ * încheierea. Moderarea (aprobarea) e singura care încă n-are interfață.
  */
 
 require_once __DIR__ . '/auth.php';
@@ -45,8 +45,9 @@ function idCategoriiValide(): array
 /**
  * Ce înseamnă „încheiat", într-un singur loc.
  *
- * Un eveniment se încheie în două feluri: organizatorul îl marchează așa (n-am
- * construit încă butonul), sau trece ziua în care a avut loc. Al doilea nu are
+ * Un eveniment se încheie în două feluri: organizatorul îl marchează așa
+ * (butonul „Încheie evenimentul" de pe pagina lui), sau trece ziua în care a
+ * avut loc. Al doilea nu are
  * nevoie de nicio sarcină programată la miezul nopții: e destul să comparăm
  * data cu ziua de azi ATUNCI CÂND ÎNTREBĂM.
  *
@@ -66,11 +67,17 @@ function idCategoriiValide(): array
  */
 function filtruNeincheiat(): array
 {
-    return ['data_eveniment >= ?', date('Y-m-d')];
+    return ['stare_moderare <> \'incheiat\' AND data_eveniment >= ?', date('Y-m-d')];
 }
 
 /**
  * S-a încheiat evenimentul ăsta?
+ *
+ * DOUĂ feluri de a se încheia, și amândouă se socotesc la fiecare citire:
+ *
+ *   - i-a trecut ziua — se întâmplă singur, fără cron;
+ *   - organizatorul a apăsat „Încheie evenimentul" — se poate întâmpla și
+ *     mai devreme: s-au ocupat locurile, s-a stricat vremea la jumătate.
  *
  * Aceeași regulă ca filtruNeincheiat(), scrisă pentru un singur rând, nu
  * pentru o interogare — pagina evenimentului are deja rândul în mână și n-are
@@ -81,9 +88,28 @@ function filtruNeincheiat(): array
  */
 function evenimentIncheiat(array $eveniment): bool
 {
+    if (($eveniment['stare_moderare'] ?? '') === 'incheiat') {
+        return true;
+    }
+
     $data = (string) ($eveniment['data_eveniment'] ?? '');
 
     return $data !== '' && $data < date('Y-m-d');
+}
+
+/**
+ * E un anunț care se vede pe site?
+ *
+ * „aprobat" și „incheiat" — două stări, o singură purtare față de lume.
+ * Încheiat nu înseamnă ascuns: evenimentul a avut loc, iar pagina lui rămâne
+ * de citit și de trimis mai departe. Se stinge doar ce se poate face pe ea.
+ *
+ * Deosebirea față de „anulat", care se ascunde de toți în afară de staff: acela
+ * n-a mai avut loc, deci n-are ce spune nimănui.
+ */
+function evenimentPublicat(array $eveniment): bool
+{
+    return in_array($eveniment['stare_moderare'] ?? '', ['aprobat', 'incheiat'], true);
 }
 
 function evenimenteActive(int $membruId): array
@@ -230,7 +256,11 @@ function evenimenteDePeProfil(int $membruId, bool $vedeSiCeleInAsteptare): array
 function cateEvenimenteOrganizate(int $membruId): int
 {
     $q = db()->prepare(
-        'SELECT COUNT(*) FROM evenimente WHERE membru_id = ? AND stare_moderare = \'aprobat\''
+        // „incheiat" se numără la fel ca „aprobat": e un eveniment care chiar
+        // a avut loc. Fără el, cifra ar scădea în clipa în care organizatorul
+        // apasă „Încheie evenimentul" — adică exact când a făcut treaba.
+        'SELECT COUNT(*) FROM evenimente
+          WHERE membru_id = ? AND stare_moderare IN (\'aprobat\', \'incheiat\')'
     );
     $q->execute([$membruId]);
 
@@ -295,7 +325,7 @@ function poateVedeaEvenimentul(array $eveniment, int $membruId, bool $eStaff = f
         return true;
     }
 
-    return $eveniment['stare_moderare'] === 'aprobat';
+    return evenimentPublicat($eveniment);
 }
 
 /** Adresa paginii unui eveniment. Un singur loc care o știe. */
@@ -338,7 +368,14 @@ function evenimentDeEditat(string $slug, int $membruId): ?array
         return null;
     }
 
-    if ($eveniment['stare_moderare'] === 'anulat') {
+    /**
+     * Anulat sau încheiat: nu mai e nimic de corectat.
+     *
+     * Fără rândurile astea, o editare ar întoarce evenimentul în
+     * „in_asteptare" (așa face actualizeazaEveniment) și l-ar readuce la viață
+     * pe lângă hotărârea pe care organizatorul tocmai o luase.
+     */
+    if (in_array($eveniment['stare_moderare'], ['anulat', 'incheiat'], true)) {
         return null;
     }
 
@@ -458,6 +495,30 @@ function anuleazaEveniment(array $eveniment, string $motiv): void
     );
 
     $q->execute([$motiv, acum(), (int) $eveniment['id']]);
+}
+
+/**
+ * Încheie evenimentul înainte de vreme.
+ *
+ * Un eveniment se încheie oricum singur a doua zi după data lui. Asta e pentru
+ * când se termină mai devreme: s-au ocupat locurile, s-a stricat vremea la
+ * jumătate, s-a strâns lumea și nu mai are rost să se înscrie nimeni.
+ *
+ * Nu e o anulare. Anulat înseamnă „nu a mai avut loc" și se ascunde de toată
+ * lumea; încheiat înseamnă „a avut loc, s-a terminat", iar pagina rămâne
+ * publică. De aceea nu se cere niciun motiv: nu e nimic de explicat nimănui,
+ * și nu pleacă niciun e-mail.
+ *
+ * Rândul rămâne cum e, cu tot cu copertă și cu lista celor care au fost —
+ * doar starea se schimbă.
+ */
+function incheieEveniment(array $eveniment): void
+{
+    $q = db()->prepare(
+        'UPDATE evenimente SET stare_moderare = \'incheiat\', actualizat_la = ? WHERE id = ?'
+    );
+
+    $q->execute([acum(), (int) $eveniment['id']]);
 }
 
 /**

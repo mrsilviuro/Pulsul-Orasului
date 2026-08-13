@@ -78,7 +78,7 @@ $evenimentId = (int) $eveniment['id'];
  * respins) sau pentru staff (cât e anulat) — și niciunul dintre ei n-are ce
  * căuta pe o listă de participanți la ceva ce nu s-a publicat încă.
  */
-if ($eveniment['stare_moderare'] !== 'aprobat') {
+if (!evenimentPublicat($eveniment)) {
     raspunsJson([
         'ok'    => false,
         'mesaj' => 'Evenimentul nu e publicat, deci nu are încă listă.',

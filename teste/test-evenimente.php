@@ -1973,6 +1973,135 @@ verifica('nici retragerea nu se mai poate', false,
     apasa($altul, $slugTrecut, 'participant')['ok'] ?? true);
 verifica('deci rândul e neatins', 'participant', stareaDinBaza($idTrecut, $idAltul));
 
+
+echo "\n=== ÎNCHEIEREA UNUI EVENIMENT, ÎNAINTE DE VREME ===\n";
+
+/** Cere încheierea evenimentului cu slugul dat. */
+function incheie(array &$cookies, string $slug, ?string $token = null): array
+{
+    return json_din(cerere($GLOBALS['baza'] . '/api/incheie-eveniment.php', $cookies, [
+        'csrf' => $token ?? csrf($cookies),
+        'slug' => $slug,
+    ]));
+}
+
+$idInch   = pune($idOrg, 'Unul pe care îl încheie el', 'aprobat', 12);
+$slugInch = $slugul($idInch);
+$laInch   = $baza . '/event.php?slug=' . urlencode($slugInch);
+$stareaLui = static fn(int $id): string => (string) db()->query(
+    'SELECT stare_moderare FROM evenimente WHERE id = ' . $id)->fetchColumn();
+
+/* --------------------- cele două feluri de a fi încheiat -------------- */
+
+verifica('unul din viitor NU e încheiat', false,
+    evenimentIncheiat(evenimentDupaSlug($slugInch)));
+verifica('unul cu data trecută, da', true,
+    evenimentIncheiat(['data_eveniment' => date('Y-m-d', strtotime('-1 day'))]));
+verifica('și unul cu starea „incheiat", chiar dacă e în viitor', true,
+    evenimentIncheiat(['data_eveniment' => date('Y-m-d', strtotime('+30 days')),
+                       'stare_moderare' => 'incheiat']));
+verifica('„aprobat" și „incheiat" sunt amândouă publicate', [true, true],
+    [evenimentPublicat(['stare_moderare' => 'aprobat']),
+     evenimentPublicat(['stare_moderare' => 'incheiat'])]);
+verifica('dar nu și celelalte', [false, false, false],
+    [evenimentPublicat(['stare_moderare' => 'in_asteptare']),
+     evenimentPublicat(['stare_moderare' => 'respins']),
+     evenimentPublicat(['stare_moderare' => 'anulat'])]);
+
+/* --------------------------- cine n-are voie -------------------------- */
+
+verifica('altcineva nu poate încheia evenimentul meu', false,
+    incheie($altul, $slugInch)['ok'] ?? false);
+verifica('fără CSRF bun, nici atât', false,
+    incheie($c, $slugInch, 'token-gresit')['ok'] ?? false);
+$gol = [];
+verifica('nelogatul, la fel', false, incheie($gol, $slugInch, 'orice')['ok'] ?? false);
+verifica('un slug inexistent nu încheie nimic', false,
+    incheie($c, 'nu-exista-nicaieri')['ok'] ?? false);
+verifica('prin GET → 405', 405,
+    cerere($baza . '/api/incheie-eveniment.php', $c)['stare']);
+verifica('după toate încercările, e tot aprobat', 'aprobat', $stareaLui($idInch));
+
+// Un anunț care încă așteaptă moderarea n-a început, deci n-are ce încheia.
+$idAstept2 = pune($idOrg, 'Încă la moderare', 'in_asteptare', 12);
+verifica('unul neaprobat nu se poate încheia', false,
+    incheie($c, $slugul($idAstept2))['ok'] ?? false);
+
+/* --------------------------- organizatorul ---------------------------- */
+
+$r = incheie($c, $slugInch);
+verifica('organizatorul îl poate încheia', true, $r['ok'] ?? false);
+verifica('cu mesajul cerut', 'Evenimentul a fost încheiat.', $r['mesaj'] ?? '');
+verifica('și e trimis înapoi pe pagina lui',
+    'event.php?slug=' . $slugInch, $r['redirect'] ?? '');
+verifica('starea din bază s-a schimbat', 'incheiat', $stareaLui($idInch));
+verifica('a doua oară n-are ce mai încheia', false, incheie($c, $slugInch)['ok'] ?? false);
+
+/* ------------------ ce se schimbă peste tot în site ------------------- */
+
+// Rămâne public, cu tot cu cartonașul de distribuire.
+$paginaInch = cerere($laInch, $anonim);
+verifica('pagina rămâne deschisă pentru oricine', 200, $paginaInch['stare']);
+verifica('și se lasă indexată', false, str_contains($paginaInch['corp'], 'name="robots"'));
+verifica('cu banda de încheiat', true,
+    str_contains($paginaInch['corp'], 'stare-anunt--incheiat'));
+verifica('butoanele de participare sunt stinse', true,
+    preg_match('/id="btn-going".*?disabled/s', $paginaInch['corp']) === 1);
+verifica('iar butonul de încheiere a dispărut', false,
+    str_contains(cerere($laInch, $c)['corp'], 'id="ev-incheie"'));
+
+// Nu mai ține pe nimeni blocat și nu mai apare pe profil.
+// Organizatorul are și alte evenimente din probele de mai sus; ne uităm doar
+// dacă ăsta a ieșit din listă.
+verifica('nu mai e printre cele active', false, in_array($idInch,
+    array_map('intval', array_column(evenimenteActive($idOrg), 'id')), true));
+verifica('nici pe profil', false, in_array('Unul pe care îl încheie el',
+    array_column(evenimenteDePeProfil($idOrg, true), 'titlu'), true));
+
+/**
+ * DAR se numără mai departe la „Evenimente organizate". Cifra aia spune ce a
+ * făcut omul pentru oraș, iar un eveniment încheiat e chiar dovada că a făcut:
+ * ar fi fost pe dos să scadă exact în clipa în care a dus treaba la capăt.
+ */
+$inainteDeIncheiere = cateEvenimenteOrganizate($idOrg);
+$idInch2 = pune($idOrg, 'Încă unul, pe care îl încheie', 'aprobat', 13);
+verifica('un eveniment aprobat se numără', $inainteDeIncheiere + 1,
+    cateEvenimenteOrganizate($idOrg));
+incheie($c, $slugul($idInch2));
+verifica('și după încheiere se numără la fel', $inainteDeIncheiere + 1,
+    cateEvenimenteOrganizate($idOrg));
+
+// Nu se mai poate edita: o editare l-ar întoarce în „in_asteptare".
+verifica('nu se mai poate edita', null, evenimentDeEditat($slugInch, $idOrg));
+verifica('nici formularul lui nu se deschide', 302,
+    cerere($baza . '/adauga_eveniment.php?slug=' . urlencode($slugInch), $c)['stare']);
+
+// Nimeni nu se mai înscrie, nici măcar retragere.
+verifica('nu se mai poate apăsa „mă interesează"', false,
+    apasa($altul, $slugInch, 'interesat')['ok'] ?? true);
+verifica('cu mesajul de încheiere', 'Evenimentul s-a încheiat.',
+    apasa($altul, $slugInch, 'interesat')['mesaj'] ?? '');
+
+/* --------------------- textul de sub butoane, la trecut --------------- */
+
+salveazaInteres($idInch, $idAltul, 'participant');
+$corpInch = cerere($laInch, $anonim)['corp'];
+verifica('un singur om: la trecut', true,
+    preg_match('/a fost interesat(ă)? sau a participat la acest eveniment\./u', $corpInch) === 1);
+verifica('fără prezent', false, str_contains($corpInch, 'este interesat'));
+
+salveazaInteres($idInch, $idOrg, 'interesat');
+$corpInch = cerere($laInch, $anonim)['corp'];
+verifica('doi oameni: tot la trecut', true,
+    str_contains($corpInch, 'au fost interesați sau au participat la acest eveniment.'));
+
+// …iar la unul încă activ, prezentul rămâne neatins.
+$idViitor = pune($idOrg, 'Care încă urmează', 'aprobat', 20);
+salveazaInteres($idViitor, $idAltul, 'interesat');
+verifica('la unul activ, prezentul rămâne', true,
+    preg_match('/este interesat(ă)? de acest eveniment\./u',
+        cerere($baza . '/event.php?slug=' . urlencode($slugul($idViitor)), $anonim)['corp']) === 1);
+
 /* ---------------------------- curățenie -------------------------------- */
 
 db()->exec('DELETE FROM evenimente');
