@@ -54,15 +54,25 @@ foreach (['fara-arond','a@','@b.ro','a@b','a b@c.ro','a@b..ro',''] as $rea) {
 }
 
 echo "\n=== DATA NAȘTERII ===\n";
-verifica('dată validă', '1990-05-20', reg(['data_nasterii'=>'1990-05-20'], $azi)['curat']['data_nasterii'] ?? null);
-verifica('30 februarie respins', true, isset(reg(['data_nasterii'=>'2000-02-30'], $azi)['erori']['data_nasterii']));
-verifica('viitor respins', true, isset(reg(['data_nasterii'=>'2030-01-01'], $azi)['erori']['data_nasterii']));
+// Din formular vine ZZ-LL-AAAA, în bază intră AAAA-LL-ZZ.
+verifica('dată validă', '1990-05-20', reg(['data_nasterii'=>'20-05-1990'], $azi)['curat']['data_nasterii'] ?? null);
+verifica('spațiile din jur nu supără', '1990-05-20', reg(['data_nasterii'=>'  20-05-1990  '], $azi)['curat']['data_nasterii'] ?? null);
+verifica('29 februarie într-un an bisect', '2000-02-29', reg(['data_nasterii'=>'29-02-2000'], $azi)['curat']['data_nasterii'] ?? null);
+verifica('30 februarie respins', true, isset(reg(['data_nasterii'=>'30-02-2000'], $azi)['erori']['data_nasterii']));
+verifica('29 februarie într-un an nebisect respins', true, isset(reg(['data_nasterii'=>'29-02-2001'], $azi)['erori']['data_nasterii']));
+verifica('31 aprilie respins', true, isset(reg(['data_nasterii'=>'31-04-1990'], $azi)['erori']['data_nasterii']));
+verifica('viitor respins', true, isset(reg(['data_nasterii'=>'01-01-2030'], $azi)['erori']['data_nasterii']));
+verifica('mâine respins', true, isset(reg(['data_nasterii'=>'07-08-2026'], $azi)['erori']['data_nasterii']));
+verifica('format aaaa-ll-zz respins', true, isset(reg(['data_nasterii'=>'1990-05-20'], $azi)['erori']['data_nasterii']));
 verifica('format zz/ll/aaaa respins', true, isset(reg(['data_nasterii'=>'20/05/1990'], $azi)['erori']['data_nasterii']));
+verifica('fără zerourile din față respins', true, isset(reg(['data_nasterii'=>'5-3-1990'], $azi)['erori']['data_nasterii']));
+verifica('an din două cifre respins', true, isset(reg(['data_nasterii'=>'20-05-90'], $azi)['erori']['data_nasterii']));
 verifica('text respins', true, isset(reg(['data_nasterii'=>'ieri'], $azi)['erori']['data_nasterii']));
-verifica('anul 1800 respins', true, isset(reg(['data_nasterii'=>'1800-01-01'], $azi)['erori']['data_nasterii']));
-verifica('12 ani respins', true, isset(reg(['data_nasterii'=>'2014-08-06'], $azi)['erori']['data_nasterii']));
-verifica('exact 13 ani acceptat', false, isset(reg(['data_nasterii'=>'2013-08-06'], $azi)['erori']['data_nasterii']));
-verifica('13 ani fără o zi respins', true, isset(reg(['data_nasterii'=>'2013-08-07'], $azi)['erori']['data_nasterii']));
+verifica('gol respins', true, isset(reg(['data_nasterii'=>''], $azi)['erori']['data_nasterii']));
+verifica('anul 1800 respins', true, isset(reg(['data_nasterii'=>'01-01-1800'], $azi)['erori']['data_nasterii']));
+verifica('9 ani respins', true, isset(reg(['data_nasterii'=>'06-08-2017'], $azi)['erori']['data_nasterii']));
+verifica('exact 10 ani acceptat', false, isset(reg(['data_nasterii'=>'06-08-2016'], $azi)['erori']['data_nasterii']));
+verifica('10 ani fără o zi respins', true, isset(reg(['data_nasterii'=>'07-08-2016'], $azi)['erori']['data_nasterii']));
 
 echo "\n=== SEX ===\n";
 verifica('"M" acceptat', 'M', reg(['sex'=>'M'], $azi)['curat']['sex'] ?? null);

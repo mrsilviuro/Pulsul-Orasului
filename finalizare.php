@@ -96,16 +96,20 @@ require __DIR__ . '/inc/antet.php';
                 </div>
               </div>
 
-              <!-- Aceleași clase ca la înregistrare, deci același CSS:
-                   iconița de calendar și săgeata de la „Sex" sunt desenate de
-                   noi, din stilurile câmpurilor. -->
+              <!-- Aceleași clase ca la înregistrare, deci același CSS: câmpul
+                   de dată vine din inc/camp-data.php, iar săgeata de la „Sex"
+                   e desenată de noi, din stilurile câmpurilor. -->
               <div class="field-row">
-                <div class="field">
-                  <label for="fn-birthdate">Data nașterii</label>
-                  <input type="date" id="fn-birthdate" name="data_nasterii" autocomplete="bday"
-                         required aria-describedby="err-fn-birthdate">
-                  <p class="field__error" id="err-fn-birthdate" hidden></p>
-                </div>
+                <?php
+                $dataId      = 'fn-birthdate';
+                $dataNume    = 'data_nasterii';
+                $dataText    = 'Data nașterii';
+                $dataExemplu = '25-12-1990';
+                $dataAuto    = 'bday';
+                $dataMin     = date('Y-m-d', strtotime('-' . VARSTA_MAX . ' years'));
+                $dataMax     = date('Y-m-d', strtotime('-' . VARSTA_MIN . ' years'));
+                require __DIR__ . '/inc/camp-data.php';
+                ?>
 
                 <div class="field">
                   <label for="fn-gender">Sex</label>
