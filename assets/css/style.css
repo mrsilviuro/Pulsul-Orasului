@@ -1096,13 +1096,19 @@ main { padding-block: 46px 64px; }
 }
 .rsvp__btn[disabled]:hover { transform: none; box-shadow: none; }
 
-.rsvp__plin {
+/* Două vorbe scurte de sub butoane, cu aceeași înfățișare: „nu mai sunt
+   locuri" și motivul pentru care butonul e stins pentru omul ăsta anume (ușa
+   închisă, evenimentul pentru celălalt sex). Spun același fel de lucru — de ce
+   nu se poate — deci arată la fel. */
+.rsvp__plin,
+.rsvp__blocaj {
   margin: 14px 0 0;
   font-size: 13.5px;
   font-weight: 600;
   color: #a3272a;
 }
-[data-theme="dark"] .rsvp__plin { color: #f2a3a4; }
+[data-theme="dark"] .rsvp__plin,
+[data-theme="dark"] .rsvp__blocaj { color: #f2a3a4; }
 
 /* ----------------- Confirmarea participării -----------------
    „Mă interesează" e o însemnare; „voi participa" dă numele și numărul de
@@ -1178,6 +1184,16 @@ main { padding-block: 46px 64px; }
 .panel { padding-top: 26px; }
 .panel:focus { outline: none; }
 .panel__intro { color: var(--text-soft); font-size: 14.5px; margin-bottom: 18px; }
+
+/* Fără nimeni pe listă, rândul de deasupra e o invitație, nu o numărătoare:
+   se așază pe mijloc, exact ca „Niciun comentariu încă" din tabul de alături
+   (.comments__gol). Cu oameni pe listă, rămâne în stânga. */
+.panel__intro--gol {
+  padding: 22px 0;
+  margin-bottom: 0;
+  text-align: center;
+  color: var(--text-faint);
+}
 
 /* formular de comentariu */
 .comment-form { display: flex; gap: 12px; margin-bottom: 30px; }

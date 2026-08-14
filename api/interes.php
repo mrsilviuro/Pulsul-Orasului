@@ -124,7 +124,7 @@ $acum = interesulMeu($evenimentId, $membruId);
  */
 if ($acum === $apasat) {
     stergeInteres($evenimentId, $membruId, $apasat);
-    raspunsJson(raspunsulListei($evenimentId, $membruId, 'Te-am scos de pe listă.'));
+    raspunsJson(raspunsulListei($eveniment, $membruId, 'Te-am scos de pe listă.'));
 }
 
 /* ===================== 4. „Mă interesează" ========================== */
@@ -132,7 +132,7 @@ if ($acum === $apasat) {
 // Nimic de cerut și nimic de verificat: e o însemnare, nu o hotărâre.
 if ($apasat === 'interesat') {
     salveazaInteres($evenimentId, $membruId, 'interesat');
-    raspunsJson(raspunsulListei($evenimentId, $membruId, 'Te-am trecut la interesați.'));
+    raspunsJson(raspunsulListei($eveniment, $membruId, 'Te-am trecut la interesați.'));
 }
 
 /* ====================== 5. „Voi participa" ========================== */
@@ -154,25 +154,25 @@ if (empty($date['confirmat'])) {
     ], 422);
 }
 
-/* --------------------------- a) ușa închisă ------------------------- */
+/* -------------------------- a) opreliștile -------------------------- */
 
 /**
- * Cine a fost scos de pe listă cu bifa pusă nu se mai poate înscrie aici.
+ * Ușa închisă de organizator, sau un eveniment care nu e pentru el.
+ *
+ * Aceeași funcție care stinge butonul în pagină — vezi
+ * motivBlocajParticipare() din inc/interese.php. În pagină e o purtare
+ * frumoasă; aici e regula, fiindcă cererea poate veni de oriunde: dintr-o filă
+ * deschisă alaltăieri, sau de-a dreptul cu curl.
  *
  * Se verifică abia acum, nu la începutul fișierului: retragerea (pasul 3) și
- * „Mă interesează" (pasul 4) rămân deschise pentru toată lumea. Interdicția
- * oprește ocuparea unui loc, nu însemnarea din dreptul omului — și nu-l ține
- * pe cineva prizonier pe o listă de pe care vrea să iasă.
- *
- * Mesajul spune ce s-a întâmplat, nu de ce: motivul a plecat deja, întreg, în
- * e-mailul primit la scoatere. Aici n-are cine să-l poarte, iar o pagină care
- * repetă mustrarea la fiecare apăsare n-ajută pe nimeni.
+ * „Mă interesează" (pasul 4) rămân deschise pentru toată lumea. Opreliștile
+ * astea țin de ocuparea unui loc, nu de însemnarea din dreptul omului — și nu
+ * țin pe nimeni prizonier pe o listă de pe care vrea să iasă.
  */
-if (esteInterzisLaEveniment($evenimentId, $membruId)) {
-    raspunsJson([
-        'ok'    => false,
-        'mesaj' => 'Nu te mai poți înscrie la acest eveniment.',
-    ], 403);
+$blocaj = motivBlocajParticipare($eveniment, $membru);
+
+if ($blocaj !== '') {
+    raspunsJson(['ok' => false, 'mesaj' => $blocaj], 403);
 }
 
 /* --------------------------- b) telefonul --------------------------- */
@@ -239,7 +239,7 @@ if (!maiSuntLocuri($eveniment, $numar['participant'])) {
 
 salveazaInteres($evenimentId, $membruId, 'participant');
 
-raspunsJson(raspunsulListei($evenimentId, $membruId, 'Te-am trecut pe lista de participanți.'));
+raspunsJson(raspunsulListei($eveniment, $membruId, 'Te-am trecut pe lista de participanți.'));
 
 /* ===================================================================== */
 
@@ -251,15 +251,29 @@ raspunsJson(raspunsulListei($evenimentId, $membruId, 'Te-am trecut pe lista de p
  * omului nostru pot intra alți zece, iar un număr crescut cu unu în browser
  * ar fi rămas greșit până la următoarea reîncărcare.
  */
-function raspunsulListei(int $evenimentId, int $membruId, string $mesaj): array
+function raspunsulListei(array $eveniment, int $membruId, string $mesaj): array
 {
-    $numar = numaraInterese($evenimentId);
+    $evenimentId = (int) $eveniment['id'];
+    $numar       = numaraInterese($evenimentId);
 
     return [
         'ok'     => true,
         'stare'  => interesulMeu($evenimentId, $membruId),
         'numar'  => $numar,
         'oameni' => randeazaChipuri($evenimentId),
+        /**
+         * Listele din taburi, gata desenate.
+         *
+         * Fără ele, omul se vedea apărând pe buton și în numărătoare, dar nu
+         * și în tabul de dedesubt — acolo intra abia după o reîncărcare pe
+         * care n-avea de ce s-o ghicească.
+         *
+         * Nu se lipesc în JS dintr-un rând nou: aceleași funcții care desenează
+         * pagina desenează și asta, deci nu se pot despărți. Butoanele de
+         * scoatere nu se trimit niciodată de aici — cine apasă „Voi participa"
+         * e un participant oarecare, nu organizatorul care face curat.
+         */
+        'panouri' => raspunsulPanourilor($eveniment),
         'mesaj'  => $mesaj,
     ];
 }

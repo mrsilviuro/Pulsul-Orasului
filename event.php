@@ -117,6 +117,22 @@ $imiCereTelefon = $eLogat && !$eOrganizatorul && telefonulMembrului($membruId) =
  */
 $poateScoateParticipanti = ($eOrganizatorul || $eStaff) && $ePublicat && !$eIncheiat;
 
+/**
+ * De ce nu se poate înscrie omul care se uită — dacă nu se poate.
+ *
+ * Ușa închisă de organizator, sau un eveniment care nu e pentru el (doar
+ * pentru femei, doar pentru bărbați). Aceeași funcție care hotărăște și
+ * refuzul din api/interes.php: aici stinge butonul, acolo oprește cererea.
+ *
+ * Cine e DEJA pe listă nu e oprit de nimic: butonul lui e cel de retragere, iar
+ * din el trebuie să poată ieși oricând. Un eveniment poate fi schimbat în „doar
+ * pentru femei" după ce s-au înscris bărbați — ei nu au de ce să rămână prinși
+ * acolo.
+ */
+$blocajParticipare = $stareaMea === 'participant'
+    ? ''
+    : motivBlocajParticipare($eveniment, $membru);
+
 /* ------------------------------ Discuția ------------------------------ */
 
 /**
@@ -455,15 +471,23 @@ require __DIR__ . '/inc/antet.php';
           </button>
 
           <!--
-            Butonul de participare se stinge când s-au ocupat toate locurile —
-            dar numai pentru cine nu e deja înăuntru: cel care e pe listă
-            trebuie să se poată retrage oricând. Oprirea adevărată e pe server,
-            unde locurile se numără din nou în clipa apăsării.
+            Butonul de participare se stinge în trei cazuri: s-au ocupat toate
+            locurile, evenimentul s-a încheiat, sau omul nu are ce căuta pe
+            listă — i s-a închis ușa, ori evenimentul e pentru celălalt sex.
+
+            Toate trei, doar pentru cine nu e deja înăuntru: cel care e pe listă
+            trebuie să se poată retrage oricând.
+
+            Stins de-a binelea, nu doar „duce la un refuz": până acum caseta de
+            confirmare se deschidea, omul apăsa „Da, particip" și abia atunci
+            afla că nu se poate. Oprirea adevărată rămâne pe server, în
+            api/interes.php, prin aceeași motivBlocajParticipare().
           -->
           <button class="rsvp__btn rsvp__btn--going" type="button"
                   id="btn-going" data-rsvp="participant"
                   aria-pressed="<?= $stareaMea === 'participant' ? 'true' : 'false' ?>"
-                  <?= ($eIncheiat || (!$maiSuntLocuri && $stareaMea !== 'participant')) ? 'disabled' : '' ?>>
+                  <?= $blocajParticipare !== '' ? 'title="' . h($blocajParticipare) . '"' : '' ?>
+                  <?= ($eIncheiat || $blocajParticipare !== '' || (!$maiSuntLocuri && $stareaMea !== 'participant')) ? 'disabled' : '' ?>>
             <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
               <circle cx="12" cy="12" r="9"/><path d="m8.2 12.3 2.6 2.6 5-5.2"/>
             </svg>
@@ -471,6 +495,15 @@ require __DIR__ . '/inc/antet.php';
             <span class="rsvp__count" data-count-for="participant"><?= (int) $numarInterese['participant'] ?></span>
           </button>
         </div>
+
+        <?php if ($blocajParticipare !== '' && !$eIncheiat): ?>
+        <!--
+          Un buton stins fără nicio vorbă lasă omul să creadă că s-a stricat
+          ceva. Motivul se scrie sub el, o singură dată — `title` de pe buton e
+          pentru mouse, iar pe telefon nu se vede niciodată.
+        -->
+        <p class="rsvp__blocaj"><?= h($blocajParticipare) ?></p>
+        <?php endif; ?>
 
         <?php if (!$eIncheiat && !$maiSuntLocuri && $stareaMea !== 'participant'): ?>
         <p class="rsvp__plin">Nu mai sunt locuri disponibile la acest eveniment.</p>
@@ -674,7 +707,10 @@ require __DIR__ . '/inc/antet.php';
              data-stare="interesat"
              data-deodata="<?= OAMENI_DEODATA ?>">
 
-          <p class="panel__intro">
+          <!-- Fără nimeni pe listă, rândul ăsta e o invitație, nu o
+               numărătoare: se așază pe mijloc, ca „Niciun comentariu încă" din
+               tabul de alături. Cu oameni pe listă, rămâne în stânga. -->
+          <p class="panel__intro<?= $numarInterese['interesat'] === 0 ? ' panel__intro--gol' : '' ?>">
             <?= vorbaDespreCatiSunt((int) $numarInterese['interesat'], 'interesat', $eIncheiat) ?>
           </p>
 
@@ -700,7 +736,7 @@ require __DIR__ . '/inc/antet.php';
              data-deodata="<?= OAMENI_DEODATA ?>"
              <?= $poateScoateParticipanti ? 'data-csrf="' . h(tokenCsrf()) . '"' : '' ?>>
 
-          <p class="panel__intro">
+          <p class="panel__intro<?= $numarInterese['participant'] === 0 ? ' panel__intro--gol' : '' ?>">
             <?= vorbaDespreCatiSunt((int) $numarInterese['participant'], 'participant', $eIncheiat) ?>
           </p>
 

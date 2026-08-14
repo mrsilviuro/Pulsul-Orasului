@@ -362,6 +362,70 @@ function esteInterzisLaEveniment(int $evenimentId, int $membruId): bool
 }
 
 /**
+ * De ce nu se poate înscrie omul ăsta ca participant.
+ *
+ * Întoarce '' dacă poate, altfel motivul, scris pentru el.
+ *
+ * UN SINGUR LOC pentru toate opreliștile, fiindcă de el atârnă două lucruri
+ * care trebuie să spună la fel: butonul stins din pagină (cu motivul scris sub
+ * el) și refuzul din api/interes.php. Scrise separat, s-ar fi despărțit — și
+ * s-ar fi ajuns iar la un buton viu care duce la un refuz, adică exact ce se
+ * repară aici.
+ *
+ * Se întreabă doar pentru cine NU e deja pe listă. Cine e înăuntru trebuie să
+ * poată ieși oricând, chiar dacă între timp evenimentul s-a închis pentru el —
+ * un eveniment poate fi schimbat în „doar pentru femei" după ce s-au înscris
+ * bărbați, iar ei nu au de ce să rămână prinși acolo.
+ *
+ * Vizitatorul fără cont nu e oprit de nimic: butonul lui duce la intrare, iar
+ * ce se poate și ce nu se hotărăște după ce se știe cine e.
+ */
+function motivBlocajParticipare(array $eveniment, ?array $membru): string
+{
+    if ($membru === null) {
+        return '';
+    }
+
+    $membruId = (int) $membru['id'];
+
+    /**
+     * Organizatorul nu e oprit de regula de gen la evenimentul lui.
+     *
+     * El e trecut oricum pe listă la salvare (vezi faOrganizatorulParticipant),
+     * fiindcă e omul de care se leagă evenimentul — cineva trebuie să răspundă
+     * de o seară pentru mame, chiar dacă n-ar putea veni la ea ca participant.
+     * Dacă s-a retras și vrea înapoi, nu-l oprim din ceva ce i s-a dat deja.
+     */
+    if ((int) $eveniment['membru_id'] === $membruId) {
+        return '';
+    }
+
+    // Ușa închisă de organizator sau de staff. Motivul a plecat întreg în
+    // e-mailul de la scoatere; aici se spune doar ce se poate și ce nu.
+    if (esteInterzisLaEveniment((int) $eveniment['id'], $membruId)) {
+        return 'Nu te mai poți înscrie la acest eveniment.';
+    }
+
+    /**
+     * Evenimentele care chiar se adresează unui singur sex: un meci de fotbal
+     * feminin, o seară pentru mame. „nespecificat" înseamnă că poate veni
+     * oricine — și așa sunt aproape toate.
+     */
+    $gen = (string) ($eveniment['gen_participanti'] ?? 'nespecificat');
+    $sex = (string) ($membru['sex'] ?? '');
+
+    if ($gen === 'femei' && $sex !== 'F') {
+        return 'Evenimentul e doar pentru femei.';
+    }
+
+    if ($gen === 'barbati' && $sex !== 'M') {
+        return 'Evenimentul e doar pentru bărbați.';
+    }
+
+    return '';
+}
+
+/**
  * Scoate un om de pe listă și ține minte de ce.
  *
  * Două scrieri care trebuie să se întâmple amândouă sau niciuna, deci într-o
@@ -591,4 +655,50 @@ function vorbaDespreCatiSunt(int $cati, string $stare, bool $incheiat): string
     return $numar . ($incheiat
         ? ($cati === 1 ? ' a fost interesată de acest eveniment.' : ' au fost interesate de acest eveniment.')
         : ($cati === 1 ? ' este interesată de acest eveniment.' : ' sunt interesate de acest eveniment.'));
+}
+
+/**
+ * Cele două panouri cu oameni, gata desenate, pentru răspunsurile JSON.
+ *
+ * Le cer amândouă API-urile: api/interes.php, după ce cineva a apăsat „Mă
+ * interesează" sau „Voi participa", și api/exclude-participant.php, după o
+ * scoatere. Amândouă schimbă listele, deci amândouă trebuie să le trimită
+ * înapoi — altfel omul își vede numele apărând pe buton, dar nu și în tabul de
+ * dedesubt, până la o reîncărcare pe care nu are de ce s-o ghicească.
+ *
+ * Aceeași formă pentru amândouă, ca main.js să aibă o singură funcție care le
+ * aplică: cheia e starea, adică exact ce scrie în `data-stare` pe panou.
+ *
+ * `gol` nu se socotește în JS din lungimea listei: rândul de deasupra e
+ * altceva când nu e nimeni („Nimeni nu s-a arătat încă interesat") și se
+ * așază pe mijloc, nu în stânga. Cine desenează textul spune și cum se așază.
+ */
+function raspunsulPanourilor(array $eveniment, bool $poateScoate = false): array
+{
+    $evenimentId   = (int) $eveniment['id'];
+    $organizatorId = (int) $eveniment['membru_id'];
+    $incheiat      = evenimentIncheiat($eveniment);
+    $numar         = numaraInterese($evenimentId);
+
+    $panouri = [];
+
+    foreach (['interesat', 'participant'] as $stare) {
+        $cati = (int) $numar[$stare];
+
+        $panouri[$stare] = [
+            // Butoanele de scoatere sunt numai pe lista de participanți, și
+            // numai pentru cine are dreptul. La interesați nu se scoate nimeni:
+            // „Mă interesează" nu ocupă niciun loc.
+            'lista' => randeazaListaOameni(
+                $evenimentId,
+                $stare,
+                $organizatorId,
+                $stare === 'participant' && $poateScoate
+            ),
+            'intro' => vorbaDespreCatiSunt($cati, $stare, $incheiat),
+            'gol'   => $cati === 0,
+        ];
+    }
+
+    return $panouri;
 }
