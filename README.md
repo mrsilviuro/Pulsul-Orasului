@@ -1638,7 +1638,7 @@ Evenimentele de dinaintea tabelului au primit rândul la migrare
 ### Rândul de sub butoane
 
 Chipurile și vorba se desenează într-un singur loc,
-`randeazaOameniInteresati()`, folosit și de pagină la încărcare, și de
+`randeazaChipuri()`, folosit și de pagină la încărcare, și de
 `api/interes.php` după fiecare apăsare. Scrise în două locuri, ar fi început să
 difere de la prima corectură.
 
@@ -1815,10 +1815,8 @@ cui trimite e-mailul și nici ce să scrie în el.
 
 ### Ce nu e făcut
 
-Panourile din taburile „Interesați" și „Participanți" sunt încă șablonul, cu
-oameni inventați — numerele de pe taburi vin din bază, listele dinăuntru nu.
-„Mergi la acest eveniment?" și comentariile merg de-a binelea; vezi secțiunile
-lor.
+Nu mai e nimic șablon pe pagina unui eveniment: „Mergi la acest eveniment?",
+comentariile și amândouă listele din taburi vin din bază; vezi secțiunile lor.
 
 Nu există încă interfață de aprobare și nici încheiere manuală. Evenimentul
 intră cu `stare_moderare = 'in_asteptare'` și nu se vede pe prima pagină; omul
@@ -2084,6 +2082,127 @@ staff-ul umblă la comentarii de pe pagina evenimentului, ca oricare autor.
 
 Verificările: `php teste/test-comentarii.php` (86 de cazuri, cere baza de date,
 nu și serverul).
+
+
+## Listele din taburi
+
+Taburile „Interesați" și „Participă" de pe pagina evenimentului: cine s-a
+adunat în jurul lui, și uneltele prin care organizatorul face curat pe lista de
+participanți.
+
+`sql/016-excluderi-evenimente.sql`, partea de jos a lui `inc/interese.php`,
+`api/exclude-participant.php`, cele două panouri din `event.php` și blocul
+„PANOURILE CU OAMENI" din `assets/js/main.js`.
+
+### Un singur panou, de două ori
+
+Cele două taburi sunt **același panou cu altă valoare în `data-stare`**. Lista
+se desenează dintr-un singur loc, `randeazaListaOameni()`, iar ascunsul și
+butonul „Vezi mai mult" le face un singur bloc din `main.js`, care merge peste
+orice element cu `data-oameni`.
+
+Se deosebesc prin trei lucruri, și atât:
+
+| | Interesați | Participă |
+|---|---|---|
+| `data-stare` | `interesat` | `participant` |
+| sub nume | „Interesată acum 2 ore" | „Confirmat ieri" |
+| butoane de scoatere | nu | da, pentru organizator și staff |
+
+Interesații n-au ce curăța: „Mă interesează" nu ocupă niciun loc, e o însemnare
+în dreptul omului, nu o hotărâre. De aceea `randeazaListaOameni()` primește
+`false` implicit pentru butoane — panoul acela nu le poate cere nici din
+greșeală.
+
+### Cine se vede
+
+Toți cei cu starea cerută în `interese_evenimente`, **în ordinea înscrierii**:
+la un eveniment cu locuri limitate, ordinea aia chiar înseamnă ceva. Numele e
+prescurtat — „R. Ioana", prin `numeAfisat()` — și duce la
+`profil.php?m=<permalink>`, ca peste tot pe site.
+
+Doar conturile active, prin aceeași bucată de SQL (`INTERESE_DOAR_ACTIVI`) din
+care se numără oamenii de pe butoane: lista și numărul de deasupra ei nu au
+voie să spună două lucruri diferite.
+
+Ca la comentarii, **toți intră în pagină de la început**; `main.js` lasă la
+vedere primii `OAMENI_DEODATA` (10) și mai arată câte zece la fiecare apăsare
+pe „Vezi mai mult (încă 13)". Zece, nu cincisprezece ca la comentarii: un om e
+un rând scurt, iar zece dintre ei ocupă cât patru comentarii.
+
+Rândul de deasupra listei — „12 persoane au confirmat că vor participa." — se
+scrie tot dintr-un singur loc, `vorbaDespreCatiSunt()`: opt feluri de a spune
+același lucru (două taburi × una/mai multe persoane × înainte/după eveniment),
+care copiate în pagină s-ar fi despărțit. Numărul poartă `data-count-for`, ca
+`main.js` să-l schimbe odată cu cel de pe tab și cu cel de pe butonul mare.
+
+### Scoaterea de pe listă
+
+Butonul se vede doar organizatorului și staff-ului, și doar la un eveniment
+publicat și neîncheiat — la unul trecut lista e istorie, nu o socoteală
+deschisă. **Organizatorul nu poate fi scos**, nici de el însuși, nici de staff:
+n-ar mai rămâne nimeni care să răspundă de eveniment, iar staff-ul are altă
+unealtă pentru un eveniment care nu-i place — îl poate anula cu totul.
+
+Caseta de confirmare cere un motiv de cel puțin `MOTIV_EXCLUDERE_MIN` (15)
+caractere, fiindcă motivul **pleacă întreg în e-mailul primit de omul scos**.
+„nu" sau „ok" nu i-ar spune nimic, iar el are dreptul să știe.
+
+Sub motiv e o bifă: *„Nu se mai poate înscrie la acest eveniment."* Fără ea,
+omul e doar dat jos și se poate întoarce — se întâmplă des, o listă plină de
+oameni care nu mai vin se face curat fără supărare. Cu ea, `api/interes.php` îl
+oprește la „Voi participa".
+
+Interdicția oprește **doar participarea**, nu și „Mă interesează": una ocupă un
+loc și aduce omul acolo, cealaltă e o însemnare în dreptul lui. Și nu-l ține pe
+nimeni prizonier — retragerea de pe listă rămâne deschisă oricui.
+
+### Ce se întâmplă în bază
+
+Rândul din `interese_evenimente` **se șterge** — locul se eliberează pe loc.
+Un rând rămas acolo, însemnat „scos", ar fi ținut un loc ocupat degeaba:
+socoteala locurilor rămase se face peste tabelul acela.
+
+Urma faptei rămâne în `excluderi_evenimente`: cine, pe cine, de ce, în ce
+calitate, și dacă i s-a închis ușa. Amândouă scrierile într-o tranzacție — dacă
+ar pica a doua, omul ar fi jos de pe listă fără ca nimeni să mai poată spune de
+ce, și fără interdicția care poate era tot rostul.
+
+`rol` se scrie **atunci**, nu se socotește la citire. Cine e staff azi poate să
+nu mai fie la anul: întrebat mai târziu, `membri.este_staff` ar răspunde despre
+omul de azi, nu despre fapta de atunci. Cine e și staff, și organizator, apare
+ca „organizator" — e evenimentul lui, iar asta spune mai mult celui care
+citește.
+
+Un om, un eveniment, un singur rând (`INSERT ... ON DUPLICATE KEY UPDATE`):
+cine a fost scos fără interdicție se poate înscrie la loc și poate fi scos din
+nou, iar a doua oară se rescrie rândul de dinainte. Ținem starea de acum, nu
+toată povestea.
+
+### E-mailul
+
+Singurul pas automat din toată povestea. Pleacă **după** scoatere, nu înainte:
+invers, un e-mail trimis și o scriere picată i-ar fi spus omului o neadevărat.
+Dacă e-mailul nu pleacă, scoaterea rămâne făcută — iar asta se poate îndrepta,
+spre deosebire de un mesaj trimis degeaba. Cel care a apăsat vede lista nouă,
+nu o eroare despre serverul de e-mail.
+
+Textul spune cine l-a scos (organizator sau staff), motivul întreg, și — într-o
+casetă care se vede, nu topit într-un paragraf — dacă ușa i s-a închis. Fără
+acea casetă, omul s-ar întoarce pe pagină, ar apăsa „Voi participa" și ar primi
+un refuz fără să înțeleagă de ce.
+
+Acordul se face după om: „Ai fost scoasă" pentru ea, „Ai fost scos" pentru el.
+E o veste neplăcută oricum — măcar să fie scrisă ca pentru cineva anume.
+
+### Ce nu e făcut
+
+Interdicția nu se poate ridica din interfață; rândul se schimbă de mână, din
+phpMyAdmin. Nu există nici o pagină care să-i arate omului de unde a fost scos —
+află doar din e-mail.
+
+Verificările: `php teste/test-participanti.php` (61 de cazuri, cere baza de
+date, nu și serverul).
 
 
 ## E-mailurile

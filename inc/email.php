@@ -688,3 +688,65 @@ function emailMesajDeContact(array $mesaj, ?int $membruId): bool
         'incheiere' => 'Mesajul e salvat și în baza de date, în tabelul mesaje_contact.',
     ]);
 }
+
+/**
+ * „Ai fost scos de pe lista de participanți."
+ *
+ * Pleacă în clipa scoaterii, singurul e-mail automat din toată povestea asta.
+ * Omul are dreptul să afle de la noi, nu ajungând pe pagină peste trei zile și
+ * negăsindu-se pe listă.
+ *
+ * $rol e „organizator" sau „staff", exact cum s-a scris în bază la scoatere
+ * (vezi sql/016-excluderi-evenimente.sql). Nu se socotește aici: cine e staff
+ * azi poate să nu mai fie mâine, iar mesajul trebuie să spună ce a fost atunci.
+ *
+ * Motivul intră ca paragraf obișnuit, deci trece prin aceeași ieșire ca restul
+ * textelor din șablon — scăpat cu htmlspecialchars în varianta HTML. Nimeni nu
+ * poate strecura etichete în e-mailul altcuiva prin caseta de motiv.
+ */
+function emailExcludereParticipant(
+    string $catre,
+    string $prenume,
+    string $sex,
+    string $titluEveniment,
+    string $adresaEveniment,
+    string $rol,
+    string $motiv,
+    bool $interzis
+): bool {
+    $cineA = $rol === 'organizator' ? 'organizatorul evenimentului' : 'un membru al echipei';
+
+    // Acordul se face după om, ca peste tot pe site: „scoasă" pentru ea,
+    // „scos" pentru el. E un mesaj neplăcut oricum — măcar să fie scris ca
+    // pentru cineva anume, nu ca un formular.
+    $scos = $sex === 'F' ? 'scoasă' : 'scos';
+
+    $blocuri = [
+        'salut'     => 'Bună, ' . $prenume . '!',
+        'paragrafe' => [
+            'Ai fost ' . $scos . ' de pe lista de participanți la „' . $titluEveniment . '", '
+            . 'de către ' . $cineA . '. Locul tău s-a eliberat.',
+            'Motivul, așa cum a fost scris:',
+            $motiv,
+        ],
+        'buton'     => ['text' => 'Vezi evenimentul', 'href' => $adresaEveniment],
+    ];
+
+    /**
+     * Ușa închisă se spune limpede, într-o casetă care se vede.
+     *
+     * Altfel omul s-ar întoarce pe pagină, ar apăsa „Voi participa" și ar primi
+     * un refuz fără să înțeleagă de ce. E vestea cea mai grea din tot mesajul,
+     * deci nu are ce căuta topită într-un paragraf.
+     */
+    if ($interzis) {
+        $blocuri['atentie'] = 'Nu te mai poți înscrie la acest eveniment. '
+                            . 'Celelalte evenimente de pe site rămân deschise pentru tine.';
+    } else {
+        $blocuri['incheiere'] = 'Te poți înscrie din nou, dacă mai sunt locuri. '
+                              . 'Dacă ți se pare o greșeală, scrie-i organizatorului '
+                              . 'de pe pagina evenimentului.';
+    }
+
+    return trimiteEmail($catre, 'Ai fost ' . $scos . ' de pe lista de la „' . $titluEveniment . '"', $blocuri);
+}

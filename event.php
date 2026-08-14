@@ -104,6 +104,19 @@ $maiSuntLocuri = maiSuntLocuri($eveniment, $numarInterese['participant']);
 $eLogat         = $membru !== null;
 $imiCereTelefon = $eLogat && !$eOrganizatorul && telefonulMembrului($membruId) === '';
 
+/**
+ * Cine poate da pe cineva jos de pe lista de participanți.
+ *
+ * Organizatorul, fiindcă locurile sunt ale lui, și staff-ul, ca la comentarii.
+ * Nu și la un eveniment neaprobat sau încheiat: acolo n-are ce curăța nimeni —
+ * la primul nu s-a înscris nimeni, iar listele celui de-al doilea sunt istorie,
+ * nu o socoteală deschisă.
+ *
+ * Aici se hotărăște doar dacă se DESENEAZĂ butoanele. Regula adevărată e în
+ * api/exclude-participant.php, care întreabă din nou tot ce se întreabă aici.
+ */
+$poateScoateParticipanti = ($eOrganizatorul || $eStaff) && $ePublicat && !$eIncheiat;
+
 /* ------------------------------ Discuția ------------------------------ */
 
 /**
@@ -513,12 +526,12 @@ require __DIR__ . '/inc/antet.php';
 
         <!--
           Chipurile și vorba de dedesubt se desenează într-un singur loc,
-          randeazaOameniInteresati() din inc/interese.php — de acolo vin și la
+          randeazaChipuri() din inc/interese.php — de acolo vin și la
           încărcarea paginii, și după fiecare apăsare, prin api/interes.php.
           Scrise în două locuri, ar fi început să difere de la prima corectură.
         -->
         <div class="rsvp__people" id="rsvp-people">
-          <?= randeazaOameniInteresati($evenimentId, $eIncheiat) ?>
+          <?= randeazaChipuri($evenimentId, $eIncheiat) ?>
         </div>
       </section>
       <?php endif; ?>
@@ -639,120 +652,116 @@ require __DIR__ . '/inc/antet.php';
           </div>
         </div>
 
+        <!-- =================== PANOURILE CU OAMENI ======================
+          „Interesați" și „Participă" sunt același panou de două ori, cu altă
+          valoare în `data-stare`. Lista se desenează într-un singur loc,
+          randeazaListaOameni() din inc/interese.php, iar ascunsul și butonul
+          „Vezi mai mult" le face un singur bloc din main.js, care merge peste
+          orice panou cu `data-oameni`.
+
+          Se deosebesc prin trei lucruri, și atât: ce stare arată, ce scrie
+          deasupra listei (vorbaDespreCatiSunt) și dacă au butoane de scoatere.
+          Interesații n-au: „Mă interesează" nu ocupă niciun loc, e o însemnare
+          în dreptul omului, deci n-are ce curăța nimeni acolo.
+
+          `data-deodata` vine din OAMENI_DEODATA, ca numărul să fie scris
+          într-un singur loc și schimbat într-unul singur.
+        ============================================================== -->
+
         <!-- ------------------------ PANOU: INTERESAȚI --------------------- -->
-        <div class="panel" id="panel-interested" role="tabpanel" aria-labelledby="tab-interested" tabindex="0" hidden>
+        <div class="panel" id="panel-interested" role="tabpanel" aria-labelledby="tab-interested" tabindex="0" hidden
+             data-oameni
+             data-stare="interesat"
+             data-deodata="<?= OAMENI_DEODATA ?>">
+
           <p class="panel__intro">
-            <strong><span data-count-for="interesat"><?= (int) $numarInterese['interesat'] ?></span> persoane</strong> sunt interesate de acest eveniment.
+            <?= vorbaDespreCatiSunt((int) $numarInterese['interesat'], 'interesat', $eIncheiat) ?>
           </p>
 
-          <ul class="people">
-            <li class="person">
-              <img class="person__avatar" src="assets/img/avatars/diana.svg" alt="" width="96" height="96" loading="lazy">
-              <div class="person__info">
-                <a class="person__name" href="profil.php">Diana Popa</a>
-                <span class="person__meta">Interesată acum 2 ore</span>
-              </div>
-            </li>
-            <li class="person">
-              <img class="person__avatar" src="assets/img/avatars/george.svg" alt="" width="96" height="96" loading="lazy">
-              <div class="person__info">
-                <a class="person__name" href="profil.php">George Tudose</a>
-                <span class="person__meta">Interesat acum 4 ore</span>
-              </div>
-            </li>
-            <li class="person">
-              <img class="person__avatar" src="assets/img/avatars/simona.svg" alt="" width="96" height="96" loading="lazy">
-              <div class="person__info">
-                <a class="person__name" href="profil.php">Simona Dobre</a>
-                <span class="person__meta">Interesată ieri</span>
-              </div>
-            </li>
-            <li class="person">
-              <img class="person__avatar" src="assets/img/avatars/tudor.svg" alt="" width="96" height="96" loading="lazy">
-              <div class="person__info">
-                <a class="person__name" href="profil.php">Tudor Anghel</a>
-                <span class="person__meta">Interesat ieri</span>
-              </div>
-            </li>
-            <li class="person">
-              <img class="person__avatar" src="assets/img/avatars/bianca.svg" alt="" width="96" height="96" loading="lazy">
-              <div class="person__info">
-                <a class="person__name" href="profil.php">Bianca Filip</a>
-                <span class="person__meta">Interesată acum 2 zile</span>
-              </div>
-            </li>
-            <li class="person">
-              <img class="person__avatar" src="assets/img/avatars/cristi.svg" alt="" width="96" height="96" loading="lazy">
-              <div class="person__info">
-                <a class="person__name" href="profil.php">Cristi Barbu</a>
-                <span class="person__meta">Interesat acum 2 zile</span>
-              </div>
-            </li>
+          <ul class="people" data-lista-oameni>
+            <?= randeazaListaOameni($evenimentId, 'interesat', (int) $eveniment['membru_id']) ?>
           </ul>
 
-          <div class="load-more">
-            <button class="btn btn--ghost" type="button">Vezi toate cele 128 de persoane</button>
+          <div class="load-more" data-mai-multi hidden>
+            <button class="btn btn--ghost" type="button" data-mai-multi-buton>Vezi mai mult</button>
           </div>
         </div>
 
         <!-- ------------------------ PANOU: PARTICIPĂ ---------------------- -->
-        <div class="panel" id="panel-going" role="tabpanel" aria-labelledby="tab-going" tabindex="0" hidden>
+        <!--
+          Tokenul CSRF se scrie doar aici, și doar pentru cine poate scoate pe
+          cineva de pe listă — organizatorul și staff-ul. Pe panoul de
+          interesați n-ar avea ce face.
+        -->
+        <div class="panel" id="panel-going" role="tabpanel" aria-labelledby="tab-going" tabindex="0" hidden
+             data-oameni
+             data-stare="participant"
+             data-slug="<?= h((string) $eveniment['slug']) ?>"
+             data-deodata="<?= OAMENI_DEODATA ?>"
+             <?= $poateScoateParticipanti ? 'data-csrf="' . h(tokenCsrf()) . '"' : '' ?>>
+
           <p class="panel__intro">
-            <strong><span data-count-for="participant"><?= (int) $numarInterese['participant'] ?></span> persoane</strong> au confirmat că vor participa.
+            <?= vorbaDespreCatiSunt((int) $numarInterese['participant'], 'participant', $eIncheiat) ?>
           </p>
 
-          <ul class="people">
-            <li class="person">
-              <img class="person__avatar" src="assets/img/avatars/ioana.svg" alt="" width="96" height="96" loading="lazy">
-              <div class="person__info">
-                <a class="person__name" href="profil.php">Ioana Rusu</a>
-                <span class="person__meta">Aleargă la 10 km</span>
-              </div>
-              <span class="person__badge">Organizator</span>
-            </li>
-            <li class="person">
-              <img class="person__avatar" src="assets/img/avatars/vlad.svg" alt="" width="96" height="96" loading="lazy">
-              <div class="person__info">
-                <a class="person__name" href="profil.php">Vlad Solomon</a>
-                <span class="person__meta">Confirmat acum 3 ore</span>
-              </div>
-            </li>
-            <li class="person">
-              <img class="person__avatar" src="assets/img/avatars/mihai.svg" alt="" width="96" height="96" loading="lazy">
-              <div class="person__info">
-                <a class="person__name" href="profil.php">Mihai Constantin</a>
-                <span class="person__meta">Confirmat acum 5 ore</span>
-              </div>
-            </li>
-            <li class="person">
-              <img class="person__avatar" src="assets/img/avatars/raluca.svg" alt="" width="96" height="96" loading="lazy">
-              <div class="person__info">
-                <a class="person__name" href="profil.php">Raluca Grigore</a>
-                <span class="person__meta">Confirmat ieri</span>
-              </div>
-            </li>
-            <li class="person">
-              <img class="person__avatar" src="assets/img/avatars/elena.svg" alt="" width="96" height="96" loading="lazy">
-              <div class="person__info">
-                <a class="person__name" href="profil.php">Elena Neagu</a>
-                <span class="person__meta">Confirmat ieri</span>
-              </div>
-            </li>
-            <li class="person">
-              <img class="person__avatar" src="assets/img/avatars/andrei.svg" alt="" width="96" height="96" loading="lazy">
-              <div class="person__info">
-                <a class="person__name" href="profil.php">Andrei Munteanu</a>
-                <span class="person__meta">Confirmat acum 2 zile</span>
-              </div>
-              <span class="person__badge">Autor</span>
-            </li>
+          <ul class="people" data-lista-oameni>
+            <?= randeazaListaOameni($evenimentId, 'participant', (int) $eveniment['membru_id'], $poateScoateParticipanti) ?>
           </ul>
 
-          <div class="load-more">
-            <button class="btn btn--ghost" type="button">Vezi toate cele 86 de persoane</button>
+          <div class="load-more" data-mai-multi hidden>
+            <button class="btn btn--ghost" type="button" data-mai-multi-buton>Vezi mai mult</button>
           </div>
-        </div>
 
+          <?php if ($poateScoateParticipanti): ?>
+          <!--
+            Caseta de confirmare a scoaterii. Una singură, mutată de JS sub
+            omul pe care s-a apăsat: câte una pentru fiecare rând ar fi însemnat
+            zeci de formulare ascunse în pagină, fiecare cu textarea și bifa lui.
+
+            Motivul e obligatoriu (MOTIV_EXCLUDERE_MIN caractere) fiindcă pleacă
+            întreg în e-mailul primit de omul scos — el are dreptul să știe de ce.
+          -->
+          <template id="sablon-scoatere">
+            <!--
+              Un `<li>`, nu un `<form>` pus de-a dreptul în listă: copiii unui
+              `<ul>` sunt `<li>`-uri, iar lista e o grilă pe două coloane — așa
+              caseta poate să le cuprindă pe amândouă, sub omul pe care s-a
+              apăsat.
+            -->
+            <li class="scoate-rand" data-scoate-form>
+            <form class="scoate-form">
+              <p class="scoate-form__titlu">Scoți de pe listă pe <strong data-scoate-nume></strong>?</p>
+
+              <label class="sr-only" for="scoate-motiv">De ce îl scoți</label>
+              <textarea id="scoate-motiv" rows="3" maxlength="<?= MOTIV_EXCLUDERE_MAX ?>"
+                        placeholder="De ce îl scoți de pe listă? (cel puțin <?= MOTIV_EXCLUDERE_MIN ?> caractere)"
+                        aria-describedby="scoate-motiv-hint err-scoate"></textarea>
+              <p class="field__hint" id="scoate-motiv-hint">
+                Textul ăsta pleacă întreg în e-mailul pe care îl primește.
+              </p>
+              <p class="field__error" id="err-scoate" hidden></p>
+
+              <!--
+                Bifa care închide ușa. `.check` e componenta de bifă a
+                site-ului, aceeași ca la termeni sau la newsletter: fără ea,
+                pătratul ar fi rămas nedesenat — resetul global stinge decorul
+                nativ al oricărui `<input>` (vezi „Fără decor nativ pe
+                controale" din style.css).
+              -->
+              <label class="check scoate-form__bifa">
+                <input type="checkbox" data-scoate-interzis>
+                <span>Nu se mai poate înscrie la acest eveniment</span>
+              </label>
+
+              <div class="scoate-form__actiuni">
+                <button class="btn btn--primary btn--xs" type="submit">Scoate de pe listă</button>
+                <button class="btn btn--text" type="button" data-scoate-renunta>Renunță</button>
+              </div>
+            </form>
+            </li>
+          </template>
+          <?php endif; ?>
+        </div>
       </section>
     </article>
 

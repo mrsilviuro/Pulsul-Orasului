@@ -1427,6 +1427,63 @@ main { padding-block: 46px 64px; }
   letter-spacing: .04em; text-transform: uppercase;
   flex: none;
 }
+/* Aceleași două culori ca la insignele de sub comentarii: staff-ul violet,
+   organizatorul în culoarea site-ului. Un om are aceeași față peste tot. */
+.person__badge--staff { background: rgba(124, 92, 255, .12); color: var(--brand-2); }
+
+/* Participanții ascunși până la „Vezi mai mult" (main.js pune `hidden`).
+   Scris pe față: `.person` are `display: flex`, care ar fi bătut purtarea
+   implicită a atributului și i-ar fi lăsat la vedere pe toți. */
+.person[hidden] { display: none; }
+
+/* Butonul care scoate pe cineva de pe listă. Se vede doar organizatorului și
+   staff-ului. Palid până la trecerea cu mouse-ul: e o unealtă rar folosită,
+   n-are de ce să strige din fiecare rând. */
+.person__scoate {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px;
+  flex: none;
+  border-radius: 50%;
+  color: var(--text-faint);
+  transition: background-color .18s var(--ease), color .18s var(--ease);
+}
+.person__scoate .ico { width: 15px; height: 15px; }
+.person__scoate:hover { background: rgba(211, 47, 49, .10); color: #d32f31; }
+[data-theme="dark"] .person__scoate:hover { background: rgba(255, 138, 134, .12); color: #ff8a86; }
+
+/* Caseta de confirmare, sub omul pe care s-a apăsat.
+   `<li>` care cuprinde amândouă coloanele grilei — vezi șablonul din
+   event.php: copiii unui `<ul>` sunt `<li>`-uri, nu formulare. */
+.scoate-rand { grid-column: 1 / -1; }
+.scoate-form {
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-soft);
+}
+.scoate-form__titlu { font-size: 14px; margin-bottom: 10px; color: var(--text); }
+.scoate-form textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 16px; line-height: 1.55;
+  resize: vertical;
+  transition: border-color .18s var(--ease), box-shadow .18s var(--ease);
+}
+.scoate-form textarea:focus {
+  outline: none; border-color: var(--brand);
+  box-shadow: 0 0 0 3px var(--brand-soft);
+}
+.scoate-form .field__hint { margin-top: 6px; }
+
+/* Bifa care închide ușa. Desenul vine din `.check`, componenta de bifă a
+   site-ului — aici se adaugă doar aerul de deasupra. Un pătrat desenat a doua
+   oară aici ar fi început să difere de restul bifelor de la prima corectură. */
+.scoate-form__bifa { margin-top: 12px; }
+
+.scoate-form__actiuni { display: flex; align-items: center; gap: 8px; margin-top: 14px; }
 
 /* articole similare */
 .related { margin-top: 64px; padding-top: 40px; border-top: 1px solid var(--border); }

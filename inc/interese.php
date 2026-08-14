@@ -219,7 +219,7 @@ function maiSuntLocuri(array $eveniment, int $catiParticipanti): bool
  * încarcă, și api/interes.php, după fiecare apăsare. Scris în două locuri, ar
  * fi început să difere de la prima corectură.
  */
-function randeazaOameniInteresati(int $evenimentId, bool $incheiat = false): string
+function randeazaChipuri(int $evenimentId, bool $incheiat = false): string
 {
     $numar  = numaraInterese($evenimentId);
     $total  = $numar['interesat'] + $numar['participant'];
@@ -289,4 +289,306 @@ function randeazaOameniInteresati(int $evenimentId, bool $incheiat = false): str
 
     return '<div class="facepile" aria-hidden="true">' . $chipuri . '</div>'
          . '<p class="rsvp__note">' . $vorba . '</p>';
+}
+
+/* ===================== LISTELE DIN TABURI ============================ */
+
+/**
+ * Câți oameni se văd deodată, înainte de „Vezi mai mult".
+ *
+ * Zece, nu cincisprezece ca la comentarii: un om e un rând scurt, cu chip și
+ * nume, iar zece dintre ei ocupă cât patru comentarii. Numărul stă aici, nu în
+ * main.js — pagina îl trimite mai departe printr-un atribut.
+ */
+const OAMENI_DEODATA = 10;
+
+/**
+ * Toți oamenii dintr-o stare, cu tot ce trebuie ca să fie arătați.
+ *
+ * O singură funcție pentru amândouă taburile: „Interesați" și „Participă" pun
+ * aceeași întrebare, doar cu altă valoare în `stare`. Două funcții aproape la
+ * fel s-ar fi despărțit la prima corectură făcută doar în una.
+ *
+ * Toți, nu primii zece: ascunsul e treaba paginii, ca la comentarii. Un
+ * eveniment are zeci de oameni, nu zeci de mii, iar „Vezi mai mult" trebuie să
+ * răspundă pe loc.
+ *
+ * Doar conturile active — aceeași bucată de SQL ca la numărătoarea de pe
+ * butoane (INTERESE_DOAR_ACTIVI), ca lista și numărul de deasupra ei să nu
+ * spună niciodată două lucruri diferite.
+ *
+ * În ordinea înscrierii, de la primul venit: la un eveniment cu locuri
+ * limitate, ordinea aia chiar înseamnă ceva. `creat_la`, nu `actualizat_la`:
+ * cine s-a arătat interesat acum o lună și a trecut aseară la „particip" s-a
+ * băgat acum o lună.
+ */
+function oameniiCuStarea(int $evenimentId, string $stare): array
+{
+    $q = db()->prepare(
+        'SELECT m.id, m.permalink, m.nume, m.prenume, m.poza, m.sex, m.este_staff,
+                i.creat_la
+           FROM interese_evenimente i
+           ' . INTERESE_DOAR_ACTIVI . '
+          WHERE i.eveniment_id = ? AND i.stare = ?
+          ORDER BY i.creat_la, i.id'
+    );
+    $q->execute([$evenimentId, $stare]);
+
+    return $q->fetchAll();
+}
+
+/**
+ * I s-a închis ușa la evenimentul ăsta?
+ *
+ * Se întreabă în api/interes.php, înainte de „Voi participa". Doar acolo:
+ * interdicția oprește ocuparea unui loc, nu și însemnarea „mă interesează".
+ *
+ * Rândul poate exista cu `interzis = 0` — cineva scos de pe listă fără să i se
+ * închidă ușa. Aceluia nu i se oprește nimic; rândul lui e doar urma faptei.
+ */
+function esteInterzisLaEveniment(int $evenimentId, int $membruId): bool
+{
+    if ($membruId <= 0) {
+        return false;
+    }
+
+    $q = db()->prepare(
+        'SELECT interzis FROM excluderi_evenimente
+          WHERE eveniment_id = ? AND membru_id = ? LIMIT 1'
+    );
+    $q->execute([$evenimentId, $membruId]);
+
+    return (int) $q->fetchColumn() === 1;
+}
+
+/**
+ * Scoate un om de pe listă și ține minte de ce.
+ *
+ * Două scrieri care trebuie să se întâmple amândouă sau niciuna, deci într-o
+ * tranzacție: dacă ar pica a doua, omul ar fi jos de pe listă fără ca nimeni
+ * să mai poată spune de ce — și fără interdicția care poate era tot rostul.
+ *
+ * Locul se eliberează prin ștergerea rândului din `interese_evenimente`, nu
+ * printr-o coloană „scos": numărătoarea locurilor rămase se face peste tabelul
+ * acela, iar un rând rămas acolo ar ține un loc ocupat degeaba.
+ *
+ * „INSERT ... ON DUPLICATE KEY UPDATE" pentru urmă: cine a fost scos o dată
+ * fără interdicție se poate înscrie la loc și poate fi scos din nou. A doua
+ * oară se rescrie rândul de dinainte — ține minte starea de acum, nu toată
+ * povestea.
+ */
+function excludeParticipant(
+    int $evenimentId,
+    int $membruId,
+    int $exclusDeId,
+    string $rol,
+    string $motiv,
+    bool $interzis
+): void {
+    $pdo = db();
+    $pdo->beginTransaction();
+
+    try {
+        $pdo->prepare(
+            'DELETE FROM interese_evenimente
+              WHERE eveniment_id = ? AND membru_id = ? AND stare = \'participant\''
+        )->execute([$evenimentId, $membruId]);
+
+        $pdo->prepare(
+            'INSERT INTO excluderi_evenimente
+                    (eveniment_id, membru_id, exclus_de_id, rol, motiv, interzis, creat_la)
+             VALUES (?,?,?,?,?,?,?)
+             ON DUPLICATE KEY UPDATE exclus_de_id = VALUES(exclus_de_id),
+                                     rol          = VALUES(rol),
+                                     motiv        = VALUES(motiv),
+                                     interzis     = VALUES(interzis),
+                                     creat_la     = VALUES(creat_la)'
+        )->execute([
+            $evenimentId, $membruId, $exclusDeId, $rol, $motiv, $interzis ? 1 : 0, acum(),
+        ]);
+
+        $pdo->commit();
+    } catch (Throwable $e) {
+        $pdo->rollBack();
+        throw $e;
+    }
+}
+
+/**
+ * Adresa, prenumele și sexul celui scos, pentru e-mailul care îl înștiințează.
+ *
+ * Sexul, fiindcă mesajul se scrie cu acord: „Ai fost scoasă" pentru ea, „Ai
+ * fost scos" pentru el. E o veste neplăcută oricum — măcar să fie scrisă ca
+ * pentru cineva anume.
+ *
+ * Se citesc ÎNAINTE de scoatere, nu după: după, rândul din
+ * `interese_evenimente` nu mai e, iar dacă între timp și-ar șterge contul n-am
+ * mai avea unde trimite. Întoarce null dacă omul nu mai are cont activ — atunci
+ * nu se trimite nimic, dar scoaterea se face oricum.
+ */
+function omulDeInstiintat(int $membruId): ?array
+{
+    $q = db()->prepare(
+        'SELECT prenume, sex, email FROM membri WHERE id = ? AND stare = \'activ\' LIMIT 1'
+    );
+    $q->execute([$membruId]);
+
+    $rand = $q->fetch();
+
+    return $rand !== false ? $rand : null;
+}
+
+/* ======================= CUM ARATĂ PE ECRAN ========================== */
+
+/**
+ * „Confirmată acum 3 ore", „Interesat de ieri" — de când e omul pe listă.
+ *
+ * Acordul se face după om, ca la rândul de sub butoane: „confirmată" pentru
+ * ea, „confirmat" pentru el. Iar verbul, după stare: pe una scrie ce a hotărât
+ * omul, pe cealaltă doar că se uită într-acolo.
+ */
+function candSAInscris(array $om, string $stare): string
+{
+    $eF = ($om['sex'] ?? '') === 'F';
+
+    $verb = $stare === 'participant'
+        ? ($eF ? 'Confirmată' : 'Confirmat')
+        : ($eF ? 'Interesată'  : 'Interesat');
+
+    return $verb . ' ' . timpRelativ((string) $om['creat_la']);
+}
+
+/**
+ * Un rând de listă: un chip, un nume, de când e acolo.
+ *
+ * Același rând pentru amândouă taburile. Se deosebesc prin două lucruri, și
+ * amândouă vin de afară: verbul de sub nume (după `$stare`) și butonul de
+ * scoatere, care apare doar la participanți și doar pentru cine are dreptul.
+ *
+ * `data-participant` e cum îl găsește main.js după ce serverul confirmă
+ * scoaterea: răspunsul spune ce id a plecat, iar pagina caută rândul după
+ * atributul ăsta. Fără el ar trebui numărate pozițiile — iar pozițiile se
+ * schimbă la fiecare om scos.
+ */
+function randeazaOm(array $om, string $stare, int $organizatorId, bool $poateScoate): string
+{
+    $id           = (int) $om['id'];
+    $eOrganizator = $id === $organizatorId;
+    $nume         = h(numeAfisat((string) $om['nume'], (string) $om['prenume']));
+
+    $legatura = ($om['permalink'] ?? '') !== ''
+        ? '<a class="person__name" href="profil.php?m=' . h((string) $om['permalink']) . '">' . $nume . '</a>'
+        : '<span class="person__name">' . $nume . '</span>';
+
+    /* ---------------------------- insignele --------------------------- */
+
+    $insigne = '';
+
+    if ($eOrganizator) {
+        $insigne .= '<span class="person__badge">Organizator</span>';
+    } elseif ((int) ($om['este_staff'] ?? 0) === 1) {
+        $insigne .= '<span class="person__badge person__badge--staff">Staff</span>';
+    }
+
+    /* ----------------------------- butonul ---------------------------- */
+
+    /**
+     * Se scoate doar de pe lista de participanți.
+     *
+     * „Mă interesează" nu ocupă niciun loc — e o însemnare în dreptul omului,
+     * nu o hotărâre — deci n-are ce curăța nimeni acolo. De aceea cine cheamă
+     * funcția trimite `false` pentru tabul „Interesați", iar
+     * api/exclude-participant.php cere oricum starea `participant`.
+     *
+     * Organizatorul nu se scoate de pe lista lui. Nici de el însuși — n-ar avea
+     * cui să-și trimită e-mailul de înștiințare și ar rămâne un eveniment fără
+     * nimeni care să răspundă de el — nici de staff, care are alte unelte
+     * pentru un eveniment care nu-i place: îl poate anula cu totul. Aceeași
+     * regulă e verificată din nou în API; aici e doar butonul.
+     */
+    $buton = ($poateScoate && !$eOrganizator)
+        ? '<button class="person__scoate" type="button" data-scoate'
+          . ' data-nume="' . $nume . '"'
+          . ' aria-label="Scoate-l de pe listă pe ' . $nume . '" title="Scoate de pe listă">'
+          . '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">'
+          . '<path d="M6 6l12 12"/><path d="M18 6 6 18"/>'
+          . '</svg></button>'
+        : '';
+
+    return '<li class="person" data-participant="' . $id . '">'
+         . '<img class="person__avatar" src="' . h(urlPoza($om['poza'] ?? null, true)) . '" alt=""'
+         . ' width="96" height="96" loading="lazy" decoding="async">'
+         . '<div class="person__info">'
+         . $legatura
+         . '<span class="person__meta">' . h(candSAInscris($om, $stare)) . '</span>'
+         . '</div>'
+         . $insigne
+         . $buton
+         . '</li>';
+}
+
+/**
+ * Toată lista unui tab, gata desenată.
+ *
+ * Întoarce HTML, nu-l tipărește, fiindcă îl cer două locuri: pagina, când se
+ * încarcă, și api/exclude-participant.php, care întoarce lista din nou după
+ * fiecare scoatere. Scrise în două locuri, ar fi început să difere.
+ */
+function randeazaListaOameni(
+    int $evenimentId,
+    string $stare,
+    int $organizatorId,
+    bool $poateScoate = false
+): string {
+    $html = '';
+
+    foreach (oameniiCuStarea($evenimentId, $stare) as $om) {
+        $html .= randeazaOm($om, $stare, $organizatorId, $poateScoate);
+    }
+
+    return $html;
+}
+
+/**
+ * Rândul de deasupra listei: „12 persoane au confirmat că vor participa."
+ *
+ * Un singur loc pentru toate cele opt feluri în care se poate spune asta:
+ * două taburi × una/mai multe persoane × înainte/după eveniment. Scrise în
+ * pagină, s-ar fi copiat între panouri și s-ar fi despărțit.
+ *
+ * Numărul e într-un `<span>` cu `data-count-for`, ca main.js să-l poată
+ * schimba după o scoatere fără să rescrie toată propoziția — și ca să se
+ * schimbe odată cu numărul de pe tab și cu cel de pe buton, care poartă același
+ * atribut.
+ */
+function vorbaDespreCatiSunt(int $cati, string $stare, bool $incheiat): string
+{
+    $eParticipare = $stare === 'participant';
+
+    if ($cati === 0) {
+        if ($incheiat) {
+            return $eParticipare
+                ? 'Nu a confirmat nimeni participarea.'
+                : 'Nu s-a arătat nimeni interesat.';
+        }
+
+        return $eParticipare
+            ? 'Nimeni nu a confirmat încă participarea. Poți fi primul.'
+            : 'Nimeni nu s-a arătat încă interesat. Poți fi primul.';
+    }
+
+    $numar = '<strong><span data-count-for="' . h($stare) . '">' . $cati . '</span> '
+           . '<span data-cuvant-persoane>' . ($cati === 1 ? 'persoană' : 'persoane') . '</span></strong>';
+
+    if ($eParticipare) {
+        // La trecut după ce s-a terminat: „vor participa" sub un anunț de acum
+        // trei luni sună a invitație la ceva ce nu se mai poate.
+        return $numar . ($incheiat
+            ? ($cati === 1 ? ' a confirmat participarea.' : ' au confirmat participarea.')
+            : ($cati === 1 ? ' a confirmat că va participa.' : ' au confirmat că vor participa.'));
+    }
+
+    return $numar . ($incheiat
+        ? ($cati === 1 ? ' a fost interesată de acest eveniment.' : ' au fost interesate de acest eveniment.')
+        : ($cati === 1 ? ' este interesată de acest eveniment.' : ' sunt interesate de acest eveniment.'));
 }

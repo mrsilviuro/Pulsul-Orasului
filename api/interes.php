@@ -154,7 +154,28 @@ if (empty($date['confirmat'])) {
     ], 422);
 }
 
-/* --------------------------- a) telefonul --------------------------- */
+/* --------------------------- a) ușa închisă ------------------------- */
+
+/**
+ * Cine a fost scos de pe listă cu bifa pusă nu se mai poate înscrie aici.
+ *
+ * Se verifică abia acum, nu la începutul fișierului: retragerea (pasul 3) și
+ * „Mă interesează" (pasul 4) rămân deschise pentru toată lumea. Interdicția
+ * oprește ocuparea unui loc, nu însemnarea din dreptul omului — și nu-l ține
+ * pe cineva prizonier pe o listă de pe care vrea să iasă.
+ *
+ * Mesajul spune ce s-a întâmplat, nu de ce: motivul a plecat deja, întreg, în
+ * e-mailul primit la scoatere. Aici n-are cine să-l poarte, iar o pagină care
+ * repetă mustrarea la fiecare apăsare n-ajută pe nimeni.
+ */
+if (esteInterzisLaEveniment($evenimentId, $membruId)) {
+    raspunsJson([
+        'ok'    => false,
+        'mesaj' => 'Nu te mai poți înscrie la acest eveniment.',
+    ], 403);
+}
+
+/* --------------------------- b) telefonul --------------------------- */
 
 /**
  * Organizatorul nu-și dă numărul lui însuși, deci nu i se cere.
@@ -196,7 +217,7 @@ if (!$eOrganizatorul && telefonulMembrului($membruId) === '') {
         ->execute([$rezultat['curat'], acum(), $membruId]);
 }
 
-/* --------------------------- b) locurile ---------------------------- */
+/* --------------------------- c) locurile ---------------------------- */
 
 /**
  * Se numără ACUM, nu la desenarea paginii: între încărcare și apăsare pot
@@ -238,7 +259,7 @@ function raspunsulListei(int $evenimentId, int $membruId, string $mesaj): array
         'ok'     => true,
         'stare'  => interesulMeu($evenimentId, $membruId),
         'numar'  => $numar,
-        'oameni' => randeazaOameniInteresati($evenimentId),
+        'oameni' => randeazaChipuri($evenimentId),
         'mesaj'  => $mesaj,
     ];
 }
