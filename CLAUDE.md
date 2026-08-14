@@ -121,7 +121,8 @@ inc/
   evenimente.php    → categorii, regula „un eveniment activ", lista de pe
                       profil, pagina unui eveniment, salvarea
   interese.php      → „Mergi la acest eveniment?" — cine e interesat, cine
-                      vine, numărătoarea, locurile, rândul cu chipuri
+                      vine, numărătoarea, locurile, rândul cu chipuri, lista
+                      de participanți ȘI scoaterea cuiva de pe ea
   comentarii.php    → discuția de sub eveniment: cele două niveluri,
                       aprecierile, ștergerea cu piatră de mormânt, ȘI cum
                       arată pe ecran (HTML-ul se scrie doar aici)
@@ -142,9 +143,10 @@ sql/                → schema.sql + migrări numerotate (002, 003, 004, 005-goo
                       009-evenimente, 010-limita-evenimente,
                       011-anulare-eveniment, 012-oras-eveniment,
                       013-interese-evenimente, 014-incheiere-eveniment,
-                      015-comentarii)
+                      015-comentarii, 016-excluderi-evenimente)
 teste/              → test-validare.php (verificările din inc/validare.php)
-                      test-comentarii.php (cere baza de date, nu și serverul)
+                      test-comentarii.php, test-participanti.php
+                      (amândouă cer baza de date, nu și serverul)
                       test-tine-minte.php, test-setari.php, test-contact.php,
                       test-evenimente.php
                       (ultimele patru cer serverul pornit — vezi antetul lor)
@@ -194,9 +196,12 @@ assets/css/style.css, assets/js/main.js, assets/img/
 
 ## Ce e neterminat (roadmap)
 
-- Panourile din taburile „Interesați" și „Participanți" — încă șablon, cu
-  oameni inventați: numerele de pe taburi sunt adevărate, listele dinăuntru nu.
-  Comentariile NU mai sunt șablon (vezi `inc/comentarii.php`)
+- Panoul din tabul „Interesați" — încă șablon, cu oameni inventați: numărul de
+  pe tab e adevărat, lista dinăuntru nu. Comentariile și lista de participanți
+  NU mai sunt șablon (vezi `inc/comentarii.php` și `inc/interese.php`)
+- Interdicția de reînscriere (`excluderi_evenimente.interzis`) nu se poate
+  ridica din interfață — rândul se schimbă de mână, din phpMyAdmin. Nu există
+  nici pagină care să-i arate omului de unde a fost scos: află doar din e-mail
 - Pagina de termeni și condiții nu există. Linkurile spre ea sunt `href="#"`
   peste tot (înregistrare, subsol, confirmarea participării)
 - Prima pagină (`index.php`) e tot cu articole scrise de mână; linkurile duc la

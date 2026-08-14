@@ -1635,6 +1635,267 @@
     potrivesteAscunsul();
   }
 
+  /* ----------------------------- PARTICIPANȚII ---------------------------
+     Tabul „Participă". Toți intră în pagină de la început; „Vezi mai mult"
+     nu aduce nimic, doar dă la o parte — ca la comentarii.
+
+     Organizatorul și staff-ul au, în dreptul fiecăruia, un buton care îl
+     scoate de pe listă. Scoaterea cere un motiv, fiindcă motivul pleacă întreg
+     în e-mailul primit de omul dat jos.
+  ------------------------------------------------------------------------ */
+
+  var panouParticipanti = document.querySelector('[data-participanti]');
+
+  if (panouParticipanti) {
+    var listaParticipanti = panouParticipanti.querySelector('[data-lista-participanti]');
+    var maiMulti      = panouParticipanti.querySelector('[data-mai-multi]');
+    var maiMultiButon = panouParticipanti.querySelector('[data-mai-multi-buton]');
+    var sablonScoatere = panouParticipanti.querySelector('#sablon-scoatere');
+    var introParticipanti = panouParticipanti.querySelector('.panel__intro');
+
+    var pePagina  = parseInt(panouParticipanti.getAttribute('data-deodata'), 10) || 10;
+    var aratati   = pePagina;
+
+    /* --------------------------- ascunsul ------------------------------ */
+
+    function totiParticipantii() {
+      if (!listaParticipanti) return [];
+      return Array.prototype.slice.call(listaParticipanti.querySelectorAll('.person'));
+    }
+
+    function potrivesteListaParticipanti() {
+      var toti = totiParticipantii();
+      var ascunsi = 0;
+
+      if (aratati < pePagina) aratati = pePagina;
+
+      toti.forEach(function (li, i) {
+        var deAscuns = i >= aratati;
+        li.hidden = deAscuns;
+        if (deAscuns) ascunsi++;
+      });
+
+      if (maiMulti) {
+        maiMulti.hidden = ascunsi === 0;
+
+        // Doar numărul în paranteză: „persoane" e deja în textul de deasupra
+        // listei, iar butonul spune ce face, nu ce numără.
+        if (maiMultiButon && ascunsi > 0) {
+          maiMultiButon.textContent = 'Vezi mai mult (încă ' + ascunsi + ')';
+        }
+      }
+    }
+
+    /* ------------------- numărul de deasupra listei -------------------- */
+
+    /**
+     * Numerele se iau din răspunsul serverului, nu se scad în browser.
+     *
+     * Între încărcarea paginii și apăsare pot intra sau ieși alții, iar un
+     * număr scăzut cu unu aici ar fi rămas greșit până la reîncărcare.
+     */
+    function setNumarParticipanti(cate) {
+      document.querySelectorAll('[data-count-for="participant"]').forEach(function (el) {
+        el.textContent = cate;
+      });
+
+      var cuvant = panouParticipanti.querySelector('[data-cuvant-persoane]');
+      if (cuvant) cuvant.textContent = cate === 1 ? 'persoană' : 'persoane';
+
+      // Lista s-a golit de tot: rândul de deasupra n-are ce număra.
+      if (introParticipanti && cate === 0) {
+        introParticipanti.textContent = 'Nu mai e nimeni pe listă.';
+      }
+    }
+
+    /* -------------------------- caseta de scos ------------------------- */
+
+    function inchideScoaterea() {
+      var deschisa = panouParticipanti.querySelector('[data-scoate-form]');
+
+      if (deschisa) {
+        var butonul = deschisa.__buton;
+        if (butonul) butonul.setAttribute('aria-expanded', 'false');
+        deschisa.remove();
+      }
+    }
+
+    function deschideScoaterea(buton) {
+      if (!sablonScoatere) return;
+
+      var rand = buton.closest('.person');
+
+      // A doua apăsare pe același buton închide caseta.
+      var deschisa = panouParticipanti.querySelector('[data-scoate-form]');
+      if (deschisa && deschisa.__buton === buton) { inchideScoaterea(); return; }
+
+
+      inchideScoaterea();
+
+      // Rândul purtător e un `<li>`, ca lista să rămână o listă; formularul
+      // stă în el (vezi șablonul din event.php).
+      var randCaseta = sablonScoatere.content.firstElementChild.cloneNode(true);
+      var form       = randCaseta.querySelector('form');
+      randCaseta.__buton = buton;
+
+      // Numele se pune ca TEXT, nu lipit în HTML: e numele altui om.
+      form.querySelector('[data-scoate-nume]').textContent = buton.getAttribute('data-nume') || '';
+
+      // Sub rândul lui, nu la capătul listei: cine confirmă trebuie să vadă
+      // pe cine scoate fără să caute cu ochii în sus.
+      rand.after(randCaseta);
+      buton.setAttribute('aria-expanded', 'true');
+
+      var motiv  = form.querySelector('textarea');
+      var eroare = form.querySelector('#err-scoate');
+      var bifa   = form.querySelector('[data-scoate-interzis]');
+
+      motiv.focus();
+
+      motiv.addEventListener('input', function () {
+        eroare.hidden = true;
+        eroare.textContent = '';
+      });
+
+      form.querySelector('[data-scoate-renunta]').addEventListener('click', inchideScoaterea);
+
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        var text = motiv.value.trim();
+
+        /**
+         * Verificarea de aici e pentru confortul omului, nu o regulă: aceeași
+         * limită e ținută de verificaMotivExcludere() pe server, unde chiar
+         * contează. Numărăm cu [...text].length, nu cu .length — în UTF-16 un
+         * „ă" e un caracter, dar un emoji e două, iar numărul de aici trebuie
+         * să fie fix cel pe care îl socotește mb_strlen() în PHP.
+         */
+        if ([...text].length < 15) {
+          eroare.textContent = 'Scrie cel puțin 15 caractere. Omul primește textul ăsta pe e-mail.';
+          eroare.hidden = false;
+          motiv.focus();
+          return;
+        }
+
+        trimiteScoaterea(
+          rand.getAttribute('data-participant'),
+          text,
+          bifa.checked,
+          form.querySelector('button[type="submit"]'),
+          eroare
+        );
+      });
+    }
+
+    /* ------------------------ vorbitul cu serverul --------------------- */
+
+    function trimiteScoaterea(id, motiv, interzis, buton, eroare) {
+      var textInitial = buton.textContent;
+
+      buton.disabled = true;
+      buton.textContent = 'Se trimite…';
+
+      function gata() {
+        buton.disabled = false;
+        buton.textContent = textInitial;
+      }
+
+      fetch('api/exclude-participant.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          csrf:     panouParticipanti.getAttribute('data-csrf') || '',
+          slug:     panouParticipanti.getAttribute('data-slug') || '',
+          membru:   id,
+          motiv:    motiv,
+          interzis: interzis
+        })
+      })
+      .then(citesteRaspuns)
+      .then(function (rez) {
+        gata();
+
+        if (!rez.corp) { toast(mesajRaspunsNeasteptat(rez)); return; }
+        var c = rez.corp;
+
+        if (rez.stare === 401) {
+          toast('Intră în cont ca să faci asta.');
+          setTimeout(goToLogin, 900);
+          return;
+        }
+
+        if (c.erori) {
+          eroare.textContent = c.erori.motiv || 'Verifică ce ai scris.';
+          eroare.hidden = false;
+          return;
+        }
+
+        if (!c.ok) { toast(c.mesaj || 'Nu am putut scoate omul de pe listă.'); return; }
+
+        inchideScoaterea();
+
+        /**
+         * Lista vine gata desenată de pe server, din aceeași funcție care o
+         * scrie la încărcarea paginii (randeazaParticipanti). De aceea se pune
+         * cu innerHTML: e HTML făcut de noi, escapat cu h(), nu text venit de
+         * la cine a apăsat.
+         */
+        if (listaParticipanti && typeof c.participanti === 'string') {
+          listaParticipanti.innerHTML = c.participanti;
+        }
+
+        // Chipurile de sub butoane s-au schimbat și ele: omul scos nu mai are
+        // ce căuta acolo.
+        var rsvpOameni = document.getElementById('rsvp-people');
+        if (rsvpOameni && typeof c.oameni === 'string') {
+          rsvpOameni.innerHTML = c.oameni;
+        }
+
+        if (c.numar) {
+          setNumarParticipanti(c.numar.participant);
+
+          document.querySelectorAll('[data-count-for="interesat"]').forEach(function (el) {
+            el.textContent = c.numar.interesat;
+          });
+        }
+
+        potrivesteListaParticipanti();
+        toast(c.mesaj || 'L-am scos de pe listă.');
+      })
+      .catch(function () {
+        gata();
+        toast(mesajFaraLegatura());
+      });
+    }
+
+    /* ------------------ o singură ureche pentru tot -------------------- */
+
+    /**
+     * Ascultarea e pe panou, nu pe fiecare buton: lista se redesenează
+     * întreagă după fiecare scoatere, iar ascultătorii legați de butoanele
+     * vechi ar fi plecat odată cu ele.
+     */
+    panouParticipanti.addEventListener('click', function (e) {
+      var buton = e.target.closest('button');
+      if (!buton || !panouParticipanti.contains(buton)) return;
+
+      if (buton.hasAttribute('data-mai-multi-buton')) {
+        aratati += pePagina;
+        potrivesteListaParticipanti();
+        return;
+      }
+
+      if (buton.hasAttribute('data-scoate')) {
+        deschideScoaterea(buton);
+      }
+    });
+
+    // Prima așezare: tot ce trece de primul teanc se dă la o parte.
+    potrivesteListaParticipanti();
+  }
+
   /* --- Bara de progres a citirii --- */
   var progress = document.querySelector('#read-progress span');
   var postBody = document.querySelector('.post__body');

@@ -40,6 +40,10 @@ const MOTIV_ANULARE_MAX   = 1000;
 const COMENTARIU_MIN = 2;    // caractere — vezi verificaComentariu()
 const COMENTARIU_MAX = 2000;
 
+/* Scoaterea cuiva de pe lista de participanți */
+const MOTIV_EXCLUDERE_MIN = 15;   // caractere — vezi verificaMotivExcludere()
+const MOTIV_EXCLUDERE_MAX = 1000;
+
 /**
  * Aduce diacriticele românești la forma corectă (virgulă dedesubt).
  *
@@ -750,6 +754,47 @@ function verificaMotivAnulare($cerut): array
     if ($cate > MOTIV_ANULARE_MAX) {
         return [
             'eroare' => 'Motivul e prea lung (cel mult ' . MOTIV_ANULARE_MAX . ' de caractere).',
+            'text'   => '',
+        ];
+    }
+
+    return ['eroare' => '', 'text' => $motiv];
+}
+
+/**
+ * De ce e scos cineva de pe lista de participanți.
+ *
+ * Cincisprezece caractere, ca la motivul de anulare, și din același motiv:
+ * textul ăsta nu rămâne între noi, ci pleacă întreg în e-mailul primit de omul
+ * dat jos. „nu" sau „ok" nu i-ar spune nimic, iar el are dreptul să știe.
+ *
+ * Funcție a ei, nu verificaMotivAnulare(): sunt două fapte diferite, cu două
+ * mesaje diferite pe ecran, iar cine schimbă limita uneia n-are de ce s-o
+ * schimbe pe a celeilalte.
+ */
+function verificaMotivExcludere($cerut): array
+{
+    $motiv = curataTextPeRanduri(is_string($cerut) ? $cerut : '');
+    $cate  = mb_strlen($motiv, 'UTF-8');
+
+    if ($motiv === '') {
+        return [
+            'eroare' => 'Scrie de ce îl scoți de pe listă. Omul primește textul ăsta pe e-mail.',
+            'text'   => '',
+        ];
+    }
+
+    if ($cate < MOTIV_EXCLUDERE_MIN) {
+        return [
+            'eroare' => 'Mai scrie puțin: ai ' . $cate . ' caractere din '
+                      . MOTIV_EXCLUDERE_MIN . ' cerute.',
+            'text'   => '',
+        ];
+    }
+
+    if ($cate > MOTIV_EXCLUDERE_MAX) {
+        return [
+            'eroare' => 'Motivul e prea lung (cel mult ' . MOTIV_EXCLUDERE_MAX . ' de caractere).',
             'text'   => '',
         ];
     }
