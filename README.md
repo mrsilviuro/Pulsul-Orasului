@@ -1206,8 +1206,29 @@ Ce așteaptă moderarea sau a fost respins nu intră în cifră: n-a ajuns nicio
 un eveniment adevărat, deci n-are ce căuta într-un număr pe care îl vede toată
 lumea.
 
-Celelalte două casete („Prezent la evenimente", „A confirmat, dar nu a venit")
-sunt încă numere scrise de mână: participările nu există în bază.
+### Celelalte două casete
+
+Erau numere scrise de mână — „47" și „3", aceleași pe orice profil. Acum sunt
+ale omului: `laCateEvenimenteAFost()` și `laCateEvenimenteNuAVenit()`, amândouă
+în `inc/evaluari.php`.
+
+**„Prezent la evenimente"** numără evenimentele la care e pe lista de
+participanți — și cele active, și cele încheiate. Unul la care merge săptămâna
+viitoare se numără la fel ca unul de acum o lună. Nu se numără cele care n-au
+ajuns niciodată publice (în așteptare, respinse) și nici cele anulate: la
+primele n-avea cum să se înscrie nimeni, la ultimele nimeni n-a fost nicăieri.
+Evenimentele pe care le-a ținut chiar el intră și ele — e trecut pe lista de
+participanți ca oricare altul, și chiar a fost acolo.
+
+**„A confirmat, dar nu a venit"** numără evenimentele la care organizatorul a
+apăsat „Nu s-a prezentat" (`evaluari.automat = 1`). Evenimentele, nu
+însemnările: `DISTINCT`, ca cifra să spună „la câte evenimente", nu „câte
+rânduri sunt în tabel".
+
+Cele două **se exclud una pe alta**, dinadins: un eveniment la care omul a
+confirmat, dar n-a ajuns, iese din prima și intră în a doua. Altfel profilul ar
+spune „prezent la 12" și „n-a venit la 3" despre aceleași douăsprezece, iar
+cine le citește n-ar ști care e adevărul.
 
 **Primele patru se văd, restul intră ascunse.** Tot ce e de arătat pleacă în
 aceeași pagină; peste al patrulea, cartonașele primesc clasa `.ascuns`, iar
@@ -2305,6 +2326,15 @@ mult (încă N)" — ca la comentarii și ca la listele din taburi. Fără nicio
 părere scrisă se arată un singur rând: „Prenume nu a primit niciun feedback
 scris."
 
+Pe profilul propriu, lipit sub bare, scrie de unde vin cifrele: „Notele sunt
+date în mod anonim de oamenii cu care ai participat la evenimente." Stă acolo,
+nu la capătul de jos al secțiunii, fiindcă despre bare vorbește — e subsolul
+lor, nu un paragraf de sine stătător. Și apare **numai odată cu ele**: fără
+nicio notă, deasupra scrie oricum „Nicio evaluare încă. Notele vin de la
+oamenii cu care a fost la evenimente", iar două rânduri care spun același lucru
+unul sub altul ar fi vorbă în plus. Anonimatul e ceva de lămurit despre note
+care există.
+
 ### Două căi către aceeași notă
 
 De pe **pagina evenimentului**, dintr-o apăsare pe stele, în dreptul fiecărui
@@ -2365,13 +2395,123 @@ Verificările: `php teste/test-evaluari.php` (74 de cazuri, cere baza de date,
 nu și serverul).
 
 
+## Mulțumirea de după eveniment
+
+După ce un eveniment s-a încheiat, fiecare om rămas pe lista de participanți
+primește **o dată** un e-mail: mulțumim că ai venit, iar dacă vrei, treci pe
+pagină și dă câte o stea celorlalți. Butonul din el duce drept la tabul „Au
+participat", nu la capul paginii.
+
+`sql/018-multumiri-eveniment.sql`, `inc/multumiri.php`,
+`cron/multumeste-participantilor.php`, `emailMultumireParticipare()` din
+`inc/email.php`.
+
+### De ce printr-un cron, și nu în clipa încheierii
+
+Fiindcă încheierea se întâmplă în două feluri, iar unul dintre ele nu se
+întâmplă nicăieri. Organizatorul poate apăsa „Încheie evenimentul", și atunci
+există un moment anume — dar un eveniment se încheie și singur, când îi trece
+ziua, iar aceea nu e fapta nimănui, e doar ceasul care merge mai departe. Nu
+există nicio cerere de prins, niciun buton apăsat. Singurul loc din care se
+poate observa e ceva care trece din când în când și se uită.
+
+Și dacă tot trebuie un cron pentru al doilea fel, îl lăsăm să le facă pe
+amândouă. Altfel același mesaj ar pleca din două locuri, cu două feluri de a
+socoti cine îl primește, și s-ar despărți la prima corectură. Organizatorul
+care apasă butonul nu trimite nimic — doar schimbă starea, iar cronul vede la
+următoarea trecere.
+
+```
+php /home/UTILIZATOR/public_html/cron/multumeste-participantilor.php
+```
+
+**Din oră în oră.** Nu o dată pe zi ca la anonimizare: acolo se aștepta un
+răgaz de treizeci de zile, deci o zi în plus nu însemna nimic. Aici omul tocmai
+s-a întors acasă, iar o mulțumire care vine a doua zi seara n-are aceeași
+căldură. Nici mai des n-are rost.
+
+Pentru încercare, fără să trimită nimic și fără să atingă baza:
+
+```
+php cron/multumeste-participantilor.php --uscat
+```
+
+### Cum se ține minte că au plecat
+
+Într-o coloană, `evenimente.multumiri_trimise_la`. Fără ea, cronul n-ar avea
+cum să deosebească un eveniment încheiat ieri **cu** mesajele trimise de unul
+încheiat ieri **fără** ele: le-ar trimite din nou la fiecare rulare, din oră în
+oră, pentru totdeauna.
+
+Semnul se pune și când n-a plecat nimic — la un eveniment fără oameni, sau
+unde toate încercările au picat. Altfel rândul acela ar fi cercetat la
+nesfârșit, iar o adresă care nu primește azi n-o să primească nici la a suta
+încercare.
+
+Se pune **după** trimitere, nu înainte. Dacă scriptul cade la jumătate, cei
+dinaintea căderii primesc mesajul de două ori la următoarea rulare. E partea
+nefericită a alegerii — dar cealaltă ar face ca o cădere să lase pe cineva
+fără mesaj, definitiv. Dintre „încă o dată" și „niciodată", prima.
+
+Migrarea închide trecutul dintr-o dată: tot ce e deja încheiat în clipa
+importului primește semnul, fără să plece nimic. Fără rândul acela, prima
+rulare ar trimite oamenilor mulțumiri pentru o seară de acum jumătate de an.
+
+### Cine primește
+
+Cine e pe lista de **participanți**, cu contul activ. Nu și cei care s-au
+arătat doar interesați: n-au fost acolo. Nu și cine a fost scos de pe listă —
+el a primit deja alt mesaj, cel cu motivul, și ar fi de prost gust să-i vină
+după aceea și „mulțumim că ai fost".
+
+Organizatorul e și el pe listă, ca oricare altul, dar primește alt prim
+paragraf: lui nu i se mulțumește că a venit, ci că l-a ținut. Tot lui i se
+amintește că poate însemna cine a confirmat și n-a mai ajuns.
+
+**Sub doi oameni nu pleacă nimic.** Mesajul e, în cea mai mare parte, o
+invitație la note, iar notele se dau între oameni: la un eveniment ținut de
+cineva singur ar fi o scrisoare care te trimite pe o pagină unde nu e nimeni.
+
+Bifa de newsletter din setări nu se citește aici. Aceea e pentru „e-mail cu
+evenimente noi", adică pentru ce n-a cerut nimeni anume; mesajul de față vine
+după o seară la care omul s-a înscris el însuși. Un mesaj despre ceva ce ai
+făcut tu nu e reclamă.
+
+### Linkul care deschide tabul
+
+Butonul duce la `event.php?slug=…#panel-going`. Un panou închis are `hidden`,
+deci browserul nu poate sări la el singur — omul ar ateriza pe pagină și ar
+rămâne tot la comentarii. De aceea componenta de taburi din `main.js` citește
+diezul, deschide tabul potrivit și mută ecranul până la el; pe telefon aduce și
+tabul pe mijlocul rândului, fiindcă la 390px nu încap toate trei.
+
+Cât de sus se oprește pagina se scrie în CSS, `scroll-margin-top` pe `.panel`,
+nu în JS: browserul încearcă și el să sară singur la elementul din adresă, iar
+încercarea lui vine după a noastră. Cu regula în CSS, amândoi se opresc în
+același loc — sub antet și sub rândul de taburi, ca să se vadă pe care tab a
+nimerit.
+
+Se potrivește pe id-ul panoului, care e și ce scrie în `aria-controls`. E
+scris în componenta de taburi, nu în pagina evenimentului, deci de acum se
+poate lega așa orice tab de pe site.
+
+Ce s-a trimis se scrie în `private/multumiri-trimise.log`, câte un rând pe
+eveniment. Rândul de încheiere doar când chiar a plecat ceva — altfel un cron
+orar ar umple fișierul cu 8760 de rânduri pe an care spun „n-am avut ce face".
+
+Verificările: `php teste/test-multumiri.php` (34 de cazuri, cere baza de date,
+nu și serverul; mesajele nu pleacă nicăieri cât `dezvoltare => true`).
+
+
 ## E-mailurile
 
 Fișier: `inc/email.php` — un singur șablon pentru toate mesajele, exact ca la
 CSS: dacă se schimbă culoarea sau subsolul, se schimbă peste tot dintr-un loc.
 
-Se trimit patru feluri de mesaje: confirmarea adresei (la înregistrare și la
-retrimitere), parola temporară și înștiințarea că parola a fost schimbată.
+Se trimit: confirmarea adresei (la înregistrare și la retrimitere), bun venit,
+parola temporară, înștiințarea că parola a fost schimbată, cele două despre
+ștergerea contului, mesajul de contact, vestea că cineva a fost scos de pe
+lista unui eveniment, și mulțumirea de după eveniment.
 
 ### De ce e-mailul se scrie altfel decât o pagină
 

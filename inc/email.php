@@ -750,3 +750,69 @@ function emailExcludereParticipant(
 
     return trimiteEmail($catre, 'Ai fost ' . $scos . ' de pe lista de la „' . $titluEveniment . '"', $blocuri);
 }
+
+/**
+ * Mulțumirea de după eveniment, cu invitația la note.
+ *
+ * Pleacă O SINGURĂ DATĂ, din cron/multumeste-participantilor.php, către
+ * fiecare om rămas pe lista de participanți. Cine a fost scos de pe listă
+ * înainte nu mai e pe ea, deci nu primește nimic — și e bine așa: el a primit
+ * deja alt mesaj, cel cu motivul.
+ *
+ * NU se uită la bifa de newsletter din setări. Aceea e pentru „e-mail cu
+ * evenimente noi", adică pentru ce n-a cerut nimeni anume; mesajul de față
+ * vine după o seară la care omul s-a înscris el însuși, și e ultimul lucru
+ * legat de ea. Un mesaj despre ceva ce ai făcut tu nu e reclamă.
+ *
+ * $adresaParticipanti e adresa ÎNTREAGĂ a paginii, cu „#panel-going" la coadă:
+ * butonul trebuie să deschidă direct tabul cu oameni, nu să lase omul să-l
+ * caute. Taburile se deschid după hash — vezi „data-tabs" din assets/js/main.js.
+ *
+ * Organizatorul primește același mesaj, cu alt prim paragraf: lui nu i se
+ * mulțumește că a venit, ci că l-a ținut.
+ */
+function emailMultumireParticipare(
+    string $catre,
+    string $prenume,
+    string $titluEveniment,
+    string $adresaParticipanti,
+    bool $eOrganizator = false
+): bool {
+    $primul = $eOrganizator
+        ? 'S-a încheiat „' . $titluEveniment . '". Mulțumim că l-ai ținut — '
+          . 'fără cineva care să-l pună la cale, seara aceea n-ar fi existat.'
+        : 'S-a încheiat „' . $titluEveniment . '". Mulțumim că ai fost acolo — '
+          . 'un eveniment e făcut din oamenii care vin la el.';
+
+    $alDoilea = $eOrganizator
+        ? 'Dacă vrei, treci pe pagina evenimentului și dă câte o stea oamenilor '
+          . 'care au venit. Tot de acolo poți însemna pe cine a confirmat, dar '
+          . 'nu a mai ajuns.'
+        : 'Dacă vrei, treci pe pagina evenimentului și dă câte o stea celorlalți '
+          . 'care au fost cu tine. Se dau din dreptul fiecăruia, în tabul '
+          . '„Au participat".';
+
+    $blocuri = [
+        'salut'     => 'Bună, ' . $prenume . '!',
+        'paragrafe' => [
+            $primul,
+            $alDoilea,
+            'Stelele sunt anonime: nimeni nu află cine le-a dat. Dacă vrei să '
+            . 'spui și câteva vorbe, ai un buton care te duce pe profilul omului — '
+            . 'acelea se semnează.',
+        ],
+        'buton'     => [
+            'text' => 'Dă o notă celor cu care ai fost',
+            'href' => $adresaParticipanti,
+        ],
+        'link_gol'  => $adresaParticipanti,
+        'incheiere' => 'Nu ești obligat să notezi pe nimeni. E doar felul în care '
+                     . 'oamenii de aici află cu cine merg data viitoare.',
+    ];
+
+    $subiect = $eOrganizator
+        ? 'S-a încheiat „' . $titluEveniment . '"'
+        : 'Mulțumim că ai fost la „' . $titluEveniment . '"';
+
+    return trimiteEmail($catre, $subiect, $blocuri);
+}

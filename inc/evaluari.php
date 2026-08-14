@@ -322,6 +322,80 @@ function potNotaLaEveniment(array $eveniment, int $membruId): bool
         && interesulMeu((int) $eveniment['id'], $membruId) === 'participant';
 }
 
+/* ====================== CIFRELE DE PE PROFIL ========================= */
+
+/**
+ * La câte evenimente a fost omul ăsta.
+ *
+ * Cele active ȘI cele încheiate — adică tot ce se vede pe site: unul la care
+ * merge săptămâna viitoare se numără la fel ca unul de acum o lună. Ce nu se
+ * numără sunt evenimentele care n-au ajuns niciodată publice (în așteptare,
+ * respinse) și cele anulate: la primele n-avea cum să se înscrie nimeni, iar
+ * la ultimele nimeni n-a fost nicăieri.
+ *
+ * SE SCAD cele la care organizatorul a însemnat că n-a venit. Altfel cele două
+ * cifre de pe profil s-ar bate cap în cap: „prezent la 12" și „a confirmat,
+ * dar nu a venit, la 3" ar însemna că trei dintre cele douăsprezece sunt
+ * tocmai cele la care n-a fost. Așa, fiecare eveniment intră într-un singur
+ * loc.
+ *
+ * Evenimentele lui, pe care le-a ținut chiar el, se numără și ele: e trecut pe
+ * lista de participanți ca oricare altul (vezi faOrganizatorulParticipant) și
+ * chiar a fost acolo.
+ */
+function laCateEvenimenteAFost(int $membruId): int
+{
+    if ($membruId <= 0) {
+        return 0;
+    }
+
+    $q = db()->prepare(
+        'SELECT COUNT(*)
+           FROM interese_evenimente i
+           JOIN evenimente e ON e.id = i.eveniment_id
+          WHERE i.membru_id = ?
+            AND i.stare = \'participant\'
+            AND e.stare_moderare IN (\'aprobat\', \'incheiat\')
+            AND NOT EXISTS (
+                  SELECT 1 FROM evaluari ev
+                   WHERE ev.eveniment_id = i.eveniment_id
+                     AND ev.evaluat_id   = i.membru_id
+                     AND ev.automat      = 1
+                )'
+    );
+    $q->execute([$membruId]);
+
+    return (int) $q->fetchColumn();
+}
+
+/**
+ * De câte ori a confirmat și n-a mai ajuns.
+ *
+ * Se numără EVENIMENTELE, nu însemnările: „Nu s-a prezentat" o poate pune doar
+ * organizatorul (vezi api/evaluare.php), deci într-un caz cinstit e oricum una
+ * pe eveniment — dar cifra de pe profil trebuie să spună „la câte evenimente",
+ * nu „câte rânduri sunt în tabel". DISTINCT o ține așa orice s-ar întâmpla mai
+ * târziu cu regula.
+ *
+ * Rândul rămâne și după ce omul se șterge de pe listă: însemnarea e despre o
+ * seară anume, nu despre ce scrie acum în dreptul lui.
+ */
+function laCateEvenimenteNuAVenit(int $membruId): int
+{
+    if ($membruId <= 0) {
+        return 0;
+    }
+
+    $q = db()->prepare(
+        'SELECT COUNT(DISTINCT ev.eveniment_id)
+           FROM evaluari ev
+          WHERE ev.evaluat_id = ? AND ev.automat = 1'
+    );
+    $q->execute([$membruId]);
+
+    return (int) $q->fetchColumn();
+}
+
 /* ========================= CUM ARATĂ PE ECRAN ======================== */
 
 /**

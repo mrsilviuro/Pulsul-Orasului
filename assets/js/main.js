@@ -665,6 +665,69 @@
       var tab = tabs.filter(function (t) { return t.id === id; })[0];
       if (tab) selectTab(tab, false);
     };
+
+    /* ---------------- deschiderea din adresă (#panel-going) --------------
+       Un panou închis are `hidden`, deci browserul nu poate sări la el
+       singur: o adresă cu diez ar duce omul pe pagină și l-ar lăsa tot la
+       comentarii, întrebându-se ce trebuia să vadă. De aceea deschidem noi
+       tabul și ne ducem tot noi până la el.
+
+       Se potrivește pe id-ul PANOULUI, care e și ce scrie în `aria-controls`
+       — adică exact ce ar fi ținta firească a unui link. E scris aici, în
+       componenta de taburi, nu în pagina evenimentului: la fel se poate lega
+       de-acum orice tab de pe site. Butonul din e-mailul de mulțumire trimite
+       drept la „#panel-going" (vezi inc/multumiri.php).
+
+       Pagina de intrare are hash-urile ei („#inregistrare"), care nu sunt
+       id-uri de panou: acolo nu se potrivește nimic aici, iar codul ei de mai
+       jos rămâne singurul care le citește. */
+    function dupaAdresa() {
+      var id = (window.location.hash || '').slice(1);
+      if (!id) return;
+
+      var tab = tabs.filter(function (t) {
+        return t.getAttribute('aria-controls') === id || t.id === id;
+      })[0];
+
+      if (!tab) return;
+
+      selectTab(tab, false);
+
+      /* Abia după ce panoul a ieșit din `hidden` are rost mutarea ecranului.
+
+         Cât de sus se oprește NU se socotește aici, ci din CSS, prin
+         `scroll-margin-top` pe `.panel`. Nu de dragul frumuseții: browserul
+         încearcă și el, singur, să sară la elementul din adresă, iar
+         încercarea lui vine după a noastră și ar da-o la o parte. Cu regula
+         în CSS, amândoi se opresc în același loc — sub antetul lipit de sus și
+         sub rândul de taburi, ca omul să vadă pe care tab a nimerit. */
+      var panou = document.getElementById(tab.getAttribute('aria-controls'));
+
+      if (panou && panou.scrollIntoView) {
+        panou.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      }
+
+      /* Pe ecran mic, rândul de taburi se dă la dreapta cu degetul: la 390px
+         nu încap toate trei. Tabul deschis din adresă poate fi tocmai cel din
+         afara ecranului, iar atunci degeaba l-am adus la vedere pe verticală —
+         se vede o listă de oameni sub două taburi stinse.
+
+         Se mută pe mijloc, dar numai când chiar e ceva de mutat. La lat, unde
+         intră toate, `scrollWidth` e cât `clientWidth` și nu se atinge nimic.
+         Socoteala se face din dreptunghiurile de pe ecran, nu din `offsetLeft`
+         — acela se măsoară față de primul strămoș așezat, care poate fi
+         oricare. */
+      if (tablist.scrollWidth > tablist.clientWidth) {
+        var dreptTab   = tab.getBoundingClientRect();
+        var dreptRand  = tablist.getBoundingClientRect();
+
+        tablist.scrollLeft += (dreptTab.left - dreptRand.left)
+                            - (dreptRand.width - dreptTab.width) / 2;
+      }
+    }
+
+    dupaAdresa();
+    window.addEventListener('hashchange', dupaAdresa);
   });
 
   /* --- Copierea linkului evenimentului -------------------------------------

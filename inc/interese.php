@@ -218,22 +218,25 @@ function maiSuntLocuri(array $eveniment, int $catiParticipanti): bool
  * Întoarce HTML, nu-l tipărește, fiindcă îl cer două locuri: pagina, când se
  * încarcă, și api/interes.php, după fiecare apăsare. Scris în două locuri, ar
  * fi început să difere de la prima corectură.
+ *
+ * TOT LA PREZENT. A avut o vreme și o formă la trecut („a fost interesat sau a
+ * participat"), pentru evenimentele încheiate. N-o mai are cui s-o arate:
+ * rândul ăsta trăiește doar în caseta „Mergi la acest eveniment?", iar aceea
+ * nu se mai desenează după ora de început (vezi event.php). Cine vrea să vadă
+ * cine a fost are taburile de dedesubt, unde scrie „Au participat".
  */
-function randeazaChipuri(int $evenimentId, bool $incheiat = false): string
+function randeazaChipuri(int $evenimentId): string
 {
     $numar  = numaraInterese($evenimentId);
     $total  = $numar['interesat'] + $numar['participant'];
     $oameni = $total > 0 ? oameniiInteresati($evenimentId) : [];
 
     if ($total === 0 || $oameni === []) {
-        /**
-         * Nimeni. Nu se arată un cerc gol și un „0 persoane": se spune ceva ce
-         * se poate face — dar numai dacă mai e ceva de făcut. La un eveniment
-         * trecut, „fii primul interesat" ar fi o invitație la ceva imposibil.
-         */
+        // Nimeni. Nu se arată un cerc gol și un „0 persoane": se spune ceva ce
+        // se poate face — iar aici mai e mereu ceva de făcut, fiindcă rândul
+        // ăsta apare numai la un eveniment care n-a început.
         return '<p class="rsvp__note rsvp__note--gol">'
-             . ($incheiat ? 'Nu s-a înscris nimeni.' : 'Fii primul interesat de acest eveniment!')
-             . '</p>';
+             . 'Fii primul interesat de acest eveniment!</p>';
     }
 
     /* ----------------------------- chipurile --------------------------- */
@@ -259,32 +262,19 @@ function randeazaChipuri(int $evenimentId, bool $incheiat = false): string
 
     $restul = $total - count($legate);
 
-    /**
-     * Prezent cât timp mai e ceva de făcut, trecut după ce s-a terminat.
-     *
-     * „sunt interesate de acest eveniment" sub un anunț de acum trei luni sună
-     * ca și cum s-ar mai putea veni. După încheiere se spune ce a fost —
-     * fiindcă lista aia chiar asta e acum: istoria evenimentului.
-     *
-     * Că s-a încheiat o spune banda de sus, o dată; aici nu se mai repetă.
-     */
     if (count($legate) === 1) {
         // Un singur om: acordul se face după el, nu după „persoane".
         $eF = ($numiti[0]['sex'] ?? '') === 'F';
 
-        $vorba = $legate[0] . ($incheiat
-            ? ' a fost ' . ($eF ? 'interesată' : 'interesat') . ' sau a participat la acest eveniment.'
-            : ' este ' . ($eF ? 'interesată' : 'interesat') . ' de acest eveniment.');
+        $vorba = $legate[0] . ' este ' . ($eF ? 'interesată' : 'interesat')
+               . ' de acest eveniment.';
     } elseif ($restul === 0) {
-        $vorba = $legate[0] . ' și ' . $legate[1] . ($incheiat
-            ? ' au fost interesați sau au participat la acest eveniment.'
-            : ' sunt interesați de acest eveniment.');
+        $vorba = $legate[0] . ' și ' . $legate[1] . ' sunt interesați de acest eveniment.';
     } else {
         $cati = $restul === 1 ? 'o persoană' : $restul . ' persoane';
 
-        $vorba = $legate[0] . ', ' . $legate[1] . ' și încă ' . $cati . ($incheiat
-            ? ' au fost interesate sau au participat la acest eveniment.'
-            : ' sunt interesate de acest eveniment.');
+        $vorba = $legate[0] . ', ' . $legate[1] . ' și încă ' . $cati
+               . ' sunt interesate de acest eveniment.';
     }
 
     return '<div class="facepile" aria-hidden="true">' . $chipuri . '</div>'
