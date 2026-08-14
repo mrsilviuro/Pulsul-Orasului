@@ -2383,9 +2383,25 @@ body { overscroll-behavior-y: none; }
 .person__parere:hover { color: var(--brand-link-hover); }
 [data-theme="dark"] .person__parere { color: var(--brand); }
 
+/* „Neprezentat" — ce rămâne în locul stelelor după însemnarea organizatorului.
+   O vede toată lumea, dar nu se apasă: e o informație, nu o unealtă. Aceleași
+   culori ca butonul de mai jos la trecerea cu mouse-ul, fiindcă e chiar ce a
+   ieșit din el. */
+.person__neprezentat {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+  background: rgba(211, 47, 49, .10);
+  color: #d32f31;
+  font-size: 12px; font-weight: 700;
+}
+.person__neprezentat .ico { width: 13px; height: 13px; }
+[data-theme="dark"] .person__neprezentat { background: rgba(255, 138, 134, .12); color: #ff8a86; }
+
 /* „Nu s-a prezentat" — numai organizatorul. Palid până la trecerea cu mouse-ul:
    e o unealtă rar folosită și cu urmări, n-are de ce să strige din fiecare
-   rând. Odată apăsată nu se mai poate lua înapoi, deci rămâne stinsă. */
+   rând. După apăsare nu se mai desenează deloc — în locul lui rămâne insigna
+   de mai sus — așa că n-are stare „apăsat". */
 .person__absent {
   display: inline-flex; align-items: center; gap: 5px;
   padding: 3px 9px;
@@ -2396,20 +2412,13 @@ body { overscroll-behavior-y: none; }
 }
 .person__absent .ico { width: 13px; height: 13px; }
 .person__absent:hover { background: rgba(211, 47, 49, .10); color: #d32f31; }
-.person__absent.is-on,
-.person__absent[disabled] {
-  background: rgba(211, 47, 49, .10);
-  color: #d32f31;
-  cursor: default;
-}
-[data-theme="dark"] .person__absent:hover,
-[data-theme="dark"] .person__absent.is-on { background: rgba(255, 138, 134, .12); color: #ff8a86; }
+[data-theme="dark"] .person__absent:hover { background: rgba(255, 138, 134, .12); color: #ff8a86; }
 
 /* ------------------------ evaluările de pe profil ----------------------
-   Anonime: în locul chipului și al numelui stă evenimentul după care s-a dat
-   nota — de acolo i se trage greutatea. De aceea rândul n-are avatar, iar
-   `.comment__body` rămâne fără prima coloană. */
-.evaluare .comment__body { gap: 0; }
+   Aici ajung numai părerile SCRISE, iar ele se semnează: chip, nume și
+   legătură spre profil, exact ca la comentarii. De aceea rândul împrumută
+   `.comment__body` întreg, cu tot cu prima coloană — nu mai are nimic de scos.
+   Stelele singure rămân nevăzute și anonime; ele nu ajung niciodată aici. */
 .comment__author--sistem { font-size: 13.5px; font-weight: 700; color: var(--text-soft); }
 .evaluare__eveniment { color: var(--text-faint); }
 .evaluare__eveniment:hover { color: var(--brand); }

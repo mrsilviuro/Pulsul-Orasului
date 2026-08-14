@@ -4,25 +4,33 @@ declare(strict_types=1);
 /**
  * PulsulOrasului.Ro — evaluările dintre participanți.
  *
- * Se dau DUPĂ un eveniment, între cei care au fost la el, și sunt ANONIME:
- * pe profil se vede nota și textul, niciodată cine le-a scris. Altfel nimeni
- * n-ar mai da patru stele cuiva pe care îl reîntâlnește sâmbăta viitoare — iar
- * o notă care se semnează e o notă frumoasă, adică una care nu spune nimic.
+ * Se dau DUPĂ un eveniment, între cei care au fost la el.
  *
- * Singura excepție e nota automată: „Nu s-a prezentat", pusă de organizator.
- * Aceea e un fapt, nu o părere, și se arată ca atare.
+ * STELELE SINGURE SUNT ANONIME, și chiar nevăzute: intră în medie și în barele
+ * de pe profil, dar nu apar nicăieri ca rând. Nimeni nu află cine i-a dat trei
+ * stele — altfel nimeni n-ar mai da trei stele cuiva pe care îl reîntâlnește
+ * sâmbăta viitoare.
+ *
+ * VORBELE SE SEMNEAZĂ. Cine se așază să scrie ceva își pune și numele: o
+ * părere semnată se cântărește altfel decât una venită de nicăieri, iar cel
+ * care o primește are cui să-i răspundă.
+ *
+ * Nota automată — „Nu s-a prezentat", pusă de organizator — e un fapt, nu o
+ * părere, și se arată ca atare. După ea, omul acela nu se mai poate nota de
+ * nimeni: n-are ce judeca nimeni la cineva care n-a fost acolo, iar
+ * organizatorul n-are cum să-și schimbe însemnarea mai târziu în cinci stele.
  */
 
 require_once __DIR__ . '/interese.php';
 
 /** Câte evaluări se văd pe profil, înainte de „Vezi mai mult". */
-const EVALUARI_DEODATA = 10;
+const EVALUARI_DEODATA = 20;
 
 /** Nota pe care o primește cine nu s-a prezentat. */
 const EVALUARE_ABSENT_STELE = 1;
 
 /** Textul pus în locul părerii, când nota o pune site-ul. */
-const EVALUARE_ABSENT_TEXT = 'Nu s-a prezentat la eveniment, deși confirmase participarea.';
+const EVALUARE_ABSENT_TEXT = 'Nu s-a prezentat la eveniment, deși s-a înscris pe lista de participanți.';
 
 /* ============================== CITIREA ============================== */
 
@@ -124,10 +132,17 @@ function rezumatEvaluari(int $membruId): array
 }
 
 /**
- * Evaluările primite de un om, cele mai noi întâi.
+ * Evaluările SCRISE, primite de un om, cele mai noi întâi.
  *
- * Fără nimic despre cine le-a dat — nici id, nici nume, nici chip. Ce nu se
- * citește din bază nu poate ajunge din greșeală în pagină.
+ * Doar cele cu vorbe. Stelele date dintr-o apăsare, de pe pagina
+ * evenimentului, se duc în medie și în barele de sus, dar nu apar aici: un
+ * rând care spune „cineva ți-a dat 4 stele" și atât nu are ce citi nimeni, iar
+ * zece la rând ar îneca singura părere scrisă cu adevărat.
+ *
+ * De asta lista NU mai e anonimă. Cine se așază să scrie ceva își pune și
+ * numele: o părere semnată se cântărește altfel decât una venită de nicăieri,
+ * iar cel care o primește are cui să-i răspundă. Stelele, care rămân
+ * nevăzute aici, rămân și anonime — acolo era rostul anonimatului.
  *
  * Vine cu titlul și slugul evenimentului: nota are greutate tocmai fiindcă în
  * spatele ei e o seară anume, iar cine citește profilul trebuie s-o poată
@@ -141,10 +156,13 @@ function evaluarilePrimite(int $membruId): array
 
     $q = db()->prepare(
         'SELECT ev.stele, ev.text, ev.automat, ev.creat_la, ev.actualizat_la,
-                e.titlu AS eveniment_titlu, e.slug AS eveniment_slug
+                e.titlu AS eveniment_titlu, e.slug AS eveniment_slug,
+                m.permalink, m.nume, m.prenume, m.poza, m.stare AS stare_cont
            FROM evaluari ev
            JOIN evenimente e ON e.id = ev.eveniment_id
+           JOIN membri m     ON m.id = ev.evaluator_id
           WHERE ev.evaluat_id = ?
+            AND ev.text IS NOT NULL AND ev.text <> \'\'
           ORDER BY ev.creat_la DESC, ev.id DESC'
     );
     $q->execute([$membruId]);
@@ -240,25 +258,24 @@ function salveazaEvaluare(
 }
 
 /**
- * Pe cine a însemnat organizatorul ca neprezentat, la evenimentul ăsta.
+ * Cine a fost însemnat ca neprezentat la evenimentul ăsta.
  *
  * Se citește o dată, pentru toată lista, nu o dată pe rând. Întoarce o hartă
  * `id => true`, ca event.php să poată întreba dintr-o privire.
  *
+ * Fără să întrebe cine a pus însemnarea: o poate pune doar organizatorul (vezi
+ * api/evaluare.php), iar rezultatul se arată oricui deschide tabul. „Neprezentat"
+ * nu e o părere pe care s-o vadă doar cel care a scris-o.
+ *
  * Doar cele automate: o steluță dată cu mâna, fiindcă omul chiar a fost
  * nesuferit, nu înseamnă că n-a venit.
  */
-function absentiiInsemnati(int $evenimentId, int $organizatorId): array
+function absentiiEvenimentului(int $evenimentId): array
 {
-    if ($organizatorId <= 0) {
-        return [];
-    }
-
     $q = db()->prepare(
-        'SELECT evaluat_id FROM evaluari
-          WHERE eveniment_id = ? AND evaluator_id = ? AND automat = 1'
+        'SELECT evaluat_id FROM evaluari WHERE eveniment_id = ? AND automat = 1'
     );
-    $q->execute([$evenimentId, $organizatorId]);
+    $q->execute([$evenimentId]);
 
     $absenti = [];
 
@@ -267,6 +284,25 @@ function absentiiInsemnati(int $evenimentId, int $organizatorId): array
     }
 
     return $absenti;
+}
+
+/**
+ * A fost însemnat ca neprezentat?
+ *
+ * Întrebarea de la o singură persoană, pentru API — pagina folosește harta de
+ * mai sus. Cine n-a venit nu se mai notează de nimeni: n-are ce judeca nimeni
+ * la un om care n-a fost acolo, iar organizatorul n-are cum să-și schimbe
+ * însemnarea mai târziu în cinci stele.
+ */
+function esteNeprezentat(int $evenimentId, int $membruId): bool
+{
+    $q = db()->prepare(
+        'SELECT 1 FROM evaluari
+          WHERE eveniment_id = ? AND evaluat_id = ? AND automat = 1 LIMIT 1'
+    );
+    $q->execute([$evenimentId, $membruId]);
+
+    return $q->fetchColumn() !== false;
 }
 
 /**
@@ -328,9 +364,9 @@ function randeazaRezumatEvaluari(array $rezumat): string
 /**
  * Lista de evaluări primite, gata desenată.
  *
- * Fără chip și fără nume: notele sunt anonime. În locul autorului stă
- * evenimentul după care s-a dat nota — asta e și ce contează, fiindcă de acolo
- * i se trage greutatea.
+ * Doar cele scrise ajung aici (vezi evaluarilePrimite), iar ele se semnează:
+ * chip, nume prescurtat și legătură spre profil, ca la comentarii. Stelele
+ * singure rămân nevăzute și anonime — acolo era rostul anonimatului.
  *
  * Toate intră în pagină; ascunsul îl face main.js, ca la comentarii și la
  * listele din taburi.
@@ -348,26 +384,42 @@ function randeazaEvaluari(array $evaluari): string
         $stele   = (int) $ev['stele'];
 
         /**
-         * O notă automată nu e o părere, e un fapt: se scrie pe față cine a
-         * pus-o și de ce. Una obișnuită rămâne anonimă — în capul ei stă
-         * evenimentul, nu omul.
+         * Contul șters se anonimizează, nu dispare (vezi inc/stergere.php), iar
+         * părerea lui rămâne. Dar omul a plecat de pe site: nu i se mai scrie
+         * numele și nu se mai trimite nimeni la profilul lui. Aceeași regulă ca
+         * la comentarii.
          */
-        $antet = $automat
-            ? '<span class="comment__author comment__author--sistem">Însemnare de la organizator</span>'
-            : '<span class="comment__author comment__author--sistem">Evaluare anonimă</span>';
+        $activ = ($ev['stare_cont'] ?? '') !== 'sters';
+        $nume  = $activ
+            ? h(numeAfisat((string) $ev['nume'], (string) $ev['prenume']))
+            : 'Utilizator șters';
+
+        /**
+         * O notă automată nu e o părere, e un fapt: în capul ei scrie de la
+         * cine vine, nu numele cuiva care și-a spus părerea.
+         */
+        if ($automat) {
+            $antet = '<span class="comment__author comment__author--sistem">Însemnare de la organizator</span>';
+            $poza  = POZA_IMPLICITA;
+        } else {
+            $antet = ($activ && ($ev['permalink'] ?? '') !== '')
+                ? '<a class="comment__author" href="profil.php?m=' . h((string) $ev['permalink']) . '">' . $nume . '</a>'
+                : '<span class="comment__author comment__author--sters">' . $nume . '</span>';
+
+            $poza = $activ ? urlPoza($ev['poza'] ?? null, true) : POZA_IMPLICITA;
+        }
 
         $undeva = '<a class="evaluare__eveniment" href="'
                 . h(urlEveniment((string) $ev['eveniment_slug'])) . '">'
                 . h((string) $ev['eveniment_titlu']) . '</a>';
 
         $cand = (string) $ev['creat_la'];
-
-        $text = $automat
-            ? EVALUARE_ABSENT_TEXT
-            : trim((string) ($ev['text'] ?? ''));
+        $text = trim((string) ($ev['text'] ?? ''));
 
         $html .= '<li class="comment evaluare' . ($automat ? ' evaluare--automata' : '') . '">'
                . '<article class="comment__body">'
+               . '<img class="comment__avatar" src="' . h($poza) . '" alt=""'
+               . ' width="96" height="96" loading="lazy" decoding="async">'
                . '<div class="comment__main">'
                . '<div class="comment__head">'
                . '<div class="comment__cine">' . $antet . '</div>'

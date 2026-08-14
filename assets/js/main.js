@@ -878,16 +878,15 @@
   }
 
   /**
-   * La un eveniment încheiat nu se leagă nimic.
+   * Tot ce urmează se leagă doar dacă există caseta.
    *
-   * Butoanele vin deja stinse din pagină; fără rândul ăsta, codul de mai jos
-   * le-ar fi putut aprinde la loc după o cerere (vezi `gata()`), iar aici nu
-   * mai e nimic de aprins. Oprirea adevărată e oricum în api/interes.php.
+   * La un eveniment care a început, event.php n-o mai desenează deloc, deci
+   * `rsvpSectiune` e null și nu se leagă nimic. A fost o vreme aici un rând
+   * care golea lista de butoane la un eveniment încheiat, fiindcă veneau
+   * stinse din HTML și `gata()` le-ar fi putut aprinde la loc după o cerere;
+   * acum n-are ce aprinde, fiindcă n-au ajuns în pagină. Oprirea adevărată e
+   * oricum în api/interes.php.
    */
-  if (rsvpSectiune && rsvpSectiune.getAttribute('data-incheiat') === '1') {
-    rsvpButtons = [];
-  }
-
   if (rsvpSectiune && rsvpButtons.length) {
     var rsvpConfirm   = document.getElementById('rsvp-confirm');
     var rsvpConfirmDa = document.getElementById('rsvp-confirm-da');
@@ -2096,20 +2095,28 @@
         slug:   panou.getAttribute('data-slug') || '',
         fapta:  'absent',
         membru: buton.getAttribute('data-absent')
-      }, buton, null, function (c) {
-        buton.classList.add('is-on');
-        buton.disabled = true;
-        buton.title = 'Însemnat ca neprezentat';
-        var eticheta = buton.querySelector('span');
-        if (eticheta) eticheta.textContent = 'Neprezentat';
+      }, buton, null, function () {
+        /**
+         * În locul stelelor și al butonului rămâne un singur cuvânt.
+         *
+         * Nu se sting, pleacă. Cine n-a venit nu se mai notează de nimeni — și
+         * mai ales nu de cel care tocmai a pus însemnarea: cu stelele rămase
+         * aprinse, ar fi putut alege peste o săptămână cinci și ar fi șters cu
+         * ele exact ce a scris. Aceeași regulă e ținută de api/evaluare.php,
+         * prin esteNeprezentat(), și de randeazaOm() la reîncărcare.
+         */
+        var rand  = buton.closest('.person');
+        var cutie = rand ? rand.querySelector('.person__note') : null;
 
-        // Stelele din dreptul lui arată acum nota pusă automat.
-        var rand = buton.closest('.person');
-        var cutie = rand ? rand.querySelector('[data-stele-participant]') : null;
-        var picker = cutie ? cutie.querySelector('[data-stele-input]') : null;
-        if (picker && picker.setChosen) picker.setChosen(c.stele);
+        if (cutie) {
+          cutie.innerHTML = '<span class="person__neprezentat"'
+            + ' title="Nu s-a prezentat la eveniment">'
+            + '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">'
+            + '<circle cx="12" cy="12" r="9"/><path d="M8.5 8.5 15.5 15.5"/>'
+            + '</svg><span>Neprezentat</span></span>';
+        }
 
-        toast(c.mesaj || 'Am însemnat că nu s-a prezentat.');
+        toast('Am însemnat că nu s-a prezentat. A primit o stea și o notă pe profil.');
       });
     });
   });

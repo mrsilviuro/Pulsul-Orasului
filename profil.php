@@ -494,10 +494,20 @@ require __DIR__ . '/inc/antet.php';
       </p>
       <?php endif; ?>
 
-      <!-- Lista de evaluări primite -->
+      <!--
+        Lista de evaluări primite. Doar cele SCRISE: stelele date dintr-o
+        apăsare intră în medie și în barele de sus, dar n-au ce citi aici.
+        Cine s-a așezat să scrie ceva își pune și numele.
+      -->
       <ul class="comments" data-lista-evaluari>
         <?= randeazaEvaluari($evaluariProfil) ?>
       </ul>
+
+      <?php if ($evaluariProfil === []): ?>
+      <p class="feedback__gol">
+        <?= h($prenumeScurt) ?> nu a primit niciun feedback scris.
+      </p>
+      <?php endif; ?>
 
       <div class="load-more" data-mai-multe-evaluari hidden>
         <button class="btn btn--ghost" type="button" data-mai-multe-evaluari-buton>Vezi mai mult</button>

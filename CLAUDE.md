@@ -126,7 +126,10 @@ inc/
                       scoaterea cuiva de pe cea de participanți
   evaluari.php      → notele dintre participanți, după eveniment: cine poate
                       nota, media și distribuția de pe profil, „Nu s-a
-                      prezentat". ANONIME — evaluator_id nu iese niciodată
+                      prezentat". STELELE SINGURE sunt anonime și nici nu se
+                      arată pe profil; doar părerile SCRISE ajung în listă, iar
+                      acelea vin semnate. Cine e însemnat neprezentat nu se mai
+                      notează de nimeni (esteNeprezentat)
   comentarii.php    → discuția de sub eveniment: cele două niveluri,
                       aprecierile, ștergerea cu piatră de mormânt, ȘI cum
                       arată pe ecran (HTML-ul se scrie doar aici)
@@ -227,7 +230,10 @@ assets/css/style.css, assets/js/main.js, assets/img/
   la ele de pe pagina evenimentului, ca oricare autor
 - Evenimentele la care merge cineva nu apar pe profilul lui
 - Notele nu se pot retrage și nici raporta. Cine a primit o stea pe nedrept nu
-  are cui să spună — nu există pagină de moderare a evaluărilor
+  are cui să spună — nu există pagină de moderare a evaluărilor. Nici
+  „Nu s-a prezentat" nu se ia înapoi: e definitivă, dinadins, ca organizatorul
+  să n-o poată schimba mai târziu — dar dacă a pus-o din greșeală, rândul se
+  șterge de mână din phpMyAdmin
 - `evenimente.varsta_minima` nu se verifică la înscriere: coloana există, dar
   nimeni nu se uită la ea (spre deosebire de `gen_participanti`, care se ține)
 - Paginile de categorie (slugurile sunt în tabelul `categorii`)
