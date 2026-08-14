@@ -121,8 +121,9 @@ inc/
   evenimente.php    → categorii, regula „un eveniment activ", lista de pe
                       profil, pagina unui eveniment, salvarea
   interese.php      → „Mergi la acest eveniment?" — cine e interesat, cine
-                      vine, numărătoarea, locurile, rândul cu chipuri, lista
-                      de participanți ȘI scoaterea cuiva de pe ea
+                      vine, numărătoarea, locurile, rândul cu chipuri, listele
+                      din taburi (aceeași funcție pentru amândouă) ȘI
+                      scoaterea cuiva de pe cea de participanți
   comentarii.php    → discuția de sub eveniment: cele două niveluri,
                       aprecierile, ștergerea cu piatră de mormânt, ȘI cum
                       arată pe ecran (HTML-ul se scrie doar aici)
@@ -196,9 +197,6 @@ assets/css/style.css, assets/js/main.js, assets/img/
 
 ## Ce e neterminat (roadmap)
 
-- Panoul din tabul „Interesați" — încă șablon, cu oameni inventați: numărul de
-  pe tab e adevărat, lista dinăuntru nu. Comentariile și lista de participanți
-  NU mai sunt șablon (vezi `inc/comentarii.php` și `inc/interese.php`)
 - Interdicția de reînscriere (`excluderi_evenimente.interzis`) nu se poate
   ridica din interfață — rândul se schimbă de mână, din phpMyAdmin. Nu există
   nici pagină care să-i arate omului de unde a fost scos: află doar din e-mail

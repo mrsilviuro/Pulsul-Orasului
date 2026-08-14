@@ -259,7 +259,7 @@ function raspunsulListei(int $evenimentId, int $membruId, string $mesaj): array
         'ok'     => true,
         'stare'  => interesulMeu($evenimentId, $membruId),
         'numar'  => $numar,
-        'oameni' => randeazaOameniInteresati($evenimentId),
+        'oameni' => randeazaChipuri($evenimentId),
         'mesaj'  => $mesaj,
     ];
 }

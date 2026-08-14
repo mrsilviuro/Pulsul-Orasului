@@ -526,12 +526,12 @@ require __DIR__ . '/inc/antet.php';
 
         <!--
           Chipurile și vorba de dedesubt se desenează într-un singur loc,
-          randeazaOameniInteresati() din inc/interese.php — de acolo vin și la
+          randeazaChipuri() din inc/interese.php — de acolo vin și la
           încărcarea paginii, și după fiecare apăsare, prin api/interes.php.
           Scrise în două locuri, ar fi început să difere de la prima corectură.
         -->
         <div class="rsvp__people" id="rsvp-people">
-          <?= randeazaOameniInteresati($evenimentId, $eIncheiat) ?>
+          <?= randeazaChipuri($evenimentId, $eIncheiat) ?>
         </div>
       </section>
       <?php endif; ?>
@@ -652,104 +652,62 @@ require __DIR__ . '/inc/antet.php';
           </div>
         </div>
 
+        <!-- =================== PANOURILE CU OAMENI ======================
+          „Interesați" și „Participă" sunt același panou de două ori, cu altă
+          valoare în `data-stare`. Lista se desenează într-un singur loc,
+          randeazaListaOameni() din inc/interese.php, iar ascunsul și butonul
+          „Vezi mai mult" le face un singur bloc din main.js, care merge peste
+          orice panou cu `data-oameni`.
+
+          Se deosebesc prin trei lucruri, și atât: ce stare arată, ce scrie
+          deasupra listei (vorbaDespreCatiSunt) și dacă au butoane de scoatere.
+          Interesații n-au: „Mă interesează" nu ocupă niciun loc, e o însemnare
+          în dreptul omului, deci n-are ce curăța nimeni acolo.
+
+          `data-deodata` vine din OAMENI_DEODATA, ca numărul să fie scris
+          într-un singur loc și schimbat într-unul singur.
+        ============================================================== -->
+
         <!-- ------------------------ PANOU: INTERESAȚI --------------------- -->
-        <div class="panel" id="panel-interested" role="tabpanel" aria-labelledby="tab-interested" tabindex="0" hidden>
+        <div class="panel" id="panel-interested" role="tabpanel" aria-labelledby="tab-interested" tabindex="0" hidden
+             data-oameni
+             data-stare="interesat"
+             data-deodata="<?= OAMENI_DEODATA ?>">
+
           <p class="panel__intro">
-            <strong><span data-count-for="interesat"><?= (int) $numarInterese['interesat'] ?></span> persoane</strong> sunt interesate de acest eveniment.
+            <?= vorbaDespreCatiSunt((int) $numarInterese['interesat'], 'interesat', $eIncheiat) ?>
           </p>
 
-          <ul class="people">
-            <li class="person">
-              <img class="person__avatar" src="assets/img/avatars/diana.svg" alt="" width="96" height="96" loading="lazy">
-              <div class="person__info">
-                <a class="person__name" href="profil.php">Diana Popa</a>
-                <span class="person__meta">Interesată acum 2 ore</span>
-              </div>
-            </li>
-            <li class="person">
-              <img class="person__avatar" src="assets/img/avatars/george.svg" alt="" width="96" height="96" loading="lazy">
-              <div class="person__info">
-                <a class="person__name" href="profil.php">George Tudose</a>
-                <span class="person__meta">Interesat acum 4 ore</span>
-              </div>
-            </li>
-            <li class="person">
-              <img class="person__avatar" src="assets/img/avatars/simona.svg" alt="" width="96" height="96" loading="lazy">
-              <div class="person__info">
-                <a class="person__name" href="profil.php">Simona Dobre</a>
-                <span class="person__meta">Interesată ieri</span>
-              </div>
-            </li>
-            <li class="person">
-              <img class="person__avatar" src="assets/img/avatars/tudor.svg" alt="" width="96" height="96" loading="lazy">
-              <div class="person__info">
-                <a class="person__name" href="profil.php">Tudor Anghel</a>
-                <span class="person__meta">Interesat ieri</span>
-              </div>
-            </li>
-            <li class="person">
-              <img class="person__avatar" src="assets/img/avatars/bianca.svg" alt="" width="96" height="96" loading="lazy">
-              <div class="person__info">
-                <a class="person__name" href="profil.php">Bianca Filip</a>
-                <span class="person__meta">Interesată acum 2 zile</span>
-              </div>
-            </li>
-            <li class="person">
-              <img class="person__avatar" src="assets/img/avatars/cristi.svg" alt="" width="96" height="96" loading="lazy">
-              <div class="person__info">
-                <a class="person__name" href="profil.php">Cristi Barbu</a>
-                <span class="person__meta">Interesat acum 2 zile</span>
-              </div>
-            </li>
+          <ul class="people" data-lista-oameni>
+            <?= randeazaListaOameni($evenimentId, 'interesat', (int) $eveniment['membru_id']) ?>
           </ul>
 
-          <div class="load-more">
-            <button class="btn btn--ghost" type="button">Vezi toate cele 128 de persoane</button>
+          <div class="load-more" data-mai-multi hidden>
+            <button class="btn btn--ghost" type="button" data-mai-multi-buton>Vezi mai mult</button>
           </div>
         </div>
 
         <!-- ------------------------ PANOU: PARTICIPĂ ---------------------- -->
         <!--
-          Toți participanții intră în pagină; ascunsul îl face main.js, care
-          lasă la vedere primii PARTICIPANTI_DEODATA și îi arată pe ceilalți la
-          apăsarea butonului, fără să mai întrebe serverul. Aceeași alegere ca
-          la comentarii, din aceleași motive.
-
-          Tokenul CSRF se scrie doar pentru cine poate scoate pe cineva de pe
-          listă — organizatorul și staff-ul. Pentru restul n-ar avea ce face.
+          Tokenul CSRF se scrie doar aici, și doar pentru cine poate scoate pe
+          cineva de pe listă — organizatorul și staff-ul. Pe panoul de
+          interesați n-ar avea ce face.
         -->
         <div class="panel" id="panel-going" role="tabpanel" aria-labelledby="tab-going" tabindex="0" hidden
-             data-participanti
+             data-oameni
+             data-stare="participant"
              data-slug="<?= h((string) $eveniment['slug']) ?>"
-             data-deodata="<?= PARTICIPANTI_DEODATA ?>"
+             data-deodata="<?= OAMENI_DEODATA ?>"
              <?= $poateScoateParticipanti ? 'data-csrf="' . h(tokenCsrf()) . '"' : '' ?>>
 
           <p class="panel__intro">
-            <?php if ($numarInterese['participant'] === 0): ?>
-            <?= $eIncheiat ? 'Nu a confirmat nimeni participarea.' : 'Nimeni nu a confirmat încă participarea. Poți fi primul.' ?>
-            <?php else: ?>
-            <strong><span data-count-for="participant"><?= (int) $numarInterese['participant'] ?></span>
-              <span data-cuvant-persoane><?= $numarInterese['participant'] === 1 ? 'persoană' : 'persoane' ?></span></strong>
-            <?= $eIncheiat ? 'au confirmat participarea.' : 'au confirmat că vor participa.' ?>
-            <?php endif; ?>
+            <?= vorbaDespreCatiSunt((int) $numarInterese['participant'], 'participant', $eIncheiat) ?>
           </p>
 
-          <!--
-            Fiecare `<li class="person">` are `data-participant` cu id-ul
-            omului: după el îl găsește main.js când serverul confirmă scoaterea.
-            Lista se desenează într-un singur loc, randeazaParticipanti() din
-            inc/interese.php — de acolo vine și la încărcarea paginii, și după
-            fiecare scoatere, prin api/exclude-participant.php.
-          -->
-          <ul class="people" data-lista-participanti>
-            <?= randeazaParticipanti($evenimentId, (int) $eveniment['membru_id'], $poateScoateParticipanti) ?>
+          <ul class="people" data-lista-oameni>
+            <?= randeazaListaOameni($evenimentId, 'participant', (int) $eveniment['membru_id'], $poateScoateParticipanti) ?>
           </ul>
 
-          <!--
-            Butonul se aprinde din JS, cu numărul celor rămași ascunși. Cât e
-            fără JS, e ascuns — toți sunt deja în pagină, deci n-ar avea ce să
-            mai aducă.
-          -->
           <div class="load-more" data-mai-multi hidden>
             <button class="btn btn--ghost" type="button" data-mai-multi-buton>Vezi mai mult</button>
           </div>

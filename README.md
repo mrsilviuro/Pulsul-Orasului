@@ -1638,7 +1638,7 @@ Evenimentele de dinaintea tabelului au primit rândul la migrare
 ### Rândul de sub butoane
 
 Chipurile și vorba se desenează într-un singur loc,
-`randeazaOameniInteresati()`, folosit și de pagină la încărcare, și de
+`randeazaChipuri()`, folosit și de pagină la încărcare, și de
 `api/interes.php` după fiecare apăsare. Scrise în două locuri, ar fi început să
 difere de la prima corectură.
 
@@ -1815,9 +1815,8 @@ cui trimite e-mailul și nici ce să scrie în el.
 
 ### Ce nu e făcut
 
-Panoul din tabul „Interesați" e încă șablonul, cu oameni inventați — numărul de
-pe tab vine din bază, lista dinăuntru nu. „Mergi la acest eveniment?",
-comentariile și lista de participanți merg de-a binelea; vezi secțiunile lor.
+Nu mai e nimic șablon pe pagina unui eveniment: „Mergi la acest eveniment?",
+comentariile și amândouă listele din taburi vin din bază; vezi secțiunile lor.
 
 Nu există încă interfață de aprobare și nici încheiere manuală. Evenimentul
 intră cu `stare_moderare = 'in_asteptare'` și nu se vede pe prima pagină; omul
@@ -2085,30 +2084,57 @@ Verificările: `php teste/test-comentarii.php` (86 de cazuri, cere baza de date,
 nu și serverul).
 
 
-## Lista de participanți
+## Listele din taburi
 
-Tabul „Participă" de pe pagina evenimentului: cine a confirmat că vine, și
-uneltele prin care organizatorul face curat pe listă.
+Taburile „Interesați" și „Participă" de pe pagina evenimentului: cine s-a
+adunat în jurul lui, și uneltele prin care organizatorul face curat pe lista de
+participanți.
 
 `sql/016-excluderi-evenimente.sql`, partea de jos a lui `inc/interese.php`,
-`api/exclude-participant.php`, panoul `#panel-going` din `event.php` și blocul
-„PARTICIPANȚII" din `assets/js/main.js`.
+`api/exclude-participant.php`, cele două panouri din `event.php` și blocul
+„PANOURILE CU OAMENI" din `assets/js/main.js`.
+
+### Un singur panou, de două ori
+
+Cele două taburi sunt **același panou cu altă valoare în `data-stare`**. Lista
+se desenează dintr-un singur loc, `randeazaListaOameni()`, iar ascunsul și
+butonul „Vezi mai mult" le face un singur bloc din `main.js`, care merge peste
+orice element cu `data-oameni`.
+
+Se deosebesc prin trei lucruri, și atât:
+
+| | Interesați | Participă |
+|---|---|---|
+| `data-stare` | `interesat` | `participant` |
+| sub nume | „Interesată acum 2 ore" | „Confirmat ieri" |
+| butoane de scoatere | nu | da, pentru organizator și staff |
+
+Interesații n-au ce curăța: „Mă interesează" nu ocupă niciun loc, e o însemnare
+în dreptul omului, nu o hotărâre. De aceea `randeazaListaOameni()` primește
+`false` implicit pentru butoane — panoul acela nu le poate cere nici din
+greșeală.
 
 ### Cine se vede
 
-Toți cei cu `stare = 'participant'` în `interese_evenimente`, **în ordinea
-înscrierii**: la un eveniment cu locuri limitate, ordinea aia chiar înseamnă
-ceva. Numele e prescurtat — „R. Ioana", prin `numeAfisat()` — și duce la
+Toți cei cu starea cerută în `interese_evenimente`, **în ordinea înscrierii**:
+la un eveniment cu locuri limitate, ordinea aia chiar înseamnă ceva. Numele e
+prescurtat — „R. Ioana", prin `numeAfisat()` — și duce la
 `profil.php?m=<permalink>`, ca peste tot pe site.
 
 Doar conturile active, prin aceeași bucată de SQL (`INTERESE_DOAR_ACTIVI`) din
-care se numără participanții de pe butoane: lista și numărul de deasupra ei nu
-au voie să spună două lucruri diferite.
+care se numără oamenii de pe butoane: lista și numărul de deasupra ei nu au
+voie să spună două lucruri diferite.
 
 Ca la comentarii, **toți intră în pagină de la început**; `main.js` lasă la
-vedere primii `PARTICIPANTI_DEODATA` (10) și mai arată câte zece la fiecare
-apăsare pe „Vezi mai mult (încă 12)". Zece, nu cincisprezece ca la comentarii:
-un participant e un rând scurt, iar zece dintre ei ocupă cât patru comentarii.
+vedere primii `OAMENI_DEODATA` (10) și mai arată câte zece la fiecare apăsare
+pe „Vezi mai mult (încă 13)". Zece, nu cincisprezece ca la comentarii: un om e
+un rând scurt, iar zece dintre ei ocupă cât patru comentarii.
+
+Rândul de deasupra listei — „12 persoane au confirmat că vor participa." — se
+scrie tot dintr-un singur loc, `vorbaDespreCatiSunt()`: opt feluri de a spune
+același lucru (două taburi × una/mai multe persoane × înainte/după eveniment),
+care copiate în pagină s-ar fi despărțit. Numărul poartă `data-count-for`, ca
+`main.js` să-l schimbe odată cu cel de pe tab și cu cel de pe butonul mare.
 
 ### Scoaterea de pe listă
 
@@ -2173,10 +2199,9 @@ E o veste neplăcută oricum — măcar să fie scrisă ca pentru cineva anume.
 
 Interdicția nu se poate ridica din interfață; rândul se schimbă de mână, din
 phpMyAdmin. Nu există nici o pagină care să-i arate omului de unde a fost scos —
-află doar din e-mail. Iar tabul „Interesați" e **încă șablonul**, cu oameni
-inventați: numărul de pe el vine din bază, lista dinăuntru nu.
+află doar din e-mail.
 
-Verificările: `php teste/test-participanti.php` (45 de cazuri, cere baza de
+Verificările: `php teste/test-participanti.php` (61 de cazuri, cere baza de
 date, nu și serverul).
 
 

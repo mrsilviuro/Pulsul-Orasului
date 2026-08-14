@@ -192,10 +192,12 @@ raspunsJson([
     'ok'          => true,
     'membru'      => $tintaId,
     'numar'       => $numar,
-    'participanti' => randeazaParticipanti($evenimentId, $organizatorId, true),
+    // Lista tabului „Participă", desenată din aceeași funcție ca la
+    // încărcarea paginii.
+    'lista'       => randeazaListaOameni($evenimentId, 'participant', $organizatorId, true),
     // Chipurile de sub butoane se schimbă și ele: omul scos nu mai are ce
     // căuta acolo, iar „încă 84 de persoane" a scăzut cu unu.
-    'oameni'      => randeazaOameniInteresati($evenimentId, evenimentIncheiat($eveniment)),
+    'chipuri'     => randeazaChipuri($evenimentId, evenimentIncheiat($eveniment)),
     'instiintat'  => $instiintat,
     'mesaj'       => $instiintat
         ? 'L-am scos de pe listă și l-am înștiințat pe e-mail.'

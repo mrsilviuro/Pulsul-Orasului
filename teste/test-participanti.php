@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 /**
- * PulsulOrasului.Ro — lista de participanți și scoaterea de pe ea.
+ * PulsulOrasului.Ro — listele din taburi și scoaterea de pe cea de participanți.
  *
  * Cere BAZA DE DATE, nu și serverul: se cheamă direct funcțiile din
  * inc/interese.php, fără să treacă prin api/exclude-participant.php.
@@ -102,7 +102,7 @@ salveazaInteres($evenimentId, $diana, 'interesat');
 
 echo "=== CINE E PE LISTĂ ===\n";
 
-$lista = participantiiEvenimentului($evenimentId);
+$lista = oameniiCuStarea($evenimentId, 'participant');
 
 verifica('trei participanți', 3, count($lista));
 verifica('în ordinea înscrierii, organizatorul primul', $organizator, (int) $lista[0]['id']);
@@ -119,10 +119,10 @@ verifica('interesata nu e pe listă', false, in_array($diana, $ids, true));
  * număr limitat. Aceeași regulă ca la numărul de pe butoane.
  */
 salveazaInteres($evenimentId, $diana, 'participant');
-verifica('acum sunt patru', 4, count(participantiiEvenimentului($evenimentId)));
+verifica('acum sunt patru', 4, count(oameniiCuStarea($evenimentId, 'participant')));
 
 anonimizeazaMembru($diana);
-verifica('contul șters iese de pe listă', 3, count(participantiiEvenimentului($evenimentId)));
+verifica('contul șters iese de pe listă', 3, count(oameniiCuStarea($evenimentId, 'participant')));
 verifica('și nu se mai numără', 3, numaraInterese($evenimentId)['participant']);
 
 /* ====================== 2. SCOATEREA DE PE LISTĂ ==================== */
@@ -135,7 +135,7 @@ verifica('locurile sunt pline (4 din 4… minus cel șters)', true,
 excludeParticipant($evenimentId, $vlad, $organizator, 'organizator',
     'Nu a mai confirmat prezența la telefon.', false);
 
-verifica('a plecat de pe listă', 2, count(participantiiEvenimentului($evenimentId)));
+verifica('a plecat de pe listă', 2, count(oameniiCuStarea($evenimentId, 'participant')));
 verifica('și numărul a scăzut', 2, numaraInterese($evenimentId)['participant']);
 
 // Locul chiar s-a eliberat: rândul din interese_evenimente s-a dus, nu a fost
@@ -210,7 +210,7 @@ echo "\n=== CUM ARATĂ PE ECRAN ===\n";
 // iar acordul „Confirmat" n-ar fi avut pe cine să cadă.
 salveazaInteres($evenimentId, $staff, 'participant');
 
-$html = randeazaParticipanti($evenimentId, $organizator, true);
+$html = randeazaListaOameni($evenimentId, 'participant', $organizator, true);
 
 verifica('numele e prescurtat: „R. Ioana"', true, str_contains($html, '>R. Ioana<'));
 verifica('și duce la profil', true, str_contains($html, 'href="profil.php?m=tstpar-org"'));
@@ -237,9 +237,78 @@ verifica('staff-ul poartă „Staff"', true,
     str_contains($html, '<span class="person__badge person__badge--staff">Staff</span>'));
 
 // Pentru cine nu are ce umbla la listă, niciun buton.
-$htmlGol = randeazaParticipanti($evenimentId, $organizator, false);
+$htmlGol = randeazaListaOameni($evenimentId, 'participant', $organizator, false);
 verifica('fără drepturi, niciun buton', 0, substr_count($htmlGol, 'data-scoate'));
 verifica('dar lista se vede întreagă', 3, substr_count($htmlGol, 'class="person"'));
+
+/* ==================== 4b. TABUL „INTERESAȚI" ======================= */
+
+echo "\n=== TABUL INTERESAȚI ===\n";
+
+/**
+ * Aceleași funcții, altă valoare în `stare`. Dacă lista de interesați ar fi
+ * fost scrisă separat, s-ar fi despărțit de cea de participanți la prima
+ * corectură făcută doar în una.
+ */
+$curios = faMembru('cur', 'Anghel', 'Tudor');
+salveazaInteres($evenimentId, $curios, 'interesat');
+
+$interesati = oameniiCuStarea($evenimentId, 'interesat');
+
+verifica('un singur interesat', 1, count($interesati));
+verifica('și e chiar el', $curios, (int) $interesati[0]['id']);
+
+// Cele două liste nu se amestecă: o stare, un rând, un singur tab.
+$idParticipanti = array_map(static fn (array $o): int => (int) $o['id'],
+    oameniiCuStarea($evenimentId, 'participant'));
+verifica('interesatul nu apare la participanți', false, in_array($curios, $idParticipanti, true));
+
+$htmlInteresati = randeazaListaOameni($evenimentId, 'interesat', $organizator);
+
+verifica('numele, la fel de prescurtat', true, str_contains($htmlInteresati, '>A. Tudor<'));
+
+// Verbul de sub nume se schimbă cu starea: acolo scrie ce a hotărât omul,
+// aici doar că se uită într-acolo.
+verifica('sub nume scrie „Interesat"', true, str_contains($htmlInteresati, '>Interesat acum'));
+verifica('nu „Confirmat"', false, str_contains($htmlInteresati, 'Confirmat'));
+
+/**
+ * La interesați nu se scoate nimeni: „Mă interesează" nu ocupă niciun loc.
+ * Funcția primește `false` implicit, tocmai ca panoul acela să nu poată cere
+ * din greșeală butoane.
+ */
+verifica('niciun buton de scos, nici măcar implicit', 0,
+    substr_count($htmlInteresati, 'data-scoate'));
+verifica('și nici dacă panoul ar cere', 0,
+    substr_count(randeazaListaOameni($evenimentId, 'interesat', $organizator, false), 'data-scoate'));
+
+/* ====================== 4c. VORBA DE DEASUPRA ====================== */
+
+echo "\n=== VORBA DE DEASUPRA LISTEI ===\n";
+
+verifica('niciun interesat', 'Nimeni nu s-a arătat încă interesat. Poți fi primul.',
+    vorbaDespreCatiSunt(0, 'interesat', false));
+verifica('niciun participant', 'Nimeni nu a confirmat încă participarea. Poți fi primul.',
+    vorbaDespreCatiSunt(0, 'participant', false));
+
+// După ce s-a terminat, la trecut: „vor participa" sub un anunț de acum trei
+// luni sună a invitație la ceva ce nu se mai poate.
+verifica('la un eveniment încheiat, fără nimeni', 'Nu a confirmat nimeni participarea.',
+    vorbaDespreCatiSunt(0, 'participant', true));
+
+verifica('un singur om, acord la singular', true,
+    str_contains(vorbaDespreCatiSunt(1, 'participant', false), 'persoană</span></strong> a confirmat că va participa.'));
+verifica('mai mulți, la plural', true,
+    str_contains(vorbaDespreCatiSunt(12, 'participant', false), 'persoane</span></strong> au confirmat că vor participa.'));
+verifica('interesați, la prezent', true,
+    str_contains(vorbaDespreCatiSunt(3, 'interesat', false), 'sunt interesate de acest eveniment.'));
+verifica('interesați, după eveniment', true,
+    str_contains(vorbaDespreCatiSunt(3, 'interesat', true), 'au fost interesate de acest eveniment.'));
+
+// Numărul poartă `data-count-for`, ca main.js să-l schimbe odată cu cel de pe
+// tab și cu cel de pe butonul mare — toate au același atribut.
+verifica('numărul se poate găsi din JS', true,
+    str_contains(vorbaDespreCatiSunt(5, 'interesat', false), 'data-count-for="interesat"'));
 
 /* ========================== 5. MOTIVUL ============================= */
 
