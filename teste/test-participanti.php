@@ -310,6 +310,95 @@ verifica('interesați, după eveniment', true,
 verifica('numărul se poate găsi din JS', true,
     str_contains(vorbaDespreCatiSunt(5, 'interesat', false), 'data-count-for="interesat"'));
 
+/* ==================== 4d. CINE NU SE POATE ÎNSCRIE ================= */
+
+echo "\n=== OPRELIȘTILE LA PARTICIPARE ===\n";
+
+/**
+ * Un singur loc pentru toate: de motivBlocajParticipare() atârnă și butonul
+ * stins din pagină, și refuzul din api/interes.php. Dacă ar fi două funcții,
+ * s-ar ajunge iar la un buton viu care duce la un refuz.
+ */
+$omul = static function (int $id): array {
+    $q = db()->prepare('SELECT id, sex FROM membri WHERE id = ?');
+    $q->execute([$id]);
+    return $q->fetch();
+};
+
+// Vlad are ușa închisă de la scoaterea de mai devreme.
+verifica('ușa închisă oprește participarea',
+    'Nu te mai poți înscrie la acest eveniment.',
+    motivBlocajParticipare($eveniment, $omul($vlad)));
+
+verifica('cine n-a fost scos, nimic', '', motivBlocajParticipare($eveniment, $omul($ana)));
+
+// Vizitatorul fără cont nu e oprit de nimic: butonul lui duce la intrare, iar
+// ce se poate și ce nu se hotărăște după ce se știe cine e.
+verifica('vizitatorul nu e oprit aici', '', motivBlocajParticipare($eveniment, null));
+
+/* ------------------------ doar pentru un sex ---------------------- */
+
+$doarFemei = $eveniment;
+$doarFemei['gen_participanti'] = 'femei';
+
+verifica('la un eveniment pentru femei, ea poate', '',
+    motivBlocajParticipare($doarFemei, $omul($ana)));
+verifica('dar el, nu', 'Evenimentul e doar pentru femei.',
+    motivBlocajParticipare($doarFemei, $omul($staff)));
+
+$doarBarbati = $eveniment;
+$doarBarbati['gen_participanti'] = 'barbati';
+
+verifica('la unul pentru bărbați, el poate', '',
+    motivBlocajParticipare($doarBarbati, $omul($staff)));
+verifica('dar ea, nu', 'Evenimentul e doar pentru bărbați.',
+    motivBlocajParticipare($doarBarbati, $omul($ana)));
+
+// „nespecificat" e ce sunt aproape toate: poate veni oricine.
+verifica('nespecificat nu oprește pe nimeni', '',
+    motivBlocajParticipare($eveniment, $omul($staff)));
+
+/**
+ * Organizatorul nu e oprit de regula de gen la evenimentul lui: e trecut
+ * oricum pe listă la salvare, fiindcă e omul de care se leagă evenimentul.
+ * Ioana e femeie, iar evenimentul de mai jos e pentru bărbați.
+ */
+verifica('organizatorul trece de regula de gen', '',
+    motivBlocajParticipare($doarBarbati, $omul($organizator)));
+
+// Ușa închisă bate genul: cine e scos nu intră nici dacă e de sexul potrivit.
+$doarBarbatiSiInterzis = $doarBarbati;
+verifica('ușa închisă se spune prima',
+    'Nu te mai poți înscrie la acest eveniment.',
+    motivBlocajParticipare($doarBarbatiSiInterzis, $omul($vlad)));
+
+/* ====================== 4e. RĂSPUNSUL PENTRU JS =================== */
+
+echo "\n=== RĂSPUNSUL CU PANOURI ===\n";
+
+$panouri = raspunsulPanourilor($eveniment);
+
+verifica('are amândouă panourile', ['interesat', 'participant'], array_keys($panouri));
+verifica('fiecare cu lista, vorba și dacă e gol',
+    ['lista', 'intro', 'gol'], array_keys($panouri['participant']));
+
+verifica('lista de participanți nu e goală', false, $panouri['participant']['gol']);
+verifica('și are rânduri', true, str_contains($panouri['participant']['lista'], 'class="person"'));
+verifica('vorba de deasupra vine cu ea', true,
+    str_contains($panouri['participant']['intro'], 'au confirmat'));
+
+/**
+ * Butoanele de scoatere NU pleacă niciodată în răspunsul de la „Voi
+ * participa": cine apasă acolo e un participant oarecare, nu organizatorul
+ * care face curat. Se cer pe față, și numai de api/exclude-participant.php.
+ */
+verifica('fără butoane de scos, implicit', 0,
+    substr_count($panouri['participant']['lista'], 'data-scoate'));
+verifica('cu ele, când se cer', true,
+    str_contains(raspunsulPanourilor($eveniment, true)['participant']['lista'], 'data-scoate'));
+verifica('dar nici atunci la interesați', 0,
+    substr_count(raspunsulPanourilor($eveniment, true)['interesat']['lista'], 'data-scoate'));
+
 /* ========================== 5. MOTIVUL ============================= */
 
 echo "\n=== MOTIVUL ===\n";

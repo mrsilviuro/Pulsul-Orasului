@@ -2136,6 +2136,55 @@ același lucru (două taburi × una/mai multe persoane × înainte/după evenime
 care copiate în pagină s-ar fi despărțit. Numărul poartă `data-count-for`, ca
 `main.js` să-l schimbe odată cu cel de pe tab și cu cel de pe butonul mare.
 
+### Ce se schimbă în timp real
+
+Cine apasă „Mă interesează" sau „Voi participa" **se vede pe loc în tabul de
+dedesubt** — nu după o reîncărcare pe care n-avea de ce s-o ghicească. La fel
+la retragere, la trecerea dintr-o listă în alta și la scoaterea unui
+participant.
+
+Amândouă API-urile întorc aceeași bucată, `raspunsulPanourilor()`: pentru
+fiecare stare, lista desenată, rândul de deasupra ei și dacă a rămas goală.
+`main.js` o aplică printr-o singură funcție, `aplicaPanouriOameni()`, care
+caută panourile după `data-stare`. Fiecare panou și-a agățat pe el un
+`__aplica`, deci orice parte a fișierului îl poate împrospăta fără să știe
+nimic despre închiderea lui.
+
+Nimic nu se socotește în browser: între încărcarea paginii și apăsare pot intra
+sau ieși alții, iar un număr crescut cu unu aici ar fi rămas greșit până la
+reîncărcare.
+
+### Cine nu se poate înscrie
+
+`motivBlocajParticipare()` — **un singur loc** pentru toate opreliștile,
+fiindcă de el atârnă două lucruri care trebuie să spună la fel: butonul stins
+din pagină (cu motivul scris sub el) și refuzul din `api/interes.php`.
+
+| Oprelişte | Ce scrie |
+|---|---|
+| ușa închisă la scoatere | „Nu te mai poți înscrie la acest eveniment." |
+| `gen_participanti = 'femei'`, iar omul nu e femeie | „Evenimentul e doar pentru femei." |
+| `gen_participanti = 'barbati'`, iar omul nu e bărbat | „Evenimentul e doar pentru bărbați." |
+
+Butonul e **stins de-a binelea**, nu „duce la un refuz": înainte, caseta de
+confirmare se deschidea, omul apăsa „Da, particip" și abia atunci afla că nu se
+poate. Motivul se scrie sub buton, fiindcă `title` e pentru mouse și pe telefon
+nu se vede niciodată.
+
+Trei lucruri pe care opreliștile NU le ating:
+
+- **„Mă interesează"** rămâne deschis. Nu ocupă niciun loc și nu duce pe nimeni
+  acolo; e o însemnare în dreptul omului.
+- **Retragerea.** Cine e deja pe listă nu e oprit de nimic — un eveniment poate
+  fi schimbat în „doar pentru femei" după ce s-au înscris bărbați, iar ei nu au
+  de ce să rămână prinși acolo.
+- **Organizatorul**, la regula de gen. E trecut oricum pe listă la salvare,
+  fiindcă e omul de care se leagă evenimentul: cineva trebuie să răspundă de o
+  seară pentru mame, chiar dacă n-ar putea veni la ea ca participant.
+
+Vizitatorul fără cont nu e oprit de nimic aici: butonul lui duce la intrare, iar
+ce se poate și ce nu se hotărăște după ce se știe cine e.
+
 ### Scoaterea de pe listă
 
 Butonul se vede doar organizatorului și staff-ului, și doar la un eveniment
@@ -2201,7 +2250,11 @@ Interdicția nu se poate ridica din interfață; rândul se schimbă de mână, 
 phpMyAdmin. Nu există nici o pagină care să-i arate omului de unde a fost scos —
 află doar din e-mail.
 
-Verificările: `php teste/test-participanti.php` (61 de cazuri, cere baza de
+Nici `varsta_minima` nu e verificată la înscriere — coloana există din
+`sql/009-evenimente.sql`, dar nimeni nu se uită la ea. E aceeași scăpare ca la
+gen, doar că neatinsă încă.
+
+Verificările: `php teste/test-participanti.php` (79 de cazuri, cere baza de
 date, nu și serverul).
 
 

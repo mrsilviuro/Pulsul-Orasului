@@ -192,9 +192,10 @@ raspunsJson([
     'ok'          => true,
     'membru'      => $tintaId,
     'numar'       => $numar,
-    // Lista tabului „Participă", desenată din aceeași funcție ca la
-    // încărcarea paginii.
-    'lista'       => randeazaListaOameni($evenimentId, 'participant', $organizatorId, true),
+    // Amândouă listele din taburi, în aceeași formă ca la api/interes.php, ca
+    // main.js să le aplice cu o singură funcție. Cu butoane de scoatere: cine
+    // a apăsat aici e organizatorul sau staff-ul, care le are.
+    'panouri'     => raspunsulPanourilor($eveniment, true),
     // Chipurile de sub butoane se schimbă și ele: omul scos nu mai are ce
     // căuta acolo, iar „încă 84 de persoane" a scăzut cu unu.
     'chipuri'     => randeazaChipuri($evenimentId, evenimentIncheiat($eveniment)),

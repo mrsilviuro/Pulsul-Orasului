@@ -847,6 +847,37 @@
   }
 
   /**
+   * Cercurile suprapuse de sub butoane, puse la loc cu ce a trimis serverul.
+   *
+   * Gata desenate, din randeazaChipuri() — aceeași funcție care le scrie la
+   * încărcarea paginii.
+   */
+  function setChipuri(html) {
+    var cutie = document.getElementById('rsvp-people');
+    if (cutie && typeof html === 'string') cutie.innerHTML = html;
+  }
+
+  /**
+   * Listele din taburi, împrospătate după orice schimbare.
+   *
+   * Fiecare panou cu `data-oameni` și-a agățat pe el o funcție `__aplica`
+   * (vezi blocul „PANOURILE CU OAMENI"). Aici se caută panoul după starea lui
+   * și i se dă bucata care îl privește din răspunsul serverului.
+   *
+   * De asta atârnă tot ce se vede în timp real: cine apasă „Voi participa" își
+   * vede numele apărând în tabul de dedesubt pe loc, nu după o reîncărcare pe
+   * care n-avea de ce s-o ghicească.
+   */
+  function aplicaPanouriOameni(panouri) {
+    if (!panouri) return;
+
+    document.querySelectorAll('[data-oameni]').forEach(function (panou) {
+      var alLui = panouri[panou.getAttribute('data-stare')];
+      if (alLui && panou.__aplica) panou.__aplica(alLui);
+    });
+  }
+
+  /**
    * La un eveniment încheiat nu se leagă nimic.
    *
    * Butoanele vin deja stinse din pagină; fără rândul ăsta, codul de mai jos
@@ -884,12 +915,28 @@
         rsvpOameni.innerHTML = c.oameni;
       }
 
+      // Și listele din taburi: omul tocmai a intrat sau a ieșit de pe una din
+      // ele, iar asta trebuie să se vadă pe loc, nu la următoarea reîncărcare.
+      aplicaPanouriOameni(c.panouri);
+
       // Cine tocmai a intrat pe listă nu mai are de ce să vadă „nu mai sunt
       // locuri", iar cine s-a retras poate găsi ușa închisă la loc.
       if (rsvpPlin) rsvpPlin.hidden = c.stare === 'participant';
 
+      /**
+       * Butonul de participare se stinge la loc dacă s-au ocupat locurile —
+       * dar niciodată pentru cine e chiar acum pe listă: acela trebuie să se
+       * poată retrage.
+       *
+       * Opreliștile de om (ușa închisă, evenimentul pentru celălalt sex) nu se
+       * ating aici: pe ele le-a hotărât serverul la desenarea paginii, prin
+       * motivBlocajParticipare(), și nu se schimbă de la o apăsare la alta.
+       */
       var btnGoing = document.getElementById('btn-going');
-      if (btnGoing && rsvpPlin) btnGoing.disabled = !rsvpPlin.hidden;
+
+      if (btnGoing && rsvpPlin && !btnGoing.hasAttribute('title')) {
+        btnGoing.disabled = !rsvpPlin.hidden;
+      }
     }
 
     /** Trimite apăsarea. `confirmat` și `telefon` doar la participare. */
@@ -1687,33 +1734,42 @@
       }
     }
 
-    /* ------------------- numărul de deasupra listei -------------------- */
+    /* --------------------- împrospătarea din afară --------------------- */
 
     /**
-     * Numerele se iau din răspunsul serverului, nu se scad în browser.
+     * Lista și rândul de deasupra, puse la loc cu ce a trimis serverul.
      *
-     * Între încărcarea paginii și apăsare pot intra sau ieși alții, iar un
-     * număr scăzut cu unu aici ar fi rămas greșit până la reîncărcare.
+     * Se agață de elementul panoului, ca oricine altcineva din fișier să-l
+     * poată împrospăta fără să știe nimic despre închiderea asta: butoanele
+     * „Mă interesează" / „Voi participa" o cheamă după fiecare apăsare, iar
+     * scoaterea unui participant, după fiecare scoatere.
      *
-     * Se schimbă în toate locurile deodată — rândul de deasupra listei,
-     * numărul de pe tab și cel de pe butonul mare — fiindcă toate poartă
-     * același `data-count-for`.
+     * Totul vine gata desenat de pe server, din aceleași funcții care scriu
+     * pagina la încărcare (randeazaListaOameni, vorbaDespreCatiSunt). De aceea
+     * se pune cu innerHTML: e HTML făcut de noi, escapat cu h(), nu text venit
+     * de la cine a apăsat. Nimic nu se socotește aici — între încărcarea
+     * paginii și apăsare pot intra sau ieși alții.
      */
-    function setNumar(care, cate) {
-      document.querySelectorAll('[data-count-for="' + care + '"]').forEach(function (el) {
-        el.textContent = cate;
-      });
+    panou.__aplica = function (date) {
+      if (!date) return;
 
-      if (care !== stare) return;
-
-      var cuvant = panou.querySelector('[data-cuvant-persoane]');
-      if (cuvant) cuvant.textContent = cate === 1 ? 'persoană' : 'persoane';
-
-      // Lista s-a golit de tot: rândul de deasupra n-are ce număra.
-      if (intro && cate === 0) {
-        intro.textContent = 'Nu mai e nimeni pe listă.';
+      if (lista && typeof date.lista === 'string') {
+        lista.innerHTML = date.lista;
       }
-    }
+
+      if (intro && typeof date.intro === 'string') {
+        intro.innerHTML = date.intro;
+        // Fără nimeni pe listă, rândul e o invitație, nu o numărătoare: se
+        // așază pe mijloc, ca „Niciun comentariu încă" din tabul de alături.
+        intro.classList.toggle('panel__intro--gol', !!date.gol);
+      }
+
+      // Cine tocmai a intrat pe listă trebuie să se vadă, chiar dacă e al
+      // unsprezecelea și teancul arătat era de zece.
+      if (aratati < pePagina) aratati = pePagina;
+
+      potriveste();
+    };
 
     /* ------------------------------------------------------------------ *
      *  De aici încolo, doar panoul cu butoane de scoatere.
@@ -1841,29 +1897,16 @@
 
           inchideScoaterea();
 
-          /**
-           * Lista vine gata desenată de pe server, din aceeași funcție care o
-           * scrie la încărcarea paginii (randeazaListaOameni). De aceea se
-           * pune cu innerHTML: e HTML făcut de noi, escapat cu h(), nu text
-           * venit de la cine a apăsat.
-           */
-          if (lista && typeof c.lista === 'string') {
-            lista.innerHTML = c.lista;
-          }
-
-          // Chipurile de sub butoane s-au schimbat și ele: omul scos nu mai
-          // are ce căuta acolo.
-          var rsvpOameni = document.getElementById('rsvp-people');
-          if (rsvpOameni && typeof c.chipuri === 'string') {
-            rsvpOameni.innerHTML = c.chipuri;
-          }
+          // Amândouă panourile, numerele și chipurile — aceeași cale ca după
+          // o apăsare pe „Mă interesează" sau „Voi participa".
+          aplicaPanouriOameni(c.panouri);
+          setChipuri(c.chipuri);
 
           if (c.numar) {
-            setNumar('participant', c.numar.participant);
-            setNumar('interesat', c.numar.interesat);
+            setRsvpCount('participant', c.numar.participant);
+            setRsvpCount('interesat', c.numar.interesat);
           }
 
-          potriveste();
           toast(c.mesaj || 'L-am scos de pe listă.');
         })
         .catch(function () {
