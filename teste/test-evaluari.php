@@ -191,41 +191,83 @@ verifica('o stea', 1, (int) $nota['stele']);
 verifica('însemnată ca automată', 1, (int) $nota['automat']);
 verifica('cu textul scris de noi', EVALUARE_ABSENT_TEXT, $nota['text']);
 
-$absenti = absentiiInsemnati($trecutId, $organizator);
-verifica('organizatorul o vede în harta lui', true, isset($absenti[$ana]));
-verifica('dar nu și notele lui obișnuite', false, isset($absenti[$vlad]));
-verifica('altcineva nu are ce vedea', [], absentiiInsemnati($trecutId, $ana));
+/**
+ * Harta se citește o dată, pentru toată lista, și e a tuturor: „Neprezentat" nu
+ * e o părere pe care s-o vadă doar cine a scris-o, e un fapt scris pe rândul
+ * omului. De aia funcția nici nu mai întreabă cine se uită.
+ */
+$absenti = absentiiEvenimentului($trecutId);
+verifica('cel însemnat e în hartă', true, isset($absenti[$ana]));
+verifica('dar nu și cine a luat note obișnuite', false, isset($absenti[$vlad]));
+
+verifica('întrebarea de unul singur spune la fel', true, esteNeprezentat($trecutId, $ana));
+verifica('și pentru ceilalți, nu', false, esteNeprezentat($trecutId, $vlad));
+
+/**
+ * Pe ea stă regula din api/evaluare.php: după însemnare, omul nu se mai
+ * notează de nimeni — nici de organizatorul care a pus-o. Altfel, cel care a
+ * scris „nu s-a prezentat" ar putea alege peste o săptămână cinci stele și ar
+ * șterge cu ele exact ce a scris, poate după o vorbă bună de la cineva.
+ *
+ * O însemnare pusă a doua oară n-are ce adăuga, și se vede tot de aici.
+ */
+verifica('a doua oară n-are ce însemna', true, esteNeprezentat($trecutId, $ana));
 
 /* ===================== 5. CUM ARATĂ PE ECRAN ====================== */
 
 echo "\n=== CUM ARATĂ PE ECRAN ===\n";
 
+/**
+ * Vlad a primit trei note: 3 de la Ana (cu vorbe), 5 de la organizatoare și 4
+ * de la Dan, amândouă dintr-o apăsare. Pe profil ajunge una singură.
+ *
+ * Stelele singure rămân nevăzute: un rând care spune „cineva ți-a dat 4 stele"
+ * și atât n-are ce citi nimeni, iar zece la rând ar îneca singura părere scrisă
+ * cu adevărat. În medie și în bare intră toate — vezi rezumatul de mai sus.
+ */
 $lista = evaluarilePrimite($vlad);
 
-verifica('trei evaluări primite', 3, count($lista));
-verifica('vin cu evenimentul de care atârnă', 'Eveniment tsteva-trecut',
+verifica('doar cea scrisă ajunge pe profil', 1, count($lista));
+verifica('și e chiar textul scris', 'Om de nădejde, a ajutat la strâns.', $lista[0]['text']);
+verifica('vine cu evenimentul de care atârnă', 'Eveniment tsteva-trecut',
     $lista[0]['eveniment_titlu']);
 
 /**
- * ANONIME. Nici măcar id-ul celui care a dat nota nu se citește din bază: ce
- * nu se citește nu poate ajunge din greșeală în pagină.
+ * VORBELE SE SEMNEAZĂ. Cine se așază să scrie ceva își pune și numele — de
+ * asta lista vine acum cu omul de care atârnă părerea. Anonime rămân stelele,
+ * care oricum nu se văd aici.
+ *
+ * Id-ul tot nu iese: pentru scris ajunge permalinkul, iar ce nu se citește nu
+ * poate ajunge din greșeală în pagină.
  */
-verifica('nimic despre cine a dat nota', false, isset($lista[0]['evaluator_id']));
+verifica('cu cine a scris-o', 'tsteva-ana', $lista[0]['permalink']);
+verifica('fără id-ul lui', false, isset($lista[0]['evaluator_id']));
 
 $html = randeazaEvaluari($lista);
 
-verifica('scrie că e anonimă', true, str_contains($html, 'Evaluare anonimă'));
-verifica('fără chipuri', false, str_contains($html, 'comment__avatar'));
+verifica('numele, prescurtat ca la comentarii', true, str_contains($html, '>N. Elena<'));
+verifica('cu legătură spre profilul lui', true,
+    str_contains($html, 'profil.php?m=tsteva-ana'));
+verifica('și cu chipul', true, str_contains($html, 'comment__avatar'));
 verifica('cu legătură spre eveniment', true, str_contains($html, 'evaluare__eveniment'));
+
+verifica('cine n-a primit nicio vorbă nu are listă', '',
+    randeazaEvaluari(evaluarilePrimite($strain)));
 
 $htmlAbsent = randeazaEvaluari(evaluarilePrimite($ana));
 verifica('însemnarea automată se deosebește', true,
     str_contains($htmlAbsent, 'evaluare--automata'));
 verifica('și spune de la cine vine', true,
     str_contains($htmlAbsent, 'Însemnare de la organizator'));
+// Un fapt, nu o părere: nu se semnează cu numele organizatorului.
+verifica('fără numele celui care a pus-o', false, str_contains($htmlAbsent, 'R. Ioana'));
 
 /* --------------------------- rezumatul ---------------------------- */
 
+/**
+ * Aici intră TOATE notele, și cele fără vorbe: media e a stelelor, nu a
+ * părerilor scrise. Vlad are trei note și o singură părere pe listă.
+ */
 $rezumat = randeazaRezumatEvaluari(rezumatEvaluari($vlad));
 
 verifica('media, scrisă cu virgulă', true, str_contains($rezumat, '>4,0<'));

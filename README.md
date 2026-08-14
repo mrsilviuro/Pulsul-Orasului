@@ -2277,16 +2277,33 @@ spatele ei e o seară petrecută împreună, nu o apăsare de pe un profil găsi
 Toate opreliștile stau într-un loc, `motivBlocajEvaluare()`, de care atârnă și
 stelele stinse din pagină, și refuzul din API — ca la participare.
 
-### Anonime
+### Stelele sunt anonime. Vorbele se semnează
 
-`evaluari.evaluator_id` **nu iese niciodată din bază**: `evaluarilePrimite()`
-nici măcar nu îl citește. Ce nu se citește nu poate ajunge din greșeală în
-pagină. Pe profil, în locul autorului stă evenimentul după care s-a dat nota.
-
-Altfel nimeni n-ar mai da patru stele cuiva pe care îl reîntâlnește sâmbăta
-viitoare — iar o notă care se semnează e o notă frumoasă, adică una care nu
+**Stelele singure nu se văd deloc pe profil.** Intră în medie și în barele de
+sus, dar nu apar nicăieri ca rând. Nimeni nu află cine i-a dat trei stele —
+altfel nimeni n-ar mai da trei stele cuiva pe care îl reîntâlnește sâmbăta
+viitoare, iar o notă care se semnează ajunge o notă frumoasă, adică una care nu
 spune nimic. Rândul ține minte cine a dat-o doar ca să nu se poată nota același
 om de zece ori, și ca să-și poată schimba părerea o dată dată.
+
+**Cine se așază să scrie ceva își pune și numele.** `evaluarilePrimite()` cere
+`ev.text IS NOT NULL AND ev.text <> ''`, iar pe profil părerea vine cu chip, cu
+„N. Prenume" și cu legătură spre profilul autorului, ca la comentarii. O părere
+semnată se cântărește altfel decât una venită de nicăieri, iar cel care o
+primește are cui să-i răspundă.
+
+Un rând care ar spune „cineva ți-a dat 4 stele" și atât n-are ce citi nimeni,
+iar zece la rând ar îneca singura părere scrisă cu adevărat. De aceea numărul de
+sub medie („31 evaluări") și numărul de rânduri de dedesubt nu se potrivesc, și
+e în regulă: media e a stelelor, lista e a vorbelor.
+
+Contul șters rămâne „Utilizator șters", fără legătură — aceeași regulă ca la
+comentarii.
+
+Lista intră toată în pagină și se ascunde din JS, **20 deodată**, cu „Vezi mai
+mult (încă N)" — ca la comentarii și ca la listele din taburi. Fără nicio
+părere scrisă se arată un singur rând: „Prenume nu a primit niciun feedback
+scris."
 
 ### Două căi către aceeași notă
 
@@ -2306,26 +2323,45 @@ n-are de unde să știe că altfel și-ar șterge vorbele scrise pe profil.
 ### „Nu s-a prezentat"
 
 Numai organizatorul, numai după încheiere. Pune **o stea** și un text scris de
-noi, însemnat cu `automat = 1`.
+noi („Nu s-a prezentat la eveniment, deși s-a înscris pe lista de
+participanți."), însemnat cu `automat = 1`.
 
 Se ține deoparte fiindcă se citește altfel: e un fapt („n-a venit"), nu o
-părere. Pe profil apare cu dungă în stânga și scrie pe față de la cine vine —
-singura notă care nu e anonimă, fiindcă n-ar avea sens să fie.
+părere. Pe profil apare cu dungă în stânga și în capul ei scrie „Însemnare de
+la organizator", nu numele cuiva.
 
-Nu se poate lua înapoi, iar butonul rămâne stins după prima apăsare.
+**După ea, omul acela nu se mai notează de nimeni.** În dreptul lui rămâne un
+singur cuvânt — „Neprezentat" — pe care îl vede toată lumea: nici stele, nici
+„Lasă și câteva cuvinte", nici butonul care tocmai s-a apăsat. Nu se sting,
+pleacă.
+
+Regula asta îl privește mai ales pe cel care a pus însemnarea: cu stelele
+rămase aprinse, organizatorul ar fi putut alege peste o săptămână cinci și ar fi
+șters cu ele exact ce scrisese — poate după o vorbă bună de la cineva. Se ține
+în trei locuri care nu se pot despărți: `randeazaOm()` la desenare,
+`esteNeprezentat()` în `api/evaluare.php` la orice cerere (409), și JS-ul care
+înlocuiește rândul pe loc, fără reîncărcare.
 
 ### Când îngheață listele
 
 Odată ce evenimentul **a început** — nu când se încheie, cum era înainte:
 
-- nimeni nu mai intră și nimeni nu mai iese de pe liste (ambele butoane stinse)
+- **caseta „Mergi la acest eveniment?" dispare cu totul.** Nu se stinge, pleacă:
+  o casetă mare care pune întrebarea asta deasupra unui eveniment care se
+  petrece chiar acum, sau care s-a terminat, e o întrebare fără rost în cel mai
+  vizibil loc al paginii. Cine vrea să vadă cine a fost are taburile de mai jos,
+  unde scrie „Au participat".
 - organizatorul și staff-ul nu mai pot scoate pe nimeni
 
 Între început și încheiere e chiar evenimentul: o retragere de atunci n-ar mai
 însemna nimic, fiindcă omul e (sau nu e) deja acolo. Iar cine s-ar șterge de pe
 listă în timpul lui ar scăpa de „Nu s-a prezentat".
 
-Verificările: `php teste/test-evaluari.php` (67 de cazuri, cere baza de date,
+Butoanele nu mai există în pagină, deci n-au ce fi apăsate; oprirea adevărată
+rămâne în `api/interes.php`, prin aceeași `evenimentAInceput()`, pentru o filă
+lăsată deschisă de dinainte.
+
+Verificările: `php teste/test-evaluari.php` (74 de cazuri, cere baza de date,
 nu și serverul).
 
 

@@ -97,6 +97,14 @@ if ($fapta === 'absent') {
         raspunsJson(['ok' => false, 'mesaj' => $blocaj], 403);
     }
 
+    // A doua oară n-are ce adăuga: în pagină butonul nici nu se mai desenează.
+    if (esteNeprezentat($evenimentId, $tintaId)) {
+        raspunsJson([
+            'ok'    => false,
+            'mesaj' => 'E deja însemnat ca neprezentat.',
+        ], 409);
+    }
+
     salveazaEvaluare(
         $evenimentId,
         $tintaId,
@@ -132,6 +140,24 @@ $blocaj = motivBlocajEvaluare($eveniment, $membruId, $tintaId);
 
 if ($blocaj !== '') {
     raspunsJson(['ok' => false, 'mesaj' => $blocaj], 403);
+}
+
+/**
+ * Cine n-a venit nu se mai notează de nimeni.
+ *
+ * N-are ce judeca nimeni la un om care n-a fost acolo. Iar regula asta îl
+ * privește mai ales pe organizator: fără ea, cel care a pus însemnarea ar
+ * putea alege peste o săptămână cinci stele și ar șterge cu ele exact ce a
+ * scris — poate după o vorbă bună de la cineva.
+ *
+ * În pagină, rândul lui nu mai are nici stele, nici „Lasă și câteva cuvinte".
+ * Aici e regula: cererea poate veni de oriunde.
+ */
+if (esteNeprezentat($evenimentId, $tintaId)) {
+    raspunsJson([
+        'ok'    => false,
+        'mesaj' => 'E însemnat ca neprezentat, nu mai poate fi notat.',
+    ], 409);
 }
 
 $stele = stelePrimite($date['stele'] ?? 0);

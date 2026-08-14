@@ -150,15 +150,6 @@ $blocajParticipare = $stareaMea === 'participant'
     ? ''
     : motivBlocajParticipare($eveniment, $membru);
 
-/**
- * Listele se închid când începe evenimentul, nu când se încheie.
- *
- * Amândouă butoanele se sting — și cel de retragere. Numerele rămân de citit,
- * dar lista e de-acum istoria evenimentului, nu o socoteală deschisă. Oprirea
- * adevărată e în api/interes.php, prin aceeași evenimentAInceput().
- */
-$listeInghetate = $aInceput;
-
 /* --------------------------- Notele de la final ----------------------- */
 
 /**
@@ -180,7 +171,10 @@ if ($eIncheiat && $ePublicat) {
         'pot_nota'      => potNotaLaEveniment($eveniment, $membruId),
         'e_organizator' => $eOrganizatorul,
         'notele_mele'   => noteleMeleLaEveniment($evenimentId, $membruId),
-        'absenti'       => $eOrganizatorul ? absentiiInsemnati($evenimentId, $membruId) : [],
+        // Pentru toată lumea, nu doar pentru organizator: „Neprezentat" se
+        // vede de oricine deschide tabul, iar în dreptul acelui om nu se mai
+        // desenează stele pentru nimeni.
+        'absenti'       => absentiiEvenimentului($evenimentId),
     ];
 }
 
@@ -471,10 +465,24 @@ require __DIR__ . '/inc/antet.php';
         </button>
       </div>
 
+      <?php if (!$aInceput): ?>
       <!-- =========================== PARTICIPARE ==========================
-        Numai la un eveniment publicat. Cât e în așteptare, respins sau
-        anulat, pagina se deschide doar pentru organizator sau pentru staff —
-        și n-are rost o listă de participanți la ceva ce nu se vede pe site.
+        Numai la un eveniment publicat CARE N-A ÎNCEPUT ÎNCĂ.
+
+        După ora de început, caseta dispare cu totul — nu se stinge, pleacă. O
+        casetă mare care întreabă „Mergi la acest eveniment?" deasupra unui
+        eveniment care se petrece chiar acum, sau care s-a terminat, e o
+        întrebare fără rost pusă în cel mai vizibil loc al paginii. Cine vrea
+        să vadă cine a fost are taburile de mai jos, unde scrie „Au participat".
+
+        De aici încolo nu se mai întreabă nici dacă evenimentul s-a încheiat:
+        între „a început" și „s-a încheiat" nu mai e nimic de desenat aici.
+        Oprirea adevărată rămâne oricum pe server, în api/interes.php, prin
+        aceeași evenimentAInceput().
+
+        Cât e în așteptare, respins sau anulat, pagina se deschide doar pentru
+        organizator sau pentru staff — și n-are rost o listă de participanți la
+        ceva ce nu se vede pe site.
 
         `aria-pressed` spune în ce stare e omul chiar acum; JS îl schimbă după
         fiecare apăsare, iar la reîncărcare vine de la server. Retragerea n-are
@@ -489,44 +497,29 @@ require __DIR__ . '/inc/antet.php';
       -->
       <section class="rsvp" id="rsvp" aria-labelledby="rsvp-title"
                data-slug="<?= h((string) $eveniment['slug']) ?>"
-               <?= $eIncheiat ? 'data-incheiat="1"' : '' ?>
                <?= $eLogat ? 'data-csrf="' . h(tokenCsrf()) . '"' : '' ?>>
         <div class="rsvp__head">
-          <!-- La un eveniment trecut întrebarea se pune la trecut: „Mergi?"
-               deasupra unei liste de oameni care au fost deja sună a invitație
-               la ceva ce s-a terminat. -->
-          <h2 id="rsvp-title"><?= $eIncheiat ? 'Cine a fost la acest eveniment?' : 'Mergi la acest eveniment?' ?></h2>
-          <?php if ($eIncheiat): ?>
-          <p>A trecut. Mai jos e cine a fost pe listă.</p>
-          <?php else: ?>
+          <h2 id="rsvp-title">Mergi la acest eveniment?</h2>
           <p>Spune-le și celorlalți — apari în lista de mai jos.</p>
-          <?php endif; ?>
         </div>
 
         <div class="rsvp__actions">
-          <!-- La un eveniment încheiat, amândouă butoanele se sting: numerele
-               rămân de citit, dar nu se mai intră și nu se mai iese de pe
-               listă. Oprirea adevărată e în api/interes.php. -->
           <button class="rsvp__btn rsvp__btn--interested" type="button"
                   id="btn-interested" data-rsvp="interesat"
-                  aria-pressed="<?= $stareaMea === 'interesat' ? 'true' : 'false' ?>"
-                  <?= $listeInghetate ? 'disabled' : '' ?>>
+                  aria-pressed="<?= $stareaMea === 'interesat' ? 'true' : 'false' ?>">
             <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
               <path d="m12 3.8 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.5 10l5.9-.9L12 3.8Z"/>
             </svg>
-            <!-- La un eveniment trecut butoanele nu mai cer nimic, ci spun ce
-                 numără: „Mă interesează 12" sub un anunț de acum trei luni
-                 sună a invitație la ceva ce nu se mai poate. -->
-            <span class="rsvp__label"><?= $eIncheiat ? 'Cine a fost interesat' : 'Mă interesează' ?></span>
+            <span class="rsvp__label">Mă interesează</span>
             <span class="rsvp__count" data-count-for="interesat"><?= (int) $numarInterese['interesat'] ?></span>
           </button>
 
           <!--
-            Butonul de participare se stinge în trei cazuri: s-au ocupat toate
-            locurile, evenimentul s-a încheiat, sau omul nu are ce căuta pe
-            listă — i s-a închis ușa, ori evenimentul e pentru celălalt sex.
+            Butonul de participare se stinge în două cazuri: s-au ocupat toate
+            locurile, sau omul nu are ce căuta pe listă — i s-a închis ușa, ori
+            evenimentul e pentru celălalt sex.
 
-            Toate trei, doar pentru cine nu e deja înăuntru: cel care e pe listă
+            Amândouă, doar pentru cine nu e deja înăuntru: cel care e pe listă
             trebuie să se poată retrage oricând.
 
             Stins de-a binelea, nu doar „duce la un refuz": până acum caseta de
@@ -538,16 +531,16 @@ require __DIR__ . '/inc/antet.php';
                   id="btn-going" data-rsvp="participant"
                   aria-pressed="<?= $stareaMea === 'participant' ? 'true' : 'false' ?>"
                   <?= $blocajParticipare !== '' ? 'title="' . h($blocajParticipare) . '"' : '' ?>
-                  <?= ($listeInghetate || $blocajParticipare !== '' || (!$maiSuntLocuri && $stareaMea !== 'participant')) ? 'disabled' : '' ?>>
+                  <?= ($blocajParticipare !== '' || (!$maiSuntLocuri && $stareaMea !== 'participant')) ? 'disabled' : '' ?>>
             <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
               <circle cx="12" cy="12" r="9"/><path d="m8.2 12.3 2.6 2.6 5-5.2"/>
             </svg>
-            <span class="rsvp__label"><?= $eIncheiat ? 'Cine a participat' : 'Voi participa' ?></span>
+            <span class="rsvp__label">Voi participa</span>
             <span class="rsvp__count" data-count-for="participant"><?= (int) $numarInterese['participant'] ?></span>
           </button>
         </div>
 
-        <?php if ($blocajParticipare !== '' && !$listeInghetate): ?>
+        <?php if ($blocajParticipare !== ''): ?>
         <!--
           Un buton stins fără nicio vorbă lasă omul să creadă că s-a stricat
           ceva. Motivul se scrie sub el, o singură dată — `title` de pe buton e
@@ -556,7 +549,7 @@ require __DIR__ . '/inc/antet.php';
         <p class="rsvp__blocaj"><?= h($blocajParticipare) ?></p>
         <?php endif; ?>
 
-        <?php if (!$eIncheiat && !$maiSuntLocuri && $stareaMea !== 'participant'): ?>
+        <?php if (!$maiSuntLocuri && $stareaMea !== 'participant'): ?>
         <p class="rsvp__plin">Nu mai sunt locuri disponibile la acest eveniment.</p>
         <?php endif; ?>
 
@@ -568,7 +561,7 @@ require __DIR__ . '/inc/antet.php';
           Se deschide din JS și se verifică din nou pe server: fără
           `confirmat`, api/interes.php nu scrie nimic.
         -->
-        <?php if ($eLogat && !$eIncheiat): ?>
+        <?php if ($eLogat): ?>
         <div class="rsvp__confirm" id="rsvp-confirm" hidden>
           <p class="rsvp__confirm-titlu"><strong>Confirmi participarea?</strong></p>
 
@@ -615,10 +608,11 @@ require __DIR__ . '/inc/antet.php';
           Scrise în două locuri, ar fi început să difere de la prima corectură.
         -->
         <div class="rsvp__people" id="rsvp-people">
-          <?= randeazaChipuri($evenimentId, $eIncheiat) ?>
+          <?= randeazaChipuri($evenimentId) ?>
         </div>
       </section>
-      <?php endif; ?>
+      <?php endif; /* !$aInceput */ ?>
+      <?php endif; /* $ePublicat */ ?>
 
       <!-- ====================== TABURI: DISCUȚII ========================== -->
       <section class="tabs-section" aria-labelledby="tabs-title">

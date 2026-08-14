@@ -628,10 +628,33 @@ function randeazaOm(
     $stele = '';
 
     if ($evaluare !== null) {
-        $euId  = (int) $evaluare['eu'];
+        $euId    = (int) $evaluare['eu'];
         $notaLui = (int) ($evaluare['notele_mele'][$id] ?? 0);
 
-        if ($id === $euId) {
+        // Harta vine gata făcută din absentiiEvenimentului(), ca să nu fie
+        // nevoie de constantele din inc/evaluari.php aici — altfel cele două
+        // fișiere s-ar fi cerut unul pe altul, în cerc.
+        $absent = !empty($evaluare['absenti'][$id]);
+
+        if ($absent) {
+            /**
+             * Cine n-a venit nu se mai notează de nimeni.
+             *
+             * Nici stele, nici „Lasă și câteva cuvinte" — doar cuvântul
+             * „Neprezentat", pe care îl vede toată lumea. N-are ce judeca
+             * nimeni la un om care n-a fost acolo.
+             *
+             * Iar dacă stelele ar rămâne aprinse, organizatorul ar putea
+             * alege peste o săptămână cinci și ar șterge cu ele exact
+             * însemnarea pe care tocmai a pus-o — poate după o vorbă bună de
+             * la cineva. Regula e ținută și de api/evaluare.php, prin
+             * esteNeprezentat().
+             */
+            $stele = '<span class="person__neprezentat" title="Nu s-a prezentat la eveniment">'
+                   . '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">'
+                   . '<circle cx="12" cy="12" r="9"/><path d="M8.5 8.5 15.5 15.5"/>'
+                   . '</svg><span>Neprezentat</span></span>';
+        } elseif ($id === $euId) {
             // Pe tine nu te notezi. Nici stele stinse: n-are ce să însemne.
             $stele = '';
         } elseif (!empty($evaluare['pot_nota'])) {
@@ -645,21 +668,18 @@ function randeazaOm(
          * „Nu s-a prezentat" — numai organizatorul, și niciodată în dreptul lui
          * însuși. E o însemnare de fapt, nu o părere: pune o stea și un text
          * scris de noi pe profilul omului.
+         *
+         * Butonul dispare după apăsare: însemnarea nu se ia înapoi, iar ce a
+         * rămas în locul lui e cuvântul „Neprezentat", de mai sus.
          */
-        if (!empty($evaluare['e_organizator']) && $id !== $euId && $id !== $organizatorId) {
-            // Harta vine gata făcută din absentiiInsemnati(), ca să nu fie
-            // nevoie de constantele din inc/evaluari.php aici — altfel cele
-            // două fișiere s-ar fi cerut unul pe altul, în cerc.
-            $absent = !empty($evaluare['absenti'][$id]);
-
-            $stele .= '<button class="person__absent' . ($absent ? ' is-on' : '') . '" type="button"'
+        if (!$absent && !empty($evaluare['e_organizator']) && $id !== $euId && $id !== $organizatorId) {
+            $stele .= '<button class="person__absent" type="button"'
                     . ' data-absent="' . $id . '" data-nume="' . $nume . '"'
-                    . ($absent ? ' disabled' : '')
-                    . ' title="' . ($absent ? 'Însemnat ca neprezentat' : 'Nu s-a prezentat') . '">'
+                    . ' title="Nu s-a prezentat">'
                     . '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">'
                     . '<circle cx="12" cy="12" r="9"/><path d="M8.5 8.5 15.5 15.5"/>'
                     . '</svg>'
-                    . '<span>' . ($absent ? 'Neprezentat' : 'Nu s-a prezentat') . '</span>'
+                    . '<span>Nu s-a prezentat</span>'
                     . '</button>';
         }
     }
