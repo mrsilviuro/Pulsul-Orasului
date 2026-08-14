@@ -2258,6 +2258,77 @@ Verificările: `php teste/test-participanti.php` (79 de cazuri, cere baza de
 date, nu și serverul).
 
 
+## Notele dintre participanți
+
+Stelele de pe profil erau șablon: 4,6 din 23, scrise de mână, cu o distribuție
+inventată și un formular care nu trimitea nimic nicăieri. Acum sunt ale
+oamenilor.
+
+`sql/017-evaluari.sql`, `inc/evaluari.php`, `api/evaluare.php`, stelele din
+tabul „Au participat" (`event.php`) și secțiunea „Evaluări" din `profil.php`.
+
+### Când și între cine
+
+**După ce s-a încheiat**, între oameni care au fost amândoi pe lista de
+participanți, și niciodată pe tine însuți. Nota are greutate tocmai fiindcă în
+spatele ei e o seară petrecută împreună, nu o apăsare de pe un profil găsit la
+întâmplare.
+
+Toate opreliștile stau într-un loc, `motivBlocajEvaluare()`, de care atârnă și
+stelele stinse din pagină, și refuzul din API — ca la participare.
+
+### Anonime
+
+`evaluari.evaluator_id` **nu iese niciodată din bază**: `evaluarilePrimite()`
+nici măcar nu îl citește. Ce nu se citește nu poate ajunge din greșeală în
+pagină. Pe profil, în locul autorului stă evenimentul după care s-a dat nota.
+
+Altfel nimeni n-ar mai da patru stele cuiva pe care îl reîntâlnește sâmbăta
+viitoare — iar o notă care se semnează e o notă frumoasă, adică una care nu
+spune nimic. Rândul ține minte cine a dat-o doar ca să nu se poată nota același
+om de zece ori, și ca să-și poată schimba părerea o dată dată.
+
+### Două căi către aceeași notă
+
+De pe **pagina evenimentului**, dintr-o apăsare pe stele, în dreptul fiecărui
+participant. După apăsare apare „Lasă și câteva cuvinte", care duce în filă
+nouă pe profilul omului, drept la formular, cu nota deja aleasă.
+
+De pe **profil**, cu stele și text. Formularul apare doar cu `?ev=<slug>` în
+adresă — adică doar dacă omul a venit de pe pagina unui eveniment încheiat la
+care au fost amândoi. Fără el nici nu se desenează: un formular care se vede și
+refuză la apăsare e mai rău decât unul care lipsește.
+
+Amândouă scriu în același rând (`INSERT ... ON DUPLICATE KEY UPDATE`). Textul
+se PĂSTREAZĂ când vin doar stele: cine schimbă nota de pe pagina evenimentului
+n-are de unde să știe că altfel și-ar șterge vorbele scrise pe profil.
+
+### „Nu s-a prezentat"
+
+Numai organizatorul, numai după încheiere. Pune **o stea** și un text scris de
+noi, însemnat cu `automat = 1`.
+
+Se ține deoparte fiindcă se citește altfel: e un fapt („n-a venit"), nu o
+părere. Pe profil apare cu dungă în stânga și scrie pe față de la cine vine —
+singura notă care nu e anonimă, fiindcă n-ar avea sens să fie.
+
+Nu se poate lua înapoi, iar butonul rămâne stins după prima apăsare.
+
+### Când îngheață listele
+
+Odată ce evenimentul **a început** — nu când se încheie, cum era înainte:
+
+- nimeni nu mai intră și nimeni nu mai iese de pe liste (ambele butoane stinse)
+- organizatorul și staff-ul nu mai pot scoate pe nimeni
+
+Între început și încheiere e chiar evenimentul: o retragere de atunci n-ar mai
+însemna nimic, fiindcă omul e (sau nu e) deja acolo. Iar cine s-ar șterge de pe
+listă în timpul lui ar scăpa de „Nu s-a prezentat".
+
+Verificările: `php teste/test-evaluari.php` (67 de cazuri, cere baza de date,
+nu și serverul).
+
+
 ## E-mailurile
 
 Fișier: `inc/email.php` — un singur șablon pentru toate mesajele, exact ca la

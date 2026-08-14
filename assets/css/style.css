@@ -2346,6 +2346,93 @@ body { overscroll-behavior-y: none; }
 .stars-input button:hover { transform: scale(1.14); }
 .stars-input button.is-on svg { fill: #f5a623; stroke: #f5a623; }
 
+/* Varianta mică, din dreptul fiecărui participant: acolo stelele stau lângă un
+   nume, nu într-un formular, și n-au loc să fie cât cele mari.
+
+   Conturul e mai închis decât la cele mari: acolo stelele stau într-o casetă
+   cu fundal, aici pe alb — iar `var(--border)` la 17px e practic invizibil, în
+   timp ce toată ideea e ca omul să vadă că are ce apăsa. */
+.stars-input--sm svg { width: 17px; height: 17px; stroke: var(--text-faint); stroke-width: 1.4; }
+.stars-input--sm button { padding: 1px; }
+.stars-input--sm button:hover svg { stroke: #f5a623; }
+
+/* ------------- notele din dreptul participanților, la final -------------
+   Apar doar la un eveniment încheiat. Rândul se rupe pe două: omul sus,
+   stelele dedesubt — la un nume lung n-ar fi încăput toate pe un rând, iar
+   stelele îngrămădite la marginea dreaptă se apasă greșit. */
+.person--cu-stele { flex-wrap: wrap; }
+.person__note {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 10px;
+  width: 100%;
+  padding-left: 49px;              /* 38px chipul + 11px spațiul de lângă el */
+}
+.person__stele { display: inline-flex; align-items: center; gap: 8px; }
+
+/* Cine n-a fost pe listă vede stelele, dar stinse și fără să le poată apăsa.
+   Nu ascunse: un rând fără stele, între altele care le au, ar fi părut scăpat
+   din greșeală. Motivul stă în `title`. */
+.person__stele--stinse { opacity: .45; }
+
+/* „Lasă și câteva cuvinte" — apare după ce s-a dat o notă și duce pe profilul
+   omului, drept la formularul de evaluare. */
+.person__parere {
+  font-size: 12.5px; font-weight: 600;
+  color: var(--brand-link);
+  text-decoration: underline; text-underline-offset: 2px;
+}
+.person__parere:hover { color: var(--brand-link-hover); }
+[data-theme="dark"] .person__parere { color: var(--brand); }
+
+/* „Nu s-a prezentat" — numai organizatorul. Palid până la trecerea cu mouse-ul:
+   e o unealtă rar folosită și cu urmări, n-are de ce să strige din fiecare
+   rând. Odată apăsată nu se mai poate lua înapoi, deci rămâne stinsă. */
+.person__absent {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+  font-size: 12px; font-weight: 700;
+  color: var(--text-faint);
+  transition: background-color .18s var(--ease), color .18s var(--ease);
+}
+.person__absent .ico { width: 13px; height: 13px; }
+.person__absent:hover { background: rgba(211, 47, 49, .10); color: #d32f31; }
+.person__absent.is-on,
+.person__absent[disabled] {
+  background: rgba(211, 47, 49, .10);
+  color: #d32f31;
+  cursor: default;
+}
+[data-theme="dark"] .person__absent:hover,
+[data-theme="dark"] .person__absent.is-on { background: rgba(255, 138, 134, .12); color: #ff8a86; }
+
+/* ------------------------ evaluările de pe profil ----------------------
+   Anonime: în locul chipului și al numelui stă evenimentul după care s-a dat
+   nota — de acolo i se trage greutatea. De aceea rândul n-are avatar, iar
+   `.comment__body` rămâne fără prima coloană. */
+.evaluare .comment__body { gap: 0; }
+.comment__author--sistem { font-size: 13.5px; font-weight: 700; color: var(--text-soft); }
+.evaluare__eveniment { color: var(--text-faint); }
+.evaluare__eveniment:hover { color: var(--brand); }
+
+/* Însemnarea organizatorului nu e o părere, e un fapt. O dungă în stânga o
+   deosebește de notele anonime din jur, fără să strige. */
+.evaluare--automata {
+  padding-left: 14px;
+  border-left: 3px solid rgba(211, 47, 49, .35);
+}
+[data-theme="dark"] .evaluare--automata { border-left-color: rgba(255, 138, 134, .35); }
+
+.feedback__gol, .feedback__nota {
+  padding: 18px 0;
+  font-size: 14.5px;
+  color: var(--text-faint);
+}
+.feedback__gol { text-align: center; }
+
+/* „După <evenimentul X>" — de unde vine dreptul de a da nota asta. */
+.review-form__unde { font-size: 13px; color: var(--text-faint); margin-bottom: 8px; }
+.review-form__unde a { color: var(--brand-link); font-weight: 600; }
+
 /* --------------------------- 22. ACTIVITATE ----------------------------- */
 .stats {
   display: grid;
