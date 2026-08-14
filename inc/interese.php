@@ -523,6 +523,36 @@ function candSAInscris(array $om, string $stare): string
 }
 
 /**
+ * Stelele de lângă un participant, la un eveniment încheiat.
+ *
+ * Cinci butoane pe care se apasă, sau cinci stele doar de privit — după cum
+ * are omul dreptul să noteze. Desenul îl face main.js, din `data-stele-input`
+ * și `data-stars`: aici se scriu doar starea și motivul.
+ *
+ * `data-nota` e nota deja dată, ca stelele să se aprindă la încărcarea paginii.
+ */
+function randeazaSteleParticipant(int $evaluatId, int $nota, string $blocaj, string $permalink): string
+{
+    /**
+     * Cine n-are dreptul să noteze vede stelele stinse, cu motivul în `title`.
+     * Nu ascunse: sunt tot atâtea rânduri, iar unul fără stele ar fi părut
+     * scăpat din greșeală.
+     */
+    if ($blocaj !== '') {
+        return '<div class="person__stele person__stele--stinse" title="' . h($blocaj) . '">'
+             . '<div class="rating__stars rating__stars--sm" data-stars="' . $nota . '"></div>'
+             . '</div>';
+    }
+
+    return '<div class="person__stele" data-stele-participant="' . $evaluatId . '"'
+         . ' data-permalink="' . h($permalink) . '"'
+         . ' data-nota="' . $nota . '">'
+         . '<div class="stars-input stars-input--sm" data-stele-input'
+         . ' data-chosen="' . ($nota > 0 ? $nota : '') . '"></div>'
+         . '</div>';
+}
+
+/**
  * Un rând de listă: un chip, un nume, de când e acolo.
  *
  * Același rând pentru amândouă taburile. Se deosebesc prin două lucruri, și
@@ -534,8 +564,13 @@ function candSAInscris(array $om, string $stare): string
  * atributul ăsta. Fără el ar trebui numărate pozițiile — iar pozițiile se
  * schimbă la fiecare om scos.
  */
-function randeazaOm(array $om, string $stare, int $organizatorId, bool $poateScoate): string
-{
+function randeazaOm(
+    array $om,
+    string $stare,
+    int $organizatorId,
+    bool $poateScoate,
+    ?array $evaluare = null
+): string {
     $id           = (int) $om['id'];
     $eOrganizator = $id === $organizatorId;
     $nume         = h(numeAfisat((string) $om['nume'], (string) $om['prenume']));
@@ -579,7 +614,58 @@ function randeazaOm(array $om, string $stare, int $organizatorId, bool $poateSco
           . '</svg></button>'
         : '';
 
-    return '<li class="person" data-participant="' . $id . '">'
+    /* ----------------------------- stelele ---------------------------- */
+
+    /**
+     * Numai la un eveniment încheiat, și numai pe lista de participanți: nota
+     * se dă pentru cum a fost omul acolo, iar cine s-a arătat doar interesat
+     * n-a fost nicăieri.
+     *
+     * $evaluare vine gata socotită din event.php — cine poate nota, ce note a
+     * dat deja — ca să nu se întrebe baza o dată pentru fiecare rând. Regula
+     * adevărată e în motivBlocajEvaluare(), pe care o cheamă API-ul.
+     */
+    $stele = '';
+
+    if ($evaluare !== null) {
+        $euId  = (int) $evaluare['eu'];
+        $notaLui = (int) ($evaluare['notele_mele'][$id] ?? 0);
+
+        if ($id === $euId) {
+            // Pe tine nu te notezi. Nici stele stinse: n-are ce să însemne.
+            $stele = '';
+        } elseif (!empty($evaluare['pot_nota'])) {
+            $stele = randeazaSteleParticipant($id, $notaLui, '', (string) ($om['permalink'] ?? ''));
+        } else {
+            $stele = randeazaSteleParticipant($id, $notaLui,
+                'Poți nota doar dacă ai fost și tu pe lista de participanți.', '');
+        }
+
+        /**
+         * „Nu s-a prezentat" — numai organizatorul, și niciodată în dreptul lui
+         * însuși. E o însemnare de fapt, nu o părere: pune o stea și un text
+         * scris de noi pe profilul omului.
+         */
+        if (!empty($evaluare['e_organizator']) && $id !== $euId && $id !== $organizatorId) {
+            // Harta vine gata făcută din absentiiInsemnati(), ca să nu fie
+            // nevoie de constantele din inc/evaluari.php aici — altfel cele
+            // două fișiere s-ar fi cerut unul pe altul, în cerc.
+            $absent = !empty($evaluare['absenti'][$id]);
+
+            $stele .= '<button class="person__absent' . ($absent ? ' is-on' : '') . '" type="button"'
+                    . ' data-absent="' . $id . '" data-nume="' . $nume . '"'
+                    . ($absent ? ' disabled' : '')
+                    . ' title="' . ($absent ? 'Însemnat ca neprezentat' : 'Nu s-a prezentat') . '">'
+                    . '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">'
+                    . '<circle cx="12" cy="12" r="9"/><path d="M8.5 8.5 15.5 15.5"/>'
+                    . '</svg>'
+                    . '<span>' . ($absent ? 'Neprezentat' : 'Nu s-a prezentat') . '</span>'
+                    . '</button>';
+        }
+    }
+
+    return '<li class="person' . ($stele !== '' ? ' person--cu-stele' : '') . '"'
+         . ' data-participant="' . $id . '">'
          . '<img class="person__avatar" src="' . h(urlPoza($om['poza'] ?? null, true)) . '" alt=""'
          . ' width="96" height="96" loading="lazy" decoding="async">'
          . '<div class="person__info">'
@@ -588,6 +674,7 @@ function randeazaOm(array $om, string $stare, int $organizatorId, bool $poateSco
          . '</div>'
          . $insigne
          . $buton
+         . ($stele !== '' ? '<div class="person__note">' . $stele . '</div>' : '')
          . '</li>';
 }
 
@@ -602,12 +689,17 @@ function randeazaListaOameni(
     int $evenimentId,
     string $stare,
     int $organizatorId,
-    bool $poateScoate = false
+    bool $poateScoate = false,
+    ?array $evaluare = null
 ): string {
     $html = '';
 
+    // Stelele sunt numai pe lista de participanți: nota se dă pentru cum a fost
+    // omul la eveniment, iar cine s-a arătat doar interesat n-a fost nicăieri.
+    $cuStele = $stare === 'participant' ? $evaluare : null;
+
     foreach (oameniiCuStarea($evenimentId, $stare) as $om) {
-        $html .= randeazaOm($om, $stare, $organizatorId, $poateScoate);
+        $html .= randeazaOm($om, $stare, $organizatorId, $poateScoate, $cuStele);
     }
 
     return $html;
@@ -673,7 +765,7 @@ function vorbaDespreCatiSunt(int $cati, string $stare, bool $incheiat): string
  * altceva când nu e nimeni („Nimeni nu s-a arătat încă interesat") și se
  * așază pe mijloc, nu în stânga. Cine desenează textul spune și cum se așază.
  */
-function raspunsulPanourilor(array $eveniment, bool $poateScoate = false): array
+function raspunsulPanourilor(array $eveniment, bool $poateScoate = false, ?array $evaluare = null): array
 {
     $evenimentId   = (int) $eveniment['id'];
     $organizatorId = (int) $eveniment['membru_id'];
@@ -693,7 +785,8 @@ function raspunsulPanourilor(array $eveniment, bool $poateScoate = false): array
                 $evenimentId,
                 $stare,
                 $organizatorId,
-                $stare === 'participant' && $poateScoate
+                $stare === 'participant' && $poateScoate,
+                $evaluare
             ),
             'intro' => vorbaDespreCatiSunt($cati, $stare, $incheiat),
             'gol'   => $cati === 0,

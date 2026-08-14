@@ -1942,6 +1942,280 @@
     potriveste();
   });
 
+  /* ----------------------------- NOTELE ---------------------------------
+     Stelele din dreptul fiecărui participant, la un eveniment încheiat, și
+     formularul de evaluare de pe profil.
+
+     Notele sunt anonime: nimic de aici nu spune cine le-a dat. Serverul ține
+     minte, ca să nu se poată nota de zece ori, dar nu scoate niciodată afară.
+  ------------------------------------------------------------------------ */
+
+  /**
+   * Trimite o notă și cheamă `laReusit` cu răspunsul.
+   *
+   * Aceeași cale pentru toate trei faptele — stelele de pe eveniment, textul de
+   * pe profil, „Nu s-a prezentat" — fiindcă toate merg la același API și toate
+   * pot pica la fel: sesiune expirată, eveniment neîncheiat, om care n-a fost
+   * pe listă.
+   */
+  function trimiteNota(trup, buton, campEroare, laReusit) {
+    var doarText    = !!buton && buton.children.length === 0;
+    var textInitial = doarText ? buton.textContent : '';
+
+    if (buton) { buton.disabled = true; }
+    if (doarText) { buton.textContent = 'Se trimite…'; }
+
+    function gata() {
+      if (buton) { buton.disabled = false; }
+      if (doarText) { buton.textContent = textInitial; }
+    }
+
+    fetch('api/evaluare.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify(trup)
+    })
+    .then(citesteRaspuns)
+    .then(function (rez) {
+      gata();
+
+      if (!rez.corp) { toast(mesajRaspunsNeasteptat(rez)); return; }
+      var c = rez.corp;
+
+      if (rez.stare === 401) {
+        toast('Intră în cont ca să dai o notă.');
+        setTimeout(goToLogin, 900);
+        return;
+      }
+
+      if (c.erori && campEroare) {
+        campEroare.textContent = c.erori.text || 'Verifică ce ai scris.';
+        campEroare.hidden = false;
+        return;
+      }
+
+      if (!c.ok) { toast(c.mesaj || 'Nu am putut trimite nota.'); return; }
+
+      if (campEroare) { campEroare.hidden = true; campEroare.textContent = ''; }
+      laReusit(c);
+    })
+    .catch(function () {
+      gata();
+      toast(mesajFaraLegatura());
+    });
+  }
+
+  /* ------------- stelele din dreptul fiecărui participant ------------- */
+
+  document.querySelectorAll('[data-stele-participant]').forEach(function (cutie) {
+    var picker = cutie.querySelector('[data-stele-input]');
+    if (!picker) return;
+
+    var panou = cutie.closest('[data-oameni]');
+    if (!panou) return;
+
+    var id        = cutie.getAttribute('data-stele-participant');
+    var permalink = cutie.getAttribute('data-permalink') || '';
+
+    /**
+     * Selectorul de stele e același cu cel din formularul de pe profil —
+     * `steleInteractive()`, scris o dată mai jos. Aici e doar mai mic și fără
+     * text lângă el: în dreptul unui nume nu încape „4 din 5 — Bun".
+     */
+    steleInteractive(picker, null, function (valoare) {
+      trimiteNota({
+        csrf:   panou.getAttribute('data-csrf') || '',
+        slug:   panou.getAttribute('data-slug') || '',
+        fapta:  'noteaza',
+        membru: id,
+        stele:  valoare
+      }, null, null, function (c) {
+        cutie.setAttribute('data-nota', String(c.stele));
+        aratInvitatia(cutie, permalink, c.stele);
+        toast(c.mesaj || 'Nota ta a fost trimisă.');
+      });
+    });
+
+    // Nota dată data trecută: invitația la scris rămâne la vedere, ca omul să
+    // poată adăuga vorbe și mai târziu, nu doar în clipa apăsării.
+    var nota = parseInt(cutie.getAttribute('data-nota'), 10) || 0;
+    if (nota > 0) aratInvitatia(cutie, permalink, nota);
+  });
+
+  /**
+   * „Lasă și câteva cuvinte" — invitația de sub stele, după ce s-a dat o notă.
+   *
+   * Duce pe profilul omului, drept la formularul de evaluare, cu nota deja
+   * aleasă. Nu deschide o casetă aici: textul se scrie pe profilul cuiva, unde
+   * stă lângă celelalte păreri despre el, nu într-un rând de listă.
+   *
+   * Se deschide în filă nouă: cine tocmai a notat trei oameni nu vrea să
+   * piardă lista de sub degete pentru al patrulea.
+   */
+  function aratInvitatia(cutie, permalink, stele) {
+    if (!permalink) return;
+
+    var link = cutie.querySelector('[data-scrie-parere]');
+
+    if (!link) {
+      link = document.createElement('a');
+      link.className = 'person__parere';
+      link.setAttribute('data-scrie-parere', '');
+      link.target = '_blank';
+      link.rel = 'noopener';
+      link.textContent = 'Lasă și câteva cuvinte';
+      cutie.appendChild(link);
+    }
+
+    var panou = cutie.closest('[data-oameni]');
+    var slug  = panou ? (panou.getAttribute('data-slug') || '') : '';
+
+    link.href = 'profil.php?m=' + encodeURIComponent(permalink)
+              + '&ev=' + encodeURIComponent(slug)
+              + '&stele=' + encodeURIComponent(stele)
+              + '#review-form';
+  }
+
+  /* --------------------- „Nu s-a prezentat" -------------------------- */
+
+  document.querySelectorAll('[data-absent]').forEach(function (buton) {
+    buton.addEventListener('click', function () {
+      var panou = buton.closest('[data-oameni]');
+      if (!panou) return;
+
+      var nume = buton.getAttribute('data-nume') || 'omul ăsta';
+
+      if (!window.confirm('Însemnezi că ' + nume + ' nu s-a prezentat?\n\n'
+            + 'Primește o stea și o notă pe profil. Nu se poate lua înapoi.')) {
+        return;
+      }
+
+      trimiteNota({
+        csrf:   panou.getAttribute('data-csrf') || '',
+        slug:   panou.getAttribute('data-slug') || '',
+        fapta:  'absent',
+        membru: buton.getAttribute('data-absent')
+      }, buton, null, function (c) {
+        buton.classList.add('is-on');
+        buton.disabled = true;
+        buton.title = 'Însemnat ca neprezentat';
+        var eticheta = buton.querySelector('span');
+        if (eticheta) eticheta.textContent = 'Neprezentat';
+
+        // Stelele din dreptul lui arată acum nota pusă automat.
+        var rand = buton.closest('.person');
+        var cutie = rand ? rand.querySelector('[data-stele-participant]') : null;
+        var picker = cutie ? cutie.querySelector('[data-stele-input]') : null;
+        if (picker && picker.setChosen) picker.setChosen(c.stele);
+
+        toast(c.mesaj || 'Am însemnat că nu s-a prezentat.');
+      });
+    });
+  });
+
+  /* ------------- „Vezi mai mult" la evaluările de pe profil ----------- */
+
+  var panouEvaluari = document.querySelector('[data-evaluari]');
+  var potrivesteEvaluarile = function () {};
+
+  if (panouEvaluari) {
+    var listaEvaluari = panouEvaluari.querySelector('[data-lista-evaluari]');
+    var maiMulteEv    = panouEvaluari.querySelector('[data-mai-multe-evaluari]');
+    var maiMulteEvBtn = panouEvaluari.querySelector('[data-mai-multe-evaluari-buton]');
+    var pePaginaEv    = parseInt(panouEvaluari.getAttribute('data-deodata'), 10) || 10;
+    var arataleEv     = pePaginaEv;
+
+    // Aceeași purtare ca la comentarii și la listele din taburi: toate intră în
+    // pagină, butonul doar dă la o parte.
+    potrivesteEvaluarile = function () {
+      if (!listaEvaluari) return;
+
+      var toate = Array.prototype.slice.call(listaEvaluari.querySelectorAll('.evaluare'));
+      var ascunse = 0;
+
+      toate.forEach(function (li, i) {
+        var deAscuns = i >= arataleEv;
+        li.hidden = deAscuns;
+        if (deAscuns) ascunse++;
+      });
+
+      if (maiMulteEv) {
+        maiMulteEv.hidden = ascunse === 0;
+        if (maiMulteEvBtn && ascunse > 0) {
+          maiMulteEvBtn.textContent = 'Vezi mai mult (încă ' + ascunse + ')';
+        }
+      }
+    };
+
+    if (maiMulteEvBtn) {
+      maiMulteEvBtn.addEventListener('click', function () {
+        arataleEv += pePaginaEv;
+        potrivesteEvaluarile();
+      });
+    }
+
+    potrivesteEvaluarile();
+  }
+
+  /* ------------- formularul de evaluare de pe profil ------------------ */
+
+  var formEvaluare = document.querySelector('[data-evaluare-form]');
+
+  if (formEvaluare) {
+    var stelePicker = formEvaluare.querySelector('[data-stars-input]');
+    var textEvaluare = formEvaluare.querySelector('#review-text');
+    var eroareEvaluare = formEvaluare.querySelector('#err-evaluare');
+
+    if (textEvaluare && eroareEvaluare) {
+      textEvaluare.addEventListener('input', function () {
+        eroareEvaluare.hidden = true;
+        eroareEvaluare.textContent = '';
+      });
+    }
+
+    formEvaluare.addEventListener('submit', function (e) {
+      e.preventDefault();
+
+      var stele = stelePicker && stelePicker.getChosen ? stelePicker.getChosen() : 0;
+
+      if (!stele) {
+        eroareEvaluare.textContent = 'Alege câte stele îi dai, de la 1 la 5.';
+        eroareEvaluare.hidden = false;
+        return;
+      }
+
+      trimiteNota({
+        csrf:   formEvaluare.getAttribute('data-csrf') || '',
+        slug:   formEvaluare.getAttribute('data-slug') || '',
+        fapta:  'scrie',
+        membru: formEvaluare.getAttribute('data-membru'),
+        stele:  stele,
+        text:   textEvaluare ? textEvaluare.value : ''
+      }, formEvaluare.querySelector('button[type="submit"]'), eroareEvaluare, function (c) {
+        /**
+         * Rezumatul și lista vin gata desenate de pe server, din aceleași
+         * funcții care scriu pagina la încărcare. Media e o împărțire peste
+         * toate notele omului — nu ceva ce se poate ajusta cu un plus aici.
+         */
+        var rezumat = document.querySelector('[data-rezumat-evaluari]');
+        if (rezumat && typeof c.rezumat === 'string') {
+          rezumat.innerHTML = c.rezumat;
+          deseneazaStele(rezumat);
+        }
+
+        var lista = document.querySelector('[data-lista-evaluari]');
+        if (lista && typeof c.evaluari === 'string') {
+          lista.innerHTML = c.evaluari;
+          deseneazaStele(lista);
+          potrivesteEvaluarile();
+        }
+
+        toast(c.mesaj || 'Evaluarea ta a fost trimisă.');
+      });
+    });
+  }
+
   /* --- Bara de progres a citirii --- */
   var progress = document.querySelector('#read-progress span');
   var postBody = document.querySelector('.post__body');
@@ -2963,10 +3237,23 @@
 
   /* -------------------- 8. STELE ȘI PAGINA DE PROFIL -------------------- */
 
-  var STAR_PATH = 'M12 2.6l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.4 6.2 20.5l1.1-6.5L2.6 9.4l6.5-.9L12 2.6z';
-
+  /**
+   * Conturul stelei stă ÎN funcție, nu într-o variabilă de deasupra.
+   *
+   * A stat o vreme afară, ca `var STAR_PATH`, și a mers cât timp toate stelele
+   * se desenau din secțiunea asta. Când desenatul a ajuns să fie chemat și mai
+   * sus în fișier — stelele din dreptul participanților, la un eveniment
+   * încheiat — variabila era hoistată, deci nu dădea nicio eroare, dar încă
+   * nedefinită: ieșeau `<path d="undefined">`, adică butoane goale, de mărimea
+   * potrivită și cu totul invizibile.
+   *
+   * Aici nu se mai poate întâmpla: o funcție e gata din clipa în care fișierul
+   * e citit, oriunde ar fi chemată din el.
+   */
   function starSvg() {
-    return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="' + STAR_PATH +
+    var contur = 'M12 2.6l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.4 6.2 20.5l1.1-6.5L2.6 9.4l6.5-.9L12 2.6z';
+
+    return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="' + contur +
            '" stroke-linejoin="round"/></svg>';
   }
 
@@ -2981,49 +3268,72 @@
     return (Math.round(value * 10) / 10).toString().replace('.', ',');
   }
 
-  /* --- Stelele de afișare: <div data-stars="4.6" data-stars-count="23"> --- */
-  document.querySelectorAll('[data-stars]').forEach(function (el) {
-    var value = parseFloat(el.getAttribute('data-stars'));
-    if (isNaN(value) || value < 0) value = 0;
-    if (value > 5) value = 5;
+  /**
+   * Desenează stelele de afișare dintr-o bucată de pagină.
+   *
+   * `<div data-stars="4.6" data-stars-count="23">` → cinci stele goale peste
+   * care se suprapun cinci pline, tăiate la procentul notei.
+   *
+   * Primește o rădăcină, ca să poată fi chemată din nou peste ce se aduce de
+   * pe server: lista de evaluări de pe profil se redesenează după fiecare notă
+   * trimisă, iar stelele din ea trebuie desenate încă o dată.
+   */
+  function deseneazaStele(radacina) {
+    (radacina || document).querySelectorAll('[data-stars]').forEach(function (el) {
+      var value = parseFloat(el.getAttribute('data-stars'));
+      if (isNaN(value) || value < 0) value = 0;
+      if (value > 5) value = 5;
 
-    var count = parseInt(el.getAttribute('data-stars-count'), 10);
-    var hasCount = !isNaN(count);
+      var count = parseInt(el.getAttribute('data-stars-count'), 10);
+      var hasCount = !isNaN(count);
 
-    el.classList.add('stars');
-    el.innerHTML = starRow('stars__row--empty') + starRow('stars__row--full');
-    el.querySelector('.stars__row--full').style.width = (value / 5 * 100) + '%';
+      el.classList.add('stars');
+      el.innerHTML = starRow('stars__row--empty') + starRow('stars__row--full');
+      el.querySelector('.stars__row--full').style.width = (value / 5 * 100) + '%';
 
-    el.setAttribute('role', 'img');
-    el.setAttribute('aria-label', value > 0
-      ? roNumber(value) + ' din 5 stele' + (hasCount ? ', din ' + count + ' evaluări' : '')
-      : 'Fără rating');
+      el.setAttribute('role', 'img');
+      el.setAttribute('aria-label', value > 0
+        ? roNumber(value) + ' din 5 stele' + (hasCount ? ', din ' + count + ' evaluări' : '')
+        : 'Fără rating');
 
-    // Textul de lângă stele, dacă pagina a pregătit un loc pentru el.
-    var box = el.closest('.rating');
-    if (!box) return;
+      // Textul de lângă stele, dacă pagina a pregătit un loc pentru el.
+      var box = el.closest('.rating');
+      if (!box) return;
 
-    var label = box.querySelector('[data-stars-label]');
-    var score = box.querySelector('[data-stars-value]');
+      var label = box.querySelector('[data-stars-label]');
+      var score = box.querySelector('[data-stars-value]');
 
-    if (value > 0) {
-      box.classList.remove('is-empty');
-      if (score) score.textContent = roNumber(value);
-      if (label) label.textContent = hasCount
-        ? (count === 1 ? 'dintr-o evaluare' : 'din ' + count + ' evaluări')
-        : '';
-    } else {
-      // fără nicio notă primită: stele goale și un text explicit
-      box.classList.add('is-empty');
-      if (label) label.textContent = 'Fără rating';
-    }
-  });
+      if (value > 0) {
+        box.classList.remove('is-empty');
+        if (score) score.textContent = roNumber(value);
+        if (label) label.textContent = hasCount
+          ? (count === 1 ? 'dintr-o evaluare' : 'din ' + count + ' evaluări')
+          : '';
+      } else {
+        // fără nicio notă primită: stele goale și un text explicit
+        box.classList.add('is-empty');
+        if (label) label.textContent = 'Fără rating';
+      }
+    });
+  }
 
-  /* --- Selectorul de stele din formularul de evaluare --- */
-  document.querySelectorAll('[data-stars-input]').forEach(function (el) {
-    var chosen = 0;
+  deseneazaStele(document);
+
+  /**
+   * Selectorul de stele: cinci butoane pe care se apasă.
+   *
+   * Scris o dată, folosit în două locuri foarte diferite — formularul mare de
+   * pe profil (cu „4 din 5 — Bun" lângă el) și stelele mici din dreptul
+   * fiecărui participant, la un eveniment încheiat. Ce le deosebește sunt
+   * exact cele două lucruri primite ca argument: unde se scrie nota aleasă și
+   * ce se întâmplă la apăsare.
+   *
+   * `data-chosen` de pe element e nota deja dată: stelele se aprind de la
+   * început, ca omul să nu creadă că a pierdut-o.
+   */
+  function steleInteractive(el, output, laAlegere) {
     var names = ['', 'Foarte slab', 'Slab', 'Acceptabil', 'Bun', 'Foarte bun'];
-    var output = document.getElementById(el.getAttribute('aria-describedby') || 'review-chosen');
+    var chosen = parseInt(el.getAttribute('data-chosen'), 10) || 0;
     var buttons = [];
 
     el.setAttribute('role', 'radiogroup');
@@ -3033,25 +3343,26 @@
       buttons.forEach(function (b, i) { b.classList.toggle('is-on', i < upTo); });
     }
 
+    function scrie(value) {
+      if (output) {
+        output.textContent = value > 0 ? value + ' din 5 — ' + names[value] : 'Nicio notă aleasă';
+      }
+    }
+
     for (var i = 1; i <= 5; i++) {
       (function (value) {
         var b = document.createElement('button');
         b.type = 'button';
         b.innerHTML = starSvg();
         b.setAttribute('role', 'radio');
-        b.setAttribute('aria-checked', 'false');
+        b.setAttribute('aria-checked', String(value === chosen));
         b.setAttribute('aria-label', value + (value === 1 ? ' stea' : ' stele'));
 
         b.addEventListener('mouseenter', function () { paint(value); });
         b.addEventListener('focus', function () { paint(value); });
         b.addEventListener('click', function () {
-          chosen = value;
-          el.setAttribute('data-chosen', String(value));
-          buttons.forEach(function (other, i) {
-            other.setAttribute('aria-checked', String(i + 1 === value));
-          });
-          paint(value);
-          if (output) output.textContent = value + ' din 5 — ' + names[value];
+          el.setChosen(value);
+          if (laAlegere) laAlegere(value);
         });
 
         el.appendChild(b);
@@ -3066,47 +3377,27 @@
     });
 
     el.getChosen = function () { return chosen; };
-    el.reset = function () {
-      chosen = 0;
-      el.removeAttribute('data-chosen');
-      buttons.forEach(function (b) { b.setAttribute('aria-checked', 'false'); });
-      paint(0);
-      if (output) output.textContent = 'Nicio notă aleasă';
+
+    el.setChosen = function (value) {
+      chosen = value;
+      el.setAttribute('data-chosen', String(value));
+      buttons.forEach(function (b, i) { b.setAttribute('aria-checked', String(i + 1 === value)); });
+      paint(value);
+      scrie(value);
     };
-  });
 
-  /* --- Trimiterea unei evaluări --- */
-  var reviewForm = document.getElementById('review-form');
+    el.reset = function () { el.setChosen(0); el.removeAttribute('data-chosen'); };
 
-  if (reviewForm) {
-    var starsInput = document.getElementById('review-stars');
-    var reviewText = document.getElementById('review-text');
-
-    reviewForm.addEventListener('submit', function (e) {
-      e.preventDefault();
-
-      if (!isLoggedIn()) {
-        toast('Intră în cont ca să lași o evaluare.');
-        setTimeout(goToLogin, 900);
-        return;
-      }
-      if (!starsInput || !starsInput.getChosen()) {
-        toast('Alege mai întâi o notă, de la 1 la 5 stele.');
-        return;
-      }
-      if (!reviewText.value.trim()) {
-        toast('Scrie și câteva cuvinte despre cum a fost.');
-        reviewText.focus();
-        return;
-      }
-
-      // TODO: trimite nota și comentariul către server, apoi recalculează media.
-      reviewText.value = '';
-      starsInput.reset();
-      toast('Evaluarea ta a fost trimisă.');
-    });
+    paint(chosen);
+    return el;
   }
 
+  // Selectorul mare, din formularul de evaluare de pe profil. Cel mic, din
+  // dreptul fiecărui participant, se leagă în blocul „NOTELE" — acolo apăsarea
+  // trimite pe loc, fără buton de trimitere.
+  document.querySelectorAll('[data-stars-input]').forEach(function (el) {
+    steleInteractive(el, document.getElementById(el.getAttribute('aria-describedby') || 'review-chosen'));
+  });
 
   /* ------------------- 8.5. DECUPATORUL (mutat + mărit) ------------------ */
   /*

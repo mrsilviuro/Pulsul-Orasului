@@ -44,6 +44,10 @@ const COMENTARIU_MAX = 2000;
 const MOTIV_EXCLUDERE_MIN = 15;   // caractere — vezi verificaMotivExcludere()
 const MOTIV_EXCLUDERE_MAX = 1000;
 
+/* Evaluările dintre participanți */
+const EVALUARE_TEXT_MIN = 10;     // caractere — vezi verificaTextEvaluare()
+const EVALUARE_TEXT_MAX = 1500;
+
 /**
  * Aduce diacriticele românești la forma corectă (virgulă dedesubt).
  *
@@ -800,6 +804,63 @@ function verificaMotivExcludere($cerut): array
     }
 
     return ['eroare' => '', 'text' => $motiv];
+}
+
+/**
+ * Vorbele de sub o notă, dacă omul a scris vreuna.
+ *
+ * Textul e OPȚIONAL: nota se poate da și dintr-o apăsare pe stele, de pe pagina
+ * evenimentului. De aceea gol înseamnă „doar stele", nu greșeală — funcția
+ * întoarce text gol fără eroare, iar cine o cheamă știe să nu-l scrie.
+ *
+ * Dacă totuși scrie ceva, îi cerem zece caractere: „ok" pus sub o notă de o
+ * stea nu ajută pe nimeni, nici pe cel care o primește, nici pe cine îi citește
+ * profilul peste o lună.
+ */
+function verificaTextEvaluare($cerut): array
+{
+    $text = curataTextPeRanduri(is_string($cerut) ? $cerut : '');
+
+    if ($text === '') {
+        return ['eroare' => '', 'text' => ''];
+    }
+
+    $cate = mb_strlen($text, 'UTF-8');
+
+    if ($cate < EVALUARE_TEXT_MIN) {
+        return [
+            'eroare' => 'Ori scrii ceva de înțeles (cel puțin ' . EVALUARE_TEXT_MIN
+                      . ' caractere), ori lași caseta goală și dai doar stele.',
+            'text'   => '',
+        ];
+    }
+
+    if ($cate > EVALUARE_TEXT_MAX) {
+        return [
+            'eroare' => 'E prea lung (cel mult ' . EVALUARE_TEXT_MAX . ' de caractere).',
+            'text'   => '',
+        ];
+    }
+
+    return ['eroare' => '', 'text' => $text];
+}
+
+/**
+ * Un număr de stele venit de la browser: 1…5, sau 0 dacă nu e bun.
+ *
+ * Zero nu e o notă — înseamnă „n-a ales nimic" — deci cine cheamă funcția
+ * oprește cererea când primește zero. Se verifică aici, într-un loc, fiindcă
+ * întrebarea vine din două pagini: de pe evenimentul încheiat și de pe profil.
+ */
+function stelePrimite($cerut): int
+{
+    if (!is_numeric($cerut)) {
+        return 0;
+    }
+
+    $stele = (int) $cerut;
+
+    return ($stele >= 1 && $stele <= 5) ? $stele : 0;
 }
 
 /**

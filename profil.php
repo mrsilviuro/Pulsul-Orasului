@@ -4,6 +4,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/inc/auth.php';
 require_once __DIR__ . '/inc/imagini.php';
 require_once __DIR__ . '/inc/evenimente.php';
+require_once __DIR__ . '/inc/evaluari.php';
 
 /**
  * Al cui e profilul.
@@ -66,6 +67,60 @@ $membruDin  = $p ? lunaSiAnul($p['creat_la'] ?? null) : 'mai 2024';
  * Cine are două prenume („Ana Maria") e strigat pe primul, ca între oameni.
  */
 $prenumeScurt = $p ? explode(' ', trim((string) $p['prenume']))[0] : 'Ionuț';
+
+/* --------------------------- Evaluările ------------------------------- */
+
+/**
+ * Notele primite: media, distribuția, și lista întreagă.
+ *
+ * Erau până acum scrise de mână în pagină — 4,6 din 23, cu o distribuție
+ * inventată și un formular care nu trimitea nimic nicăieri. Acum vin din bază.
+ */
+$rezumatProfil  = $p ? rezumatEvaluari((int) $p['id']) : ['medie' => 0.0, 'cate' => 0, 'distributie' => []];
+$evaluariProfil = $p ? evaluarilePrimite((int) $p['id']) : [];
+
+/**
+ * Poate omul care se uită să dea o notă aici, chiar acum?
+ *
+ * Numai dacă a venit de pe pagina unui eveniment încheiat la care au fost
+ * amândoi — adică numai cu „?ev=<slug>" în adresă. Nota nu se dă de pe un
+ * profil găsit la întâmplare: greutatea ei vine tocmai din seara petrecută
+ * împreună.
+ *
+ * `?stele=` e nota apăsată acolo, pe pagina evenimentului. NU se salvează din
+ * ea nimic — o adresă venită din afară n-are voie să scrie în bază — ci doar se
+ * aprind stelele în casetă. Ce s-a salvat cu adevărat se citește din
+ * evaluareaMea(), iar aceea are ultimul cuvânt.
+ */
+$slugEvaluare  = trim((string) ($_GET['ev'] ?? ''));
+$titluEvaluare = '';
+$potEvalua     = false;
+$stelePuse     = 0;
+$textPus       = '';
+
+if ($p !== null && !$eProfilulMeu && $slugEvaluare !== '') {
+    $evenimentEvaluare = evenimentDupaSlug($slugEvaluare);
+
+    if ($evenimentEvaluare !== null
+        && motivBlocajEvaluare($evenimentEvaluare, (int) $eu['id'], (int) $p['id']) === '') {
+
+        $potEvalua     = true;
+        $titluEvaluare = (string) $evenimentEvaluare['titlu'];
+
+        $deja = evaluareaMea((int) $evenimentEvaluare['id'], (int) $eu['id'], (int) $p['id']);
+
+        if ($deja !== null) {
+            $stelePuse = (int) $deja['stele'];
+            $textPus   = (string) ($deja['text'] ?? '');
+        }
+
+        // Stelele apăsate pe pagina evenimentului, dacă n-a apucat să se
+        // salveze nimic încă. Se trec prin aceeași verificare ca oriunde.
+        if ($stelePuse === 0) {
+            $stelePuse = stelePrimite($_GET['stele'] ?? 0);
+        }
+    }
+}
 
 /* ---------------------- Evenimentele organizate ----------------------- */
 
@@ -199,10 +254,11 @@ require __DIR__ . '/inc/antet.php';
       ============================================================== -->
       <div class="rating">
         <div class="rating__score">
-          <span class="rating__value" data-stars-value>4,6</span>
+          <span class="rating__value" data-stars-value>—</span>
           <span class="rating__max">/ 5</span>
         </div>
-        <div class="rating__stars" data-stars="4.6" data-stars-count="23"></div>
+        <div class="rating__stars" data-stars="<?= h((string) $rezumatProfil['medie']) ?>"
+             data-stars-count="<?= (int) $rezumatProfil['cate'] ?>"></div>
         <p class="rating__meta" data-stars-label></p>
       </div>
     </header>
@@ -361,8 +417,18 @@ require __DIR__ . '/inc/antet.php';
 
     </section>
 
-    <!-- =========================== FEEDBACK ============================= -->
-    <section class="feedback" aria-labelledby="feedback-title">
+    <!-- =========================== FEEDBACK =============================
+      Evaluările primite. ANONIME: se vede nota și textul, niciodată cine
+      le-a scris. Altfel nimeni n-ar mai da patru stele cuiva pe care îl
+      reîntâlnește sâmbăta viitoare — iar o notă care se semnează e o notă
+      frumoasă, adică una care nu spune nimic.
+
+      Toate intră în pagină; ascunsul îl face main.js, ca la comentarii și la
+      listele din taburile evenimentului.
+    ============================================================== -->
+    <section class="feedback" aria-labelledby="feedback-title"
+             data-evaluari
+             data-deodata="<?= EVALUARI_DEODATA ?>">
 
       <div class="section-head">
         <div>
@@ -371,132 +437,72 @@ require __DIR__ . '/inc/antet.php';
         </div>
       </div>
 
-      <!-- Rezumatul notelor -->
-      <div class="rating-summary">
-        <div class="rating-summary__score">
-          <span class="rating-summary__value">4,6</span>
-          <div class="rating__stars" data-stars="4.6"></div>
-          <span class="rating-summary__count">23 de evaluări</span>
-        </div>
-
-        <!--
-          Distribuția pe stele. data-percent se calculează pe server:
-          (număr de note de N stele / total note) × 100.
-        -->
-        <ul class="rating-bars">
-          <li><span>5</span><div class="rating-bar"><i style="width:70%"></i></div><span>16</span></li>
-          <li><span>4</span><div class="rating-bar"><i style="width:22%"></i></div><span>5</span></li>
-          <li><span>3</span><div class="rating-bar"><i style="width:4%"></i></div><span>1</span></li>
-          <li><span>2</span><div class="rating-bar"><i style="width:4%"></i></div><span>1</span></li>
-          <li><span>1</span><div class="rating-bar"><i style="width:0%"></i></div><span>0</span></li>
-        </ul>
+      <!-- Media, câte sunt, barele pe stele — toate din randeazaRezumatEvaluari() -->
+      <div class="rating-summary" data-rezumat-evaluari>
+        <?= randeazaRezumatEvaluari($rezumatProfil) ?>
       </div>
 
-      <!-- Formular: notă + comentariu -->
-      <form class="review-form" id="review-form" novalidate>
+      <?php if ($potEvalua): ?>
+      <!--
+        Formularul apare DOAR când cineva vine aici de pe pagina unui eveniment
+        încheiat la care au fost amândoi — adică cu „?ev=<slug>" în adresă.
+
+        Fără evenimentul acela, nota n-ar avea de ce să se lege: notele nu se
+        dau de pe un profil găsit la întâmplare, ci după o seară petrecută
+        împreună. De aceea nici nu se desenează caseta — un formular care se
+        vede și refuză la apăsare e mai rău decât unul care lipsește.
+      -->
+      <form class="review-form" id="review-form" novalidate
+            data-evaluare-form
+            data-slug="<?= h($slugEvaluare) ?>"
+            data-membru="<?= (int) $p['id'] ?>"
+            data-csrf="<?= h(tokenCsrf()) ?>">
         <img class="comment-form__avatar" src="<?= h(urlPoza($eu['poza'] ?? null, true)) ?>" alt="" width="96" height="96">
 
         <div class="comment-form__main">
+          <p class="review-form__unde">
+            După <a href="<?= h(urlEveniment($slugEvaluare)) ?>"><?= h($titluEvaluare) ?></a>
+          </p>
+
           <div class="review-form__stars">
             <span class="review-form__ask">Ce notă îi dai?</span>
-            <!-- Selectorul de stele se generează din JS, în [data-stars-input]. -->
-            <div class="stars-input" data-stars-input id="review-stars"></div>
-            <span class="review-form__chosen" id="review-chosen">Nicio notă aleasă</span>
+            <!-- Selectorul de stele se generează din JS, în [data-stars-input].
+                 `data-chosen` e nota deja dată — de pe pagina evenimentului sau
+                 de aici, data trecută — ca omul să nu creadă că a pierdut-o. -->
+            <div class="stars-input" data-stars-input id="review-stars"
+                 data-chosen="<?= $stelePuse > 0 ? (int) $stelePuse : '' ?>"></div>
+            <span class="review-form__chosen" id="review-chosen">
+              <?= $stelePuse > 0 ? (int) $stelePuse . ' din 5' : 'Nicio notă aleasă' ?>
+            </span>
           </div>
 
           <label class="sr-only" for="review-text">Comentariul tău</label>
-          <textarea id="review-text" rows="3" placeholder="Spune pe scurt cum a fost…"></textarea>
+          <textarea id="review-text" rows="3" maxlength="<?= EVALUARE_TEXT_MAX ?>"
+                    placeholder="Spune pe scurt cum a fost…"><?= h($textPus) ?></textarea>
+          <p class="field__error" id="err-evaluare" hidden></p>
 
           <div class="comment-form__actions">
-            <p class="comment-form__hint">Evaluează doar oameni cu care ai fost la un eveniment.</p>
+            <p class="comment-form__hint">Nota e anonimă. Textul e opțional.</p>
             <button class="btn btn--primary btn--sm" type="submit">Trimite evaluarea</button>
           </div>
         </div>
       </form>
+      <?php elseif ($eProfilulMeu): ?>
+      <p class="feedback__nota">
+        Notele vin de la oamenii cu care ai fost la evenimente. Nu se vede cine
+        le-a dat.
+      </p>
+      <?php endif; ?>
 
       <!-- Lista de evaluări primite -->
-      <ul class="comments">
-
-        <li class="comment">
-          <article class="comment__body">
-            <img class="comment__avatar" src="assets/img/avatars/ioana.svg" alt="" width="96" height="96" loading="lazy">
-            <div class="comment__main">
-              <div class="comment__head">
-                <a class="comment__author" href="profil.php">R. Ioana</a>
-                <span class="badge">Organizator</span>
-                <span class="dot" aria-hidden="true"></span>
-                <time datetime="2026-07-28">28 iulie 2026</time>
-              </div>
-              <div class="rating__stars rating__stars--sm" data-stars="5"></div>
-              <p>
-                A organizat cursa de la lac impecabil. A stat până la ultimul participant și
-                a ajutat la strâns. Recomand cu încredere.
-              </p>
-              <div class="comment__tools">
-                <button class="comment__tool" type="button" data-like aria-pressed="false">
-                  <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M7 20V9.5l4.2-6a1.6 1.6 0 0 1 2.9 1.2L13.3 9H19a2 2 0 0 1 2 2.4l-1.4 6.4A2.6 2.6 0 0 1 17 20Z"/>
-                    <path d="M7 9.8H4.2A1.2 1.2 0 0 0 3 11v7.8c0 .7.5 1.2 1.2 1.2H7"/>
-                  </svg>
-                  <span data-like-count>7</span>
-                </button>
-              </div>
-            </div>
-          </article>
-        </li>
-
-        <li class="comment">
-          <article class="comment__body">
-            <img class="comment__avatar" src="assets/img/avatars/mihai.svg" alt="" width="96" height="96" loading="lazy">
-            <div class="comment__main">
-              <div class="comment__head">
-                <a class="comment__author" href="profil.php">C. Mihai</a>
-                <span class="dot" aria-hidden="true"></span>
-                <time datetime="2026-07-15">15 iulie 2026</time>
-              </div>
-              <div class="rating__stars rating__stars--sm" data-stars="4"></div>
-              <p>
-                Om serios, ne-am văzut la două ture cu bicicleta. Singurul minus: a anunțat
-                traseul cam târziu, cu o zi înainte.
-              </p>
-              <div class="comment__tools">
-                <button class="comment__tool" type="button" data-like aria-pressed="false">
-                  <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M7 20V9.5l4.2-6a1.6 1.6 0 0 1 2.9 1.2L13.3 9H19a2 2 0 0 1 2 2.4l-1.4 6.4A2.6 2.6 0 0 1 17 20Z"/>
-                    <path d="M7 9.8H4.2A1.2 1.2 0 0 0 3 11v7.8c0 .7.5 1.2 1.2 1.2H7"/>
-                  </svg>
-                  <span data-like-count>3</span>
-                </button>
-              </div>
-            </div>
-          </article>
-        </li>
-
-        <li class="comment">
-          <article class="comment__body">
-            <img class="comment__avatar" src="assets/img/avatars/elena.svg" alt="" width="96" height="96" loading="lazy">
-            <div class="comment__main">
-              <div class="comment__head">
-                <span class="comment__author comment__author--system">Sistem</span>
-                <span class="badge badge--author">Automat</span>
-                <span class="dot" aria-hidden="true"></span>
-                <time datetime="2026-07-01">1 iulie 2026</time>
-              </div>
-              <div class="rating__stars rating__stars--sm" data-stars="5"></div>
-              <p>
-                Notă acordată automat: zece evenimente organizate fără nicio anulare.
-              </p>
-            </div>
-          </article>
-        </li>
-
+      <ul class="comments" data-lista-evaluari>
+        <?= randeazaEvaluari($evaluariProfil) ?>
       </ul>
 
-      <div class="load-more">
-        <button class="btn btn--ghost" type="button">Vezi toate cele 23 de evaluări</button>
+      <div class="load-more" data-mai-multe-evaluari hidden>
+        <button class="btn btn--ghost" type="button" data-mai-multe-evaluari-buton>Vezi mai mult</button>
       </div>
     </section>
-
   </div>
 </main>
 <?php require __DIR__ . '/inc/subsol.php'; ?>

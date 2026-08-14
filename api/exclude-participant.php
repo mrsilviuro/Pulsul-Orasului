@@ -96,6 +96,21 @@ if (!evenimentPublicat($eveniment)) {
     ], 409);
 }
 
+/**
+ * După ce a început, lista nu se mai atinge.
+ *
+ * Nici de organizator, nici de staff. De aici încolo lista e istoria
+ * evenimentului: cine a fost trecut pe ea a fost, iar dacă n-a venit, unealta
+ * potrivită e „Nu s-a prezentat" — care lasă urmă pe profilul omului — nu
+ * ștergerea lui din poveste.
+ */
+if (evenimentAInceput($eveniment)) {
+    raspunsJson([
+        'ok'    => false,
+        'mesaj' => 'Evenimentul a început, lista nu se mai schimbă.',
+    ], 409);
+}
+
 /* ========================= 3. Pe cine scoate ======================== */
 
 $tintaId = (int) ($date['membru'] ?? 0);

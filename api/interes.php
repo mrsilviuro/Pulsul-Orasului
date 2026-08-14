@@ -86,20 +86,27 @@ if (!evenimentPublicat($eveniment)) {
 }
 
 /**
- * Ce s-a încheiat nu se mai schimbă.
+ * Ce a început nu se mai schimbă.
+ *
+ * Regula pornea până acum abia la încheiere, dar între început și încheiere e
+ * chiar evenimentul — tocmai răstimpul în care o retragere n-ar mai însemna
+ * nimic, fiindcă omul e (sau nu e) deja acolo. Iar cine se șterge de pe listă
+ * în timpul evenimentului ar scăpa de „Nu s-a prezentat".
+ *
+ * Nici retragerea nu se mai poate. Listele unui eveniment care a început sunt
+ * istoria lui: cine a fost pe ele a fost, iar organizatorul care se uită peste
+ * ele trebuie să vadă ce a fost, nu ce a mai rămas.
  *
  * În pagină butoanele sunt deja stinse, dar asta e o purtare frumoasă, nu o
- * regulă: cererea poate veni de oriunde, iar o filă deschisă alaltăieri, pe
- * când evenimentul era încă în față, arată butoanele vii.
- *
- * Nici retragerea nu se mai poate. Listele de la un eveniment trecut sunt
- * istorie: cine a fost pe ele a fost, iar organizatorul care se uită peste ele
- * a doua zi trebuie să vadă ce a fost, nu ce a mai rămas.
+ * regulă: cererea poate veni de oriunde, iar o filă deschisă azi-dimineață,
+ * pe când evenimentul era încă în față, arată butoanele vii.
  */
-if (evenimentIncheiat($eveniment)) {
+if (evenimentAInceput($eveniment)) {
     raspunsJson([
         'ok'    => false,
-        'mesaj' => 'Evenimentul s-a încheiat.',
+        'mesaj' => evenimentIncheiat($eveniment)
+            ? 'Evenimentul s-a încheiat.'
+            : 'Evenimentul a început, lista nu se mai schimbă.',
     ], 409);
 }
 

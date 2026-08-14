@@ -124,6 +124,9 @@ inc/
                       vine, numărătoarea, locurile, rândul cu chipuri, listele
                       din taburi (aceeași funcție pentru amândouă) ȘI
                       scoaterea cuiva de pe cea de participanți
+  evaluari.php      → notele dintre participanți, după eveniment: cine poate
+                      nota, media și distribuția de pe profil, „Nu s-a
+                      prezentat". ANONIME — evaluator_id nu iese niciodată
   comentarii.php    → discuția de sub eveniment: cele două niveluri,
                       aprecierile, ștergerea cu piatră de mormânt, ȘI cum
                       arată pe ecran (HTML-ul se scrie doar aici)
@@ -144,10 +147,11 @@ sql/                → schema.sql + migrări numerotate (002, 003, 004, 005-goo
                       009-evenimente, 010-limita-evenimente,
                       011-anulare-eveniment, 012-oras-eveniment,
                       013-interese-evenimente, 014-incheiere-eveniment,
-                      015-comentarii, 016-excluderi-evenimente)
+                      015-comentarii, 016-excluderi-evenimente, 017-evaluari)
 teste/              → test-validare.php (verificările din inc/validare.php)
-                      test-comentarii.php, test-participanti.php
-                      (amândouă cer baza de date, nu și serverul)
+                      test-comentarii.php, test-participanti.php,
+                      test-evaluari.php
+                      (toate trei cer baza de date, nu și serverul)
                       test-tine-minte.php, test-setari.php, test-contact.php,
                       test-evenimente.php
                       (ultimele patru cer serverul pornit — vezi antetul lor)
@@ -222,6 +226,10 @@ assets/css/style.css, assets/js/main.js, assets/img/
 - Comentariile: nu există raportare și nici pagină de moderare. Staff-ul umblă
   la ele de pe pagina evenimentului, ca oricare autor
 - Evenimentele la care merge cineva nu apar pe profilul lui
+- Notele nu se pot retrage și nici raporta. Cine a primit o stea pe nedrept nu
+  are cui să spună — nu există pagină de moderare a evaluărilor
+- `evenimente.varsta_minima` nu se verifică la înscriere: coloana există, dar
+  nimeni nu se uită la ea (spre deosebire de `gen_participanti`, care se ține)
 - Paginile de categorie (slugurile sunt în tabelul `categorii`)
 - Imaginile implicite de categorie (`categorii.imagine_default`) — coloana
   există, fișierele nu; se urcă de mână, nu prin `inc/imagini.php`

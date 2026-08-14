@@ -13,6 +13,7 @@ require_once __DIR__ . '/inc/evenimente.php';
 require_once __DIR__ . '/inc/afisare-eveniment.php';
 require_once __DIR__ . '/inc/interese.php';
 require_once __DIR__ . '/inc/comentarii.php';
+require_once __DIR__ . '/inc/evaluari.php';
 
 $slug = trim((string) ($_GET['slug'] ?? ''));
 
@@ -72,6 +73,22 @@ $eAnulat        = $eveniment['stare_moderare'] === 'anulat';
 $eIncheiat = evenimentIncheiat($eveniment);
 
 /**
+ * A început deja.
+ *
+ * De aici încolo listele îngheață: nimeni nu mai intră, nimeni nu mai iese, iar
+ * organizatorul nu mai poate scoate pe nimeni. Până acum regula pornea abia la
+ * încheiere, dar între început și încheiere e chiar evenimentul — tocmai
+ * răstimpul în care o retragere n-ar mai însemna nimic, fiindcă omul e (sau nu
+ * e) deja acolo. Iar cine se șterge de pe listă în timpul evenimentului scapă
+ * de „Nu s-a prezentat".
+ *
+ * Un eveniment încheiat a început, dinadins: încheierea manuală se poate face
+ * numai după ce a început (vezi $poateIncheia), iar cea de la sine, după ce
+ * i-a trecut ziua.
+ */
+$aInceput = evenimentAInceput($eveniment);
+
+/**
  * Poate organizatorul să-l încheie chiar acum?
  *
  * Doar după ce a început — ziua ȘI ora. Un eveniment care nu s-a petrecut încă
@@ -115,7 +132,7 @@ $imiCereTelefon = $eLogat && !$eOrganizatorul && telefonulMembrului($membruId) =
  * Aici se hotărăște doar dacă se DESENEAZĂ butoanele. Regula adevărată e în
  * api/exclude-participant.php, care întreabă din nou tot ce se întreabă aici.
  */
-$poateScoateParticipanti = ($eOrganizatorul || $eStaff) && $ePublicat && !$eIncheiat;
+$poateScoateParticipanti = ($eOrganizatorul || $eStaff) && $ePublicat && !$aInceput;
 
 /**
  * De ce nu se poate înscrie omul care se uită — dacă nu se poate.
@@ -132,6 +149,40 @@ $poateScoateParticipanti = ($eOrganizatorul || $eStaff) && $ePublicat && !$eInch
 $blocajParticipare = $stareaMea === 'participant'
     ? ''
     : motivBlocajParticipare($eveniment, $membru);
+
+/**
+ * Listele se închid când începe evenimentul, nu când se încheie.
+ *
+ * Amândouă butoanele se sting — și cel de retragere. Numerele rămân de citit,
+ * dar lista e de-acum istoria evenimentului, nu o socoteală deschisă. Oprirea
+ * adevărată e în api/interes.php, prin aceeași evenimentAInceput().
+ */
+$listeInghetate = $aInceput;
+
+/* --------------------------- Notele de la final ----------------------- */
+
+/**
+ * Stelele din dreptul fiecărui participant, la un eveniment încheiat.
+ *
+ * Se socotește O DATĂ, aici, pentru toată lista: cine poate nota, ce note a dat
+ * deja, pe cine a însemnat ca neprezentat. Întrebate rând cu rând, ar fi fost
+ * treizeci de cereri cu același răspuns.
+ *
+ * `null` cât evenimentul n-a trecut: atunci nu se desenează nicio stea, iar
+ * randeazaOm() nu are ce să caute în el.
+ */
+$contextEvaluare = null;
+
+if ($eIncheiat && $ePublicat) {
+    $contextEvaluare = [
+        'eu'            => $membruId,
+        'slug'          => (string) $eveniment['slug'],
+        'pot_nota'      => potNotaLaEveniment($eveniment, $membruId),
+        'e_organizator' => $eOrganizatorul,
+        'notele_mele'   => noteleMeleLaEveniment($evenimentId, $membruId),
+        'absenti'       => $eOrganizatorul ? absentiiInsemnati($evenimentId, $membruId) : [],
+    ];
+}
 
 /* ------------------------------ Discuția ------------------------------ */
 
@@ -459,7 +510,7 @@ require __DIR__ . '/inc/antet.php';
           <button class="rsvp__btn rsvp__btn--interested" type="button"
                   id="btn-interested" data-rsvp="interesat"
                   aria-pressed="<?= $stareaMea === 'interesat' ? 'true' : 'false' ?>"
-                  <?= $eIncheiat ? 'disabled' : '' ?>>
+                  <?= $listeInghetate ? 'disabled' : '' ?>>
             <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
               <path d="m12 3.8 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.5 10l5.9-.9L12 3.8Z"/>
             </svg>
@@ -487,7 +538,7 @@ require __DIR__ . '/inc/antet.php';
                   id="btn-going" data-rsvp="participant"
                   aria-pressed="<?= $stareaMea === 'participant' ? 'true' : 'false' ?>"
                   <?= $blocajParticipare !== '' ? 'title="' . h($blocajParticipare) . '"' : '' ?>
-                  <?= ($eIncheiat || $blocajParticipare !== '' || (!$maiSuntLocuri && $stareaMea !== 'participant')) ? 'disabled' : '' ?>>
+                  <?= ($listeInghetate || $blocajParticipare !== '' || (!$maiSuntLocuri && $stareaMea !== 'participant')) ? 'disabled' : '' ?>>
             <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
               <circle cx="12" cy="12" r="9"/><path d="m8.2 12.3 2.6 2.6 5-5.2"/>
             </svg>
@@ -496,7 +547,7 @@ require __DIR__ . '/inc/antet.php';
           </button>
         </div>
 
-        <?php if ($blocajParticipare !== '' && !$eIncheiat): ?>
+        <?php if ($blocajParticipare !== '' && !$listeInghetate): ?>
         <!--
           Un buton stins fără nicio vorbă lasă omul să creadă că s-a stricat
           ceva. Motivul se scrie sub el, o singură dată — `title` de pe buton e
@@ -588,7 +639,7 @@ require __DIR__ . '/inc/antet.php';
             <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
               <path d="m12 3.8 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.5 10l5.9-.9L12 3.8Z"/>
             </svg>
-            <span>Interesați</span>
+            <span><?= $eIncheiat ? 'Au fost interesați' : 'Interesați' ?></span>
             <span class="tab__count" data-count-for="interesat"><?= (int) $numarInterese['interesat'] ?></span>
           </button>
 
@@ -597,7 +648,7 @@ require __DIR__ . '/inc/antet.php';
             <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
               <circle cx="12" cy="12" r="9"/><path d="m8.2 12.3 2.6 2.6 5-5.2"/>
             </svg>
-            <span>Participă</span>
+            <span><?= $eIncheiat ? 'Au participat' : 'Participă' ?></span>
             <span class="tab__count" data-count-for="participant"><?= (int) $numarInterese['participant'] ?></span>
           </button>
         </div>
@@ -734,14 +785,14 @@ require __DIR__ . '/inc/antet.php';
              data-stare="participant"
              data-slug="<?= h((string) $eveniment['slug']) ?>"
              data-deodata="<?= OAMENI_DEODATA ?>"
-             <?= $poateScoateParticipanti ? 'data-csrf="' . h(tokenCsrf()) . '"' : '' ?>>
+             <?= ($poateScoateParticipanti || $contextEvaluare !== null) ? 'data-csrf="' . h(tokenCsrf()) . '"' : '' ?>>
 
           <p class="panel__intro<?= $numarInterese['participant'] === 0 ? ' panel__intro--gol' : '' ?>">
             <?= vorbaDespreCatiSunt((int) $numarInterese['participant'], 'participant', $eIncheiat) ?>
           </p>
 
           <ul class="people" data-lista-oameni>
-            <?= randeazaListaOameni($evenimentId, 'participant', (int) $eveniment['membru_id'], $poateScoateParticipanti) ?>
+            <?= randeazaListaOameni($evenimentId, 'participant', (int) $eveniment['membru_id'], $poateScoateParticipanti, $contextEvaluare) ?>
           </ul>
 
           <div class="load-more" data-mai-multi hidden>

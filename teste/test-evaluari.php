@@ -1,0 +1,285 @@
+<?php
+declare(strict_types=1);
+
+/**
+ * PulsulOrasului.Ro — notele dintre participanți.
+ *
+ * Cere BAZA DE DATE, nu și serverul: se cheamă direct funcțiile din
+ * inc/evaluari.php, fără să treacă prin api/evaluare.php.
+ *
+ * Cum se rulează:
+ *     php teste/test-evaluari.php
+ */
+
+require_once __DIR__ . '/../inc/evaluari.php';
+
+$treceri = 0; $picaturi = 0;
+
+function verifica(string $ce, $asteptat, $primit): void
+{
+    global $treceri, $picaturi;
+    $ok = $asteptat === $primit;
+    $ok ? $treceri++ : $picaturi++;
+    printf("%-58s %s%s\n", $ce, $ok ? 'OK' : 'PICAT',
+        $ok ? '' : "  (aștept " . var_export($asteptat, true) . ", am primit " . var_export($primit, true) . ")");
+}
+
+/* ========================= oamenii de probă ========================== */
+
+function faMembru(string $cheie, string $nume, string $prenume): int
+{
+    db()->prepare(
+        'INSERT INTO membri (permalink, nume, prenume, email, sex, data_nasterii,
+                             parola_hash, stare, este_staff, creat_la, actualizat_la)
+         VALUES (?,?,?,?,\'M\',\'1990-01-01\',\'x\',\'activ\',0,?,?)'
+    )->execute(['tsteva-' . $cheie, $nume, $prenume,
+                'test-evaluari-' . $cheie . '@invalid.local', acum(), acum()]);
+
+    return (int) db()->lastInsertId();
+}
+
+/**
+ * Un eveniment cu ziua în trecut sau în viitor, după cum are nevoie testul.
+ *
+ * `evenimentIncheiat()` se uită la ziua evenimentului, nu la o coloană: de aia
+ * ajunge să punem data înapoi ca să avem un eveniment terminat.
+ */
+function faEveniment(string $slug, int $organizator, string $cand): array
+{
+    db()->prepare(
+        'INSERT INTO evenimente (membru_id, categorie_id, titlu, slug, descriere, oras,
+                                 locatie, data_eveniment, ora_inceput, stare_moderare,
+                                 creat_la, actualizat_la)
+         VALUES (?, (SELECT MIN(id) FROM categorii), ?, ?, ?, \'Roman\', \'Centru\',
+                 ?, \'18:00:00\', \'aprobat\', ?, ?)'
+    )->execute([
+        $organizator, 'Eveniment ' . $slug, $slug, str_repeat('Text de probă. ', 30),
+        date('Y-m-d', strtotime($cand)), acum(), acum(),
+    ]);
+
+    return evenimentDupaSlug($slug);
+}
+
+function curata(): void
+{
+    db()->prepare('DELETE e FROM evenimente e JOIN membri m ON m.id = e.membru_id
+                    WHERE m.permalink LIKE ?')->execute(['tsteva-%']);
+    db()->prepare('DELETE FROM membri WHERE permalink LIKE ?')->execute(['tsteva-%']);
+}
+
+curata();
+
+$organizator = faMembru('org', 'Rusu',    'Ioana');
+$ana         = faMembru('ana', 'Neagu',   'Elena');
+$vlad        = faMembru('vld', 'Solomon', 'Vlad');
+$strain      = faMembru('str', 'Popa',    'Dan');
+
+$trecut = faEveniment('tsteva-trecut', $organizator, '-3 days');
+$viitor = faEveniment('tsteva-viitor', $organizator, '+9 days');
+
+foreach ([$trecut, $viitor] as $ev) {
+    faOrganizatorulParticipant((int) $ev['id'], $organizator);
+    salveazaInteres((int) $ev['id'], $ana, 'participant');
+    salveazaInteres((int) $ev['id'], $vlad, 'participant');
+    salveazaInteres((int) $ev['id'], $strain, 'interesat');
+}
+
+$trecutId = (int) $trecut['id'];
+
+/* ====================== 1. CINE POATE SĂ NOTEZE ===================== */
+
+echo "=== CINE POATE SĂ NOTEZE ===\n";
+
+verifica('doi participanți, după eveniment', '',
+    motivBlocajEvaluare($trecut, $ana, $vlad));
+
+verifica('nu pe tine însuți', 'Nu te poți nota pe tine.',
+    motivBlocajEvaluare($trecut, $ana, $ana));
+
+verifica('vizitatorul fără cont', 'Intră în cont ca să dai o notă.',
+    motivBlocajEvaluare($trecut, 0, $vlad));
+
+// În timpul evenimentului nimeni n-are ce nota: părerea se face la sfârșit.
+verifica('înainte de eveniment, nimeni', 'Notele se dau după ce se încheie evenimentul.',
+    motivBlocajEvaluare($viitor, $ana, $vlad));
+
+verifica('cine s-a arătat doar interesat nu notează',
+    'Poți nota doar dacă ai fost și tu pe lista de participanți.',
+    motivBlocajEvaluare($trecut, $strain, $ana));
+
+verifica('și nici nu poate fi notat',
+    'Omul ăsta n-a fost pe lista de participanți.',
+    motivBlocajEvaluare($trecut, $ana, $strain));
+
+// Scurtătura folosită de pagină, care întreabă o dată pentru toată lista.
+verifica('scurtătura spune la fel, pentru participant', true,
+    potNotaLaEveniment($trecut, $ana));
+verifica('pentru cel doar interesat, nu', false, potNotaLaEveniment($trecut, $strain));
+verifica('și nici înainte de eveniment', false, potNotaLaEveniment($viitor, $ana));
+
+/* ========================= 2. NOTELE ============================== */
+
+echo "\n=== NOTELE ===\n";
+
+salveazaEvaluare($trecutId, $vlad, $ana, 4);
+
+$nota = evaluareaMea($trecutId, $ana, $vlad);
+verifica('nota s-a scris', 4, (int) $nota['stele']);
+verifica('fără vorbe, deocamdată', null, $nota['text']);
+verifica('și nu e automată', 0, (int) $nota['automat']);
+
+// A doua trecere rescrie același rând: regula o ține indexul unic.
+salveazaEvaluare($trecutId, $vlad, $ana, 5, 'Om de nădejde, a ajutat la strâns.');
+
+$q = db()->prepare('SELECT COUNT(*) FROM evaluari WHERE eveniment_id = ? AND evaluat_id = ? AND evaluator_id = ?');
+$q->execute([$trecutId, $vlad, $ana]);
+verifica('tot un singur rând', 1, (int) $q->fetchColumn());
+
+$nota = evaluareaMea($trecutId, $ana, $vlad);
+verifica('stelele s-au schimbat', 5, (int) $nota['stele']);
+verifica('și au apărut vorbele', 'Om de nădejde, a ajutat la strâns.', $nota['text']);
+
+/**
+ * Miezul: cine schimbă stelele de pe pagina evenimentului NU-și șterge cu asta
+ * textul scris pe profil. N-are de unde să știe că ar face-o.
+ */
+salveazaEvaluare($trecutId, $vlad, $ana, 3);
+$nota = evaluareaMea($trecutId, $ana, $vlad);
+
+verifica('stelele iar s-au schimbat', 3, (int) $nota['stele']);
+verifica('dar textul a rămas', 'Om de nădejde, a ajutat la strâns.', $nota['text']);
+
+// Notele mele de la evenimentul ăsta, pentru toată lista dintr-o cerere.
+salveazaEvaluare($trecutId, $organizator, $ana, 5);
+$notele = noteleMeleLaEveniment($trecutId, $ana);
+
+verifica('două note date', 2, count($notele));
+verifica('a lui Vlad', 3, $notele[$vlad] ?? 0);
+verifica('a organizatoarei', 5, $notele[$organizator] ?? 0);
+verifica('cine n-a notat nimic', [], noteleMeleLaEveniment($trecutId, $vlad));
+
+/* ======================== 3. MEDIA DE PE PROFIL ==================== */
+
+echo "\n=== MEDIA DE PE PROFIL ===\n";
+
+$gol = rezumatEvaluari($strain);
+verifica('fără note, media e zero', 0.0, $gol['medie']);
+verifica('și numărul la fel', 0, $gol['cate']);
+verifica('dar cele cinci trepte există', [5, 4, 3, 2, 1], array_keys($gol['distributie']));
+
+salveazaEvaluare($trecutId, $vlad, $organizator, 5);
+
+$r = rezumatEvaluari($vlad);
+verifica('două note: 3 și 5', 2, $r['cate']);
+verifica('media e 4', 4.0, $r['medie']);
+verifica('câte una pe fiecare treaptă', 1, $r['distributie'][5]);
+verifica('și una la trei', 1, $r['distributie'][3]);
+verifica('restul, zero', 0, $r['distributie'][4]);
+
+// Media se rotunjește la o zecimală, ca să încapă lângă stele.
+salveazaEvaluare($trecutId, $vlad, $vlad === $ana ? $strain : $strain, 4);
+verifica('trei note: 3, 5, 4 → media 4', 4.0, rezumatEvaluari($vlad)['medie']);
+
+/* ==================== 4. „NU S-A PREZENTAT" ======================== */
+
+echo "\n=== NU S-A PREZENTAT ===\n";
+
+salveazaEvaluare($trecutId, $ana, $organizator, EVALUARE_ABSENT_STELE, EVALUARE_ABSENT_TEXT, true);
+
+$nota = evaluareaMea($trecutId, $organizator, $ana);
+verifica('o stea', 1, (int) $nota['stele']);
+verifica('însemnată ca automată', 1, (int) $nota['automat']);
+verifica('cu textul scris de noi', EVALUARE_ABSENT_TEXT, $nota['text']);
+
+$absenti = absentiiInsemnati($trecutId, $organizator);
+verifica('organizatorul o vede în harta lui', true, isset($absenti[$ana]));
+verifica('dar nu și notele lui obișnuite', false, isset($absenti[$vlad]));
+verifica('altcineva nu are ce vedea', [], absentiiInsemnati($trecutId, $ana));
+
+/* ===================== 5. CUM ARATĂ PE ECRAN ====================== */
+
+echo "\n=== CUM ARATĂ PE ECRAN ===\n";
+
+$lista = evaluarilePrimite($vlad);
+
+verifica('trei evaluări primite', 3, count($lista));
+verifica('vin cu evenimentul de care atârnă', 'Eveniment tsteva-trecut',
+    $lista[0]['eveniment_titlu']);
+
+/**
+ * ANONIME. Nici măcar id-ul celui care a dat nota nu se citește din bază: ce
+ * nu se citește nu poate ajunge din greșeală în pagină.
+ */
+verifica('nimic despre cine a dat nota', false, isset($lista[0]['evaluator_id']));
+
+$html = randeazaEvaluari($lista);
+
+verifica('scrie că e anonimă', true, str_contains($html, 'Evaluare anonimă'));
+verifica('fără chipuri', false, str_contains($html, 'comment__avatar'));
+verifica('cu legătură spre eveniment', true, str_contains($html, 'evaluare__eveniment'));
+
+$htmlAbsent = randeazaEvaluari(evaluarilePrimite($ana));
+verifica('însemnarea automată se deosebește', true,
+    str_contains($htmlAbsent, 'evaluare--automata'));
+verifica('și spune de la cine vine', true,
+    str_contains($htmlAbsent, 'Însemnare de la organizator'));
+
+/* --------------------------- rezumatul ---------------------------- */
+
+$rezumat = randeazaRezumatEvaluari(rezumatEvaluari($vlad));
+
+verifica('media, scrisă cu virgulă', true, str_contains($rezumat, '>4,0<'));
+verifica('și numărul de evaluări', true, str_contains($rezumat, '3 evaluări'));
+// „rating-bar" e și începutul lui „rating-bars", numele listei: se numără
+// barele întregi, cu tot cu ghilimeaua de la coadă.
+verifica('cu cele cinci bare', 5, substr_count($rezumat, '"rating-bar"'));
+
+verifica('fără note, se spune pe față', true,
+    str_contains(randeazaRezumatEvaluari(rezumatEvaluari($strain)), 'Nicio evaluare încă'));
+
+/* --------------------------- stelele ------------------------------ */
+
+$stele = randeazaSteleParticipant($vlad, 3, '', 'tsteva-vld');
+
+verifica('stele pe care se poate apăsa', true, str_contains($stele, 'data-stele-input'));
+verifica('cu nota deja dată aprinsă', true, str_contains($stele, 'data-nota="3"'));
+verifica('și cu permalinkul, pentru invitația la scris', true,
+    str_contains($stele, 'data-permalink="tsteva-vld"'));
+
+$stinse = randeazaSteleParticipant($vlad, 0, 'Poți nota doar dacă ai fost și tu pe listă.', '');
+verifica('cine n-are dreptul le vede stinse', true, str_contains($stinse, 'person__stele--stinse'));
+verifica('fără nimic de apăsat', false, str_contains($stinse, 'data-stele-input'));
+verifica('dar cu motivul la vedere', true, str_contains($stinse, 'title="Poți nota'));
+
+/* =========================== 6. NUMERELE ========================== */
+
+echo "\n=== NUMĂRUL DE STELE PRIMIT DE LA BROWSER ===\n";
+
+verifica('trei stele', 3, stelePrimite(3));
+verifica('ca text, tot trei', 3, stelePrimite('3'));
+verifica('zero nu e notă', 0, stelePrimite(0));
+verifica('nici șase', 0, stelePrimite(6));
+verifica('nici minus doi', 0, stelePrimite(-2));
+verifica('nici „patru"', 0, stelePrimite('patru'));
+verifica('nici o listă', 0, stelePrimite([4]));
+
+echo "\n=== TEXTUL DE SUB NOTĂ ===\n";
+
+verifica('gol e în regulă: doar stele', '', verificaTextEvaluare('')['eroare']);
+verifica('și nu întoarce text', '', verificaTextEvaluare('   ')['text']);
+verifica('două cuvinte de înțeles trec', '',
+    verificaTextEvaluare('Om serios, a venit la timp.')['eroare']);
+verifica('„ok" nu ajută pe nimeni', true, verificaTextEvaluare('ok')['eroare'] !== '');
+verifica('prea lung, respins', true,
+    verificaTextEvaluare(str_repeat('a', EVALUARE_TEXT_MAX + 1))['eroare'] !== '');
+
+/* =========================== curățenie ============================= */
+
+curata();
+
+$q = db()->prepare('SELECT COUNT(*) FROM evaluari WHERE eveniment_id = ?');
+$q->execute([$trecutId]);
+verifica('evenimentul șters își ia notele cu el', 0, (int) $q->fetchColumn());
+
+printf("\n%s\nTOTAL: %d trecute, %d picate\n", str_repeat('=', 60), $treceri, $picaturi);
+exit($picaturi > 0 ? 1 : 0);
