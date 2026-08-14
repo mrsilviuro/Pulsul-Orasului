@@ -130,6 +130,10 @@ inc/
                       arată pe profil; doar părerile SCRISE ajung în listă, iar
                       acelea vin semnate. Cine e însemnat neprezentat nu se mai
                       notează de nimeni (esteNeprezentat)
+  multumiri.php     → e-mailul de mulțumire de după eveniment: cine îl
+                      primește, când, și semnul că a plecat o singură dată
+                      (evenimente.multumiri_trimise_la). Îl cheamă doar
+                      cron/multumeste-participantilor.php
   comentarii.php    → discuția de sub eveniment: cele două niveluri,
                       aprecierile, ștergerea cu piatră de mormânt, ȘI cum
                       arată pe ecran (HTML-ul se scrie doar aici)
@@ -145,16 +149,19 @@ inc/
 api/                → endpoint-uri JSON apelate din JS (fetch); eveniment.php e
                       singurul care primește multipart, fiindcă urcă un fișier
 cron/               → scripturi rulate din cron (doar CLI, .htaccess le blochează)
+                      anonimizeaza-conturi.php      — o dată pe zi
+                      multumeste-participantilor.php — din oră în oră
 sql/                → schema.sql + migrări numerotate (002, 003, 004, 005-google,
                       006-tine-minte, 007-setari, 008-mesaje-contact,
                       009-evenimente, 010-limita-evenimente,
                       011-anulare-eveniment, 012-oras-eveniment,
                       013-interese-evenimente, 014-incheiere-eveniment,
-                      015-comentarii, 016-excluderi-evenimente, 017-evaluari)
+                      015-comentarii, 016-excluderi-evenimente, 017-evaluari,
+                      018-multumiri-eveniment)
 teste/              → test-validare.php (verificările din inc/validare.php)
                       test-comentarii.php, test-participanti.php,
-                      test-evaluari.php
-                      (toate trei cer baza de date, nu și serverul)
+                      test-evaluari.php, test-multumiri.php
+                      (toate patru cer baza de date, nu și serverul)
                       test-tine-minte.php, test-setari.php, test-contact.php,
                       test-evenimente.php
                       (ultimele patru cer serverul pornit — vezi antetul lor)
@@ -222,13 +229,16 @@ assets/css/style.css, assets/js/main.js, assets/img/
   înscrieri și comentarii) e o acțiune viitoare de staff — vezi `TODO`-ul din
   `anuleazaEveniment()`
 - Adresele frumoase: acum sunt `profil.php?m=<permalink>` și `event.php?slug=…`
-- Înștiințările: nimeni nu află nimic prin e-mail. Cine primește un răspuns la
+- Înștiințările: aproape nimeni nu află nimic prin e-mail. Pleacă doar
+  mulțumirea de după eveniment (cron/multumeste-participantilor.php) și
+  vestea că cineva a fost scos de pe listă. Cine primește un răspuns la
   comentariu nu vede decât dacă se întoarce singur pe pagină, iar la anularea
   unui eveniment vezi `TODO`-ul din `anuleazaEveniment()` — trebuie trimis
   e-mail cu textul din `motiv_anulare`, ÎNAINTE de ștergerea făcută de staff
 - Comentariile: nu există raportare și nici pagină de moderare. Staff-ul umblă
   la ele de pe pagina evenimentului, ca oricare autor
-- Evenimentele la care merge cineva nu apar pe profilul lui
+- Evenimentele la care merge cineva nu apar pe profilul lui — se vede doar
+  numărul lor, în „Prezent la evenimente" (laCateEvenimenteAFost)
 - Notele nu se pot retrage și nici raporta. Cine a primit o stea pe nedrept nu
   are cui să spună — nu există pagină de moderare a evaluărilor. Nici
   „Nu s-a prezentat" nu se ia înapoi: e definitivă, dinadins, ca organizatorul

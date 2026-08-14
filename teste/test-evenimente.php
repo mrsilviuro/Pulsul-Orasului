@@ -731,8 +731,10 @@ verifica('nu „Ce pui la cale", că nu e al lui', false, str_contains($pagina, 
 verifica('și niciunul în așteptare', 0, $catePe($pagina, 'card--in-asteptare'));
 verifica('titlul unui eveniment în așteptare nu se scurge', false,
     str_contains($pagina, 'Aștept de puțin'));
+// Butonul evenimentelor, nu oricare: pagina are și unul pentru evaluări, care
+// stă mereu în HTML (ascuns) și n-are treabă cu lista de cartonașe.
 verifica('fără buton „Vezi mai mult", că nu e nimic ascuns', false,
-    str_contains($pagina, 'Vezi mai mult'));
+    str_contains($pagina, 'id="evenimente-mai-mult"'));
 
 $pagina = cerere($baza . '/profil.php', $c)['corp'];
 
@@ -1941,25 +1943,38 @@ verifica('care spune limpede ce s-a întâmplat', true,
 verifica('și nu se împrumută din culorile de eroare', false,
     str_contains($paginaTrecut['corp'], 'stare-anunt--respins'));
 
-verifica('butonul „mă interesează" e stins', true,
-    preg_match('/id="btn-interested".*?disabled/s', $paginaTrecut['corp']) === 1);
-verifica('și eticheta lui e la trecut', true,
-    str_contains($paginaTrecut['corp'], '>Cine a fost interesat</span>'));
-verifica('și cel de participare', true,
-    preg_match('/id="btn-going".*?disabled/s', $paginaTrecut['corp']) === 1);
+/**
+ * Caseta „Mergi la acest eveniment?" nu se stinge — pleacă.
+ *
+ * A fost o vreme desenată și la un eveniment trecut, cu butoanele stinse și
+ * etichetele puse la trecut. Dar o casetă mare care întreabă asta deasupra a
+ * ceva ce s-a terminat e o întrebare fără rost în cel mai vizibil loc al
+ * paginii. Cine vrea să vadă cine a fost are taburile de dedesubt.
+ */
+verifica('caseta de participare nu mai există', false,
+    str_contains($paginaTrecut['corp'], 'class="rsvp"'));
+verifica('nici butonul „mă interesează"', false,
+    str_contains($paginaTrecut['corp'], 'id="btn-interested"'));
+verifica('nici cel de participare', false,
+    str_contains($paginaTrecut['corp'], 'id="btn-going"'));
 verifica('caseta de confirmare nici nu se scrie', false,
     str_contains($paginaTrecut['corp'], 'id="rsvp-confirm"'));
-verifica('JS-ul e prevenit prin atribut', true,
-    str_contains($paginaTrecut['corp'], 'data-incheiat="1"'));
 verifica('și nu-l mai cheamă să fie primul interesat', false,
     str_contains($paginaTrecut['corp'], 'Fii primul interesat'));
+
+// Dar taburile rămân, cu etichetele puse la trecut: acolo se vede cine a fost.
+verifica('taburile rămân', true, str_contains($paginaTrecut['corp'], 'id="tab-going"'));
+verifica('cu eticheta la trecut', true,
+    str_contains($paginaTrecut['corp'], '>Au participat</span>'));
+verifica('și cealaltă la fel', true,
+    str_contains($paginaTrecut['corp'], '>Au fost interesați</span>'));
 
 // Numărătoarea rămâne: e istoria evenimentului, nu o invitație.
 salveazaInteres($idTrecut, $idAltul, 'participant');
 $paginaTrecut = cerere($laTrecut, $anonim)['corp'];
 verifica('numărul celor care au fost rămâne afișat', true,
     preg_match('/data-count-for="participant"[^>]*>1</', $paginaTrecut) === 1);
-verifica('și oamenii, la fel', true, str_contains($paginaTrecut, 'facepile'));
+verifica('și oamenii, la fel', true, str_contains($paginaTrecut, 'data-participant='));
 
 /* -------- serverul nu se bazează pe butonul stins din pagină -------- */
 
@@ -2087,19 +2102,22 @@ verifica('pagina rămâne deschisă pentru oricine', 200, $paginaInch['stare']);
 verifica('și se lasă indexată', false, str_contains($paginaInch['corp'], 'name="robots"'));
 verifica('cu banda de încheiat', true,
     str_contains($paginaInch['corp'], 'stare-anunt--incheiat'));
-verifica('butoanele de participare sunt stinse', true,
-    preg_match('/id="btn-going".*?disabled/s', $paginaInch['corp']) === 1);
+verifica('caseta de participare a plecat cu totul', false,
+    str_contains($paginaInch['corp'], 'class="rsvp"'));
+verifica('deci n-are ce mai fi stins', false,
+    str_contains($paginaInch['corp'], 'id="btn-going"'));
 
 /**
- * Și nu mai cer nimic, ci spun ce numără. „Mă interesează 12" sub un anunț
- * trecut sună a invitație la ceva ce nu se mai poate.
+ * Ce rămâne sunt taburile, iar ele nu mai cer nimic: spun ce numără.
+ * „Participă 12" sub un anunț trecut sună a invitație la ceva ce nu se mai
+ * poate.
  */
-verifica('eticheta întâi devine „Cine a fost interesat"', true,
-    str_contains($paginaInch['corp'], '>Cine a fost interesat</span>'));
-verifica('a doua, „Cine a participat"', true,
-    str_contains($paginaInch['corp'], '>Cine a participat</span>'));
-verifica('fără prezent pe butoane', false,
-    str_contains($paginaInch['corp'], '>Mă interesează</span>'));
+verifica('eticheta întâi devine „Au fost interesați"', true,
+    str_contains($paginaInch['corp'], '>Au fost interesați</span>'));
+verifica('a doua, „Au participat"', true,
+    str_contains($paginaInch['corp'], '>Au participat</span>'));
+verifica('fără prezent pe taburi', false,
+    str_contains($paginaInch['corp'], '>Participă</span>'));
 verifica('iar butonul de încheiere a dispărut', false,
     str_contains(cerere($laInch, $c)['corp'], 'id="ev-incheie"'));
 
@@ -2135,18 +2153,28 @@ verifica('nu se mai poate apăsa „mă interesează"', false,
 verifica('cu mesajul de încheiere', 'Evenimentul s-a încheiat.',
     apasa($altul, $slugInch, 'interesat')['mesaj'] ?? '');
 
-/* --------------------- textul de sub butoane, la trecut --------------- */
+/* ------------- textul de sub butoane, la un eveniment trecut ---------- */
 
+/**
+ * Nu mai există deloc, fiindcă nu mai există nici butoanele deasupra lui.
+ *
+ * Rândul cu chipuri („X este interesat de acest eveniment") trăiește doar în
+ * caseta „Mergi la acest eveniment?", iar aceea pleacă odată cu ora de
+ * început. A avut o vreme și o formă la trecut; acum n-are cui s-o arate, așa
+ * că nu mai e scrisă nicăieri (vezi randeazaChipuri din inc/interese.php).
+ */
 salveazaInteres($idInch, $idAltul, 'participant');
 $corpInch = cerere($laInch, $anonim)['corp'];
-verifica('un singur om: la trecut', true,
-    preg_match('/a fost interesat(ă)? sau a participat la acest eveniment\./u', $corpInch) === 1);
-verifica('fără prezent', false, str_contains($corpInch, 'este interesat'));
+verifica('nu mai e niciun rând cu chipuri', false, str_contains($corpInch, 'facepile'));
+verifica('nici la prezent', false, str_contains($corpInch, 'este interesat'));
+verifica('nici la trecut', false, str_contains($corpInch, 'a fost interesat sau a participat'));
 
+// Dar omul e tot pe listă, în tabul de dedesubt: numai vorba a plecat.
 salveazaInteres($idInch, $idOrg, 'interesat');
 $corpInch = cerere($laInch, $anonim)['corp'];
-verifica('doi oameni: tot la trecut', true,
-    str_contains($corpInch, 'au fost interesați sau au participat la acest eveniment.'));
+verifica('oamenii se văd în taburi', true, str_contains($corpInch, 'data-participant='));
+verifica('cu numărul lor pe tab', true,
+    preg_match('/data-count-for="interesat"[^>]*>1</', $corpInch) === 1);
 
 // …iar la unul încă activ, prezentul rămâne neatins.
 $idViitor = pune($idOrg, 'Care încă urmează', 'aprobat', 20);

@@ -1181,7 +1181,18 @@ main { padding-block: 46px 64px; }
 }
 .tab.is-active .tab__count { background: var(--brand-soft); color: var(--brand); }
 
-.panel { padding-top: 26px; }
+/* `scroll-margin-top` spune unde se oprește pagina când se sare la un panou
+   din adresă (#panel-going, din e-mailul de mulțumire): sub antetul lipit de
+   sus ȘI sub rândul de taburi, care are 41px. Fără el, capul listei ajunge
+   exact sub antet, iar taburile rămân deasupra ecranului — omul vede o listă
+   de oameni și niciun semn din care să înțeleagă pe care tab a nimerit.
+
+   Regula stă aici, nu în JS, fiindcă browserul încearcă și el să sară singur
+   la elementul din adresă: așa se opresc amândoi în același loc. */
+.panel {
+  padding-top: 26px;
+  scroll-margin-top: calc(var(--header-h) + 58px);
+}
 .panel:focus { outline: none; }
 .panel__intro { color: var(--text-soft); font-size: 14.5px; margin-bottom: 18px; }
 
@@ -2437,6 +2448,11 @@ body { overscroll-behavior-y: none; }
   color: var(--text-faint);
 }
 .feedback__gol { text-align: center; }
+
+/* Lămurirea stă lipită de barele de deasupra, fiindcă despre ele vorbește: e
+   subsolul cifrelor, nu un paragraf de sine stătător. De aceea sus se strânge
+   la jumătate, iar jos rămâne aer înainte de lista de păreri. */
+.feedback__nota { padding: 10px 0 20px; }
 
 /* „După <evenimentul X>" — de unde vine dreptul de a da nota asta. */
 .review-form__unde { font-size: 13px; color: var(--text-faint); margin-bottom: 8px; }

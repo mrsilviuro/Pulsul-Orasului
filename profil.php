@@ -139,6 +139,17 @@ $evenimenteProfil = $p ? evenimenteDePeProfil((int) $p['id'], $eProfilulMeu) : [
  */
 $cateOrganizate = $p ? cateEvenimenteOrganizate((int) $p['id']) : 12;
 
+/**
+ * Celelalte două cifre: la câte evenimente a fost, și de câte ori n-a ajuns.
+ *
+ * Se exclud una pe alta, dinadins — vezi laCateEvenimenteAFost(). Un eveniment
+ * la care omul a confirmat, dar organizatorul a însemnat că n-a venit, iese
+ * din prima și intră în a doua. Altfel cele două s-ar bate cap în cap, iar
+ * cine le citește n-ar ști care e adevărul.
+ */
+$cateParticipari = $p ? laCateEvenimenteAFost((int) $p['id'])     : 0;
+$cateAbsente     = $p ? laCateEvenimenteNuAVenit((int) $p['id'])  : 0;
+
 /** Câte se văd din prima. Restul intră în pagină, dar ascunse. */
 const EVENIMENTE_VIZIBILE = 4;
 
@@ -282,7 +293,7 @@ require __DIR__ . '/inc/antet.php';
             <circle cx="12" cy="12" r="9"/><path d="m8.2 12.3 2.6 2.6 5-5.2"/>
           </svg>
         </span>
-        <span class="stat__value">47</span>
+        <span class="stat__value"><?= (int) $cateParticipari ?></span>
         <span class="stat__label">Prezent la evenimente</span>
       </div>
 
@@ -292,7 +303,7 @@ require __DIR__ . '/inc/antet.php';
             <circle cx="12" cy="12" r="9"/><path d="m9 9 6 6M15 9l-6 6"/>
           </svg>
         </span>
-        <span class="stat__value">3</span>
+        <span class="stat__value"><?= (int) $cateAbsente ?></span>
         <span class="stat__label">A confirmat, dar nu a venit</span>
       </div>
     </section>
@@ -442,6 +453,28 @@ require __DIR__ . '/inc/antet.php';
         <?= randeazaRezumatEvaluari($rezumatProfil) ?>
       </div>
 
+      <?php if ($eProfilulMeu && $rezumatProfil['cate'] > 0): ?>
+      <!--
+        Rândul care spune de unde vin cifrele de deasupra — deci stă lipit de
+        ele, nu la capătul de jos al secțiunii.
+
+        Numai ODATĂ CU BARELE. Fără nicio notă, deasupra scrie oricum „Nicio
+        evaluare încă. Notele vin de la oamenii cu care a fost la evenimente."
+        — două rânduri care spun același lucru, unul sub altul, ar fi fost
+        vorbă în plus. Iar anonimatul e ceva de lămurit despre note care
+        există, nu despre note care lipsesc.
+
+        Numai pe profilul propriu, ca înainte: e o lămurire pentru cel care își
+        vede notele și se întreabă de la cine sunt. Pe profilul altcuiva ar fi
+        un rând despre treburile lui, scris pentru un privitor care n-are ce
+        face cu el.
+      -->
+      <p class="feedback__nota">
+        Notele sunt date în mod anonim de oamenii cu care ai participat la
+        evenimente.
+      </p>
+      <?php endif; ?>
+
       <?php if ($potEvalua): ?>
       <!--
         Formularul apare DOAR când cineva vine aici de pe pagina unui eveniment
@@ -487,11 +520,6 @@ require __DIR__ . '/inc/antet.php';
           </div>
         </div>
       </form>
-      <?php elseif ($eProfilulMeu): ?>
-      <p class="feedback__nota">
-        Notele vin de la oamenii cu care ai fost la evenimente. Nu se vede cine
-        le-a dat.
-      </p>
       <?php endif; ?>
 
       <!--
