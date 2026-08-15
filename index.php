@@ -133,15 +133,20 @@ require __DIR__ . '/inc/antet.php';
         </noscript>
       </div>
 
-      <!-- CATEGORIILE, din tabelul `categorii`. Ordinea vine de acolo
-           (`ordine`), nu de aici. -->
+      <!-- CATEGORIILE, din tabelul `categorii` — dar numai cele în care chiar
+           s-a pus ceva. O categorie goală e un buton care duce la un ecran
+           gol: ocupă loc, se apasă o dată și pe urmă nu mai are cine să se
+           încreadă în rândul ăsta. Ordinea vine din tabel (`ordine`).
+
+           În formularul de publicat un eveniment apar TOATE, tocmai ca ele să
+           se poată umple — acolo se cheamă categoriiEvenimente(). -->
       <div class="chips" aria-label="Filtrează după categorie">
         <a class="chip<?= $categorieAleasa === '' ? ' is-active' : '' ?>"
            href="<?= h(adresaFiltrata($orasAles, '')) ?>"
            data-filtru-categorie=""
            <?= $categorieAleasa === '' ? 'aria-current="true"' : '' ?>>Toate</a>
 
-        <?php foreach (categoriiEvenimente() as $categorie): ?>
+        <?php foreach (categoriiCuEvenimente() as $categorie): ?>
         <a class="chip<?= $categorieAleasa === $categorie['slug'] ? ' is-active' : '' ?>"
            href="<?= h(adresaFiltrata($orasAles, (string) $categorie['slug'])) ?>"
            data-filtru-categorie="<?= h((string) $categorie['slug']) ?>"

@@ -221,6 +221,20 @@ $contextComentarii = [
     'nume'           => numeleComentatorilor($randuriComentarii),
 ];
 
+/* --------------------- Ar putea să te intereseze ---------------------- */
+
+/**
+ * Câteva evenimente la întâmplare, pentru coada paginii.
+ *
+ * Numai ce N-A ÎNCEPUT încă, din orice oraș — vezi evenimenteSugerate(). Fără
+ * niciunul, secțiunea nu se scrie deloc: pagina se oprește la comentarii și
+ * sare la subsol. Un titlu cu nimic sub el e mai rău decât lipsa lui.
+ *
+ * Se citește și la un eveniment neaprobat sau anulat, pe care îl vede doar
+ * organizatorul: și acolo capătul paginii poate să ducă undeva.
+ */
+$sugerate = evenimenteSugerate($evenimentId);
+
 /* --------------------------- ce se afișează --------------------------- */
 
 // Coperta, orele, numele organizatorului — toate se pregătesc în
@@ -899,47 +913,36 @@ require __DIR__ . '/inc/antet.php';
       </section>
     </article>
 
-    <!-- ========================= ARTICOLE SIMILARE ======================== -->
+    <?php if ($sugerate !== []): ?>
+    <!-- ======================= AR PUTEA SĂ TE INTERESEZE ==================
+      Câteva evenimente la întâmplare, din orice oraș, dintre cele care N-AU
+      ÎNCEPUT ÎNCĂ. E o invitație, nu o listă: n-are rost să trimiți pe cineva
+      la o seară care se petrece chiar acum — n-are cum să mai ajungă — și cu
+      atât mai puțin la una încheiată.
+
+      Fără niciunul, secțiunea nu se scrie deloc: pagina se oprește la
+      comentarii și sare la subsol. Un titlu cu nimic sub el e mai rău decât
+      lipsa lui.
+
+      Cartonașele sunt cele de peste tot (randeazaCartonasEveniment), fără
+      niciun semn de stare: aici sunt, prin alegere, numai evenimente care
+      urmează.
+    ============================================================== -->
     <section class="related" aria-labelledby="related-title">
       <div class="section-head">
         <h2 class="section-title" id="related-title">Ar putea să te intereseze</h2>
-        <a class="link-more" href="index.php">Toate articolele
+        <a class="link-more" href="index.php">Prima pagină
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15"/><path d="m13 6 6 6-6 6"/></svg>
         </a>
       </div>
 
       <div class="grid">
-        <article class="card">
-          <a class="card__media" href="event.php">
-            <img src="assets/img/posts/post-5.svg" alt="" width="1280" height="720" loading="lazy" decoding="async">
-            <span class="card__tag">Sport</span>
-          </a>
-          <div class="card__body">
-            <h3 class="card__title"><a href="event.php">Prima pistă de ciclism care leagă cele două maluri</a></h3>
-            <div class="card__meta">
-              <time datetime="2026-07-30">30 iul 2026</time>
-              <span class="dot" aria-hidden="true"></span>
-              <span>4 min citire</span>
-            </div>
-          </div>
-        </article>
-
-        <article class="card">
-          <a class="card__media" href="event.php">
-            <img src="assets/img/posts/post-2.svg" alt="" width="1280" height="720" loading="lazy" decoding="async">
-            <span class="card__tag">Cultură</span>
-          </a>
-          <div class="card__body">
-            <h3 class="card__title"><a href="event.php">Trei zile de festival în parcul central, cu intrare liberă</a></h3>
-            <div class="card__meta">
-              <time datetime="2026-08-03">3 aug 2026</time>
-              <span class="dot" aria-hidden="true"></span>
-              <span>3 min citire</span>
-            </div>
-          </div>
-        </article>
+        <?php foreach ($sugerate as $ev): ?>
+        <?= randeazaCartonasEveniment($ev) ?>
+        <?php endforeach; ?>
       </div>
     </section>
+    <?php endif; ?>
 
   </div>
 </main>

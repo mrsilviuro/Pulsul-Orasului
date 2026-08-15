@@ -40,6 +40,38 @@ function idCategoriiValide(): array
     return array_map(static fn(array $c): int => (int) $c['id'], categoriiEvenimente());
 }
 
+/**
+ * Categoriile care au măcar un eveniment public.
+ *
+ * Pentru filtrele de pe prima pagină. O categorie în care n-a pus nimeni nimic
+ * e un buton care duce la un ecran gol: ocupă loc, se apasă o dată și pe urmă
+ * nu mai are cine să se încreadă în rândul acela.
+ *
+ * ÎN TOATĂ BAZA, nu doar în orașul ales. Altfel rândul de chipuri s-ar
+ * rearanja la fiecare schimbare de oraș, iar categoria pe care tocmai ai
+ * apăsat-o ar putea să-ți fugă de sub deget. Așa rămâne așezat, iar „niciun
+ * eveniment pe potriva filtrelor" își păstrează rostul: pentru potriviri care
+ * chiar nu există, nu pentru categorii care nu există.
+ *
+ * Formularul de publicat un eveniment folosește mai departe categoriiEvenimente()
+ * — acolo trebuie să apară TOATE, tocmai ca ele să se poată umple.
+ */
+function categoriiCuEvenimente(): array
+{
+    $q = db()->query(
+        'SELECT c.id, c.nume, c.slug
+           FROM categorii c
+          WHERE EXISTS (
+                  SELECT 1 FROM evenimente e
+                   WHERE e.categorie_id = c.id
+                     AND e.stare_moderare IN (\'aprobat\', \'incheiat\')
+                )
+          ORDER BY c.ordine, c.nume'
+    );
+
+    return $q->fetchAll();
+}
+
 /* ====================== UN EVENIMENT ACTIV ============================ */
 
 /**
@@ -347,10 +379,72 @@ function randeazaListaEvenimente(array $evenimente): string
     $html = '';
 
     foreach ($evenimente as $ev) {
-        $html .= randeazaCartonasEveniment($ev, '', false, !empty($ev['incheiat']));
+        /**
+         * Unde se află evenimentul în timp. Se întreabă cu funcțiile de peste
+         * tot, nu se socotește aici din date: „a început" și „s-a încheiat"
+         * sunt scrise o singură dată pe site, iar aici doar se citesc.
+         *
+         * „Live" e ce a început și încă nu s-a terminat. Nu e o a treia stare
+         * în bază — e o clipă între celelalte două, și se vede numai când
+         * cineva se uită. Ziua în care are loc se termină la miezul nopții,
+         * deci un eveniment de la 18:00 rămâne „Live" toată seara: n-avem ora
+         * de sfârșit ca regulă, iar aceea e cea mai cinstită socoteală.
+         */
+        $incheiat = !empty($ev['incheiat']);
+        $stare    = $incheiat ? 'incheiat' : (evenimentAInceput($ev) ? 'live' : '');
+
+        $html .= randeazaCartonasEveniment($ev, '', false, $stare);
     }
 
     return $html;
+}
+
+/** Câte evenimente se propun la coada paginii unui eveniment. */
+const EVENIMENTE_SUGERATE = 2;
+
+/**
+ * Câteva evenimente la întâmplare, pentru „Ar putea să te intereseze".
+ *
+ * NUMAI CE N-A ÎNCEPUT ÎNCĂ. E o invitație, nu o listă: n-are rost să trimiți
+ * pe cineva la o seară care se petrece chiar acum (n-are cum să mai ajungă) și
+ * cu atât mai puțin la una încheiată. Aici „a început" ține de ceas, cu ora —
+ * nu de ziua care trece, ca la „încheiat".
+ *
+ * DIN ORICE ORAȘ, dinadins. Pe prima pagină omul alege singur unde se uită;
+ * aici e capătul unei pagini pe care a citit-o până la fund, și e locul potrivit
+ * să afle că se petrec lucruri și dincolo de orașul lui.
+ *
+ * La întâmplare, nu „cele mai apropiate": altfel același om, intrând de trei
+ * ori pe site, ar vedea de trei ori aceleași două. RAND() e destul — la câteva
+ * sute de rânduri costă cât o citire, iar dacă lista crește cândva la zeci de
+ * mii, aici se schimbă.
+ *
+ * $fara e evenimentul de pe pagina căruia se face propunerea: n-are rost să te
+ * trimită unde ești deja.
+ */
+function evenimenteSugerate(int $fara = 0, int $cate = EVENIMENTE_SUGERATE): array
+{
+    $acum = acum();
+    $cate = max(1, min($cate, 12));
+
+    $q = db()->prepare(
+        'SELECT e.id, e.titlu, e.slug, e.coperta, e.data_eveniment, e.ora_inceput,
+                e.locatie, e.descriere, e.stare_moderare, e.oras,
+                c.nume AS categorie, c.slug AS categorie_slug, c.imagine_default
+           FROM evenimente e
+           JOIN categorii c ON c.id = e.categorie_id
+          WHERE e.stare_moderare = \'aprobat\'
+            AND e.id <> ?
+            -- N-a început: ziua ȘI ora, ca la evenimentAInceput(). „incheiat"
+            -- nu poate trece de aici, fiindcă starea e cernută mai sus.
+            AND CONCAT(e.data_eveniment, \' \', COALESCE(e.ora_inceput, \'00:00:00\')) > ?
+          ORDER BY RAND()
+          LIMIT ' . $cate
+    );
+
+    $q->execute([$fara, $acum]);
+
+    return $q->fetchAll();
 }
 
 /**
@@ -588,23 +682,30 @@ function urlEveniment(string $slug): string
  * butonul doar dă la o parte, nu cere nimic de la server. (Pe prima pagină nu
  * se folosește: acolo teancurile vin din bază, unul câte unul.)
  *
- * $incheiat îmbracă altfel cartonașul unui eveniment care a trecut: poza se
- * stinge și în colț apare „Încheiat". Nu se ghicește din rând, ci se spune:
- * pe prima pagină e ceva de deosebit între ce urmează și ce a fost, dar în
- * tabul „Istoric" de pe profil totul e încheiat, iar un semn pe fiecare
- * cartonaș ar fi doar zgomot.
+ * $stare îmbracă altfel cartonașul, după unde se află evenimentul în timp:
+ *
+ *   'incheiat' — a trecut: poza se stinge, în colț scrie „Încheiat"
+ *   'live'     — se petrece chiar acum: în colț clipește „Live"
+ *   ''         — nimic, ca la un anunț care abia urmează
+ *
+ * Nu se ghicește din rând, ci se spune. Pe prima pagină e ceva de deosebit
+ * între ce urmează, ce e în toi și ce a fost; în tabul „Istoric" de pe profil
+ * totul e încheiat, iar un semn pe fiecare cartonaș ar fi doar zgomot.
  */
 function randeazaCartonasEveniment(
     array $ev,
     string $insigne = '',
     bool $ascuns = false,
-    bool $incheiat = false
+    string $stare = ''
 ): string {
     $inAsteptare = ($ev['stare_moderare'] ?? '') === 'in_asteptare';
+    $incheiat    = $stare === 'incheiat';
+    $live        = $stare === 'live';
 
     $clase = 'card';
     if ($inAsteptare) { $clase .= ' card--in-asteptare'; }
     if ($incheiat)    { $clase .= ' card--incheiat'; }
+    if ($live)        { $clase .= ' card--live'; }
     if ($ascuns)      { $clase .= ' ascuns'; }
 
     $coperta = urlCoperta($ev['coperta'] ?? null);
@@ -630,19 +731,23 @@ function randeazaCartonasEveniment(
      * se vede doar pe profilul organizatorului, iar acolo nu se pune semnul de
      * încheiat.
      */
-    $stare = '';
+    $semn = '';
 
     if ($inAsteptare) {
-        $stare = '<span class="card__stare">În așteptare de aprobare</span>';
+        $semn = '<span class="card__stare">În așteptare de aprobare</span>';
     } elseif ($incheiat) {
-        $stare = '<span class="card__stare card__stare--incheiat">Încheiat</span>';
+        $semn = '<span class="card__stare card__stare--incheiat">Încheiat</span>';
+    } elseif ($live) {
+        // Punctul care pulsează e același cu cel din „Live din oraș", de sus.
+        $semn = '<span class="card__stare card__stare--live">'
+              . '<span class="pulse-dot" aria-hidden="true"></span>Live</span>';
     }
 
     return '<article class="' . $clase . '">'
          . '<a class="card__media" href="' . $adresa . '">'
          . $poza
          . '<span class="card__tag">' . h((string) ($ev['categorie'] ?? '')) . '</span>'
-         . $stare
+         . $semn
          . $insigne
          . '</a>'
          . '<div class="card__body">'

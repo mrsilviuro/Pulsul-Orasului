@@ -123,11 +123,20 @@ inc/
                       singura care se aduce din bază în teancuri, nu toată
                       deodată), pagina unui eveniment, salvarea ȘI cartonașul
                       unui eveniment (randeazaCartonasEveniment) — un singur
-                      loc pentru cum arată, oriunde ar fi pus. TOT AICI cele
-                      două întrebări de care atârnă ce se poate face pe pagina
-                      unui eveniment: evenimentIncheiat() și
-                      evenimentAInceput() — iar „încheiat" înseamnă ÎNTOTDEAUNA
-                      și „a început", oricât ar arăta ceasul
+                      loc pentru cum arată, oriunde ar fi pus; al patrulea
+                      parametru al lui e starea ('' | 'incheiat' | 'live'),
+                      iar „Live" se citește la fiecare afișare, nu se ține în
+                      bază. TOT AICI cele două întrebări de care atârnă ce se
+                      poate face pe pagina unui eveniment: evenimentIncheiat()
+                      și evenimentAInceput() — iar „încheiat" înseamnă
+                      ÎNTOTDEAUNA și „a început", oricât ar arăta ceasul. TOT
+                      AICI: categoriiCuEvenimente() (doar cele cu cel puțin un
+                      eveniment public — filtrele de pe prima pagină; formularul
+                      de publicare folosește mai departe categoriiEvenimente(),
+                      cu toate, ca o categorie goală să se poată umple) și
+                      evenimenteSugerate() („Ar putea să te intereseze" de pe
+                      pagina unui eveniment: două la întâmplare, doar ce
+                      urmează, fără cel curent, fără oraș)
   interese.php      → „Mergi la acest eveniment?" — cine e interesat, cine
                       vine, numărătoarea, locurile, rândul cu chipuri, listele
                       din taburi (aceeași funcție pentru amândouă) ȘI
