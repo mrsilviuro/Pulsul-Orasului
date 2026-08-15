@@ -2328,6 +2328,13 @@ mult (încă N)" — ca la comentarii și ca la listele din taburi. Fără nicio
 părere scrisă se arată un singur rând: „Prenume nu a primit niciun feedback
 scris."
 
+**Caseta cu bare se arată întotdeauna**, chiar și la un om care n-a primit
+nicio stea. Era până acum un rând de text în locul ei — „Nicio evaluare încă" —
+iar profilul arăta altfel după cum fusese sau nu notat cineva. Barele goale spun
+același lucru, dar spun și CE va apărea acolo: cinci trepte care așteaptă. În
+locul mediei stă o linie, nu „0,0": aceea e o notă, și încă cea mai proastă cu
+putință. Un om care n-a fost notat de nimeni n-a luat zero — n-a luat nimic.
+
 **Steaua stinsă are nevoie de contur, nu de umplutură.** Pe alb, conturul de
 `var(--border)` la 18px e practic invizibil: un „Fără rating" fără nimic sub el,
 și o medie de 2,8 din care nu se înțelege din câte stele. Acum e același contur
@@ -2443,7 +2450,7 @@ vede în pronume: **„L-am scos de pe listă"** pentru el, **„Am scos-o de pe
 listă"** pentru ea. La e-mail e altfel — acolo e pasiv, cu „a fi", care se
 acordă: „Ai fost scoasă" / „Ai fost scos".
 
-Verificările: `php teste/test-evaluari.php` (92 de cazuri, cere baza de date,
+Verificările: `php teste/test-evaluari.php` (96 de cazuri, cere baza de date,
 nu și serverul).
 
 
@@ -2485,6 +2492,29 @@ nu se șterge o seară fiindcă n-a ajuns la ea.
 Fără niciun eveniment: „Prenume nu a mai participat la niciun eveniment.", pe
 mijloc, ca „Niciun comentariu încă" din tabul de alături.
 
+### Poza de profil se mărește
+
+Apeși pe cerc, poza se deschide peste toată pagina. Fișierul de pe server e
+512×512 (`POZA_LATURA`), iar în antetul profilului se vede la 86 px — deci e ce
+arăta, nu o mărire pe degeaba. Peste 512 px nu se întinde: ar fi pixeli
+inventați.
+
+Un `<button>`, nu un `<img>` cu ascultător pus pe el: se ajunge la el cu tabul,
+se apasă cu Enter, iar cititorul de ecran spune ce face. Creionul de schimbare
+a pozei rămâne frate cu butonul, nu copil — un link în interiorul unui buton
+n-ar fi HTML valid.
+
+Se închide din „×", din Escape, sau apăsând oriunde în afara pozei; pe poză nu,
+fiindcă cine apasă pe ea vrea s-o vadă, nu s-o piardă. Cât e deschisă, pagina de
+dedesubt nu se mai plimbă, iar la închidere atenția se întoarce pe cerc — cine
+merge cu tastatura ar rămâne altfel cu atenția pe un element care tocmai s-a
+evaporat.
+
+Fără poză nu se deschide nimic: chipul implicit e un desen, nu un om, și nici
+șablonul casetei nu mai ajunge în pagină. Caseta merge peste orice
+`[data-mareste="<adresa>"]`, deci nu știe nimic despre profil — dacă mâine se
+apasă și pe coperta unui eveniment, tot ea o deschide.
+
 ### Ce s-a refolosit
 
 Trei lucruri, și niciunul n-a fost scris a doua oară:
@@ -2512,7 +2542,7 @@ O grijă mică, dar care s-a mai plătit o dată: `.card` are `display: flex`, c
 bate `hidden`-ul browserului. Fără `.card[hidden] { display: none; }`, butonul
 n-ar ascunde nimic — exact bug-ul avut la `.comment__replies`.
 
-Verificările: `php teste/test-evaluari.php` (92 de cazuri, cere baza de date,
+Verificările: `php teste/test-evaluari.php` (96 de cazuri, cere baza de date,
 nu și serverul).
 
 

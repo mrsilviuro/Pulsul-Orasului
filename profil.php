@@ -194,8 +194,28 @@ require __DIR__ . '/inc/antet.php';
           ci pur și simplu nu ajunge în pagină pentru ceilalți.
         -->
         <div class="profile__poza">
+          <?php if (estePozaValida($pozaProfil)): ?>
+          <!--
+            Cu poză, cercul se poate apăsa: se deschide mărită, cât încape pe
+            ecran. Fișierul de pe server e 512×512 (POZA_LATURA), iar aici se
+            vede la 86 px — deci e ce arăta, nu o mărire pe degeaba.
+
+            Un `<button>`, nu un `<img>` cu ascultător pus pe el: se ajunge la
+            el cu tabul, se apasă cu Enter și cititorul de ecran spune ce face.
+            Creionul rămâne frate cu el, nu copil — un link în interiorul unui
+            buton n-ar fi HTML valid.
+          -->
+          <button class="profile__poza-lupa" type="button"
+                  data-mareste="<?= h(urlPoza($pozaProfil)) ?>"
+                  aria-label="Vezi poza mai mare">
+            <img class="profile__avatar" id="profil-avatar"
+                 src="<?= h(urlPoza($pozaProfil)) ?>" alt="" width="96" height="96">
+          </button>
+          <?php else: ?>
+          <!-- Fără poză, n-are ce se mări: chipul implicit e un desen, nu un om. -->
           <img class="profile__avatar" id="profil-avatar"
                src="<?= h(urlPoza($pozaProfil)) ?>" alt="" width="96" height="96">
+          <?php endif; ?>
 
           <?php if ($eProfilulMeu): ?>
           <a class="profile__poza-edit" href="poza.php"
@@ -456,16 +476,16 @@ require __DIR__ . '/inc/antet.php';
         <?= randeazaRezumatEvaluari($rezumatProfil) ?>
       </div>
 
-      <?php if ($eProfilulMeu && $rezumatProfil['cate'] > 0): ?>
+      <?php if ($eProfilulMeu): ?>
       <!--
         Rândul care spune de unde vin cifrele de deasupra — deci stă lipit de
         ele, nu la capătul de jos al secțiunii.
 
-        Numai ODATĂ CU BARELE. Fără nicio notă, deasupra scrie oricum „Nicio
-        evaluare încă. Notele vin de la oamenii cu care a fost la evenimente."
-        — două rânduri care spun același lucru, unul sub altul, ar fi fost
-        vorbă în plus. Iar anonimatul e ceva de lămurit despre note care
-        există, nu despre note care lipsesc.
+        Odată cu barele, ca înainte — numai că barele se arată acum
+        întotdeauna, așa că și el. La un profil fără nicio notă e chiar mai
+        bine venit: lămurește niște bare goale, adică spune de unde ar veni
+        stelele dacă ar veni. Rândul care spunea asta înainte, în locul
+        casetei, a plecat odată cu ea.
 
         Numai pe profilul propriu, ca înainte: e o lămurire pentru cel care își
         vede notele și se întreabă de la cine sunt. Pe profilul altcuiva ar fi
@@ -578,5 +598,29 @@ require __DIR__ . '/inc/antet.php';
     </div>
     </section>
   </div>
+
+  <?php if (estePozaValida($pozaProfil)): ?>
+  <!-- ============================ POZA MĂRITĂ ==========================
+    Caseta în care se deschide poza de profil, la apăsare pe cerc.
+
+    Șablon, ca la casetele de confirmare de pe pagina evenimentului: HTML-ul
+    se scrie tot în PHP, iar JS-ul doar îl clonează când are nevoie. Se
+    tipărește numai când există o poză — fără ea, n-are cine să-l ceară.
+
+    `alt` rămâne gol dinadins: e chipul omului al cărui nume scrie mare
+    deasupra, nu o poză care spune ceva în plus. Un cititor de ecran ar
+    repeta numele degeaba.
+  ============================================================== -->
+  <template id="sablon-lupa">
+    <div class="lupa" role="dialog" aria-modal="true" aria-label="Poza de profil">
+      <button class="lupa__inchide" type="button" aria-label="Închide">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M6 6l12 12M18 6 6 18"/>
+        </svg>
+      </button>
+      <img class="lupa__poza" src="" alt="" width="512" height="512">
+    </div>
+  </template>
+  <?php endif; ?>
 </main>
 <?php require __DIR__ . '/inc/subsol.php'; ?>

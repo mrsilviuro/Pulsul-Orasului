@@ -2362,6 +2362,74 @@
     });
   }
 
+  /* ----------------------- POZA MĂRITĂ ------------------------------
+     Apeși pe poza de profil, se deschide cât încape pe ecran.
+
+     Merge peste orice `[data-mareste="<adresa pozei>"]`, deci nu știe nimic
+     despre profil: dacă mâine se apasă și pe coperta unui eveniment, tot asta
+     o deschide.
+
+     Caseta vine dintr-un `<template>` din pagină, ca la confirmările de pe
+     pagina evenimentului: HTML-ul se scrie în PHP, aici se clonează. Una
+     singură deodată — a doua apăsare n-are cum să vină, fiindcă prima
+     acoperă tot ecranul.
+  ------------------------------------------------------------------------ */
+
+  var sablonLupa = document.getElementById('sablon-lupa');
+
+  if (sablonLupa) {
+    var lupa = null;
+
+    function inchideLupa() {
+      if (!lupa) return;
+
+      var deschizator = lupa.__deschizator;
+
+      lupa.remove();
+      lupa = null;
+      document.documentElement.classList.remove('cu-lupa');
+
+      // Atenția se întoarce de unde a plecat. Fără rândul ăsta, cine merge cu
+      // tastatura rămâne cu atenția pe un element care tocmai s-a evaporat,
+      // adică nicăieri, și ar lua pagina de la capăt.
+      if (deschizator) deschizator.focus();
+    }
+
+    function deschideLupa(buton) {
+      var adresa = buton.getAttribute('data-mareste');
+      if (!adresa) return;
+
+      inchideLupa();
+
+      lupa = sablonLupa.content.firstElementChild.cloneNode(true);
+      lupa.__deschizator = buton;
+      lupa.querySelector('.lupa__poza').src = adresa;
+
+      document.body.appendChild(lupa);
+
+      // Pagina de dedesubt nu se mai plimbă cât timp poza e peste ea: altfel,
+      // o rotiță de mouse ar muta ce nu se vede oricum.
+      document.documentElement.classList.add('cu-lupa');
+
+      lupa.querySelector('.lupa__inchide').focus();
+
+      // Oriunde în afara pozei închide. Poza însăși nu: cine apasă pe ea vrea
+      // s-o vadă, nu s-o piardă.
+      lupa.addEventListener('click', function (e) {
+        if (!e.target.closest('.lupa__poza')) inchideLupa();
+      });
+    }
+
+    document.addEventListener('click', function (e) {
+      var buton = e.target.closest('[data-mareste]');
+      if (buton) deschideLupa(buton);
+    });
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && lupa) inchideLupa();
+    });
+  }
+
   /* --- Bara de progres a citirii --- */
   var progress = document.querySelector('#read-progress span');
   var postBody = document.querySelector('.post__body');

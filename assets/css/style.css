@@ -1516,6 +1516,63 @@ main { padding-block: 46px 64px; }
 .related { margin-top: 64px; padding-top: 40px; border-top: 1px solid var(--border); }
 .related .section-head { margin-bottom: 22px; }
 
+/* ---------------------------- POZA MĂRITĂ -------------------------------
+   Se deschide peste toată pagina, la apăsare pe poza de profil.
+
+   Peste toast (z-index 300) n-are rost să treacă: cât e poza deschisă nu se
+   apasă nimic care să scoată un mesaj. Sub el, în schimb, ar fi acoperită de
+   un mesaj rămas pe ecran — deci stă exact deasupra.
+   ========================================================================= */
+.profile__poza-lupa {
+  display: block;
+  line-height: 0;
+  border-radius: 50%;
+  cursor: zoom-in;
+  transition: transform .18s var(--ease);
+}
+.profile__poza-lupa:hover { transform: scale(1.03); }
+
+.lupa {
+  position: fixed;
+  inset: 0;
+  z-index: 310;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(8, 10, 14, .86);
+  backdrop-filter: blur(4px);
+  animation: lupa-vine .18s var(--ease);
+  cursor: zoom-out;
+}
+
+/* Cât încape pe ecran, dar nu mai mare decât fișierul: peste 512 px (POZA_LATURA
+   din inc/imagini.php) n-ar mai fi o mărire, ci o întindere cu pixeli inventați. */
+.lupa__poza {
+  width: min(92vw, 92vh, 512px);
+  height: auto;
+  border-radius: var(--radius);
+  box-shadow: 0 24px 60px -12px rgba(0, 0, 0, .7);
+  cursor: default;
+}
+
+.lupa__inchide {
+  position: absolute;
+  top: 16px; right: 16px;
+  width: 40px; height: 40px;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .14);
+  color: #fff;
+  transition: background .18s var(--ease);
+}
+.lupa__inchide:hover { background: rgba(255, 255, 255, .26); }
+.lupa__inchide .ico { width: 20px; height: 20px; }
+
+@keyframes lupa-vine { from { opacity: 0; } to { opacity: 1; } }
+
+/* Pagina de dedesubt nu se mai plimbă cât timp poza e peste ea. */
+html.cu-lupa, html.cu-lupa body { overflow: hidden; }
+
 /* ------------------------------ 12. TOAST ------------------------------- */
 .toast {
   position: fixed;
@@ -2534,6 +2591,15 @@ body { overscroll-behavior-y: none; }
 }
 .rating-summary__value { font-size: 40px; font-weight: 800; letter-spacing: -.03em; line-height: 1; }
 .rating-summary__count { font-size: 12.5px; color: var(--text-faint); }
+
+/* Linia care ține locul mediei, la cine n-a primit nicio stea. Mai mică și mai
+   stinsă decât o notă: la 40px îngroșată, o liniuță ajunge o bară neagră care
+   pare pusă PESTE ceva, nu un loc gol care așteaptă. */
+.rating-summary__value--gol {
+  font-size: 30px;
+  font-weight: 700;
+  color: var(--text-faint);
+}
 
 .rating-bars { flex: 1; min-width: 200px; display: grid; gap: 6px; }
 .rating-bars li {

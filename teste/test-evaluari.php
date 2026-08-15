@@ -276,8 +276,20 @@ verifica('și numărul de evaluări', true, str_contains($rezumat, '3 evaluări'
 // barele întregi, cu tot cu ghilimeaua de la coadă.
 verifica('cu cele cinci bare', 5, substr_count($rezumat, '"rating-bar"'));
 
+/**
+ * Fără nicio notă, caseta rămâne aceeași: cinci bare goale, stele stinse și o
+ * linie în locul mediei. Era până acum un rând de text în locul ei, iar
+ * profilul arăta altfel după cum fusese sau nu notat cineva.
+ */
+$golRezumat = randeazaRezumatEvaluari(rezumatEvaluari($strain));
+
 verifica('fără note, se spune pe față', true,
-    str_contains(randeazaRezumatEvaluari(rezumatEvaluari($strain)), 'Nicio evaluare încă'));
+    str_contains($golRezumat, 'Nicio evaluare încă'));
+verifica('dar barele sunt tot acolo', 5, substr_count($golRezumat, '"rating-bar"'));
+verifica('toate goale', 5, substr_count($golRezumat, 'width:0%'));
+verifica('în locul mediei, o linie', true,
+    str_contains($golRezumat, 'rating-summary__value--gol'));
+verifica('și nu un zero, care ar fi o notă', false, str_contains($golRezumat, '>0,0<'));
 
 /* --------------------------- stelele ------------------------------ */
 
