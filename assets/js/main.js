@@ -1994,7 +1994,9 @@
             setRsvpCount('interesat', c.numar.interesat);
           }
 
-          toast(c.mesaj || 'L-am scos de pe listă.');
+          // Vorba vine de la server, unde se știe dacă e ea sau el. Aici, dacă
+          // lipsește, rămâne una fără gen: mai bine seacă decât greșită.
+          toast(c.mesaj || 'Am scos omul de pe listă.');
         })
         .catch(function () {
           gata();

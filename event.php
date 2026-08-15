@@ -82,9 +82,12 @@ $eIncheiat = evenimentIncheiat($eveniment);
  * e) deja acolo. Iar cine se șterge de pe listă în timpul evenimentului scapă
  * de „Nu s-a prezentat".
  *
- * Un eveniment încheiat a început, dinadins: încheierea manuală se poate face
- * numai după ce a început (vezi $poateIncheia), iar cea de la sine, după ce
- * i-a trecut ziua.
+ * Un eveniment încheiat a început, dinadins — și e scris în cod, nu presupus:
+ * evenimentAInceput() răspunde „da" pentru orice eveniment încheiat, oricât ar
+ * arăta ceasul. Presupunerea de dinainte (butonul se dă doar după început,
+ * deci încheiat vine mereu după) se strica dacă starea se punea de mână, din
+ * phpMyAdmin: ieșea o pagină care spunea „s-a încheiat" și dedesubt întreba,
+ * cu butoane vii, „Mergi la acest eveniment?".
  */
 $aInceput = evenimentAInceput($eveniment);
 

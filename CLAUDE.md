@@ -121,7 +121,11 @@ inc/
   evenimente.php    → categorii, regula „un eveniment activ", lista de pe
                       profil, pagina unui eveniment, salvarea ȘI cartonașul
                       unui eveniment (randeazaCartonasEveniment) — un singur
-                      loc pentru cum arată, oriunde ar fi pus
+                      loc pentru cum arată, oriunde ar fi pus. TOT AICI cele
+                      două întrebări de care atârnă ce se poate face pe pagina
+                      unui eveniment: evenimentIncheiat() și
+                      evenimentAInceput() — iar „încheiat" înseamnă ÎNTOTDEAUNA
+                      și „a început", oricât ar arăta ceasul
   interese.php      → „Mergi la acest eveniment?" — cine e interesat, cine
                       vine, numărătoarea, locurile, rândul cu chipuri, listele
                       din taburi (aceeași funcție pentru amândouă) ȘI

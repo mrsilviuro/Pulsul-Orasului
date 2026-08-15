@@ -100,17 +100,39 @@ function evenimentIncheiat(array $eveniment): bool
 /**
  * A început deja?
  *
- * Ziua ȘI ora, nu doar ziua — spre deosebire de „încheiat", care se socotește
- * pe zile. Aici e nevoie de ceas: un eveniment de azi de la 19:00 n-a început
- * la ora 10 dimineața, iar organizatorul n-are ce încheia dintr-un lucru care
- * nu s-a petrecut încă. Ce vrea el atunci se cheamă anulare, și are butonul
- * lui, cu motiv cu tot.
+ * De ea atârnă tot ce se închide în clipa în care evenimentul pornește: caseta
+ * „Mergi la acest eveniment?", butoanele ei, scoaterea cuiva de pe listă. Deci
+ * răspunsul ei trebuie să fie „da" ori de câte ori evenimentul nu mai e ceva
+ * ce urmează.
+ *
+ * DOUĂ CĂI, și amândouă contează:
+ *
+ *   1. Ceasul: ziua ȘI ora, nu doar ziua — spre deosebire de „încheiat", care
+ *      se socotește pe zile. Un eveniment de azi de la 19:00 n-a început la ora
+ *      10 dimineața.
+ *
+ *   2. Starea: un eveniment ÎNCHEIAT a început, oricât ar arăta ceasul.
+ *
+ * A doua pare de prisos, fiindcă butonul „Încheie evenimentul" se dă doar după
+ * ce a început (vezi $poateIncheia din event.php) — deci, pe drumul obișnuit,
+ * încheiat vine mereu după început. Dar starea se poate schimba și pe alt drum:
+ * de mână, din phpMyAdmin, așa cum se fac multe pe site-ul ăsta. Iar atunci
+ * ieșea o pagină care spunea „Acest eveniment s-a încheiat." și dedesubt
+ * întreba, cu butoane vii, „Mergi la acest eveniment?" — ba mai mult, lăsa
+ * organizatorul să scoată oameni de pe o listă care nu mai era a nimănui.
+ *
+ * Ce e scris ca presupunere într-un comentariu se strică în tăcere; ce e scris
+ * în cod, nu. Aici e scris în cod.
  *
  * Se compară șiruri „AAAA-LL-ZZ HH:MM:SS", care se ordonează la fel ca
  * momentele pe care le scriu. Ceasul e al PHP-ului, ca peste tot.
  */
 function evenimentAInceput(array $eveniment): bool
 {
+    if (evenimentIncheiat($eveniment)) {
+        return true;
+    }
+
     $data = (string) ($eveniment['data_eveniment'] ?? '');
 
     if ($data === '') {

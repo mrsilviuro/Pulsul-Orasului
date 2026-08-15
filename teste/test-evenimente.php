@@ -2054,6 +2054,28 @@ verifica('și unul de ieri', true,
     evenimentAInceput(['data_eveniment' => date('Y-m-d', strtotime('-1 day')),
                        'ora_inceput'    => '23:00:00']));
 
+/**
+ * ȘI UNUL ÎNCHEIAT, oricât ar arăta ceasul.
+ *
+ * Pe drumul obișnuit, încheiat vine mereu după început: butonul se dă doar
+ * după ce a pornit. Dar starea se poate pune și de mână, din phpMyAdmin, așa
+ * cum se fac multe pe site-ul ăsta — iar atunci ieșea o pagină care spunea
+ * „Acest eveniment s-a încheiat." și dedesubt întreba, cu butoane vii, „Mergi
+ * la acest eveniment?", ba mai lăsa organizatorul să scoată oameni de pe o
+ * listă care nu mai era a nimănui.
+ *
+ * Presupunerea scrisă într-un comentariu s-a stricat în tăcere. Acum e scrisă
+ * în cod, și e verificată aici.
+ */
+verifica('unul încheiat a început, deși ziua lui abia vine', true,
+    evenimentAInceput(['data_eveniment'  => date('Y-m-d', strtotime('+5 days')),
+                       'ora_inceput'     => '19:00:00',
+                       'stare_moderare'  => 'incheiat']));
+verifica('dar unul aprobat, la aceeași dată, nu', false,
+    evenimentAInceput(['data_eveniment'  => date('Y-m-d', strtotime('+5 days')),
+                       'ora_inceput'     => '19:00:00',
+                       'stare_moderare'  => 'aprobat']));
+
 // Evenimentul de probă e peste 12 zile, deci nu se poate încheia încă.
 $r = incheie($c, $slugInch);
 verifica('unul care n-a început nu se poate încheia', false, $r['ok'] ?? true);
@@ -2192,6 +2214,99 @@ salveazaInteres($idViitor, $idAltul, 'interesat');
 verifica('la unul activ, prezentul rămâne', true,
     preg_match('/este interesat(ă)? de acest eveniment\./u',
         cerere($baza . '/event.php?slug=' . urlencode($slugul($idViitor)), $anonim)['corp']) === 1);
+
+/* ============ ÎNCHEIAT DE MÂNĂ, CU ZIUA ÎNCĂ ÎN VIITOR ================
+   Starea se poate pune și din phpMyAdmin, nu doar din buton. Atunci ieșea o
+   pagină care spunea „Acest eveniment s-a încheiat." și dedesubt întreba, cu
+   butoane vii, „Mergi la acest eveniment?" — ba mai lăsa organizatorul să
+   scoată oameni de pe o listă care nu mai era a nimănui.
+
+   Se verifică pe toată calea: ce se desenează, și ce refuză serverul.
+   ====================================================================== */
+
+echo "\n=== ÎNCHEIAT DE MÂNĂ, CU ZIUA ÎN VIITOR ===\n";
+
+$idCiudat   = pune($idOrg, 'Încheiat înainte de vreme', 'aprobat', 9);
+$slugCiudat = $slugul($idCiudat);
+$laCiudat   = $baza . '/event.php?slug=' . urlencode($slugCiudat);
+
+salveazaInteres($idCiudat, $idOrg, 'participant');
+salveazaInteres($idCiudat, $idAltul, 'participant');
+
+// Ca în phpMyAdmin: numai coloana, fără să treacă pe la nicio regulă.
+db()->prepare('UPDATE evenimente SET stare_moderare = \'incheiat\' WHERE id = ?')
+    ->execute([$idCiudat]);
+
+$evCiudat = evenimentDupaSlug($slugCiudat);
+
+verifica('e încheiat', true, evenimentIncheiat($evCiudat));
+verifica('deci a și început', true, evenimentAInceput($evCiudat));
+
+$corpCiudat = cerere($laCiudat, $c)['corp'];
+
+verifica('pagina spune că s-a încheiat', true,
+    str_contains($corpCiudat, 'Acest eveniment s-a încheiat.'));
+verifica('fără caseta de participare', false, str_contains($corpCiudat, 'class="rsvp"'));
+verifica('fără butoane', false, str_contains($corpCiudat, 'id="btn-going"'));
+verifica('fără tabul „Interesați"', false, str_contains($corpCiudat, 'id="tab-interested"'));
+verifica('și fără niciun „X" de scoatere', false, str_contains($corpCiudat, 'person__scoate'));
+
+// Serverul refuză și el, nu doar pagina: cererea poate veni de oriunde.
+$r = json_din(cerere($baza . '/api/exclude-participant.php', $c, [
+    'csrf'   => csrf($c),
+    'slug'   => $slugCiudat,
+    'membru' => $idAltul,
+    'motiv'  => 'Un motiv destul de lung ca să treacă de verificare.',
+]));
+
+verifica('serverul refuză scoaterea', false, $r['ok'] ?? true);
+verifica('cu motivul limpede', true, str_contains($r['mesaj'] ?? '', 'a început'));
+verifica('iar omul e tot pe listă', 'participant', stareaDinBaza($idCiudat, $idAltul));
+
+verifica('și înscrierea e refuzată', false, apasa($altul, $slugCiudat, 'interesat')['ok'] ?? true);
+
+/* ============ VORBA DE DUPĂ SCOATERE, DUPĂ OM =========================
+   „L-am scos de pe listă" despre o femeie e o scăpare care se vede din prima,
+   mai ales de cea despre care e vorba. Sexul se citește oricum, ca să i se
+   poată scrie cum trebuie și în e-mail.
+   ====================================================================== */
+
+echo "\n=== VORBA DE DUPĂ SCOATERE ===\n";
+
+$idScos   = pune($idOrg, 'De pe care se scot oameni', 'aprobat', 14);
+$slugScos = $slugul($idScos);
+$motivBun = 'Un motiv destul de lung ca să treacă de verificare.';
+
+$scoate = static function (int $cine) use (&$c, $slugScos, $motivBun): array {
+    return json_din(cerere($GLOBALS['baza'] . '/api/exclude-participant.php', $c, [
+        'csrf'   => csrf($c),
+        'slug'   => $slugScos,
+        'membru' => $cine,
+        'motiv'  => $motivBun,
+    ]));
+};
+
+// El: contul de probă e bărbat.
+salveazaInteres($idScos, $idAltul, 'participant');
+$r = $scoate($idAltul);
+
+verifica('scoaterea merge', true, $r['ok'] ?? false);
+verifica('pentru el, „L-am scos"', true, str_contains($r['mesaj'] ?? '', 'L-am scos'));
+
+// Ea: același om, trecut pe „F" — sexul e singurul lucru care se schimbă.
+db()->prepare('UPDATE membri SET sex = \'F\' WHERE id = ?')->execute([$idAltul]);
+db()->prepare('DELETE FROM excluderi_evenimente WHERE eveniment_id = ?')->execute([$idScos]);
+salveazaInteres($idScos, $idAltul, 'participant');
+
+$r = $scoate($idAltul);
+
+verifica('și acum tot merge', true, $r['ok'] ?? false);
+verifica('pentru ea, „Am scos-o"', true, str_contains($r['mesaj'] ?? '', 'Am scos-o'));
+verifica('și nicidecum „L-am scos"', false, str_contains($r['mesaj'] ?? '', 'L-am scos'));
+verifica('nici la înștiințare', true,
+    str_contains($r['mesaj'] ?? '', 'am înștiințat-o') || !($r['instiintat'] ?? false));
+
+db()->prepare('UPDATE membri SET sex = \'M\' WHERE id = ?')->execute([$idAltul]);
 
 /* ---------------------------- curățenie -------------------------------- */
 
