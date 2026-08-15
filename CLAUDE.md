@@ -119,7 +119,9 @@ inc/
   validare.php      → toate verificările server-side (fără atingere DB)
   imagini.php       → procesare/validare poze de profil ȘI coperți de eveniment
   evenimente.php    → categorii, regula „un eveniment activ", lista de pe
-                      profil, pagina unui eveniment, salvarea
+                      profil, pagina unui eveniment, salvarea ȘI cartonașul
+                      unui eveniment (randeazaCartonasEveniment) — un singur
+                      loc pentru cum arată, oriunde ar fi pus
   interese.php      → „Mergi la acest eveniment?" — cine e interesat, cine
                       vine, numărătoarea, locurile, rândul cu chipuri, listele
                       din taburi (aceeași funcție pentru amândouă) ȘI
@@ -129,7 +131,10 @@ inc/
                       prezentat". STELELE SINGURE sunt anonime și nici nu se
                       arată pe profil; doar părerile SCRISE ajung în listă, iar
                       acelea vin semnate. Cine e însemnat neprezentat nu se mai
-                      notează de nimeni (esteNeprezentat)
+                      notează de nimeni (esteNeprezentat). TOT AICI: cifrele de
+                      pe profil și tabul „Istoric" (istoricEvenimente) — pe
+                      unde a fost omul, cu „Organizator" și „Absent" pe
+                      cartonașe
   multumiri.php     → e-mailul de mulțumire de după eveniment: cine îl
                       primește, când, și semnul că a plecat o singură dată
                       (evenimente.multumiri_trimise_la). Îl cheamă doar
@@ -237,8 +242,6 @@ assets/css/style.css, assets/js/main.js, assets/img/
   e-mail cu textul din `motiv_anulare`, ÎNAINTE de ștergerea făcută de staff
 - Comentariile: nu există raportare și nici pagină de moderare. Staff-ul umblă
   la ele de pe pagina evenimentului, ca oricare autor
-- Evenimentele la care merge cineva nu apar pe profilul lui — se vede doar
-  numărul lor, în „Prezent la evenimente" (laCateEvenimenteAFost)
 - Notele nu se pot retrage și nici raporta. Cine a primit o stea pe nedrept nu
   are cui să spună — nu există pagină de moderare a evaluărilor. Nici
   „Nu s-a prezentat" nu se ia înapoi: e definitivă, dinadins, ca organizatorul

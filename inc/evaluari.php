@@ -322,6 +322,105 @@ function potNotaLaEveniment(array $eveniment, int $membruId): bool
         && interesulMeu((int) $eveniment['id'], $membruId) === 'participant';
 }
 
+/* ======================= CE SE VEDE PE PROFIL ======================== */
+
+/**
+ * Câte evenimente se descoperă odată în tabul „Istoric".
+ *
+ * Șase, cât un rând-două de cartonașe: sunt mari, cu poză, iar mai multe
+ * deodată ar face pagina să sară. Numărul stă aici, nu în HTML și nu în JS —
+ * pagina îl scrie în `data-deodata`, iar main.js îl citește de acolo. Ca la
+ * comentarii, la listele din taburi și la evaluări.
+ */
+const ISTORIC_DEODATA = 6;
+
+/**
+ * Toate evenimentele la care a fost omul ăsta, cele mai noi întâi.
+ *
+ * Tabul „Istoric" de pe profil. Nu se amestecă cu „Evenimente organizate" de
+ * mai sus: acolo se vede ce PUNE LA CALE, adică ce urmează; aici ce a fost —
+ * și ce urmează, și ce s-a încheiat, și ale lui, și ale altora.
+ *
+ * Aceleași reguli de socoteală ca laCateEvenimenteAFost(), cu o singură
+ * deosebire: aici NU se scot cele la care a fost însemnat absent. Cifra de sus
+ * spune la câte a fost, deci absențele n-au ce căuta în ea; lista de aici e
+ * istoria lui, iar din istorie nu se șterge o seară fiindcă n-a ajuns la ea.
+ * Se scrie „Absent" pe cartonaș și rămâne la locul lui.
+ *
+ * Evenimentele ținute de el vin cu ele: organizatorul e trecut pe lista de
+ * participanți ca oricare altul (vezi faOrganizatorulParticipant). Ca să se
+ * poată scrie „Organizator" pe ele, se întoarce și `e_organizator`.
+ *
+ * Cele anulate și cele care n-au ajuns niciodată publice lipsesc: la primele
+ * nimeni n-a fost nicăieri, la celelalte n-avea cum să se înscrie cineva.
+ */
+function istoricEvenimente(int $membruId): array
+{
+    if ($membruId <= 0) {
+        return [];
+    }
+
+    $q = db()->prepare(
+        'SELECT e.id, e.titlu, e.slug, e.coperta, e.data_eveniment, e.ora_inceput,
+                e.locatie, e.descriere, e.stare_moderare,
+                c.nume AS categorie, c.slug AS categorie_slug, c.imagine_default,
+                (e.membru_id = i.membru_id) AS e_organizator,
+                EXISTS (
+                  SELECT 1 FROM evaluari ev
+                   WHERE ev.eveniment_id = i.eveniment_id
+                     AND ev.evaluat_id   = i.membru_id
+                     AND ev.automat      = 1
+                ) AS absent
+           FROM interese_evenimente i
+           JOIN evenimente e ON e.id = i.eveniment_id
+           JOIN categorii  c ON c.id = e.categorie_id
+          WHERE i.membru_id = ?
+            AND i.stare = \'participant\'
+            AND e.stare_moderare IN (\'aprobat\', \'incheiat\')
+          ORDER BY e.data_eveniment DESC, e.ora_inceput DESC, e.id DESC'
+    );
+    $q->execute([$membruId]);
+
+    return $q->fetchAll();
+}
+
+/**
+ * Istoricul, gata desenat.
+ *
+ * Aceleași cartonașe ca peste tot (randeazaCartonasEveniment din
+ * inc/evenimente.php); ce se adaugă aici sunt cele două însemne care se pot
+ * pune numai privind de pe profilul cuiva anume.
+ *
+ * „Organizator" e o laudă mică: spune că seara aceea a existat fiindcă s-a
+ * ocupat el de ea. „Absent" e celălalt capăt, și se scrie pe față — cine se
+ * uită la istoricul cuiva are dreptul să vadă și de câte ori n-a ajuns, altfel
+ * cifra de sus („A confirmat, dar nu a venit") ar rămâne fără nimic în spate.
+ *
+ * Toate intră în pagină; ascunsul îl face main.js, câte ISTORIC_DEODATA — ca
+ * la comentarii, la listele din taburi și la evaluări. De aceea nu se pune
+ * `.ascuns` de aici pe niciunul.
+ */
+function randeazaIstoric(array $evenimente): string
+{
+    $html = '';
+
+    foreach ($evenimente as $ev) {
+        $insigne = '';
+
+        if (!empty($ev['e_organizator'])) {
+            $insigne .= '<span class="card__rol card__rol--organizator">Organizator</span>';
+        }
+
+        if (!empty($ev['absent'])) {
+            $insigne .= '<span class="card__rol card__rol--absent">Absent</span>';
+        }
+
+        $html .= randeazaCartonasEveniment($ev, $insigne);
+    }
+
+    return $html;
+}
+
 /* ====================== CIFRELE DE PE PROFIL ========================= */
 
 /**

@@ -80,6 +80,15 @@ $rezumatProfil  = $p ? rezumatEvaluari((int) $p['id']) : ['medie' => 0.0, 'cate'
 $evaluariProfil = $p ? evaluarilePrimite((int) $p['id']) : [];
 
 /**
+ * Istoricul: pe unde a fost omul.
+ *
+ * Tabul de lângă evaluări. Se citește tot, dintr-o cerere, și intră tot în
+ * pagină — ascunsul îl face main.js. Nu se amestecă cu $evenimenteProfil de
+ * mai sus: acela e ce PUNE LA CALE, adică ce urmează; ăsta e ce a fost.
+ */
+$istoricProfil = $p ? istoricEvenimente((int) $p['id']) : [];
+
+/**
  * Poate omul care se uită să dea o notă aici, chiar acum?
  *
  * Numai dacă a venit de pe pagina unui eveniment încheiat la care au fost
@@ -368,50 +377,17 @@ require __DIR__ . '/inc/antet.php';
       </div>
 
       <?php else: ?>
+      <!--
+        Peste primele patru, cartonașele intră în pagină ascunse. Le arată
+        butonul „Vezi mai mult…", fără să mai ceară nimic de la server.
+
+        Cum arată un cartonaș se scrie într-un singur loc,
+        randeazaCartonasEveniment() din inc/evenimente.php — tabul „Istoric"
+        de mai jos desenează cu aceeași funcție.
+      -->
       <div class="grid" id="evenimente-lista">
         <?php foreach ($evenimenteProfil as $i => $ev): ?>
-        <?php
-          $inAsteptare = ($ev['stare_moderare'] ?? '') === 'in_asteptare';
-
-          // Peste primele patru, cartonașele intră în pagină ascunse. Le arată
-          // butonul „Vezi mai mult…", fără să mai ceară nimic de la server.
-          $ascuns = $i >= EVENIMENTE_VIZIBILE;
-
-          $clase = 'card';
-          if ($inAsteptare) { $clase .= ' card--in-asteptare'; }
-          if ($ascuns)      { $clase .= ' ascuns'; }
-
-          $coperta = urlCoperta($ev['coperta'] ?? null);
-
-          // Imaginea implicită a categoriei, când va exista. Coloana e deja în
-          // bază, fișierele se urcă de mână — vezi roadmap-ul din CLAUDE.md.
-          if ($coperta === '' && !empty($ev['imagine_default'])) {
-              $coperta = 'assets/img/categorii/' . $ev['imagine_default'];
-          }
-
-          // De acum pagina evenimentului există, deci cartonașul duce undeva.
-          $adresa = h(urlEveniment((string) $ev['slug']));
-        ?>
-        <article class="<?= $clase ?>">
-          <a class="card__media" href="<?= $adresa ?>">
-            <?php if ($coperta !== ''): ?>
-            <img src="<?= h($coperta) ?>" alt="" width="1600" height="900" loading="lazy" decoding="async">
-            <?php endif; ?>
-            <span class="card__tag"><?= h($ev['categorie']) ?></span>
-            <?php if ($inAsteptare): ?>
-            <span class="card__stare">În așteptare de aprobare</span>
-            <?php endif; ?>
-          </a>
-          <div class="card__body">
-            <h3 class="card__title"><a href="<?= $adresa ?>"><?= h($ev['titlu']) ?></a></h3>
-            <p class="card__excerpt"><?= h(inceputDeText((string) $ev['descriere'])) ?></p>
-            <div class="card__meta">
-              <time datetime="<?= h((string) $ev['data_eveniment']) ?>"><?= h(dataScurta($ev['data_eveniment'])) ?></time>
-              <span class="dot" aria-hidden="true"></span>
-              <span><?= h(inceputDeText((string) $ev['locatie'], 48)) ?></span>
-            </div>
-          </div>
-        </article>
+        <?= randeazaCartonasEveniment($ev, '', $i >= EVENIMENTE_VIZIBILE) ?>
         <?php endforeach; ?>
       </div>
 
@@ -428,25 +404,52 @@ require __DIR__ . '/inc/antet.php';
 
     </section>
 
+    <!-- ================= TABURI: EVALUĂRI ȘI ISTORIC ====================
+      Aceeași componentă ca pe pagina evenimentului: `[data-tabs]` din
+      main.js, cu `role="tab"` și `aria-controls`. Nimic nou de scris — nici
+      măcar deschiderea din adresă (#panel-istoric), care vine cu ea.
+
+      Două lucruri care se citesc unul lângă altul: ce spun ceilalți despre
+      om, și pe unde a fost. Unul sub altul ar fi făcut o pagină lungă în
+      care al doilea s-ar fi văzut doar dacă mai ai răbdare să dai jos.
+
+      NU se amestecă cu „Evenimente organizate" de mai sus: acolo se vede ce
+      pune la cale, adică ce URMEAZĂ. Aici e ce a fost.
+    ============================================================== -->
+    <section class="tabs-section" aria-labelledby="tabs-profil-title">
+      <h2 class="sr-only" id="tabs-profil-title">Evaluări și istoric</h2>
+
+      <div class="tabs" role="tablist" data-tabs aria-label="Evaluări și istoric">
+        <button class="tab is-active" type="button" role="tab" id="tab-evaluari"
+                aria-controls="panel-evaluari" aria-selected="true" tabindex="0">
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m12 3.8 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.5 10l5.9-.9L12 3.8Z"/>
+          </svg>
+          <span>Evaluări</span>
+          <span class="tab__count"><?= (int) $rezumatProfil['cate'] ?></span>
+        </button>
+
+        <button class="tab" type="button" role="tab" id="tab-istoric"
+                aria-controls="panel-istoric" aria-selected="false" tabindex="-1">
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="9"/><path d="M12 7.2V12l3 1.8"/>
+          </svg>
+          <span>Istoric</span>
+          <span class="tab__count"><?= count($istoricProfil) ?></span>
+        </button>
+      </div>
+
     <!-- =========================== FEEDBACK =============================
-      Evaluările primite. ANONIME: se vede nota și textul, niciodată cine
-      le-a scris. Altfel nimeni n-ar mai da patru stele cuiva pe care îl
-      reîntâlnește sâmbăta viitoare — iar o notă care se semnează e o notă
-      frumoasă, adică una care nu spune nimic.
+      Evaluările primite. STELELE SINGURE sunt anonime și nici nu se arată;
+      doar părerile scrise ajung în listă, iar acelea vin semnate.
 
       Toate intră în pagină; ascunsul îl face main.js, ca la comentarii și la
       listele din taburile evenimentului.
     ============================================================== -->
-    <section class="feedback" aria-labelledby="feedback-title"
-             data-evaluari
-             data-deodata="<?= EVALUARI_DEODATA ?>">
-
-      <div class="section-head">
-        <div>
-          <p class="eyebrow"><span class="pulse-dot" aria-hidden="true"></span> Ce spun ceilalți</p>
-          <h2 class="section-title" id="feedback-title">Evaluări</h2>
-        </div>
-      </div>
+    <div class="panel is-active" id="panel-evaluari" role="tabpanel"
+         aria-labelledby="tab-evaluari" tabindex="0"
+         data-descopera
+         data-deodata="<?= EVALUARI_DEODATA ?>">
 
       <!-- Media, câte sunt, barele pe stele — toate din randeazaRezumatEvaluari() -->
       <div class="rating-summary" data-rezumat-evaluari>
@@ -527,7 +530,7 @@ require __DIR__ . '/inc/antet.php';
         apăsare intră în medie și în barele de sus, dar n-au ce citi aici.
         Cine s-a așezat să scrie ceva își pune și numele.
       -->
-      <ul class="comments" data-lista-evaluari>
+      <ul class="comments" data-lista-evaluari data-descopera-lista>
         <?= randeazaEvaluari($evaluariProfil) ?>
       </ul>
 
@@ -537,9 +540,42 @@ require __DIR__ . '/inc/antet.php';
       </p>
       <?php endif; ?>
 
-      <div class="load-more" data-mai-multe-evaluari hidden>
-        <button class="btn btn--ghost" type="button" data-mai-multe-evaluari-buton>Vezi mai mult</button>
+      <div class="load-more" data-descopera-mai-mult hidden>
+        <button class="btn btn--ghost" type="button" data-descopera-buton>Vezi mai mult</button>
       </div>
+    </div>
+
+    <!-- ============================ ISTORIC =============================
+      Pe unde a fost omul: tot ce se vede pe site și are numele lui pe lista
+      de participanți — și ce urmează, și ce s-a încheiat, și ale lui, și ale
+      altora. Cartonașele sunt aceleași ca pe prima pagină, prin aceeași
+      funcție (randeazaCartonasEveniment din inc/evenimente.php).
+
+      Toate intră în pagină; ascunsul îl face main.js, câte ISTORIC_DEODATA,
+      prin aceeași componentă ca lista de evaluări de deasupra.
+    ============================================================== -->
+    <div class="panel" id="panel-istoric" role="tabpanel"
+         aria-labelledby="tab-istoric" tabindex="0" hidden
+         data-descopera
+         data-deodata="<?= ISTORIC_DEODATA ?>">
+
+      <?php if ($istoricProfil === []): ?>
+      <!-- Niciunul. Se spune pe mijloc, ca „Niciun comentariu încă" din tabul
+           de alături — un rând singur, aliniat la stânga, ar arăta a text
+           uitat acolo. -->
+      <p class="panel__intro panel__intro--gol">
+        <?= h($prenumeScurt) ?> nu a mai participat la niciun eveniment.
+      </p>
+      <?php else: ?>
+      <div class="grid" data-descopera-lista>
+        <?= randeazaIstoric($istoricProfil) ?>
+      </div>
+
+      <div class="load-more" data-descopera-mai-mult hidden>
+        <button class="btn btn--ghost" type="button" data-descopera-buton>Vezi mai mult</button>
+      </div>
+      <?php endif; ?>
+    </div>
     </section>
   </div>
 </main>

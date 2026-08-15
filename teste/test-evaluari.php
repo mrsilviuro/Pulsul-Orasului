@@ -293,7 +293,64 @@ verifica('cine n-are dreptul le vede stinse', true, str_contains($stinse, 'perso
 verifica('fără nimic de apăsat', false, str_contains($stinse, 'data-stele-input'));
 verifica('dar cu motivul la vedere', true, str_contains($stinse, 'title="Poți nota'));
 
-/* =========================== 6. NUMERELE ========================== */
+/* ====================== 6. ISTORICUL DE PE PROFIL ================== */
+
+echo "\n=== ISTORICUL DE PE PROFIL ===\n";
+
+/**
+ * Tabul de lângă evaluări: pe unde a fost omul. Cele de mai sus au pregătit
+ * exact ce trebuie — două evenimente (unul trecut, unul viitor), participanți,
+ * un om doar interesat, și o însemnare de neprezentare pe Ana.
+ */
+$istoricAna = istoricEvenimente($ana);
+
+verifica('amândouă evenimentele', 2, count($istoricAna));
+verifica('cel mai nou întâi', 'tsteva-viitor', $istoricAna[0]['slug']);
+
+verifica('cine s-a arătat doar interesat n-are istoric', [], istoricEvenimente($strain));
+verifica('și nici cine n-are cont', [], istoricEvenimente(0));
+
+/**
+ * Absența NU scoate evenimentul din listă — spre deosebire de cifra de sus.
+ * Cifra spune la câte a fost; lista e istoria lui, iar din istorie nu se șterge
+ * o seară fiindcă n-a ajuns la ea. Se scrie „Absent" pe cartonaș și rămâne.
+ */
+$trecutulEi = null;
+
+foreach ($istoricAna as $ev) {
+    if ((string) $ev['slug'] === 'tsteva-trecut') { $trecutulEi = $ev; }
+}
+
+verifica('cel la care n-a ajuns e tot acolo', true, $trecutulEi !== null);
+verifica('însemnat ca atare', 1, (int) ($trecutulEi['absent'] ?? 0));
+verifica('dar nu se numără la prezențe', 1, laCateEvenimenteAFost($ana));
+
+// Organizatoarea le-a ținut pe amândouă, deci amândouă sunt însemnate.
+$istoricOrg = istoricEvenimente($organizator);
+verifica('organizatoarea le are pe amândouă', 2, count($istoricOrg));
+verifica('și scrie că-s ale ei', [1, 1],
+    array_map(fn ($e) => (int) $e['e_organizator'], $istoricOrg));
+
+/* --------------------------- pe ecran ------------------------------ */
+
+$htmlIstoric = randeazaIstoric($istoricAna);
+
+verifica('două cartonașe', 2, substr_count($htmlIstoric, '<article class="card'));
+verifica('cu însemnul de absență', 1, substr_count($htmlIstoric, 'card__rol--absent'));
+verifica('fără „Organizator", că nu-s ale ei', 0,
+    substr_count($htmlIstoric, 'card__rol--organizator'));
+verifica('duc la pagina evenimentului', true,
+    str_contains($htmlIstoric, 'href="event.php?slug=tsteva-trecut"'));
+
+// Nimic nu vine ascuns din PHP: ascunsul îl face main.js, câte ISTORIC_DEODATA.
+verifica('și niciunul nu vine ascuns din PHP', 0, substr_count($htmlIstoric, 'ascuns'));
+
+verifica('la organizatoare, celălalt însemn', 2,
+    substr_count(randeazaIstoric($istoricOrg), 'card__rol--organizator'));
+
+verifica('fără nimic, fără HTML', '', randeazaIstoric([]));
+
+/* =========================== 7. NUMERELE ========================== */
 
 echo "\n=== NUMĂRUL DE STELE PRIMIT DE LA BROWSER ===\n";
 
