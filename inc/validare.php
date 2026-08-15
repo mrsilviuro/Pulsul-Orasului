@@ -49,20 +49,6 @@ const EVALUARE_TEXT_MIN = 10;     // caractere — vezi verificaTextEvaluare()
 const EVALUARE_TEXT_MAX = 1500;
 
 /**
- * Mesajele din chat
- *
- * Mult mai scurte decât un comentariu, dinadins. Un comentariu e o părere
- * așezată, pe care o citește cineva mâine; un mesaj de chat e o vorbă spusă
- * acum, într-un șir care curge. Cine are de scris două mii de caractere are de
- * scris un comentariu, iar sub eveniment îl așteaptă unul.
- *
- * Minimul e 1: „:)" e un mesaj întreg, iar „da" e un răspuns complet. Se apără
- * doar mesajul gol, trimis din greșeală cu Enter.
- */
-const MESAJ_CHAT_MIN = 1;     // caractere — vezi verificaMesajChat()
-const MESAJ_CHAT_MAX = 1000;
-
-/**
  * Aduce diacriticele românești la forma corectă (virgulă dedesubt).
  *
  * Multe tastaturi și programe mai vechi produc ş și ţ cu sedilă — arată
@@ -622,19 +608,14 @@ function verificaEveniment(array $date, array $categoriiValide, array $oraseVali
 }
 
 /**
- * Un text făcut bucată de adresă: „Piatra Neamț" → „piatra-neamt".
+ * Adresa publică a unui eveniment, făcută din titlu.
  *
- * Litere mici, cifre și cratime, atât. Diacriticele devin literele de bază, ca
- * adresa să se poată scrie de mână, dicta la telefon și da mai departe pe
- * WhatsApp fără să se strice pe drum.
- *
- * Întoarce șirul gol dacă n-a rămas nimic din text (un titlu numai din semne de
- * punctuație). Cine o cheamă hotărăște ce face cu golul — slugEveniment() pune
- * „eveniment", chatul cade pe camera generală.
+ * Coada întâmplătoare e acolo fiindcă două evenimente pot avea același titlu
+ * („Târg de Crăciun") în ani diferiți, iar adresa trebuie să rămână unică.
  */
-function slugSimplu(string $text, int $lungimeMax = 140): string
+function slugEveniment(string $titlu): string
 {
-    $slug = normalizeazaDiacritice($text);
+    $slug = normalizeazaDiacritice($titlu);
 
     // Diacriticele devin literele de bază: „Cluj-Napoca în seară" → „...in seara".
     $slug = strtr(mb_strtolower($slug, 'UTF-8'), [
@@ -645,20 +626,8 @@ function slugSimplu(string $text, int $lungimeMax = 140): string
     $slug = preg_replace('/[^a-z0-9]+/u', '-', $slug) ?? '';
     $slug = trim($slug, '-');
 
-    return mb_substr($slug, 0, $lungimeMax, 'UTF-8');
-}
-
-/**
- * Adresa publică a unui eveniment, făcută din titlu.
- *
- * Coada întâmplătoare e acolo fiindcă două evenimente pot avea același titlu
- * („Târg de Crăciun") în ani diferiți, iar adresa trebuie să rămână unică.
- *
- * Tăiat la 140 de slugSimplu(), ca împreună cu coada să încapă în coloana de 170.
- */
-function slugEveniment(string $titlu): string
-{
-    $slug = slugSimplu($titlu);
+    // Tăiat la 140, ca împreună cu coada să încapă în coloana de 170.
+    $slug = mb_substr($slug, 0, 140, 'UTF-8');
 
     if ($slug === '') {
         $slug = 'eveniment';
@@ -918,37 +887,6 @@ function verificaComentariu($cerut): array
         return [
             'eroare' => 'Comentariul e prea lung: ai ' . $cate . ' caractere din '
                       . COMENTARIU_MAX . ' câte încap.',
-            'text'   => '',
-        ];
-    }
-
-    return ['eroare' => '', 'text' => $text];
-}
-
-/**
- * Un mesaj de chat.
- *
- * Același curățător ca la comentariu — rândurile omului rămân ale lui — dar cu
- * o limită mult mai scurtă (MESAJ_CHAT_MAX). Cine are de scris mai mult are de
- * scris un comentariu, iar sub eveniment îl așteaptă unul.
- *
- * Un singur caracter e de ajuns: „?" e un mesaj întreg într-o discuție care
- * curge. Se apără doar mesajul gol — Enter apăsat din greșeală într-o casetă în
- * care nu s-a scris nimic.
- */
-function verificaMesajChat($cerut): array
-{
-    $text = curataTextPeRanduri(is_string($cerut) ? $cerut : '');
-    $cate = mb_strlen($text, 'UTF-8');
-
-    if ($text === '' || $cate < MESAJ_CHAT_MIN) {
-        return ['eroare' => 'Scrie ceva înainte de a trimite.', 'text' => ''];
-    }
-
-    if ($cate > MESAJ_CHAT_MAX) {
-        return [
-            'eroare' => 'Mesajul e prea lung: ai ' . $cate . ' caractere din '
-                      . MESAJ_CHAT_MAX . ' câte încap.',
             'text'   => '',
         ];
     }
