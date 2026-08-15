@@ -71,42 +71,6 @@ require __DIR__ . '/inc/antet.php';
   </div>
 </section>
 
-<!-- ============================ SPRE CHAT ===============================
-  O singură legătură lată, sub slider. Nu e un buton mic într-un colț de
-  meniu: chatul e locul în care se vorbește, iar dacă nu-l vede nimeni de pe
-  prima pagină, nu-l deschide nimeni.
-
-  Se vede și fără cont — cine nu e înscris trebuie să afle că există, nu să
-  descopere după ce se înregistrează. Cine nu e conectat ajunge la intrare,
-  dar cu drumul de întoarcere în adresă: după autentificare pică direct în
-  chat, nu pe prima pagină, de unde ar trebui să caute butonul din nou.
-
-  Aceeași lățime ca restul paginii (`.wrap` = --wrap din :root).
-============================================================== -->
-<section class="spre-chat" aria-label="Chatul comunității">
-  <div class="wrap">
-    <a class="chat-cta" href="<?= $logat
-          ? 'chat.php'
-          : 'login.php?redirect=' . h(urlencode('/chat.php')) ?>">
-      <span class="chat-cta__ico" aria-hidden="true">
-        <svg viewBox="0 0 24 24">
-          <path d="M21 12a8 8 0 0 1-8 8H7l-4 3V12a8 8 0 0 1 8-8h2a8 8 0 0 1 8 8Z"/>
-          <path d="M9 11h6"/><path d="M9 15h4"/>
-        </svg>
-      </span>
-
-      <span class="chat-cta__text">
-        <strong class="chat-cta__titlu">Intră în discuție</strong>
-        <span class="chat-cta__sub">Vorbește cu oamenii din oraș: ce se întâmplă, unde se merge, cine vine.</span>
-      </span>
-
-      <span class="chat-cta__sageata" aria-hidden="true">
-        <svg viewBox="0 0 24 24"><path d="M4 12h15"/><path d="m13 6 6 6-6 6"/></svg>
-      </span>
-    </a>
-  </div>
-</section>
-
 <!-- =============================== CONȚINUT ============================= -->
 <main id="main">
   <div class="wrap">

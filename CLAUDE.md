@@ -110,7 +110,7 @@ Site live: https://pulsulorasului.ro
 index.php, event.php, contact.php, despre.php, login.php,
 profil.php, poza.php, setari.php, adauga_eveniment.php, previzualizare.php,
 parola-uitata.php, parola-noua.php, google.php, finalizare.php, confirma.php,
-stergere.php, iesire.php, verifica.php, chat.php
+stergere.php, iesire.php, verifica.php
 
 inc/
   antet.php        → head + meniu + antete siguranță (folosit de toate paginile)
@@ -165,18 +165,6 @@ inc/
   buton-google.php  → butonul de login Google
   stergere.php      → ștergerea contului cu răgaz + anonimizarea
   camp-parola.php   → un câmp de parolă cu ochi (folosit de toate paginile)
-  chat.php          → CAMERELE și mesajele din ele. O cameră nu e un rând în
-                      bază, e un NUME cu felul ei în față ('general',
-                      'oras:roman', 'ev:<slug>'); cine hotărăște care e
-                      cameră adevărată e cameraCeruta(), iar un nume care nu
-                      duce nicăieri deschide „General", nu o eroare. TOT AICI
-                      cum arată un mesaj pe ecran (randeazaMesajChat — al meu
-                      la dreapta, al altuia la stânga) și cele două cursoare
-                      după care întreabă browserul: `dupa` (id) pentru ce s-a
-                      mai spus și `sters_la` pentru ce s-a mai șters. Ștergerea
-                      lasă piatră de mormânt (rândul rămâne, vorbele pleacă),
-                      altfel filele deschise n-ar afla niciodată că mesajul nu
-                      mai e
 
 api/                → endpoint-uri JSON apelate din JS (fetch); eveniment.php e
                       singurul care primește multipart, fiindcă urcă un fișier
@@ -189,16 +177,15 @@ sql/                → schema.sql + migrări numerotate (002, 003, 004, 005-goo
                       011-anulare-eveniment, 012-oras-eveniment,
                       013-interese-evenimente, 014-incheiere-eveniment,
                       015-comentarii, 016-excluderi-evenimente, 017-evaluari,
-                      018-multumiri-eveniment, 019-chat)
+                      018-multumiri-eveniment)
 teste/              → test-validare.php (verificările din inc/validare.php)
                       test-comentarii.php, test-participanti.php,
                       test-evaluari.php, test-multumiri.php
                       (toate patru cer baza de date, nu și serverul)
                       test-tine-minte.php, test-setari.php, test-contact.php,
-                      test-evenimente.php, test-prima-pagina.php, test-chat.php
-                      (ultimele șase cer serverul pornit — vezi antetul lor;
-                      test-prima-pagina și test-chat merg și fără, sar doar
-                      partea de API)
+                      test-evenimente.php, test-prima-pagina.php
+                      (ultimele cinci cer serverul pornit — vezi antetul lor;
+                      test-prima-pagina merge și fără, sare doar partea de API)
 private/            → loguri (emailuri-trimise.log), protejat prin .htaccess
 assets/css/style.css, assets/js/main.js, assets/img/
 ```
@@ -279,15 +266,6 @@ assets/css/style.css, assets/js/main.js, assets/img/
 - Paginile de categorie (slugurile sunt în tabelul `categorii`)
 - Imaginile implicite de categorie (`categorii.imagine_default`) — coloana
   există, fișierele nu; se urcă de mână, nu prin `inc/imagini.php`
-- Chatul arată ULTIMELE `CHAT_MESAJE_DEODATA` mesaje dintr-o cameră și atât:
-  nu există buton de „mesaje mai vechi", deci ce a ieșit din fereastră nu se
-  mai poate citi din interfață. Rândurile rămân în bază
-- Chatul nu e încă pus pe `event.php`. Camera unui eveniment funcționează
-  (`chat.php?camera=<slug>`), dar la ea se ajunge doar scriind adresa: pagina
-  evenimentului n-are încă legătură spre ea
-- Mesajele de chat nu se pot raporta, iar ștergerea o poate face doar staff-ul
-  (`poateStergeMesajChat`), din camera în care stă. Autorul nu-și poate șterge
-  mesajul, iar cel șters nu se mai poate întoarce
 
 ## Workflow recomandat cu Claude Code
 

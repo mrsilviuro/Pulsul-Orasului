@@ -2044,24 +2044,12 @@ verifica('dar nu și celelalte', [false, false, false],
 verifica('unul de peste cinci zile n-a început', false,
     evenimentAInceput(['data_eveniment' => date('Y-m-d', strtotime('+5 days')),
                        'ora_inceput'    => '19:00:00']));
-/**
- * Ziua și ora se iau din ACEEAȘI clipă, nu fiecare din ceasul de acum.
- *
- * Scrise separat — `date('Y-m-d')` pentru zi și `date('H:i', strtotime('+2
- * hours'))` pentru oră — cele două se despart între 22:00 și miezul nopții:
- * ora sare în ziua următoare, ziua rămâne azi, iar „peste două ore" devine
- * „azi la 01:33", adică douăzeci și două de ore în urmă. Testul pica seara și
- * trecea dimineața, pe un cod care n-avea nimic.
- */
-$pesteDouaOre = strtotime('+2 hours');
-$acumOOra     = strtotime('-1 hour');
-
 verifica('nici cel de azi, peste două ore', false,
-    evenimentAInceput(['data_eveniment' => date('Y-m-d', $pesteDouaOre),
-                       'ora_inceput'    => date('H:i:00', $pesteDouaOre)]));
+    evenimentAInceput(['data_eveniment' => date('Y-m-d'),
+                       'ora_inceput'    => date('H:i:00', strtotime('+2 hours'))]));
 verifica('dar cel de azi, de acum o oră, da', true,
-    evenimentAInceput(['data_eveniment' => date('Y-m-d', $acumOOra),
-                       'ora_inceput'    => date('H:i:00', $acumOOra)]));
+    evenimentAInceput(['data_eveniment' => date('Y-m-d'),
+                       'ora_inceput'    => date('H:i:00', strtotime('-1 hour'))]));
 verifica('și unul de ieri', true,
     evenimentAInceput(['data_eveniment' => date('Y-m-d', strtotime('-1 day')),
                        'ora_inceput'    => '23:00:00']));
