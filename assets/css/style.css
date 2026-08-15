@@ -3684,17 +3684,23 @@ body { overscroll-behavior-y: none; }
   text-align: center;
 }
 
-/* `display: flex` peste `inline-flex`-ul lui .logo: altfel logoul și insigna
+/* Logoul e ACELAȘI cu cel din bara de sus, până la ultima culoare: aici se
+   schimbă numai unde stă, nu cum arată.
+
+   Avusese o vreme două culori scrise peste cele de bază, iar una din ele —
+   `color: var(--brand)` pe pătrățel — făcea linia pulsului portocalie pe fundal
+   portocaliu, adică o ștergea cu totul. Culorile vin toate din `.logo__mark`,
+   `.logo__accent` și `.logo__tld`; pagina fiind pe tema întunecată
+   (`data-theme="dark"` în <html>), ies exact ca în header.
+
+   `display: flex` peste `inline-flex`-ul lui `.logo`: altfel logoul și insigna
    de dedesubt s-ar fi așezat una lângă alta, ca două cuvinte pe același rând. */
 .logo--constructie {
   display: flex;
   justify-content: center;
   margin-bottom: 26px;
-  color: #fff;
   text-decoration: none;
 }
-.logo--constructie .logo__mark { color: var(--brand); }
-.logo--constructie .logo__tld  { color: rgba(255, 255, 255, .55); }
 
 .constructie__eyebrow {
   display: inline-flex; align-items: center; gap: 8px;
