@@ -507,6 +507,12 @@ function laCateEvenimenteNuAVenit(int $membruId): int
 /**
  * Rezumatul de pe profil: media, câte sunt, barele pe stele.
  *
+ * MEREU aceeași casetă, chiar și la un om care n-a primit nicio stea. Era
+ * până acum un rând de text în locul ei — „Nicio evaluare încă" — iar profilul
+ * arăta altfel după cum fusese sau nu notat cineva. Barele goale spun același
+ * lucru, dar spun și CE va apărea acolo: cinci trepte care așteaptă. Un rând de
+ * text nu arată nimic.
+ *
  * Întoarce HTML, nu-l tipărește: îl cere profilul la încărcare, iar
  * api/evaluare.php după ce cineva tocmai a notat de pe pagina lui.
  */
@@ -514,11 +520,6 @@ function randeazaRezumatEvaluari(array $rezumat): string
 {
     $cate  = (int) $rezumat['cate'];
     $medie = (float) $rezumat['medie'];
-
-    if ($cate === 0) {
-        return '<p class="feedback__gol">Nicio evaluare încă. '
-             . 'Notele vin de la oamenii cu care a fost la evenimente.</p>';
-    }
 
     $bare = '';
 
@@ -532,12 +533,30 @@ function randeazaRezumatEvaluari(array $rezumat): string
                . '<span>' . $cateAici . '</span></li>';
     }
 
+    /**
+     * Fără nicio notă, în locul mediei stă o linie.
+     *
+     * Nu „0,0": aceea e o notă, și încă cea mai proastă cu putință. Un om care
+     * n-a fost notat de nimeni n-a luat zero — n-a luat nimic. Aceeași linie o
+     * arată și caseta de sus, din antetul profilului, până i-o umple JS-ul.
+     */
+    $valoare = $cate > 0
+        ? '<span class="rating-summary__value">' . h(number_format($medie, 1, ',', '')) . '</span>'
+        // Linia se scrie mai mică și mai stinsă decât o notă: la mărimea unui
+        // „4,6" îngroșat, o liniuță ajunge o bară neagră care pare pusă peste
+        // ceva, nu un loc gol care așteaptă.
+        : '<span class="rating-summary__value rating-summary__value--gol">—</span>';
+
+    $vorba = match (true) {
+        $cate === 0 => 'Nicio evaluare încă',
+        $cate === 1 => 'o evaluare',
+        default     => $cate . ' evaluări',
+    };
+
     return '<div class="rating-summary__score">'
-         . '<span class="rating-summary__value">' . h(number_format($medie, 1, ',', '')) . '</span>'
+         . $valoare
          . '<div class="rating__stars" data-stars="' . h((string) $medie) . '"></div>'
-         . '<span class="rating-summary__count">'
-         . ($cate === 1 ? 'o evaluare' : $cate . ' evaluări')
-         . '</span></div>'
+         . '<span class="rating-summary__count">' . $vorba . '</span></div>'
          . '<ul class="rating-bars">' . $bare . '</ul>';
 }
 
