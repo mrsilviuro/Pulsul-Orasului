@@ -203,6 +203,32 @@ if ($omul !== null) {
  */
 $numar = numaraInterese($evenimentId);
 
+/**
+ * Vorba de pe ecran se face după om, ca peste tot pe site.
+ *
+ * „L-am scos de pe listă" despre o femeie e o scăpare care se vede din prima,
+ * mai ales de cea despre care e vorba. Sexul îl avem deja: a fost citit ca să
+ * i se poată scrie cum trebuie și în e-mail (vezi emailExcludereParticipant).
+ *
+ * Când contul e șters între timp și $omul e null, rămâne o vorbă fără gen —
+ * nu se ghicește.
+ */
+$eF = ($omul['sex'] ?? '') === 'F';
+
+if ($omul === null) {
+    $mesaj = $instiintat
+        ? 'Am scos omul de pe listă și l-am înștiințat pe e-mail.'
+        : 'Am scos omul de pe listă.';
+} elseif ($eF) {
+    $mesaj = $instiintat
+        ? 'Am scos-o de pe listă și am înștiințat-o pe e-mail.'
+        : 'Am scos-o de pe listă.';
+} else {
+    $mesaj = $instiintat
+        ? 'L-am scos de pe listă și l-am înștiințat pe e-mail.'
+        : 'L-am scos de pe listă.';
+}
+
 raspunsJson([
     'ok'          => true,
     'membru'      => $tintaId,
@@ -215,7 +241,5 @@ raspunsJson([
     // căuta acolo, iar „încă 84 de persoane" a scăzut cu unu.
     'chipuri'     => randeazaChipuri($evenimentId),
     'instiintat'  => $instiintat,
-    'mesaj'       => $instiintat
-        ? 'L-am scos de pe listă și l-am înștiințat pe e-mail.'
-        : 'L-am scos de pe listă.',
+    'mesaj'       => $mesaj,
 ]);

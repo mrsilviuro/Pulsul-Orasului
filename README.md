@@ -2400,6 +2400,15 @@ Butoanele nu mai există în pagină, deci n-au ce fi apăsate; oprirea adevăra
 rămâne în `api/interes.php`, prin aceeași `evenimentAInceput()`, pentru o filă
 lăsată deschisă de dinainte.
 
+**Încheiat înseamnă și „a început".** Pe drumul obișnuit, încheierea vine
+oricum după început: butonul „Încheie evenimentul" se dă doar după ce a pornit.
+Dar starea se poate pune și de mână, din phpMyAdmin, așa cum se fac multe pe
+site-ul ăsta — iar atunci ieșea o pagină care spunea „Acest eveniment s-a
+încheiat." și dedesubt întreba, cu butoane vii, „Mergi la acest eveniment?", ba
+mai lăsa organizatorul să scoată oameni de pe o listă care nu mai era a
+nimănui. Acum `evenimentAInceput()` întreabă întâi dacă e încheiat: ce era
+scris ca presupunere într-un comentariu e scris în cod.
+
 Iar la **încheiere**, pleacă și tabul „Interesați" — și tabul, și panoul lui.
 Rămân două: „Comentarii" și „Au participat". Lista de interesați nu spune nimic
 despre seara care a fost, fiindcă sunt oameni care s-au uitat într-acolo și n-au
@@ -2420,6 +2429,19 @@ casetă gri de sistem.
 
 Fără motiv, spre deosebire de scoatere: acolo textul pleacă în e-mailul omului,
 care are dreptul să știe de ce. Aici nu se trimite nimănui nimic de citit.
+
+### Vorba de după scoatere se face după om
+
+„L-am scos de pe listă" despre o femeie e o scăpare care se vede din prima, mai
+ales de cea despre care e vorba. Mesajul se alege pe server, unde sexul e deja
+citit — se citea oricum, ca să i se poată scrie cum trebuie și în e-mail. Când
+contul e șters între timp și nu mai e cine să fie întrebat, rămâne o vorbă fără
+gen: mai bine seacă decât greșită.
+
+În română, participiul de după „a avea" nu se acordă („am scos"), deci genul se
+vede în pronume: **„L-am scos de pe listă"** pentru el, **„Am scos-o de pe
+listă"** pentru ea. La e-mail e altfel — acolo e pasiv, cu „a fi", care se
+acordă: „Ai fost scoasă" / „Ai fost scos".
 
 Verificările: `php teste/test-evaluari.php` (92 de cazuri, cere baza de date,
 nu și serverul).
