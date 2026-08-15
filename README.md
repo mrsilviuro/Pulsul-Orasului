@@ -3190,3 +3190,162 @@ server și nume de tabele.
 ## De făcut mai departe
 
 Paginile de categorie și moderarea evenimentelor.
+
+
+## Chatul
+
+Până acum, tot ce se putea spune pe site se spunea *sub un anunț*: un
+comentariu, cu răspunsuri, aprecieri și editare. Bun pentru o dezbatere care se
+citește mâine, prost pentru „cine mai vine sâmbătă?".
+
+`chat.php`, `inc/chat.php`, `api/chat.php` (scrie), `api/chat-mesaje.php`
+(citește), blocul „CHATUL" din `main.js`, `sql/019-chat.sql`.
+
+### Camerele nu au tabel
+
+O cameră nu e un lucru administrat de cineva. E un **nume**, iar camera
+„există" din clipa în care cineva scrie în ea. Sunt trei feluri:
+
+```
+general                       camera tuturor
+oras:roman                    un oraș din config.php, după slugul lui
+ev:targ-de-craciun-a1b2c3     camera unui eveniment, după slug
+```
+
+Un tabel `camere` ar fi trebuit ținut la zi cu orașele din `config.php` și cu
+fiecare eveniment publicat — două liste care se schimbă singure, în alte locuri.
+S-ar fi despărțit de el la prima nepotrivire, iar atunci un oraș adăugat în
+config n-ar fi avut cameră până când nu-și amintea cineva să scrie un rând.
+
+Prefixul din față nu e împodobire: fără el, un eveniment slugit „general" ar fi
+intrat peste camera tuturor. Slugurile de eveniment au o coadă întâmplătoare,
+deci ciocnirea e neverosimilă — dar „neverosimil" nu e „imposibil", iar aici
+despărțirea costă șase caractere.
+
+### Ce nu duce nicăieri deschide „General"
+
+Ordinea întrebărilor, în `cameraCeruta()`: **întâi evenimentele** — slugul din
+adresă se caută în `evenimente` — **apoi orașele**, și abia la urmă camera
+generală.
+
+Al treilea pas nu e o scăpare, e regula. Camera unui eveniment șters, o adresă
+veche dintr-o zi în care exista alt oraș, o literă greșită la scris: toate duc
+unde e lume, nu într-un ecran roșu. Iar „nu există" și „n-ai voie" arată la fel,
+ca peste tot pe site — din camera care se deschide nu trebuie să se poată afla
+dacă un eveniment ascuns există.
+
+Camera unui eveniment ține de aceleași două întrebări ca pagina lui
+(`evenimentPublicat`, `poateVedeaEvenimentul`), nu de o regulă scrisă a doua
+oară pentru chat. Un anunț încheiat rămâne cu camera deschisă, ca și cu
+comentariile: acolo se spune „ce seară a fost", iar asta se spune mai ales după.
+
+### Cine citește
+
+Chatul cere cont — și pentru scris, și pentru **citit**. Pagina unui eveniment
+se deschide de oricine, fiindcă e un anunț; o discuție între oameni care se
+cunosc din oraș nu e o pagină de arătat lumii, iar cine scrie în ea are dreptul
+să știe cine o citește.
+
+### Cum află browserul ce s-a mai spus
+
+Din când în când întreabă (`api/chat-mesaje.php`), la patru secunde. Nu e
+WebSocket și n-are de ce să fie: aici se vorbește în oraș, nu se joacă șah pe
+timp, iar o găzduire obișnuită de PHP n-are cu ce ține o conexiune deschisă.
+Fila ascunsă nu întreabă nimic — nu se uită nimeni la ea, iar pe telefon ar fi
+ținut radioul pornit degeaba.
+
+Întrebarea are **două cursoare**, fiindcă sunt două lucruri de aflat:
+
+- `dupa` — cel mai mare id de pe ecran. Răspunsul e exact ce-i lipsește.
+- `sters_dupa` — clipa până la care știe ce s-a șters.
+
+Al doilea există fiindcă un mesaj șters nu mai apare în niciun răspuns cu
+mesaje. Cine îl avea pe ecran l-ar fi ținut acolo până la prima reîncărcare —
+adică exact omul de la care trebuia să dispară. De aceea ștergerea lasă **piatră
+de mormânt**: rândul rămâne, vorbele se golesc, iar `sters_la` e cursorul după
+care se află de ea.
+
+Clipa vine de la **server**, nu de la ceasul browserului: fiecare răspuns spune
+„am terminat de socotit aici", iar întrebarea următoare pleacă de acolo. Cu
+ceasul browserului, unul rămas în urmă cu un minut ar fi cerut de fiecare dată
+aceleași ștergeri, iar unul luat înainte le-ar fi sărit.
+
+Mesajele vin **gata desenate**, din aceleași funcții PHP care scriu pagina la
+încărcare. Nicio bulă nu se construiește în JS: ar fi fost a doua descriere a
+aceluiași lucru, în alt limbaj, și text venit de la om lipit în pagină fără
+trecerea prin `h()`.
+
+### Pe ecran
+
+Al meu la dreapta, al altuia la stânga. E singurul lucru care se citește dintr-o
+privire într-un șir de vorbe, fără să fie nevoie să se citească numele de
+fiecare dată — de aceea nici numele, nici chipul nu se scriu pe mesajele mele:
+știu cine sunt, iar chipul ar fi fost al meu de cincizeci de ori pe aceeași
+coloană.
+
+Ora e scurtă („14:32"), nu „acum 6 ore" ca la comentarii: într-un chat se caută
+ora la care s-a spus ceva, ca să se poată lega de restul zilei.
+
+Cât sunt puține mesaje, discuția stă lipită de jos, lângă caseta de scris. Se
+face cu `margin-top: auto` pe primul mesaj, nu cu `justify-content: flex-end` pe
+fir: al doilea taie mesajele de sus când firul se umple, și nu se mai poate
+derula până la ele.
+
+Firul coboară singur la un mesaj nou **numai dacă omul era deja jos**. Cine s-a
+urcat să recitească ceva de acum zece minute n-are de ce să fie smucit înapoi la
+fiecare vorbă a altcuiva. La mesajul meu se coboară mereu: eu l-am scris, deci
+vreau să-l văd plecat.
+
+### „×"-ul de ștergere
+
+Numai staff-ul. Nu e ascuns cu CSS de restul lumii — nici nu se scrie în pagina
+lor, iar `api/chat.php` întreabă din nou la apăsare: un buton care nu e în HTML
+se poate oricând face dintr-o consolă.
+
+Mesajul trebuie să fie **din camera în care stă omul**, iar camera aceea a
+trecut deja prin `cameraCeruta()`. Fără perechea asta, un om de casă ar fi putut
+șterge, cu id-uri luate la rând dintr-o consolă, mesaje din camere pe care nu
+le-a deschis niciodată. Are dreptul să șteargă, dar acolo unde e și citește, nu
+pe nevăzute.
+
+Apăsat o dată, întreabă; apăsat a doua oară, șterge. Fără fereastra de sistem a
+browserului, care sare peste toată pagina cu alte litere decât restul site-ului,
+și fără o casetă de confirmare lângă fiecare bulă, care ar fi împins discuția în
+jos. Ștergerea nu se ia înapoi, deci o apăsare greșită trebuie să aibă unde să
+se oprească.
+
+### Limitele
+
+Două secunde între mesaje, și cel mult douăzeci pe minut, numărate **peste toate
+camerele**. Altfel cineva care vrea să înece chatul ar fi trecut prin camere pe
+rând și ar fi avut din nou dreptul la douăzeci în fiecare.
+
+La comentarii sunt cincisprezece secunde, fiindcă acolo un om scrie o dată și
+pleacă. Aici se vorbește, iar cincisprezece secunde între „da" și „vin și eu" ar
+fi făcut chatul de nefolosit.
+
+Se numără în tabelul propriu al funcției, ca la conturile noi și la mesajele de
+contact. La refuz, mesajul **rămâne în casetă**: omul l-a scris, e al lui, iar
+la „prea lung" are de tăiat din el — și n-are ce tăia dintr-o casetă golită.
+
+### Fără JavaScript
+
+Caseta e un formular adevărat, cu `method="post"`, iar `chat.php` chiar îl
+primește: aceleași verificări, prin aceleași funcții ca API-ul, apoi
+trimite-redirecționează-arată, ca o reîncărcare să nu scrie mesajul a doua oară.
+Camerele sunt legături, nu butoane.
+
+(Intrarea în cont, în schimb, cere JS pe tot site-ul — `#login-form` n-are nici
+`action`, nici `method`. E o lipsă mai veche, de pe pagina de intrare, nu a
+chatului.)
+
+### Butonul de pe prima pagină
+
+Un singur bloc lat, sub slider, cât `--wrap` de larg ca tot restul paginii. Nu e
+un buton mic într-un colț de meniu: chatul e locul în care se vorbește, iar dacă
+nu se vede de pe prima pagină, nu-l deschide nimeni. Se arată și fără cont, cu
+drumul de întoarcere în adresă — după autentificare omul pică direct în chat, nu
+pe prima pagină, de unde ar trebui să caute butonul din nou.
+
+Verificările: `php teste/test-chat.php http://127.0.0.1:8128` (115 cazuri; fără
+adresă merge și fără server, sare doar partea de API — 97 de cazuri).
