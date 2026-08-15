@@ -236,7 +236,7 @@ function randeazaChipuri(int $evenimentId): string
         // se poate face — iar aici mai e mereu ceva de făcut, fiindcă rândul
         // ăsta apare numai la un eveniment care n-a început.
         return '<p class="rsvp__note rsvp__note--gol">'
-             . 'Fii primul interesat de acest eveniment!</p>';
+             . 'Fii primul interesat de această activitate!</p>';
     }
 
     /* ----------------------------- chipurile --------------------------- */
@@ -267,14 +267,14 @@ function randeazaChipuri(int $evenimentId): string
         $eF = ($numiti[0]['sex'] ?? '') === 'F';
 
         $vorba = $legate[0] . ' este ' . ($eF ? 'interesată' : 'interesat')
-               . ' de acest eveniment.';
+               . ' de această activitate.';
     } elseif ($restul === 0) {
-        $vorba = $legate[0] . ' și ' . $legate[1] . ' sunt interesați de acest eveniment.';
+        $vorba = $legate[0] . ' și ' . $legate[1] . ' sunt interesați de această activitate.';
     } else {
         $cati = $restul === 1 ? 'o persoană' : $restul . ' persoane';
 
         $vorba = $legate[0] . ', ' . $legate[1] . ' și încă ' . $cati
-               . ' sunt interesate de acest eveniment.';
+               . ' sunt interesate de această activitate.';
     }
 
     return '<div class="facepile" aria-hidden="true">' . $chipuri . '</div>'
@@ -393,7 +393,7 @@ function motivBlocajParticipare(array $eveniment, ?array $membru): string
     // Ușa închisă de organizator sau de staff. Motivul a plecat întreg în
     // e-mailul de la scoatere; aici se spune doar ce se poate și ce nu.
     if (esteInterzisLaEveniment((int) $eveniment['id'], $membruId)) {
-        return 'Nu te mai poți înscrie la acest eveniment.';
+        return 'Nu te mai poți înscrie la această activitate.';
     }
 
     /**
@@ -762,8 +762,8 @@ function vorbaDespreCatiSunt(int $cati, string $stare, bool $incheiat): string
 
     // Tot la prezent, oricare ar fi starea evenimentului: vezi de ce, mai sus.
     return $numar . ($cati === 1
-        ? ' este interesată de acest eveniment.'
-        : ' sunt interesate de acest eveniment.');
+        ? ' este interesată de această activitate.'
+        : ' sunt interesate de această activitate.');
 }
 
 /**
