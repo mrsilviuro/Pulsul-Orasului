@@ -2505,8 +2505,9 @@ body { overscroll-behavior-y: none; }
 .stat__label { font-size: 13px; color: var(--text-soft); line-height: 1.35; }
 
 /* --------------------------- 23. EVALUĂRI ------------------------------- */
-.feedback { margin-top: 46px; }
-.feedback .section-head { margin-bottom: 20px; }
+/* Evaluările stau de-acum într-un tab, lângă „Istoric": distanța de sus vine
+   de la `.tabs-section`, iar capul de secțiune l-au înlocuit taburile. Ce a
+   rămas al lor începe mai jos, cu rezumatul. */
 
 .rating-summary {
   display: flex;
@@ -3222,7 +3223,7 @@ body { overscroll-behavior-y: none; }
 
 /* Aceeași distanță și deasupra, și dedesubt. Casetele cu statistici n-au
    margine jos, deci fără rândul ăsta secțiunea se lipea de ele — sub ea, unde
-   `.feedback` are marginea lui de sus, spațiul era deja bun. */
+   `.tabs-section` are marginea lui de sus, spațiul era deja bun. */
 .evenimente-profil { margin-top: 54px; margin-bottom: 54px; }
 
 /* Cartonașele duc acum la event.php, deci se poartă ca oricare altele de pe
@@ -3259,10 +3260,41 @@ body { overscroll-behavior-y: none; }
   line-height: 1.5;
 }
 
+/* --- Însemnele de pe cartonașele din „Istoric" --------------------------
+   „Organizator" și „Absent": două lucruri care se pot spune despre un
+   eveniment numai privindu-l de pe profilul cuiva anume. Stau în colțul de
+   jos-stânga al pozei, ca să nu se bată cu eticheta de categorie (sus-stânga)
+   sau cu starea de moderare (sus-dreapta) — un cartonaș le poate purta pe
+   toate deodată.
+
+   Se așază unul lângă altul: cine a organizat un eveniment nu poate lipsi de
+   la el, deci n-o să se întâmple des, dar dacă se întâmplă trebuie să încapă
+   amândouă. */
+.card__rol {
+  position: absolute;
+  bottom: 10px; left: 10px;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 11px; font-weight: 800;
+  letter-spacing: .04em; text-transform: uppercase;
+  backdrop-filter: blur(8px);
+}
+.card__rol--organizator { background: rgba(212, 57, 43, .92); color: #fff; }
+
+/* Al doilea se dă la dreapta primului, dacă se nimeresc amândouă. */
+.card__rol--organizator ~ .card__rol--absent { left: auto; right: 10px; }
+.card__rol--absent { background: rgba(26, 31, 39, .82); color: #fff; }
+
 /* --- Peste primele patru ------------------------------------------------
    Sunt deja în pagină, doar nu se văd. Butonul „Vezi mai mult…" le arată
    scoțând clasa, fără să mai ceară nimic de la server. */
 .ascuns { display: none; }
+
+/* Iar cele din „Istoric" se ascund cu atributul `hidden`, pus de main.js.
+   Fără rândul ăsta n-ar face nimic: `.card` are `display: flex`, care bate
+   ascunderea din browser. Aceeași grijă ca la `.comment[hidden]` și
+   `.person[hidden]`. */
+.card[hidden] { display: none; }
 
 .vezi-mai-mult { display: flex; justify-content: center; margin-top: 26px; }
 

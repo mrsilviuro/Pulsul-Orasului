@@ -2184,49 +2184,70 @@
     });
   });
 
-  /* ------------- „Vezi mai mult" la evaluările de pe profil ----------- */
+  /* ------------------ „Vezi mai mult", peste tot ---------------------
+     O listă lungă intră toată în pagină și se descoperă din câte-n câte.
 
-  var panouEvaluari = document.querySelector('[data-evaluari]');
-  var potrivesteEvaluarile = function () {};
+     A fost scrisă întâi pentru evaluările de pe profil. Când a venit și
+     istoricul, tot acolo, ar fi ajuns a doua copie a aceluiași lucru pe
+     aceeași pagină — deci s-a mutat aici, fără nimic al ei: orice
+     `[data-descopera]` cu o listă înăuntru merge, oricare i-ar fi rândurile.
 
-  if (panouEvaluari) {
-    var listaEvaluari = panouEvaluari.querySelector('[data-lista-evaluari]');
-    var maiMulteEv    = panouEvaluari.querySelector('[data-mai-multe-evaluari]');
-    var maiMulteEvBtn = panouEvaluari.querySelector('[data-mai-multe-evaluari-buton]');
-    var pePaginaEv    = parseInt(panouEvaluari.getAttribute('data-deodata'), 10) || 10;
-    var arataleEv     = pePaginaEv;
+     Ce se numără sunt COPIII listei, nu ceva după clasă. Așa merge și peste
+     `<li class="evaluare">`, și peste `<article class="card">`, fără să știe
+     nimic despre niciunul.
 
-    // Aceeași purtare ca la comentarii și la listele din taburi: toate intră în
-    // pagină, butonul doar dă la o parte.
-    potrivesteEvaluarile = function () {
-      if (!listaEvaluari) return;
+     Butonul îl scrie tot ea, cu câte au mai rămas: numărul nu se poate pune
+     din PHP, fiindcă se schimbă la fiecare apăsare. De aceea rândul lui intră
+     `hidden` din pagină — altfel s-ar vedea o clipă scris „Vezi mai mult",
+     fără număr, și s-ar corecta singur sub ochii omului. */
 
-      var toate = Array.prototype.slice.call(listaEvaluari.querySelectorAll('.evaluare'));
+  document.querySelectorAll('[data-descopera]').forEach(function (panou) {
+    var lista    = panou.querySelector('[data-descopera-lista]');
+    var cutie    = panou.querySelector('[data-descopera-mai-mult]');
+    var buton    = panou.querySelector('[data-descopera-buton]');
+    var pePagina = parseInt(panou.getAttribute('data-deodata'), 10) || 10;
+    var aratate  = pePagina;
+
+    if (!lista) return;
+
+    function potriveste() {
+      var toate   = Array.prototype.slice.call(lista.children);
       var ascunse = 0;
 
-      toate.forEach(function (li, i) {
-        var deAscuns = i >= arataleEv;
-        li.hidden = deAscuns;
+      toate.forEach(function (rand, i) {
+        var deAscuns = i >= aratate;
+        rand.hidden = deAscuns;
         if (deAscuns) ascunse++;
       });
 
-      if (maiMulteEv) {
-        maiMulteEv.hidden = ascunse === 0;
-        if (maiMulteEvBtn && ascunse > 0) {
-          maiMulteEvBtn.textContent = 'Vezi mai mult (încă ' + ascunse + ')';
+      if (cutie) {
+        cutie.hidden = ascunse === 0;
+        if (buton && ascunse > 0) {
+          buton.textContent = 'Vezi mai mult (încă ' + ascunse + ')';
         }
       }
-    };
+    }
 
-    if (maiMulteEvBtn) {
-      maiMulteEvBtn.addEventListener('click', function () {
-        arataleEv += pePaginaEv;
-        potrivesteEvaluarile();
+    if (buton) {
+      buton.addEventListener('click', function () {
+        aratate += pePagina;
+        potriveste();
       });
     }
 
-    potrivesteEvaluarile();
-  }
+    /**
+     * Lăsată la vedere pentru cine schimbă lista din afară.
+     *
+     * Formularul de evaluare de mai jos înlocuiește toată lista după ce
+     * trimite o părere; fără rândul ăsta, rândurile noi ar rămâne toate
+     * descoperite, iar butonul ar arăta un număr de dinainte. Câte se văd NU
+     * se dă înapoi la prima pagină: cine tocmai a apăsat de trei ori „Vezi mai
+     * mult" n-are de ce să se trezească iar la început.
+     */
+    panou.__descopera = potriveste;
+
+    potriveste();
+  });
 
   /* ------------- formularul de evaluare de pe profil ------------------ */
 
@@ -2278,7 +2299,11 @@
         if (lista && typeof c.evaluari === 'string') {
           lista.innerHTML = c.evaluari;
           deseneazaStele(lista);
-          potrivesteEvaluarile();
+
+          // Rândurile sunt noi, deci ascunsul se face din nou. Funcția stă pe
+          // panoul din jur, pusă acolo de componenta „Vezi mai mult".
+          var panou = lista.closest('[data-descopera]');
+          if (panou && panou.__descopera) panou.__descopera();
         }
 
         toast(c.mesaj || 'Evaluarea ta a fost trimisă.');

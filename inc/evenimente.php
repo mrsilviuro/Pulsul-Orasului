@@ -361,6 +361,73 @@ function urlEveniment(string $slug): string
     return 'event.php?slug=' . urlencode($slug);
 }
 
+/**
+ * Cartonașul unui eveniment, așa cum arată peste tot: poză, categorie, titlu,
+ * început de text, ziua și locul.
+ *
+ * A fost scris o vreme de-a dreptul în profil.php, într-un `foreach`. Când a
+ * venit și lista de istoric, tot de acolo, ar fi ajuns scris de două ori pe
+ * aceeași pagină — iar două bucăți de HTML care trebuie să arate la fel încep
+ * să difere de la prima corectură. Acum e într-un loc.
+ *
+ * Întoarce HTML, nu-l tipărește: așa poate fi pus și într-o listă, și într-un
+ * răspuns JSON, dacă va fi vreodată nevoie.
+ *
+ * $insigne e HTML gata făcut, lipit peste poză, în dreapta sus: „Organizator",
+ * „Absent". Cine cheamă funcția știe ce are de spus despre eveniment; funcția
+ * asta știe doar cum arată un cartonaș.
+ *
+ * $ascuns pune clasa `.ascuns`, pentru cartonașele care intră în pagină dar nu
+ * se văd până la „Vezi mai mult". Tot ce e de arătat pleacă în aceeași pagină:
+ * butonul doar dă la o parte, nu cere nimic de la server.
+ */
+function randeazaCartonasEveniment(array $ev, string $insigne = '', bool $ascuns = false): string
+{
+    $inAsteptare = ($ev['stare_moderare'] ?? '') === 'in_asteptare';
+
+    $clase = 'card';
+    if ($inAsteptare) { $clase .= ' card--in-asteptare'; }
+    if ($ascuns)      { $clase .= ' ascuns'; }
+
+    $coperta = urlCoperta($ev['coperta'] ?? null);
+
+    // Imaginea implicită a categoriei, când va exista. Coloana e deja în bază,
+    // fișierele se urcă de mână — vezi roadmap-ul din CLAUDE.md.
+    if ($coperta === '' && !empty($ev['imagine_default'])) {
+        $coperta = 'assets/img/categorii/' . $ev['imagine_default'];
+    }
+
+    $adresa = h(urlEveniment((string) $ev['slug']));
+
+    $poza = $coperta !== ''
+        ? '<img src="' . h($coperta) . '" alt="" width="1600" height="900"'
+          . ' loading="lazy" decoding="async">'
+        : '';
+
+    // Cea de moderare rămâne separată de $insigne: e o stare a anunțului, nu
+    // ceva despre omul de pe profilul căruia se uită cartonașul.
+    $stare = $inAsteptare
+        ? '<span class="card__stare">În așteptare de aprobare</span>'
+        : '';
+
+    return '<article class="' . $clase . '">'
+         . '<a class="card__media" href="' . $adresa . '">'
+         . $poza
+         . '<span class="card__tag">' . h((string) ($ev['categorie'] ?? '')) . '</span>'
+         . $stare
+         . $insigne
+         . '</a>'
+         . '<div class="card__body">'
+         . '<h3 class="card__title"><a href="' . $adresa . '">' . h((string) $ev['titlu']) . '</a></h3>'
+         . '<p class="card__excerpt">' . h(inceputDeText((string) $ev['descriere'])) . '</p>'
+         . '<div class="card__meta">'
+         . '<time datetime="' . h((string) $ev['data_eveniment']) . '">'
+         . h(dataScurta($ev['data_eveniment'])) . '</time>'
+         . '<span class="dot" aria-hidden="true"></span>'
+         . '<span>' . h(inceputDeText((string) $ev['locatie'], 48)) . '</span>'
+         . '</div></div></article>';
+}
+
 /** Adresa formularului, în modul în care editează un eveniment anume. */
 function urlEditareEveniment(string $slug): string
 {

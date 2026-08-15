@@ -1230,6 +1230,8 @@ confirmat, dar n-a ajuns, iese din prima și intră în a doua. Altfel profilul 
 spune „prezent la 12" și „n-a venit la 3" despre aceleași douăsprezece, iar
 cine le citește n-ar ști care e adevărul.
 
+Lista din spatele lor e tabul „Istoric", descris mai jos.
+
 **Primele patru se văd, restul intră ascunse.** Tot ce e de arătat pleacă în
 aceeași pagină; peste al patrulea, cartonașele primesc clasa `.ascuns`, iar
 butonul „Vezi mai mult… (2)" apare doar dacă are ce descoperi — cu numărul
@@ -2391,7 +2393,72 @@ Butoanele nu mai există în pagină, deci n-au ce fi apăsate; oprirea adevăra
 rămâne în `api/interes.php`, prin aceeași `evenimentAInceput()`, pentru o filă
 lăsată deschisă de dinainte.
 
-Verificările: `php teste/test-evaluari.php` (74 de cazuri, cere baza de date,
+Verificările: `php teste/test-evaluari.php` (90 de cazuri, cere baza de date,
+nu și serverul).
+
+
+## Taburile de pe profil: „Evaluări" și „Istoric"
+
+Jumătatea de jos a profilului stă de-acum în două taburi. Primul e ce era
+înainte — notele primite. Al doilea e nou: **pe unde a fost omul.**
+
+`istoricEvenimente()` și `randeazaIstoric()` din `inc/evaluari.php`,
+`randeazaCartonasEveniment()` din `inc/evenimente.php`, componenta
+`[data-descopera]` din `main.js`.
+
+### Ce intră în „Istoric"
+
+Tot ce se vede pe site și are numele lui pe lista de participanți: și ce
+urmează, și ce s-a încheiat, și ale lui, și ale altora — cele mai noi întâi.
+Lipsesc cele anulate și cele care n-au ajuns niciodată publice: la primele
+nimeni n-a fost nicăieri, la celelalte n-avea cum să se înscrie cineva.
+
+**Nu se amestecă cu „Evenimente organizate"** de mai sus. Acolo se vede ce
+*pune la cale*, adică ce urmează; aici, ce a fost. Un organizator cu douăzeci
+de seri în urmă și niciuna în față are lista de sus goală și istoricul plin.
+
+Cartonașele sunt cele de pe prima pagină, prin aceeași funcție. Două însemne se
+adaugă în colțul pozei, fiindcă se pot spune numai privind de pe profilul cuiva
+anume: **„Organizator"**, o laudă mică — seara aceea a existat fiindcă s-a
+ocupat el de ea — și **„Absent"**, celălalt capăt. Al doilea se scrie pe față:
+cine se uită la istoricul cuiva are dreptul să vadă și de câte ori n-a ajuns,
+altfel cifra de sus ar rămâne fără nimic în spate.
+
+Absența **nu scoate** evenimentul din listă, deși îl scoate din cifra „Prezent
+la evenimente". Cifra spune la câte a fost; lista e istoria lui, iar din istorie
+nu se șterge o seară fiindcă n-a ajuns la ea.
+
+Fără niciun eveniment: „Prenume nu a mai participat la niciun eveniment.", pe
+mijloc, ca „Niciun comentariu încă" din tabul de alături.
+
+### Ce s-a refolosit
+
+Trei lucruri, și niciunul n-a fost scris a doua oară:
+
+- **Taburile.** Aceeași componentă `[data-tabs]` ca pe pagina evenimentului, cu
+  `role="tab"` și `aria-controls`. A venit cu tot cu navigarea din săgeți și cu
+  deschiderea din adresă — `profil.php?m=…#panel-istoric` cade drept pe istoric.
+- **Cartonașul.** Era scris de-a dreptul în `profil.php`, într-un `foreach`. Cu
+  a doua listă pe aceeași pagină ar fi ajuns scris de două ori, iar două bucăți
+  de HTML care trebuie să arate la fel încep să difere de la prima corectură.
+  Acum e `randeazaCartonasEveniment()`, cu un loc unde cine cheamă funcția poate
+  lipi ce are de spus el.
+- **„Vezi mai mult".** Era scris pentru evaluări. S-a mutat în
+  `[data-descopera]`, fără nimic al lui: numără **copiii listei**, deci merge la
+  fel peste `<li class="evaluare">` și peste `<article class="card">`. Câte
+  deodată vine din `data-deodata` — 20 la evaluări, 6 la istoric, fiindcă un
+  cartonaș cu poză ocupă cât patru păreri scrise.
+
+Funcția de reașezare rămâne agățată de panou (`panou.__descopera`), ca formularul
+de evaluare să poată chema ascunsul din nou după ce înlocuiește toată lista.
+Câte se văd nu se dă înapoi la prima pagină: cine tocmai a apăsat de trei ori
+„Vezi mai mult" n-are de ce să se trezească iar la început.
+
+O grijă mică, dar care s-a mai plătit o dată: `.card` are `display: flex`, care
+bate `hidden`-ul browserului. Fără `.card[hidden] { display: none; }`, butonul
+n-ar ascunde nimic — exact bug-ul avut la `.comment__replies`.
+
+Verificările: `php teste/test-evaluari.php` (90 de cazuri, cere baza de date,
 nu și serverul).
 
 
