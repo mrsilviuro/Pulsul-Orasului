@@ -25,6 +25,21 @@ if (esteLogat()) {
 $tocmaiIesit = isset($_GET['iesit']);
 
 /**
+ * Cât timp site-ul e în lucru, pagina asta e singura ușă — dar e mai îngustă.
+ *
+ * Se scot din ea cele două drumuri care n-ar duce nicăieri: înregistrarea
+ * (api/inregistrare.php e închis) și intrarea cu Google (google.php la fel,
+ * fiindcă drumul prin el se poate termina cu un cont NOU, iar cât e închis nu
+ * se fac conturi noi).
+ *
+ * Le scoatem din pagină, nu le ascundem cu CSS: un formular care se vede și
+ * nu merge e mai supărător decât unul care lipsește. Cine e de-al casei intră
+ * cu e-mail și parolă, iar cine nu e n-are ce face aici nici într-un fel, nici
+ * în altul — vezi api/autentificare.php.
+ */
+$inConstructie = siteInConstructie();
+
+/**
  * Unde vrea omul să ajungă după ce intră.
  *
  * Se ia din adresă și se dă mai departe butonului de Google, care pleacă de pe
@@ -83,7 +98,11 @@ require __DIR__ . '/inc/antet.php';
 
       <div class="auth__card">
 
-        <!-- ====================== TABURI DE SELECȚIE ==================== -->
+        <!-- ====================== TABURI DE SELECȚIE ====================
+          Cât e site-ul în lucru rămâne doar autentificarea: conturile noi nu
+          se pot face, deci un tab „Înregistrare" ar fi fost un drum înfundat.
+        ============================================================== -->
+        <?php if (!$inConstructie): ?>
         <div class="auth-tabs" role="tablist" data-tabs id="auth-tabs" aria-label="Autentificare sau înregistrare">
           <button class="auth-tab is-active" type="button" role="tab" id="tab-login"
                   aria-controls="panel-login" aria-selected="true" tabindex="0">
@@ -94,12 +113,21 @@ require __DIR__ . '/inc/antet.php';
             Înregistrare
           </button>
         </div>
+        <?php endif; ?>
 
         <!-- ======================== AUTENTIFICARE ====================== -->
         <div class="auth-panel is-active" id="panel-login" role="tabpanel" aria-labelledby="tab-login" tabindex="0">
 
           <div id="login-block">
 
+          <?php if ($inConstructie): ?>
+          <h1 class="auth__title">Site-ul e în lucru</h1>
+          <p class="auth__lead">
+            Deocamdată intră doar echipa. Dacă ai ajuns aici din greșeală,
+            <a href="constructie.php">lasă-ne adresa</a> și îți dăm de veste
+            când deschidem.
+          </p>
+          <?php else: ?>
           <h1 class="auth__title">Bine ai revenit</h1>
           <p class="auth__lead">Intră în cont ca să publici evenimente și să participi la discuții.</p>
 
@@ -109,6 +137,7 @@ require __DIR__ . '/inc/antet.php';
             $redirectDupa    = $inapoiLa;
             require __DIR__ . '/inc/buton-google.php';
           ?>
+          <?php endif; ?>
 
           <form class="form" id="login-form" novalidate>
 
@@ -151,10 +180,12 @@ require __DIR__ . '/inc/antet.php';
 
             <button class="btn btn--primary btn--block" type="submit">Intră în cont</button>
 
+            <?php if (!$inConstructie): ?>
             <p class="auth__switch">
               Nu ai cont încă?
               <button class="link-btn" type="button" data-go-tab="tab-register">Creează unul</button>
             </p>
+            <?php endif; ?>
           </form>
           </div><!-- /#login-block -->
 
@@ -215,7 +246,13 @@ require __DIR__ . '/inc/antet.php';
           </div>
         </div>
 
-        <!-- ========================= ÎNREGISTRARE ====================== -->
+        <!-- ========================= ÎNREGISTRARE ======================
+          Lipsește cu totul cât e site-ul în lucru: api/inregistrare.php e
+          închis, deci formularul n-ar avea unde să trimită. Scos din pagină,
+          nu ascuns — unul care se vede și nu merge e mai supărător decât unul
+          care nu e.
+        ============================================================== -->
+        <?php if (!$inConstructie): ?>
         <div class="auth-panel" id="panel-register" role="tabpanel" aria-labelledby="tab-register" tabindex="0" hidden>
 
           <div id="register-block">
@@ -382,12 +419,17 @@ require __DIR__ . '/inc/antet.php';
             </div>
           </div>
         </div>
+        <?php endif; ?>
 
       </div>
 
+      <?php /* contact.php e închis cât ține lucrarea, deci n-are rost trimis
+               nimeni acolo — vezi inc/constructie.php. */ ?>
+      <?php if (!$inConstructie): ?>
       <p class="auth__foot">
         Ai nevoie de ajutor? <a href="contact.php">Scrie-ne</a>.
       </p>
+      <?php endif; ?>
 
     </div>
   </div>

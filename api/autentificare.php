@@ -80,7 +80,11 @@ if ($blocat > 0) {
 /* -------------------------- Căutarea contului ------------------------- */
 
 $q = db()->prepare(
-    'SELECT id, permalink, nume, prenume, email, parola_hash, stare,
+    // `este_staff` e aici pentru lacătul de mai jos: cât timp site-ul e în
+    // lucru, numai oamenii de casă trec de intrare. Fără coloană, esteStaff()
+    // ar fi citit un câmp lipsă, l-ar fi luat drept 0 și i-ar fi închis ușa
+    // tocmai celui care trebuia s-o poată deschide.
+    'SELECT id, permalink, nume, prenume, email, parola_hash, stare, este_staff,
             parola_temporara_hash, parola_temporara_expira, parola_temporara_incercari
        FROM membri
       WHERE email = ?
@@ -156,6 +160,36 @@ if ($membru['stare'] !== 'activ') {
         'stare' => 'suspendat',
         'mesaj' => 'Contul este suspendat. Scrie-ne dacă vrei lămuriri.',
     ], 403);
+}
+
+/* ------------------- Site-ul e închis pentru lucrări ------------------- */
+
+/**
+ * Parola a fost bună, dar ușa e închisă pentru cine nu e de-al casei.
+ *
+ * Verificarea stă AICI, înainte de autentifica(), tocmai ca sesiunea să nu se
+ * facă deloc. Dacă am fi lăsat-o pe urmă — sau, mai rău, doar pe lacătul de la
+ * intrarea în pagini — omul ar fi rămas conectat în spatele unui site închis:
+ * cu cont, cu cookie, cu tot, dar fără nicio pagină la care să ajungă. Așa nu
+ * se întâmplă nimic: e ca și cum n-ar fi apăsat.
+ *
+ * Se citește din rândul deja adus din bază (`este_staff`), prin aceeași
+ * esteStaff() ca peste tot — nu dintr-o comparație scrisă din nou aici.
+ *
+ * Nu se numără ca încercare greșită: parola a fost corectă, iar omul n-a
+ * făcut nimic rău. Ar fi fost cel mai nedrept fel de blocare — trei intrări
+ * bune și contul încuiat zece minute, pentru că site-ul e în lucru.
+ *
+ * `redirect` întoarce pagina la afișul de pe ușă, ca omul să vadă unde a
+ * ajuns, nu un formular care refuză fără să spună unde să se ducă.
+ */
+if (siteInConstructie() && !esteStaff($membru)) {
+    raspunsJson([
+        'ok'       => false,
+        'stare'    => 'in_constructie',
+        'redirect' => 'constructie.php',
+        'mesaj'    => 'Site-ul e în lucru. Îți dăm de veste imediat ce deschidem.',
+    ], 503);
 }
 
 /* ---------------------------- Totul e bun ----------------------------- */

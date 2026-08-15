@@ -9,6 +9,7 @@ declare(strict_types=1);
  */
 
 require_once __DIR__ . '/bootstrap.php';
+require_once __DIR__ . '/constructie.php';
 
 const INCERCARI_MAXIME       = 3;    // greșeli permise înainte de blocare
 const MINUTE_BLOCARE         = 10;   // cât ține blocarea
@@ -853,3 +854,20 @@ function durataInCuvinte(int $secunde): string
     }
     return $secunde <= 1 ? 'o secundă' : $secunde . ' de secunde';
 }
+
+/* ========================== UȘA ÎNCHISĂ ============================== */
+
+/**
+ * Lacătul de pe site, cât timp `in_constructie` e pornit din inc/config.php.
+ *
+ * Stă AICI, la coada fișierului care știe cine e conectat, și nu în fiecare
+ * pagină în parte: o listă de pagini care trebuie să-și pună singure lacătul e
+ * o listă din care lipsește mereu una — cea scrisă mâine. Așa, orice pagină și
+ * orice API care are de-a face cu un om conectat trece pe aici fără să știe.
+ *
+ * Se cheamă la sfârșit, nu la început: până aici trebuie să fie deja definite
+ * esteStaff() și membruCurent(), de care atârnă întrebarea „are voie înăuntru?".
+ *
+ * Regula întreagă — cine trece, ce uși rămân deschise — e în inc/constructie.php.
+ */
+opresteDacaEInConstructie();

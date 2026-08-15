@@ -5091,4 +5091,77 @@
     });
   }
 
+  /* ======================================================================
+     PAGINA DE AȘTEPTARE — înscrierea la vești
+
+     Formularul e unul adevărat, cu `method="post"`, iar constructie.php îl
+     primește: fără JavaScript merge la fel, doar cu o reîncărcare. Aici se
+     scurtează drumul — adresa pleacă pe lângă pagină și răspunsul apare pe
+     loc, fără ca omul să piardă ce vedea.
+     ====================================================================== */
+
+  var formaVesti = document.querySelector('[data-newsletter]');
+
+  if (formaVesti) {
+    var vestiCamp    = formaVesti.querySelector('[name="email"]');
+    var vestiButon   = formaVesti.querySelector('[data-newsletter-buton]');
+    var vestiRaspuns = formaVesti.querySelector('[data-newsletter-raspuns]');
+    var vestiPleaca  = false;
+
+    function vestiSpune(text, eBun) {
+      if (!vestiRaspuns) return;
+
+      vestiRaspuns.textContent = text;
+      vestiRaspuns.classList.toggle('constructie__raspuns--rau', !eBun);
+      vestiRaspuns.hidden = !text;
+    }
+
+    formaVesti.addEventListener('submit', function (e) {
+      e.preventDefault();
+
+      if (vestiPleaca) return;
+
+      var adresa = (vestiCamp.value || '').trim();
+
+      // Verificarea din browser e doar confort: taie drumul până la server
+      // pentru o casetă goală. Cea care hotărăște e verificaEmail() de pe
+      // server — vezi inscrieLaVesti() din inc/constructie.php.
+      if (!adresa) { vestiCamp.focus(); return; }
+
+      vestiPleaca = true;
+      if (vestiButon) { vestiButon.disabled = true; }
+
+      fetch('api/newsletter.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          csrf:    (formaVesti.querySelector('[name="csrf"]') || {}).value || '',
+          email:   adresa,
+          website: (formaVesti.querySelector('[name="website"]') || {}).value || ''
+        })
+      })
+      .then(citesteRaspuns)
+      .then(function (rez) {
+        vestiPleaca = false;
+        if (vestiButon) { vestiButon.disabled = false; }
+
+        if (!rez.corp) { vestiSpune(mesajRaspunsNeasteptat(rez), false); return; }
+        var c = rez.corp;
+
+        if (!c.ok) { vestiSpune(c.mesaj || 'Nu am putut salva adresa.', false); return; }
+
+        // Reușita golește caseta: altfel omul se uită la adresa lui lângă un
+        // „gata, te-am trecut" și nu știe dacă mai are ceva de apăsat.
+        vestiCamp.value = '';
+        vestiSpune(c.mesaj || 'Gata!', true);
+      })
+      .catch(function () {
+        vestiPleaca = false;
+        if (vestiButon) { vestiButon.disabled = false; }
+        vestiSpune(mesajFaraLegatura(), false);
+      });
+    });
+  }
+
 })();

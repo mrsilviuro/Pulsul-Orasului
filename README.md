@@ -3190,3 +3190,131 @@ server și nume de tabele.
 ## De făcut mai departe
 
 Paginile de categorie și moderarea evenimentelor.
+
+
+## Site închis pentru lucrări
+
+`in_constructie` din `inc/config.php` pus pe `true` închide site-ul: oricine
+intră vede un afiș pe ușă și atât. Se ia înapoi punându-l pe `false` — nimic
+altceva, nicio bază de schimbat, niciun fișier de mutat.
+
+`inc/constructie.php` (regula), `constructie.php` (afișul), `api/newsletter.php`,
+`sql/019-newsletter.sql`.
+
+### Nu e o ascundere de ochi
+
+Nu se ascund doar paginile, se opresc și API-urile din spatele lor. Altfel
+oricine ar fi putut citi lista de evenimente cu un `curl`, sau și-ar fi făcut
+cont, cât timp pe ecran scria „ne pregătim". O ușă închisă doar la vedere nu e
+o ușă închisă.
+
+Paginile primesc o redirecționare spre afiș; API-urile primesc **503** în JSON,
+fiindcă un `fetch` care se trezește cu HTML în loc de răspuns arată pe ecran
+„ceva n-a mers", fără să spună ce. Iar 503 e cuvântul potrivit: nu „n-ai voie",
+ci „nu acum".
+
+### Lacătul stă într-un singur loc
+
+La **coada lui `inc/auth.php`**, nu în fiecare pagină. O listă de pagini care
+trebuie să-și pună singure lacătul e o listă din care lipsește mereu una — cea
+scrisă mâine. Așa, orice fișier care are de-a face cu un om conectat trece pe
+acolo fără să știe, iar cine adaugă o pagină nouă n-are ce uita.
+
+La coadă, nu la început: până acolo trebuie să fie deja definite `esteStaff()`
+și `membruCurent()`, de care atârnă întrebarea „are voie înăuntru?".
+
+Un singur API scăpa: `api/inregistrare.php`, singurul care nu cerea `auth.php`
+— tocmai fiindcă înregistrarea o face cine n-are cont. Acum îl cere, pentru
+lacăt. Era exact gaura prin care se puteau face conturi cu site-ul închis.
+
+Din **linia de comandă** nu se pune niciun lacăt: cronurile și testele nu sunt
+vizitatori, sunt casa însăși.
+
+### Ușile care rămân deschise
+
+`constructie.php`, `login.php`, `api/autentificare.php`, `api/newsletter.php` și
+`iesire.php`. Ultima e acolo ca nimeni să nu rămână închis înăuntru: cine era
+conectat în clipa în care s-a pus lacătul trebuie să poată ieși din cont.
+
+Potrivirea se face pe **fișierul de pe disc**, adus la forma lui adevărată cu
+`realpath()`, nu pe adresa cerută. E singurul fel în care lista chiar înseamnă
+ceva: o comparație pe URL ar fi trebuit să se apere singură de
+`/api/../index.php`, de bara în plus și de literele mari — adică exact felul de
+verificare scrisă de mână care lasă mereu ceva să treacă.
+
+Google **nu** e pe listă. Intrarea prin el trece prin trei adrese și se poate
+încheia cu un cont nou, iar cât e site-ul închis nu se fac conturi noi. De
+aceea butonul lui nici nu se arată pe `login.php` atunci, împreună cu tot tabul
+de înregistrare: un formular care se vede și nu merge e mai supărător decât
+unul care lipsește.
+
+### Cine nu e staff nu apucă să se conecteze
+
+Verificarea stă în `api/autentificare.php`, **înainte** de `autentifica()`,
+tocmai ca sesiunea să nu se facă deloc. Lăsată pe urmă — sau, mai rău, doar pe
+lacătul de la intrarea în pagini — omul ar fi rămas conectat în spatele unui
+site închis: cu cont, cu cookie, cu tot, dar fără nicio pagină la care să
+ajungă. Așa nu se întâmplă nimic: e ca și cum n-ar fi apăsat.
+
+Nu se numără ca încercare greșită. Parola a fost bună, iar omul n-a făcut nimic
+rău — ar fi fost cel mai nedrept fel de blocare: trei intrări corecte și contul
+încuiat zece minute, fiindcă site-ul e în lucru.
+
+Interogarea de la intrare a trebuit să înceapă să aducă și `este_staff`. Fără
+coloană, `esteStaff()` citea un câmp lipsă, îl lua drept 0 și închidea ușa
+tocmai celui care trebuia s-o poată deschide.
+
+### Afișul
+
+Singura pagină a site-ului **fără antet și fără subsol**. Antetul aduce cu el
+meniul întreg — Acasă, Despre, Contact — adică exact paginile închise în clipa
+aceea. Un „revenim curând" cu un meniu din care nu merge nimic e mai rău decât
+niciun meniu: omul apasă, ajunge înapoi la afiș și crede că s-a stricat ceva.
+
+Rămân comune cele care contează: `style.css` și `main.js`, ca peste tot.
+
+O fotografie de amurg peste tot ecranul, blurată. Poza stă în elementul ei, nu
+ca `background-image` pe `body`: un blur pus pe fundalul paginii ar fi tras
+după el și textul. E crescută cu 40 de puncte peste marginile ecranului, ca
+dunga spălăcită pe care blurul o lasă pe margini să cadă în afara lui.
+
+Pagina e mereu întunecată — `data-theme="dark"` scris de-a dreptul în `<html>`.
+Pe alb, o fotografie de noapte cu text alb peste ea n-ar avea ce să însemne,
+iar butonul de temă nici nu ajunge în pagină.
+
+Răspunde cu **503** și `Retry-After`. Cu 200, Google ar fi indexat „ne
+pregătim" ca fiind pagina noastră de start și ar fi ținut-o așa săptămâni după
+deschidere.
+
+Cu site-ul deschis, afișul se redirecționează singur spre prima pagină — altfel
+ar fi rămas la adresa lui pentru totdeauna, iar cine îl deschidea dintr-un
+bookmark ar fi crezut că încă n-am pornit. La fel pentru omul de casă: pentru
+el site-ul e deschis, deci afișul nu-l privește.
+
+### Adresele celor care așteaptă
+
+Un singur câmp și un buton. `abonati_newsletter` nu are legătură cu `membri`:
+cine se înscrie acolo n-are cont și nici n-ar putea să-și facă unul.
+
+A doua înscriere cu aceeași adresă arată **exact ca prima**. Nu fiindcă n-am
+ști — cheia unică din bază o știe — ci fiindcă un „ești deja înscris" ar fi
+făcut din formular un loc unde oricine află, adresă cu adresă, cine e pe listă.
+Unicitatea o ține baza, prin `ON DUPLICATE KEY UPDATE id = id`, nu o întrebare
+pusă înainte, pe lângă care două apăsări în aceeași clipă ar trece amândouă.
+
+Verificarea adresei, limita pe IP și scrierea stau într-o singură funcție,
+`inscrieLaVesti()`, fiindcă o cer două uși: API-ul, când pagina are JavaScript,
+și `constructie.php` însuși, când n-are. Formularul are `method="post"` și un
+capăt adevărat care îl primește — nu doar un atribut scris în HTML.
+
+Regula adresei de e-mail s-a mutat în `verificaEmail()`. O aveau scrisă la fel
+înregistrarea și formularul de contact; a treia copie ar fi însemnat că într-o
+zi o adresă trece pe undeva și e refuzată în altă parte.
+
+Verificările: `php teste/test-constructie.php http://127.0.0.1:8128` (71 de
+cazuri; fără adresă merge și fără server, 35). Partea cu serverul pornește și
+oprește `in_constructie` din `config.php` și îl pune la loc cum l-a găsit — și
+dacă pică ceva la mijloc. După fiecare schimbare **așteaptă până când serverul
+chiar o vede**: PHP ține fișierele compilate în OPcache și se uită dacă s-au
+schimbat pe disc doar din două în două secunde, iar proba pica pe un lacăt care
+era pus, dar nu apucase să se audă.

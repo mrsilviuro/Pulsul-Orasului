@@ -3617,3 +3617,198 @@ body { overscroll-behavior-y: none; }
   line-height: 1.6;
   text-align: center;
 }
+
+/* =========================================================================
+   PAGINA DE AȘTEPTARE (constructie.php)
+   -------------------------------------------------------------------------
+   Singura pagină a site-ului fără antet și fără subsol: meniul ei ar fi dus
+   numai spre uși închise. E o singură fotografie de amurg, cu text peste ea,
+   așa că e mereu întunecată — `data-theme="dark"` e scris de-a dreptul în
+   <html>, iar butonul de temă nici nu ajunge în pagină.
+   ========================================================================= */
+
+.constructie {
+  min-height: 100dvh;          /* `dvh`, ca bara de adrese de pe telefon să nu
+                                  taie din pagină când intră și iese */
+  display: grid;
+  place-items: center;
+  padding: 32px 20px 44px;
+  background: #0d1015;         /* se vede cât se încarcă poza */
+  color: #eef1f6;
+  overflow: hidden;            /* poza crescută peste margini n-are voie să
+                                  lățească pagina */
+}
+
+/* --- Poza, blurată ------------------------------------------------------
+   Stă în elementul ei, nu ca `background-image` pe body: un blur pus pe
+   fundalul paginii ar fi tras după el și textul de deasupra.
+
+   `inset: -40px` o crește dincolo de marginile ecranului. Blurul spală
+   pixelii de la margine spre exterior și lasă o dungă transparentă pe toate
+   cele patru laturi; crescută, dunga aceea cade în afara ecranului.        */
+.constructie__fundal {
+  position: fixed;
+  inset: -40px;
+  z-index: 0;
+}
+.constructie__fundal img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  filter: blur(16px) saturate(1.15);
+  /* Poza e statică; fără asta unele browsere o redesenează la fiecare
+     derulare, cu tot cu blur — cel mai scump lucru de pe pagină. */
+  will-change: transform;
+}
+
+/* Voalul dintre poză și text. Fără el, literele albe cad peste ferestrele
+   aprinse ale orașului și se citesc din două încercări. Mai închis sus și
+   jos, mai limpede la mijloc, unde e poza cea mai frumoasă. */
+.constructie__voal {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  /* Destul cât să se citească textul, nu atât cât să se piardă orașul: poza e
+     jumătate din pagină, iar un voal prea gros o face un dreptunghi negru. */
+  background:
+    radial-gradient(115% 85% at 50% 42%, rgba(13, 16, 21, .10) 0%, rgba(13, 16, 21, .58) 100%),
+    linear-gradient(180deg, rgba(13, 16, 21, .48) 0%, rgba(13, 16, 21, .16) 45%, rgba(13, 16, 21, .68) 100%);
+}
+
+/* --- Ce se citește ------------------------------------------------------ */
+
+.constructie__cuprins {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 620px;
+  text-align: center;
+}
+
+/* `display: flex` peste `inline-flex`-ul lui .logo: altfel logoul și insigna
+   de dedesubt s-ar fi așezat una lângă alta, ca două cuvinte pe același rând. */
+.logo--constructie {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 26px;
+  color: #fff;
+  text-decoration: none;
+}
+.logo--constructie .logo__mark { color: var(--brand); }
+.logo--constructie .logo__tld  { color: rgba(255, 255, 255, .55); }
+
+.constructie__eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  margin-bottom: 14px;
+  padding: 6px 14px;
+  border: 1px solid rgba(255, 255, 255, .16);
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, .07);
+  backdrop-filter: blur(8px);
+  color: rgba(255, 255, 255, .82);
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.constructie__titlu {
+  margin: 0 0 16px;
+  font-size: clamp(30px, 6.2vw, 50px);
+  font-weight: 800;
+  line-height: 1.12;
+  letter-spacing: -.03em;
+  /* Umbra e pentru cazul cel mai rău: un ecran în soare, unde voalul nu mai
+     ajunge. Nu se vede în rest. */
+  text-shadow: 0 2px 24px rgba(0, 0, 0, .5);
+}
+
+.constructie__text {
+  margin: 0 auto 30px;
+  max-width: 480px;
+  color: rgba(238, 241, 246, .78);
+  font-size: 16px;
+  line-height: 1.65;
+}
+
+/* --- Înscrierea la vești ------------------------------------------------ */
+
+.constructie__forma { margin: 0 auto; max-width: 470px; }
+
+/* Câmpul și butonul pe un rând pe ecran larg, unul sub altul pe telefon —
+   vezi mai jos. Nu e `<div>` cu flex peste tot: pe telefon butonul întins pe
+   toată lățimea e mai ușor de nimerit cu degetul decât unul lipit în dreapta. */
+.constructie__rand { display: flex; gap: 10px; }
+
+.constructie__camp {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: var(--field-h);
+  padding: 0 16px;
+  border: 1px solid rgba(255, 255, 255, .18);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, .08);
+  backdrop-filter: blur(10px);
+  color: #fff;
+  font: inherit;
+  font-size: 15px;
+}
+.constructie__camp::placeholder { color: rgba(255, 255, 255, .45); }
+.constructie__camp:focus {
+  outline: none;
+  border-color: var(--brand);
+  background: rgba(255, 255, 255, .13);
+  box-shadow: 0 0 0 3px rgba(255, 97, 82, .28);
+}
+
+.constructie__buton { flex: 0 0 auto; height: var(--field-h); padding-inline: 22px; }
+.constructie__buton[disabled] { opacity: .6; cursor: default; }
+
+.constructie__marunt {
+  margin-top: 12px;
+  color: rgba(238, 241, 246, .52);
+  font-size: 12.5px;
+}
+
+/* Răspunsul de după trimitere. Verde pentru „gata", roșul mărcii pentru ce
+   n-a mers — dar deschis, ca să se citească pe fundal închis. */
+.constructie__raspuns {
+  margin-top: 14px;
+  padding: 10px 14px;
+  border: 1px solid rgba(110, 231, 183, .35);
+  border-radius: var(--radius);
+  background: rgba(16, 185, 129, .16);
+  color: #a7f3d0;
+  font-size: 14px;
+}
+.constructie__raspuns--rau {
+  border-color: rgba(255, 143, 130, .38);
+  background: rgba(255, 97, 82, .16);
+  color: #ffb3a9;
+}
+/* `[hidden]` singur nu învinge un `display` scris de noi; aici nu e cazul, dar
+   regula stă lângă celelalte ca să nu se piardă la prima mutare. */
+.constructie__raspuns[hidden] { display: none; }
+
+.constructie__intrare { margin-top: 34px; font-size: 14px; }
+.constructie__intrare a {
+  color: rgba(238, 241, 246, .62);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(255, 255, 255, .22);
+  padding-bottom: 2px;
+}
+.constructie__intrare a:hover { color: #fff; border-bottom-color: var(--brand); }
+
+@media (max-width: 560px) {
+  /* Unul sub altul: butonul întins pe toată lățimea se apasă cu degetul fără
+     să te uiți, iar câmpul rămâne destul de lat cât să vezi ce scrii. */
+  .constructie__rand { flex-direction: column; }
+  .constructie__buton { width: 100%; }
+  .constructie__text { font-size: 15px; }
+}
+
+/* Blurul e cel mai scump lucru de pe pagină, iar pe un telefon vechi se simte.
+   Cine a cerut mai puțină mișcare primește o poză mai puțin blurată — tot
+   citibilă, fiindcă voalul rămâne. */
+@media (prefers-reduced-motion: reduce) {
+  .constructie__fundal img { filter: blur(10px) saturate(1.1); will-change: auto; }
+}

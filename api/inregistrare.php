@@ -13,7 +13,15 @@ declare(strict_types=1);
  * înlocuiește formularul cu mesajul de confirmare.
  */
 
+/**
+ * auth.php nu se cere aici pentru sesiune — înregistrarea se face tocmai de
+ * cine n-are cont. Se cere pentru LACĂT: la coada lui stă
+ * opresteDacaEInConstructie(), iar fără el ăsta ar fi rămas singurul API prin
+ * care se puteau face conturi cât timp site-ul e închis. Toate celelalte îl
+ * primesc pe drum, prin fișierele pe care le cer oricum.
+ */
 require_once __DIR__ . '/../inc/bootstrap.php';
+require_once __DIR__ . '/../inc/auth.php';
 require_once __DIR__ . '/../inc/email.php';
 
 /* ------------------------- 1. Doar prin POST -------------------------- */

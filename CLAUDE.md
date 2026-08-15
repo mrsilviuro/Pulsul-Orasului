@@ -110,7 +110,7 @@ Site live: https://pulsulorasului.ro
 index.php, event.php, contact.php, despre.php, login.php,
 profil.php, poza.php, setari.php, adauga_eveniment.php, previzualizare.php,
 parola-uitata.php, parola-noua.php, google.php, finalizare.php, confirma.php,
-stergere.php, iesire.php, verifica.php
+stergere.php, iesire.php, verifica.php, constructie.php
 
 inc/
   antet.php        → head + meniu + antete siguranță (folosit de toate paginile)
@@ -165,6 +165,16 @@ inc/
   buton-google.php  → butonul de login Google
   stergere.php      → ștergerea contului cu răgaz + anonimizarea
   camp-parola.php   → un câmp de parolă cu ochi (folosit de toate paginile)
+  constructie.php   → LACĂTUL de pe site (`in_constructie` din config.php):
+                      cine trece (doar staff), ce uși rămân deschise
+                      (usileDeschiseInConstructie) și oprirea propriu-zisă
+                      (opresteDacaEInConstructie, chemată la COADA lui
+                      auth.php — nu în fiecare pagină, fiindcă o listă de
+                      pagini care-și pun singure lacătul e o listă din care
+                      lipsește mereu cea scrisă mâine). Paginile primesc o
+                      redirecționare, API-urile un 503 în JSON. TOT AICI:
+                      inscrieLaVesti() — lista de adrese de pe afiș, cerută
+                      și de api/newsletter.php, și de constructie.php (fără JS)
 
 api/                → endpoint-uri JSON apelate din JS (fetch); eveniment.php e
                       singurul care primește multipart, fiindcă urcă un fișier
@@ -177,15 +187,19 @@ sql/                → schema.sql + migrări numerotate (002, 003, 004, 005-goo
                       011-anulare-eveniment, 012-oras-eveniment,
                       013-interese-evenimente, 014-incheiere-eveniment,
                       015-comentarii, 016-excluderi-evenimente, 017-evaluari,
-                      018-multumiri-eveniment)
+                      018-multumiri-eveniment, 019-newsletter)
 teste/              → test-validare.php (verificările din inc/validare.php)
                       test-comentarii.php, test-participanti.php,
                       test-evaluari.php, test-multumiri.php
                       (toate patru cer baza de date, nu și serverul)
                       test-tine-minte.php, test-setari.php, test-contact.php,
-                      test-evenimente.php, test-prima-pagina.php
-                      (ultimele cinci cer serverul pornit — vezi antetul lor;
-                      test-prima-pagina merge și fără, sare doar partea de API)
+                      test-evenimente.php, test-prima-pagina.php,
+                      test-constructie.php
+                      (ultimele șase cer serverul pornit — vezi antetul lor;
+                      test-prima-pagina și test-constructie merg și fără, sar
+                      doar partea care cere serverul. ATENȚIE: test-constructie
+                      pornește și oprește `in_constructie` din inc/config.php,
+                      și îl pune la loc cum l-a găsit)
 private/            → loguri (emailuri-trimise.log), protejat prin .htaccess
 assets/css/style.css, assets/js/main.js, assets/img/
 ```
@@ -198,6 +212,9 @@ assets/css/style.css, assets/js/main.js, assets/img/
   și de `verificaEveniment()`. Nu există tabel în bază pentru ea.
 - `dezvoltare => true/false` — în dev, linkurile de confirmare apar direct în pagină +
   log în `private/`. Pe producție OBLIGATORIU `false`.
+- `in_constructie => true/false` — site închis, cu pagina de așteptare peste
+  tot. Trec doar oamenii de casă (`membri.este_staff`), iar cine nu e staff nu
+  apucă să se conecteze deloc. Vezi `inc/constructie.php`
 - `fus_orar => 'Europe/Bucharest'`
 - `url_site` — fără `/` la final
 - `email_expeditor` — trebuie să fie pe domeniul propriu (SPF/DKIM), altfel spam

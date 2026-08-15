@@ -105,6 +105,30 @@ return [
      */
     'dezvoltare' => true,
 
+    // ------------------------------------------------------------- în lucru
+    /**
+     * Cât timp e true, site-ul e închis: oricine intră vede pagina de
+     * așteptare (`constructie.php`) și atât. Nu se pot citi evenimente, nu se
+     * pot scrie comentarii, nu se pot face conturi — nu doar că nu se VĂD
+     * paginile, ci nici API-urile din spatele lor nu răspund.
+     *
+     * Rămân deschise doar patru uși, cât să se poată intra și aștepta:
+     * pagina de așteptare, `login.php` cu API-ul ei de intrare, formularul
+     * de înscriere la vești și ieșirea din cont. Lista e scrisă întreagă în
+     * inc/constructie.php.
+     *
+     * CINE TRECE: numai oamenii de casă (`membri.este_staff`). Ei intră pe
+     * login.php ca de obicei, iar de la prima pagină încolo văd site-ul
+     * întreg, ca și cum n-ar fi închis. Cine nu e staff nici măcar nu apucă
+     * să se conecteze: parola bună nu-i deschide nimic, e trimis înapoi la
+     * pagina de așteptare, iar sesiune nu se face deloc.
+     *
+     * Se pune pe true cât se lucrează la ceva mare și pe false la deschidere.
+     * Nu ține loc de mentenanță programată și nu trimite niciun e-mail — e
+     * doar o ușă închisă, cu un afiș pe ea.
+     */
+    'in_constructie' => false,
+
     // -------------------------------------------------------------- limite
     // Câte conturi pot fi create de la aceeași adresă IP într-o oră.
     'inregistrari_pe_ora' => 5,

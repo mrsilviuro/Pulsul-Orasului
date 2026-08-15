@@ -115,6 +115,38 @@ function numeCuMajuscula(string $nume): string
 }
 
 /**
+ * O adresă de e-mail: curățată, verificată, adusă la litere mici.
+ *
+ * Întoarce ['eroare' => '', 'email' => 'ion@email.ro'] sau eroarea, cu adresa
+ * goală. Un singur loc pentru regula asta — o aveau scrisă la fel formularul
+ * de înregistrare și cel de contact, iar înscrierea la vești ar fi fost a
+ * treia copie. Trei copii înseamnă că într-o zi o adresă trece pe undeva și e
+ * refuzată în altă parte.
+ *
+ * Literele mici la salvare sunt jumătatea care contează: fără ele,
+ * „Ion@Email.ro" și „ion@email.ro" ajung două rânduri diferite, iar cheia
+ * unică din bază nu mai apără nimic.
+ */
+function verificaEmail($cerut): array
+{
+    $email = curataSpatii(is_string($cerut) ? $cerut : '');
+
+    if ($email === '') {
+        return ['eroare' => 'Scrie adresa de e-mail.', 'email' => ''];
+    }
+
+    if (mb_strlen($email, 'UTF-8') > EMAIL_MAX) {
+        return ['eroare' => 'Adresa de e-mail e prea lungă.', 'email' => ''];
+    }
+
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        return ['eroare' => 'Adresa de e-mail nu pare validă.', 'email' => ''];
+    }
+
+    return ['eroare' => '', 'email' => mb_strtolower($email, 'UTF-8')];
+}
+
+/**
  * Verifică o dată de naștere scrisă ca ZZ-LL-AAAA, cum se scrie în România.
  *
  * Întoarce mesajul de eroare, sau șir gol dacă data e bună. Cine o primește
@@ -213,18 +245,12 @@ function verificaInregistrare(array $date, ?DateTimeImmutable $azi = null): arra
     }
 
     /* ------------------------------ E-mail ---------------------------- */
-    $email = curataSpatii($citeste('email'));
+    $email = verificaEmail($citeste('email'));
 
-    if ($email === '') {
-        $erori['email'] = 'Scrie adresa de e-mail.';
-    } elseif (mb_strlen($email, 'UTF-8') > EMAIL_MAX) {
-        $erori['email'] = 'Adresa de e-mail e prea lungă.';
-    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $erori['email'] = 'Adresa de e-mail nu pare validă.';
+    if ($email['eroare'] !== '') {
+        $erori['email'] = $email['eroare'];
     } else {
-        // Adresele se păstrează cu litere mici, ca „Ion@Email.ro" și
-        // „ion@email.ro" să nu ajungă două conturi diferite.
-        $curat['email'] = mb_strtolower($email, 'UTF-8');
+        $curat['email'] = $email['email'];
     }
 
     /* -------------------------- Data nașterii ------------------------- */
@@ -1040,16 +1066,12 @@ function verificaContact(array $date, array $dinCont = []): array
     if ($eLogat) {
         $curat['email'] = (string) $dinCont['email'];
     } else {
-        $email = curataSpatii($citeste('email'));
+        $email = verificaEmail($citeste('email'));
 
-        if ($email === '') {
-            $erori['email'] = 'Scrie adresa de e-mail.';
-        } elseif (mb_strlen($email, 'UTF-8') > EMAIL_MAX) {
-            $erori['email'] = 'Adresa de e-mail e prea lungă.';
-        } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            $erori['email'] = 'Adresa de e-mail nu pare validă.';
+        if ($email['eroare'] !== '') {
+            $erori['email'] = $email['eroare'];
         } else {
-            $curat['email'] = mb_strtolower($email, 'UTF-8');
+            $curat['email'] = $email['email'];
         }
     }
 
