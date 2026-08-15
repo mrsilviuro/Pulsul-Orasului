@@ -444,6 +444,38 @@ main { padding-block: 46px 64px; }
   background: var(--text); color: var(--bg); border-color: var(--text);
 }
 
+/* --- Filtrele de pe prima pagină ---------------------------------------
+   Un rând cu lista de orașe, iar sub el categoriile. Pe ecran lat încap una
+   lângă alta; pe telefon, lista de orașe ia toată lățimea și chipurile trec
+   dedesubt — de-aia sunt două rânduri, nu o coloană strânsă. */
+.filtre {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 18px;
+  margin-bottom: 26px;
+}
+.filtre .chips { margin-bottom: 0; }
+
+/* Lista de orașe: caseta de selectare a site-ului, doar cât îi trebuie —
+   nu pe toată lățimea, cum stă în formularul de eveniment. */
+.filtre__oras { display: flex; align-items: center; gap: 10px; }
+.filtre__oras select { width: auto; min-width: 190px; }
+
+@media (max-width: 560px) {
+  .filtre__oras, .filtre__oras select { width: 100%; }
+}
+
+/* Când filtrele nu potrivesc nimic. Pe mijloc, ca „Niciun comentariu încă"
+   din taburile evenimentului: un rând singur, la stânga, ar arăta a text
+   uitat acolo. */
+.grid-gol {
+  padding: 40px 24px;
+  text-align: center;
+  color: var(--text-faint);
+  font-size: 15px;
+}
+
 /* Grilă */
 .grid {
   display: grid;
@@ -3333,6 +3365,24 @@ body { overscroll-behavior-y: none; }
   letter-spacing: .03em;
   line-height: 1.5;
 }
+
+/* Evenimentul care a trecut: poza se stinge, iar în colț scrie „Încheiat".
+   Numai pe prima pagină, unde stă lângă unele care abia urmează — în tabul
+   „Istoric" de pe profil totul e încheiat, iar semnul ar fi doar zgomot.
+
+   DUPĂ `.card__stare`, nu înaintea lui: au aceeași greutate, deci hotărăște
+   ordinea din fișier. Pus mai sus, portocaliul de deasupra îl acoperea, iar
+   „Încheiat" arăta exact ca „În așteptare de aprobare" — două lucruri care
+   n-au nimic de-a face unul cu altul. */
+.card__stare--incheiat {
+  background: rgba(26, 31, 39, .82);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  backdrop-filter: blur(6px);
+}
+.card--incheiat .card__media img { opacity: .55; filter: saturate(.7); }
+.card--incheiat .card__title a { color: var(--text-soft); }
+[data-theme="dark"] .card--incheiat .card__media img { opacity: .45; }
 
 /* --- Însemnele de pe cartonașele din „Istoric" --------------------------
    „Organizator" și „Absent": două lucruri care se pot spune despre un

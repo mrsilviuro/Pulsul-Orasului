@@ -239,6 +239,190 @@ function poatePublicaEveniment(int $membruId): array
  */
 const EVENIMENTE_PE_PROFIL_MAX = 60;
 
+/* ===================== LISTA DE PE PRIMA PAGINĂ ====================== */
+
+/** Câte evenimente se văd la prima încărcare a paginii. */
+const EVENIMENTE_PRIMA_TURA = 10;
+
+/** Câte se mai aduc la fiecare apăsare pe „Vezi mai mult". */
+const EVENIMENTE_INCA = 4;
+
+/**
+ * Evenimentele de pe prima pagină: mai întâi cele care urmează, apoi cele
+ * încheiate.
+ *
+ * SE ADUC DIN BAZĂ CÂTE PUȚINE, nu toate deodată ca peste tot pe site. Restul
+ * listelor de aici — comentariile, oamenii dintr-un tab, evaluările de pe
+ * profil — intră întregi în pagină și se ascund din JS, fiindcă au un capăt
+ * firesc: câți oameni pot fi la un eveniment, câte păreri poate primi un om.
+ * Prima pagină n-are: peste un an sunt sute de evenimente, iar a le trimite pe
+ * toate ca să se vadă zece ar fi o pagină de un megabyte pentru un ecran de
+ * conținut. De aceea aici, și numai aici, e nevoie de o cerere pentru fiecare
+ * teanc (vezi api/lista-evenimente.php).
+ *
+ * ORDINEA e cerută de felul în care se citește pagina: ce urmează, în ordinea
+ * în care vine — cel mai apropiat sus. Apoi ce s-a încheiat, cel mai proaspăt
+ * întâi: dintre două seri trecute, cea de ieri interesează mai mult decât cea
+ * de acum trei luni.
+ *
+ * „Încheiat" se socotește la fel ca peste tot (vezi evenimentIncheiat): ori
+ * i-a trecut ziua, ori organizatorul a apăsat butonul. Ziua o dă PHP-ul, ca
+ * peste tot — MySQL e pe alt fus, iar CURDATE() ar rupe socoteala în cele două
+ * ore de diferență.
+ *
+ * Întoarce și dacă mai e ceva după teancul ăsta: se cere un rând în plus și se
+ * aruncă. Așa butonul „Vezi mai mult" știe dacă are ce descoperi, fără o a doua
+ * cerere care să numere tot.
+ */
+function evenimenteDePePrima(string $oras = '', string $categorie = '', int $deLa = 0, int $cate = EVENIMENTE_PRIMA_TURA): array
+{
+    $azi   = date('Y-m-d');
+    $deLa  = max(0, $deLa);
+    $cate  = max(1, min($cate, EVENIMENTE_PRIMA_TURA));
+
+    /**
+     * Bucata care spune dacă s-a încheiat. Se scrie o dată și se folosește de
+     * trei ori — în SELECT și de două ori în ORDER BY — ca cele trei să nu
+     * poată ajunge vreodată să spună lucruri diferite.
+     */
+    $eIncheiat = '(e.stare_moderare = \'incheiat\' OR e.data_eveniment < ?)';
+
+    $unde   = ['e.stare_moderare IN (\'aprobat\', \'incheiat\')'];
+    $valori = [$azi];   // primul „?" e cel din SELECT
+
+    if ($oras !== '') {
+        $unde[]   = 'e.oras = ?';
+        $valori[] = $oras;
+    }
+
+    if ($categorie !== '') {
+        $unde[]   = 'c.slug = ?';
+        $valori[] = $categorie;
+    }
+
+    // Cele două „?" din ORDER BY, în ordinea în care apar.
+    $valori[] = $azi;
+    $valori[] = $azi;
+
+    $q = db()->prepare(
+        'SELECT e.id, e.titlu, e.slug, e.coperta, e.data_eveniment, e.ora_inceput,
+                e.locatie, e.descriere, e.stare_moderare, e.oras,
+                c.nume AS categorie, c.slug AS categorie_slug, c.imagine_default,
+                ' . $eIncheiat . ' AS incheiat
+           FROM evenimente e
+           JOIN categorii c ON c.id = e.categorie_id
+          WHERE ' . implode(' AND ', $unde) . '
+          ORDER BY ' . $eIncheiat . ' ASC,
+                   CASE WHEN ' . $eIncheiat . ' THEN NULL ELSE e.data_eveniment END ASC,
+                   e.data_eveniment DESC,
+                   e.ora_inceput ASC,
+                   e.id ASC
+          LIMIT ' . ($cate + 1) . ' OFFSET ' . $deLa
+    );
+
+    $q->execute($valori);
+
+    $randuri  = $q->fetchAll();
+    $maiSunt  = count($randuri) > $cate;
+
+    return [
+        'evenimente' => array_slice($randuri, 0, $cate),
+        'mai_sunt'   => $maiSunt,
+    ];
+}
+
+/**
+ * Teancul de cartonașe de pe prima pagină, gata desenat.
+ *
+ * Îl cer două locuri: index.php, la încărcare, și api/lista-evenimente.php, la
+ * fiecare apăsare pe „Vezi mai mult". Scris în două locuri, ar fi început să
+ * difere de la prima corectură — iar aici s-ar fi văzut din prima, fiindcă
+ * cartonașele venite prin fetch stau lipite de cele scrise de PHP.
+ *
+ * Cartonașul e același ca pe profil (randeazaCartonasEveniment): ce se adaugă
+ * aici e doar semnul că evenimentul a trecut.
+ */
+function randeazaListaEvenimente(array $evenimente): string
+{
+    $html = '';
+
+    foreach ($evenimente as $ev) {
+        $html .= randeazaCartonasEveniment($ev, '', false, !empty($ev['incheiat']));
+    }
+
+    return $html;
+}
+
+/**
+ * Adresa primei pagini, cu filtrele puse în ea.
+ *
+ * Se scrie într-un singur loc fiindcă o cer trei: legăturile categoriilor din
+ * index.php, JS-ul care rescrie adresa după fiecare filtrare, și oricine ar mai
+ * vrea vreodată să trimită pe cineva drept la „Sport în Roman".
+ *
+ * Ce e gol nu se scrie: „index.php" e mai frumos de citit și de dat mai departe
+ * decât „index.php?oras=&categorie=", și înseamnă același lucru.
+ */
+function adresaFiltrata(string $oras = '', string $categorie = ''): string
+{
+    $parti = [];
+
+    if ($oras !== '')      { $parti['oras']      = $oras; }
+    if ($categorie !== '') { $parti['categorie'] = $categorie; }
+
+    return $parti === [] ? 'index.php' : 'index.php?' . http_build_query($parti);
+}
+
+/**
+ * Orașul cerut, dacă e unul dintre ale noastre — altfel, toate.
+ *
+ * Nu se pune în interogare ce a venit de afară: se caută în lista din
+ * config.php și se folosește valoarea DE ACOLO. Așa, „Roman'; DROP" nu doar că
+ * nu ajunge la bază (o țin oricum interogările pregătite), dar nici nu se
+ * strecoară în pagină ca „ai ales orașul Roman'; DROP".
+ *
+ * Întoarce '' pentru „toate orașele", care e și ce se întâmplă când adresa
+ * poartă un oraș care nu există.
+ */
+function orasulCerut(?string $cerut): string
+{
+    $cerut = trim((string) $cerut);
+
+    if ($cerut === '') {
+        return '';
+    }
+
+    foreach (oraseDisponibile() as $oras) {
+        if ($oras === $cerut) {
+            return $oras;
+        }
+    }
+
+    return '';
+}
+
+/**
+ * Categoria cerută, dacă slugul ei există în bază — altfel, toate.
+ *
+ * Aceeași grijă ca la orașe, doar că lista vine din tabelul `categorii`.
+ */
+function categoriaCeruta(?string $cerut): string
+{
+    $cerut = trim((string) $cerut);
+
+    if ($cerut === '') {
+        return '';
+    }
+
+    foreach (categoriiEvenimente() as $categorie) {
+        if ((string) $categorie['slug'] === $cerut) {
+            return $cerut;
+        }
+    }
+
+    return '';
+}
+
 /**
  * Evenimentele arătate pe profilul cuiva.
  *
@@ -401,14 +585,26 @@ function urlEveniment(string $slug): string
  *
  * $ascuns pune clasa `.ascuns`, pentru cartonașele care intră în pagină dar nu
  * se văd până la „Vezi mai mult". Tot ce e de arătat pleacă în aceeași pagină:
- * butonul doar dă la o parte, nu cere nimic de la server.
+ * butonul doar dă la o parte, nu cere nimic de la server. (Pe prima pagină nu
+ * se folosește: acolo teancurile vin din bază, unul câte unul.)
+ *
+ * $incheiat îmbracă altfel cartonașul unui eveniment care a trecut: poza se
+ * stinge și în colț apare „Încheiat". Nu se ghicește din rând, ci se spune:
+ * pe prima pagină e ceva de deosebit între ce urmează și ce a fost, dar în
+ * tabul „Istoric" de pe profil totul e încheiat, iar un semn pe fiecare
+ * cartonaș ar fi doar zgomot.
  */
-function randeazaCartonasEveniment(array $ev, string $insigne = '', bool $ascuns = false): string
-{
+function randeazaCartonasEveniment(
+    array $ev,
+    string $insigne = '',
+    bool $ascuns = false,
+    bool $incheiat = false
+): string {
     $inAsteptare = ($ev['stare_moderare'] ?? '') === 'in_asteptare';
 
     $clase = 'card';
     if ($inAsteptare) { $clase .= ' card--in-asteptare'; }
+    if ($incheiat)    { $clase .= ' card--incheiat'; }
     if ($ascuns)      { $clase .= ' ascuns'; }
 
     $coperta = urlCoperta($ev['coperta'] ?? null);
@@ -426,11 +622,21 @@ function randeazaCartonasEveniment(array $ev, string $insigne = '', bool $ascuns
           . ' loading="lazy" decoding="async">'
         : '';
 
-    // Cea de moderare rămâne separată de $insigne: e o stare a anunțului, nu
-    // ceva despre omul de pe profilul căruia se uită cartonașul.
-    $stare = $inAsteptare
-        ? '<span class="card__stare">În așteptare de aprobare</span>'
-        : '';
+    /**
+     * Starea anunțului rămâne separată de $insigne: e ceva despre eveniment,
+     * nu despre omul de pe profilul căruia se uită cartonașul.
+     *
+     * Cele două nu se ceartă niciodată pentru colț: un eveniment în așteptare
+     * se vede doar pe profilul organizatorului, iar acolo nu se pune semnul de
+     * încheiat.
+     */
+    $stare = '';
+
+    if ($inAsteptare) {
+        $stare = '<span class="card__stare">În așteptare de aprobare</span>';
+    } elseif ($incheiat) {
+        $stare = '<span class="card__stare card__stare--incheiat">Încheiat</span>';
+    }
 
     return '<article class="' . $clase . '">'
          . '<a class="card__media" href="' . $adresa . '">'

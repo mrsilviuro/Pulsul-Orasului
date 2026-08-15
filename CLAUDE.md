@@ -119,7 +119,9 @@ inc/
   validare.php      → toate verificările server-side (fără atingere DB)
   imagini.php       → procesare/validare poze de profil ȘI coperți de eveniment
   evenimente.php    → categorii, regula „un eveniment activ", lista de pe
-                      profil, pagina unui eveniment, salvarea ȘI cartonașul
+                      profil, LISTA DE PE PRIMA PAGINĂ (evenimenteDePePrima —
+                      singura care se aduce din bază în teancuri, nu toată
+                      deodată), pagina unui eveniment, salvarea ȘI cartonașul
                       unui eveniment (randeazaCartonasEveniment) — un singur
                       loc pentru cum arată, oriunde ar fi pus. TOT AICI cele
                       două întrebări de care atârnă ce se poate face pe pagina
@@ -172,8 +174,9 @@ teste/              → test-validare.php (verificările din inc/validare.php)
                       test-evaluari.php, test-multumiri.php
                       (toate patru cer baza de date, nu și serverul)
                       test-tine-minte.php, test-setari.php, test-contact.php,
-                      test-evenimente.php
-                      (ultimele patru cer serverul pornit — vezi antetul lor)
+                      test-evenimente.php, test-prima-pagina.php
+                      (ultimele cinci cer serverul pornit — vezi antetul lor;
+                      test-prima-pagina merge și fără, sare doar partea de API)
 private/            → loguri (emailuri-trimise.log), protejat prin .htaccess
 assets/css/style.css, assets/js/main.js, assets/img/
 ```
@@ -225,8 +228,6 @@ assets/css/style.css, assets/js/main.js, assets/img/
   nici pagină care să-i arate omului de unde a fost scos: află doar din e-mail
 - Pagina de termeni și condiții nu există. Linkurile spre ea sunt `href="#"`
   peste tot (înregistrare, subsol, confirmarea participării)
-- Prima pagină (`index.php`) e tot cu articole scrise de mână; linkurile duc la
-  `event.php` fără slug, deci se întorc pe `index.php`
 - Moderarea: fiecare eveniment intră cu `stare_moderare = 'in_asteptare'`; se
   vede doar organizatorului, pe profilul lui și pe pagina evenimentului; nu
   există interfață de aprobare

@@ -2454,6 +2454,92 @@ Verificările: `php teste/test-evaluari.php` (96 de cazuri, cere baza de date,
 nu și serverul).
 
 
+## Prima pagină: evenimentele adevărate
+
+Erau cinci articole scrise de mână în HTML, cu poze de umplutură și linkuri
+care duceau la `event.php` fără slug — adică înapoi acasă. Acum sunt
+evenimentele din bază, cu filtre și cu „Vezi mai mult".
+
+`evenimenteDePePrima()` și `randeazaListaEvenimente()` din `inc/evenimente.php`,
+`api/lista-evenimente.php`, blocul „PRIMA PAGINĂ" din `main.js`.
+
+### Singurul loc unde lista se aduce din bucăți
+
+Peste tot în rest — comentariile, oamenii dintr-un tab, evaluările de pe profil,
+istoricul — tot ce e de arătat intră în pagină de la început, iar butonul doar
+dă la o parte. Merge, fiindcă acolo listele au un capăt firesc: câți oameni
+încap la un eveniment, câte păreri primește un om.
+
+Prima pagină n-are niciunul. Peste un an sunt sute de evenimente, iar a le
+trimite pe toate ca să se vadă zece ar fi o pagină de un megabyte pentru un
+ecran de conținut. De aceea aici, și numai aici, fiecare teanc e o cerere.
+
+**Primele zece le scrie PHP**, la încărcare. Fără ele, cine intră pe site ar
+vedea o pagină goală până pleacă și se întoarce o a doua cerere — iar Google ar
+indexa exact golul acela. Următoarele vin **patru câte patru**: cine a ajuns la
+capătul listei caută ceva anume, iar patru cartonașe se citesc dintr-o privire.
+
+Butonul nu spune câte au mai rămas, spre deosebire de celelalte „Vezi mai
+mult" de pe site: acolo se știe, fiindcă tot ce e de arătat e deja în pagină.
+Aici s-ar afla doar numărând tot ce e în bază, la fiecare apăsare, pentru un
+număr care oricum n-ar ajuta pe nimeni. Se știe doar **dacă mai e ceva** — atât
+îi trebuie butonului ca să hotărască dacă rămâne pe ecran, iar asta se află
+cerând un rând în plus și aruncându-l.
+
+Cât se aduce hotărăște serverul, după `de_la`, nu browserul: altfel o cerere
+scrisă de mână ar fi putut cere zece mii deodată.
+
+### Ordinea
+
+Întâi ce urmează, de la cel mai apropiat. Apoi ce s-a încheiat, de la cel mai
+proaspăt: dintre două seri trecute, cea de ieri interesează mai mult decât cea
+de acum trei luni.
+
+Cele încheiate se văd din prima — poza se stinge, iar în colț scrie „Încheiat".
+Semnul e pus de pe prima pagină, nu din cartonaș: în tabul „Istoric" de pe
+profil totul e încheiat, iar un semn pe fiecare cartonaș ar fi doar zgomot.
+
+### Filtrele
+
+Orașul dintr-o listă (din `config.php`, cu „Toate orașele" în frunte) și
+categoriile din tabelul `categorii`, ca niște chipuri. Orice schimbare ia lista
+de la capăt: iar primele zece, iar butonul de la început.
+
+**Merg și fără JavaScript.** E un `<form method="get">` adevărat, iar
+categoriile sunt legături, nu butoane: fără JS se reîncarcă pagina cu filtrele
+în adresă și se vede exact același lucru. Cu JS, aceleași filtre aduc doar
+lista. Butonul „Arată" de lângă lista de orașe stă în `<noscript>` și e scos
+din pagină de JS, ca să nu rămână acolo unul care nu mai are ce face.
+
+Filtrele stau în adresă, nu în sesiune: așa o pagină filtrată se poate da mai
+departe pe WhatsApp și se deschide la fel la celălalt capăt. JS o rescrie cu
+`replaceState`, nu `pushState` — altfel fiecare apăsare pe o categorie ar lăsa
+o treaptă în istoric, iar „înapoi" ar trebui apăsat de șapte ori ca să ieși din
+pagină.
+
+Ce vine din adresă trece prin sitele lui: `orasulCerut()` caută în lista din
+config și folosește **valoarea de acolo**, `categoriaCeruta()` la fel, cu
+tabelul. Un oraș care nu există înseamnă „toate", nu o eroare — o adresă veche,
+dintr-o zi în care exista alt oraș, trebuie să arate prima pagină, nu un ecran
+roșu.
+
+### Un API care doar citește
+
+`api/lista-evenimente.php` e singurul de pe site care nu schimbă nimic. De
+aceea e și singurul care primește **GET**, și singurul **fără token CSRF**:
+tokenul apără de fapte făcute în numele cuiva fără voia lui, iar aici nu se
+face nimic. Nici cont nu cere — lista e publică, la fel ca pagina din care
+vine.
+
+Întoarce **cartonașe gata desenate**, nu date brute, prin aceeași funcție care
+scrie pagina la încărcare. Cu JSON de date, browserul ar fi trebuit să știe și
+el să deseneze un cartonaș — adică a doua descriere a aceluiași lucru, în alt
+limbaj, care s-ar fi despărțit de prima la întâia corectură.
+
+Verificările: `php teste/test-prima-pagina.php http://127.0.0.1:8128` (39 de
+cazuri; fără adresă merge și fără server, sare doar partea de API).
+
+
 ## Taburile de pe profil: „Evaluări" și „Istoric"
 
 Jumătatea de jos a profilului stă de-acum în două taburi. Primul e ce era
@@ -3047,4 +3133,4 @@ server și nume de tabele.
 
 ## De făcut mai departe
 
-Formularul de publicat un eveniment și paginile de categorie.
+Paginile de categorie și moderarea evenimentelor.
