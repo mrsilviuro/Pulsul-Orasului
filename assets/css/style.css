@@ -3384,6 +3384,30 @@ body { overscroll-behavior-y: none; }
 .card--incheiat .card__title a { color: var(--text-soft); }
 [data-theme="dark"] .card--incheiat .card__media img { opacity: .45; }
 
+/* Evenimentul care se petrece CHIAR ACUM: a început, dar nu s-a încheiat.
+   Roșul mărcii, cu punctul care pulsează de la „Live din oraș" — același
+   semn, același înțeles.
+
+   Nu e o a treia stare în bază: e o clipă între celelalte două, care se vede
+   doar când cineva se uită (vezi randeazaListaEvenimente). */
+.card__stare--live {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--brand);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+/* Punctul e alb aici, nu roșu: stă pe fundal roșu. */
+.card__stare--live .pulse-dot {
+  background: #fff;
+  box-shadow: 0 0 0 0 rgba(255, 255, 255, .7);
+  animation-name: pulse-alb;
+}
+@keyframes pulse-alb {
+  0%   { box-shadow: 0 0 0 0 rgba(255, 255, 255, .55); }
+  70%  { box-shadow: 0 0 0 7px rgba(255, 255, 255, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+}
+
 /* --- Însemnele de pe cartonașele din „Istoric" --------------------------
    „Organizator" și „Absent": două lucruri care se pot spune despre un
    eveniment numai privindu-l de pe profilul cuiva anume. Stau în colțul de

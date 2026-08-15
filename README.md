@@ -2499,11 +2499,41 @@ Cele încheiate se văd din prima — poza se stinge, iar în colț scrie „În
 Semnul e pus de pe prima pagină, nu din cartonaș: în tabul „Istoric" de pe
 profil totul e încheiat, iar un semn pe fiecare cartonaș ar fi doar zgomot.
 
+### „Live": ce se petrece chiar acum
+
+Între „urmează" și „s-a încheiat" mai e o stare, care ținea până acum de nimeni:
+evenimentul a început, dar nu s-a terminat. Pe listă arăta ca oricare altul care
+urmează, deși cine se uită la el nu mai are ce plănui — are unde să se ducă în
+clipa asta.
+
+Cartonașul primește un semn roșu cu un punct care pulsează. Starea nu se ține
+minte nicăieri și nu se scrie în bază: se citește la fiecare afișare, prin
+`evenimentAInceput()`, aceeași funcție de care atârnă și ce se poate face pe
+pagina evenimentului. Un rând din bază ar fi trebuit întors de un cron la ora
+potrivită și ar fi rămas mincinos între două rulări.
+
+Ordinea nu se schimbă: cele Live sunt tot „neîncheiate", deci stau în capul
+listei, unde ziua lor le duce oricum — a început azi, deci e cea mai apropiată.
+
+Un cartonaș nu poate fi și Live, și încheiat, fiindcă întrebarea se pune într-o
+singură ordine: dacă s-a încheiat, atât se scrie; abia dacă nu, se întreabă dacă
+a început.
+
 ### Filtrele
 
 Orașul dintr-o listă (din `config.php`, cu „Toate orașele" în frunte) și
 categoriile din tabelul `categorii`, ca niște chipuri. Orice schimbare ia lista
 de la capăt: iar primele zece, iar butonul de la început.
+
+**Se arată doar categoriile care au ceva de arătat**, prin
+`categoriiCuEvenimente()`. Un filtru care duce garantat la „niciun eveniment" nu
+e un filtru, e o promisiune mincinoasă: omul apasă pe „Muzică", vede gol și
+pleacă cu impresia că s-a stricat ceva. Cum categoriile se pot umple mâine,
+lista se calculează la fiecare încărcare, nu se ține minte.
+
+Formularul de publicare folosește mai departe `categoriiEvenimente()`, cu toate:
+acolo se pun evenimente noi, deci o categorie goală trebuie să se poată alege —
+altfel n-ar avea niciodată cum să înceteze să fie goală.
 
 **Merg și fără JavaScript.** E un `<form method="get">` adevărat, iar
 categoriile sunt legături, nu butoane: fără JS se reîncarcă pagina cu filtrele
@@ -2536,8 +2566,34 @@ scrie pagina la încărcare. Cu JSON de date, browserul ar fi trebuit să știe 
 el să deseneze un cartonaș — adică a doua descriere a aceluiași lucru, în alt
 limbaj, care s-ar fi despărțit de prima la întâia corectură.
 
-Verificările: `php teste/test-prima-pagina.php http://127.0.0.1:8128` (39 de
-cazuri; fără adresă merge și fără server, sare doar partea de API).
+### „Ar putea să te intereseze"
+
+Jos, pe pagina unui eveniment, stăteau tot articole scrise de mână. Acum stau
+**două evenimente luate la întâmplare** (`evenimenteSugerate()`), prin același
+`randeazaCartonasEveniment()` ca peste tot.
+
+Doar ce **urmează**, niciodată ce s-a încheiat și nici ce se petrece chiar
+acum: locul ăsta e o invitație, iar la o seară care a trecut sau care a început
+deja nu mai are cine să te invite. Evenimentul de pe pagina căruia ești e scos
+din listă — n-are rost să te trimită unde ești.
+
+Fără oraș: pe prima pagină omul a ales el ce vrea, aici nu ceruse nimic, iar
+două evenimente din alt oraș sunt mai bune decât niciunul. Și chiar la
+întâmplare, `ORDER BY RAND()`: la o mână de evenimente, „cele mai apropiate"
+ar fi arătat aceleași două săptămâni la rând, oricui, pe orice pagină.
+
+**Dacă nu iese niciunul, secțiunea nu se scrie deloc** — nici titlul, nici
+legătura, nici chenarul gol. Pagina se oprește la comentarii și sare la subsol.
+Un „Ar putea să te intereseze" cu nimic dedesubt e mai rău decât lipsa lui: pare
+o pagină ruptă. Iar în ziua în care e un singur eveniment pe tot site-ul, exact
+pagina lui e cea care ajunge să fie citită.
+
+Legătura de lângă titlu spunea „Toate articolele" — o vorbă rămasă de pe vremea
+blogului. Acum spune „Prima pagină" și duce chiar acolo.
+
+Verificările: `php teste/test-prima-pagina.php http://127.0.0.1:8128` (60 de
+cazuri, plus unul dacă în `config.php` e mai mult de un oraș; fără adresă merge
+și fără server, sare doar partea de API).
 
 
 ## Taburile de pe profil: „Evaluări" și „Istoric"

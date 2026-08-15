@@ -250,7 +250,117 @@ verifica('dincolo de capăt, nimic', 0,
 verifica('cererea de o mie se strânge la zece', 6,
     count(evenimenteDePePrima('', '', 0, 1000)['evenimente']));
 
-/* ======================== 6. ADRESA FILTRATĂ ======================== */
+/* ==================== 6. LIVE, ȘI CATEGORIILE GOALE ================= */
+
+echo "\n=== LIVE ===\n";
+
+/**
+ * „Live" e ce a început și încă nu s-a încheiat — o clipă între celelalte
+ * două stări, care nu se scrie nicăieri în bază. Se vede doar când cineva se
+ * uită, deci se socotește la desenare.
+ */
+faEveniment($org, 'chiar-acum', 0, $orasUnu, $catSport);
+db()->prepare('UPDATE evenimente SET ora_inceput = ? WHERE slug = ?')
+    ->execute([date('H:i:00', strtotime('-2 hours')), SEMN . 'chiar-acum']);
+
+$acumRand = null;
+
+foreach (evenimenteDePePrima()['evenimente'] as $ev) {
+    if ((string) $ev['slug'] === SEMN . 'chiar-acum') { $acumRand = $ev; }
+}
+
+verifica('cel de azi, de acum două ore, e în listă', true, $acumRand !== null);
+verifica('și nu e socotit încheiat', 0, (int) $acumRand['incheiat']);
+verifica('dar a început', true, evenimentAInceput($acumRand));
+
+$htmlLive = randeazaListaEvenimente([$acumRand]);
+verifica('cartonașul lui poartă semnul', true, str_contains($htmlLive, 'card--live'));
+verifica('și scrie „Live"', true, str_contains($htmlLive, '>Live</span>'));
+verifica('fără semnul de încheiat', false, str_contains($htmlLive, 'card--incheiat'));
+
+// Unul care abia urmează n-are niciun semn.
+$maiVine = null;
+
+foreach (evenimenteDePePrima()['evenimente'] as $ev) {
+    if ((string) $ev['slug'] === SEMN . 'viitor-aproape') { $maiVine = $ev; }
+}
+
+$htmlVine = randeazaListaEvenimente([$maiVine]);
+verifica('cel care abia urmează, curat', false, str_contains($htmlVine, 'card--live'));
+verifica('și tot curat', false, str_contains($htmlVine, 'card--incheiat'));
+
+// Iar unul trecut e încheiat, nu „live".
+$celTrecut = null;
+
+foreach (evenimenteDePePrima()['evenimente'] as $ev) {
+    if ((string) $ev['slug'] === SEMN . 'trecut-recent') { $celTrecut = $ev; }
+}
+
+$htmlTrecut = randeazaListaEvenimente([$celTrecut]);
+verifica('cel trecut e încheiat', true, str_contains($htmlTrecut, 'card--incheiat'));
+verifica('și nu e niciodată Live', false, str_contains($htmlTrecut, 'card--live'));
+
+echo "\n=== CATEGORIILE DIN FILTRE ===\n";
+
+/**
+ * Numai cele în care s-a pus ceva. O categorie goală e un buton care duce la
+ * un ecran gol.
+ */
+$inFiltre = array_map(static fn(array $c): string => (string) $c['slug'], categoriiCuEvenimente());
+$toateCat = array_map(static fn(array $c): string => (string) $c['slug'], categoriiEvenimente());
+
+verifica('categoria cu evenimente e în filtre', true,
+    in_array((string) $categorii[0]['slug'], $inFiltre, true));
+
+/**
+ * Ultima categorie nu are niciun eveniment de-al nostru — iar ale altora sunt
+ * date deoparte mai sus, deci trebuie să lipsească.
+ */
+$cateGoale = 0;
+
+foreach ($toateCat as $slug) {
+    if (!in_array($slug, $inFiltre, true)) { $cateGoale++; }
+}
+
+verifica('și rămân pe dinafară cele goale', true, $cateGoale > 0);
+verifica('dar formularul le are pe toate', true, count($toateCat) > count($inFiltre));
+
+/* ==================== 7. AR PUTEA SĂ TE INTERESEZE ================== */
+
+echo "\n=== SUGESTIILE DE PE PAGINA UNUI EVENIMENT ===\n";
+
+$deAcasa = evenimenteSugerate(0, 10);
+$sluguriSugerate = [];
+
+foreach ($deAcasa as $ev) {
+    $sluguriSugerate[] = substr((string) $ev['slug'], strlen(SEMN));
+}
+
+sort($sluguriSugerate);
+
+verifica('numai ce n-a început încă',
+    ['viitor-aproape', 'viitor-departe', 'viitor-mijloc'], $sluguriSugerate);
+
+verifica('fără cel care se petrece chiar acum', false,
+    in_array('chiar-acum', $sluguriSugerate, true));
+verifica('fără cele încheiate', false, in_array('trecut-recent', $sluguriSugerate, true));
+verifica('fără cel închis cu mâna', false, in_array('incheiat-manual', $sluguriSugerate, true));
+verifica('fără cel anulat', false, in_array('anulat', $sluguriSugerate, true));
+verifica('fără cel în așteptare', false, in_array('asteptare', $sluguriSugerate, true));
+
+// Nu se propune pe el însuși.
+$q = db()->prepare('SELECT id FROM evenimente WHERE slug = ?');
+$q->execute([SEMN . 'viitor-aproape']);
+$idAproape = (int) $q->fetchColumn();
+
+$fara = array_map(static fn(array $e): int => (int) $e['id'], evenimenteSugerate($idAproape, 10));
+verifica('nu se propune pe el însuși', false, in_array($idAproape, $fara, true));
+
+verifica('și se cer câte două, atât', 2, count(evenimenteSugerate(0)));
+verifica('nici cererea de o mie nu trece de doisprezece', 3,
+    count(evenimenteSugerate(0, 1000)));
+
+/* ======================== 8. ADRESA FILTRATĂ ======================== */
 
 echo "\n=== ADRESA ===\n";
 
@@ -280,11 +390,18 @@ if ($baza === '') {
         return ['cod' => $cod, 'corp' => json_decode((string) $raw, true) ?: []];
     };
 
+    /**
+     * Câte sunt ale noastre chiar acum. Nu un număr scris de mână: tot ce s-a
+     * adăugat mai sus (cel „chiar acum", de pildă) intră și el în listă, iar o
+     * cifră fixă aici s-ar strica la fiecare probă nouă.
+     */
+    $cateAvem = count(aleNoastre(evenimenteDePePrima('', '', 0, EVENIMENTE_PRIMA_TURA)));
+
     $r = $cheama('');
     verifica('răspunde cu ok', true, $r['corp']['ok'] ?? false);
-    verifica('cu primul teanc de șase', 6, $r['corp']['cate'] ?? 0);
+    verifica('cu primul teanc întreg', $cateAvem, $r['corp']['cate'] ?? 0);
     verifica('și spune că s-a terminat', false, $r['corp']['mai_sunt'] ?? true);
-    verifica('cu cartonașe gata desenate', 6,
+    verifica('cu cartonașe gata desenate', $cateAvem,
         substr_count($r['corp']['html'] ?? '', '<article class="card'));
 
     $r = $cheama('?de_la=2');
@@ -292,14 +409,15 @@ if ($baza === '') {
 
     $r = $cheama('?oras=' . rawurlencode($alDoilea));
     verifica('filtrul de oraș merge și prin API',
-        $orasDoi !== null ? 2 : 6, $r['corp']['cate'] ?? 0);
+        count(aleNoastre(evenimenteDePePrima($alDoilea, '', 0, EVENIMENTE_PRIMA_TURA))),
+        $r['corp']['cate'] ?? 0);
 
     $r = $cheama('?oras=Vaslui');
-    verifica('un oraș inventat nu e o eroare', 6, $r['corp']['cate'] ?? 0);
+    verifica('un oraș inventat nu e o eroare', $cateAvem, $r['corp']['cate'] ?? 0);
 
     // Numărul cerut nu se ia de la browser: serverul îl hotărăște după `de_la`.
     $r = $cheama('?de_la=0&cate=999');
-    verifica('nu se poate cere cât vrea browserul', 6, $r['corp']['cate'] ?? 0);
+    verifica('nu se poate cere cât vrea browserul', $cateAvem, $r['corp']['cate'] ?? 0);
 }
 
 /* =========================== curățenie ============================= */
