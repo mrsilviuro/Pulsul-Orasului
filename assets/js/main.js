@@ -1756,6 +1756,59 @@
      ce curăța: „Mă interesează" nu ocupă niciun loc.
   ------------------------------------------------------------------------ */
 
+  /**
+   * Caseta de confirmare de sub un om.
+   *
+   * Două fapte o folosesc, și amândouă sunt de același fel: ceva ce
+   * organizatorul face ALTUIA și nu se mai poate lua înapoi — scoaterea de pe
+   * listă și „Nu s-a prezentat". Una cere motiv, cealaltă nu; în rest, aceeași
+   * casetă, în același loc.
+   *
+   * SUB RÂNDUL OMULUI, nu la capătul listei și nu într-o fereastră peste
+   * pagină: cine confirmă trebuie să vadă pe cine, fără să caute cu ochii în
+   * sus. Una singură deodată, în tot panoul.
+   *
+   * Șablonul vine din pagină (`<template>`), ca HTML-ul să fie scris tot în
+   * PHP, ca peste tot pe site. Întoarce caseta clonată, sau null dacă apăsarea
+   * a fost pe același buton — adică „închide-o".
+   */
+  function deschideCaseta(panou, buton, sablon, selectorNume) {
+    var deschisa = panou.querySelector('[data-caseta]');
+
+    // A doua apăsare pe același buton închide caseta.
+    if (deschisa && deschisa.__buton === buton) { inchideCaseta(panou); return null; }
+
+    inchideCaseta(panou);
+
+    var rand = buton.closest('.person');
+    if (!rand) return null;
+
+    var caseta = sablon.content.firstElementChild.cloneNode(true);
+    caseta.__buton = buton;
+
+    // Numele se pune ca TEXT, nu lipit în HTML: e numele altui om.
+    var locNume = selectorNume ? caseta.querySelector(selectorNume) : null;
+    if (locNume) locNume.textContent = buton.getAttribute('data-nume') || '';
+
+    rand.after(caseta);
+    buton.setAttribute('aria-expanded', 'true');
+
+    var renunta = caseta.querySelector('[data-renunta]');
+    if (renunta) {
+      renunta.addEventListener('click', function () { inchideCaseta(panou); });
+    }
+
+    return caseta;
+  }
+
+  function inchideCaseta(panou) {
+    var deschisa = panou.querySelector('[data-caseta]');
+    if (!deschisa) return;
+
+    if (deschisa.__buton) deschisa.__buton.setAttribute('aria-expanded', 'false');
+    deschisa.remove();
+  }
+
   document.querySelectorAll('[data-oameni]').forEach(function (panou) {
     var lista        = panou.querySelector('[data-lista-oameni]');
     var maiMulti     = panou.querySelector('[data-mai-multi]');
@@ -1838,39 +1891,13 @@
      * ------------------------------------------------------------------ */
 
     if (sablonScoatere) {
-      var inchideScoaterea = function () {
-        var deschisa = panou.querySelector('[data-scoate-form]');
-
-        if (deschisa) {
-          var butonul = deschisa.__buton;
-          if (butonul) butonul.setAttribute('aria-expanded', 'false');
-          deschisa.remove();
-        }
-      };
-
       var deschideScoaterea = function (buton) {
-        var rand = buton.closest('.person');
+        var rand      = buton.closest('.person');
+        var randCaseta = deschideCaseta(panou, buton, sablonScoatere, '[data-scoate-nume]');
 
-        // A doua apăsare pe același buton închide caseta.
-        var deschisa = panou.querySelector('[data-scoate-form]');
-        if (deschisa && deschisa.__buton === buton) { inchideScoaterea(); return; }
+        if (!randCaseta) return;
 
-        inchideScoaterea();
-
-        // Rândul purtător e un `<li>`, ca lista să rămână o listă; formularul
-        // stă în el (vezi șablonul din event.php).
-        var randCaseta = sablonScoatere.content.firstElementChild.cloneNode(true);
-        var form       = randCaseta.querySelector('form');
-        randCaseta.__buton = buton;
-
-        // Numele se pune ca TEXT, nu lipit în HTML: e numele altui om.
-        form.querySelector('[data-scoate-nume]').textContent = buton.getAttribute('data-nume') || '';
-
-        // Sub rândul lui, nu la capătul listei: cine confirmă trebuie să vadă
-        // pe cine scoate fără să caute cu ochii în sus.
-        rand.after(randCaseta);
-        buton.setAttribute('aria-expanded', 'true');
-
+        var form   = randCaseta.querySelector('form');
         var motiv  = form.querySelector('textarea');
         var eroare = form.querySelector('#err-scoate');
         var bifa   = form.querySelector('[data-scoate-interzis]');
@@ -1881,8 +1908,6 @@
           eroare.hidden = true;
           eroare.textContent = '';
         });
-
-        form.querySelector('[data-scoate-renunta]').addEventListener('click', inchideScoaterea);
 
         form.addEventListener('submit', function (e) {
           e.preventDefault();
@@ -1957,7 +1982,7 @@
 
           if (!c.ok) { toast(c.mesaj || 'Nu am putut scoate omul de pe listă.'); return; }
 
-          inchideScoaterea();
+          inchideCaseta(panou);
 
           // Amândouă panourile, numerele și chipurile — aceeași cale ca după
           // o apăsare pe „Mă interesează" sau „Voi participa".
@@ -2139,47 +2164,71 @@
               + '#review-form';
   }
 
-  /* --------------------- „Nu s-a prezentat" -------------------------- */
+  /* --------------------- „Nu s-a prezentat" --------------------------
+     Se confirmă ÎN PAGINĂ, într-o casetă de sub omul pe care s-a apăsat —
+     aceeași casetă ca la scoaterea de pe listă, prin aceeași deschideCaseta().
 
-  document.querySelectorAll('[data-absent]').forEach(function (buton) {
-    buton.addEventListener('click', function () {
-      var panou = buton.closest('[data-oameni]');
-      if (!panou) return;
+     A fost o vreme un `confirm()` din browser. E cel mai ușor de scris și cel
+     mai prost lucru de arătat: o fereastră care sare peste toată pagina, cu
+     alte litere și alte butoane decât tot restul site-ului, iar pe telefon
+     lipită de bara de adrese. Iar fapta e destul de grea (o stea și o notă pe
+     profilul altui om, definitiv) ca omul să merite s-o confirme uitându-se la
+     rândul lui, nu la o casetă gri de sistem.
 
-      var nume = buton.getAttribute('data-nume') || 'omul ăsta';
+     Fără motiv, spre deosebire de scoatere: acolo textul pleacă în e-mailul
+     omului. Aici nu se trimite nimănui nimic de citit.
+  ------------------------------------------------------------------------ */
 
-      if (!window.confirm('Însemnezi că ' + nume + ' nu s-a prezentat?\n\n'
-            + 'Primește o stea și o notă pe profil. Nu se poate lua înapoi.')) {
-        return;
-      }
+  document.querySelectorAll('[data-oameni]').forEach(function (panou) {
+    var sablonAbsent = panou.querySelector('#sablon-absent');
+    if (!sablonAbsent) return;
 
-      trimiteNota({
-        csrf:   panou.getAttribute('data-csrf') || '',
-        slug:   panou.getAttribute('data-slug') || '',
-        fapta:  'absent',
-        membru: buton.getAttribute('data-absent')
-      }, buton, null, function () {
-        /**
-         * În locul stelelor și al butonului rămâne un singur cuvânt.
-         *
-         * Nu se sting, pleacă. Cine n-a venit nu se mai notează de nimeni — și
-         * mai ales nu de cel care tocmai a pus însemnarea: cu stelele rămase
-         * aprinse, ar fi putut alege peste o săptămână cinci și ar fi șters cu
-         * ele exact ce a scris. Aceeași regulă e ținută de api/evaluare.php,
-         * prin esteNeprezentat(), și de randeazaOm() la reîncărcare.
-         */
-        var rand  = buton.closest('.person');
-        var cutie = rand ? rand.querySelector('.person__note') : null;
+    /**
+     * Ascultarea e pe panou, nu pe fiecare buton, ca la scoatere: butoanele
+     * se schimbă sub noi de fiecare dată când lista se redesenează.
+     */
+    panou.addEventListener('click', function (e) {
+      var buton = e.target.closest('[data-absent]');
+      if (!buton || !panou.contains(buton)) return;
 
-        if (cutie) {
-          cutie.innerHTML = '<span class="person__neprezentat"'
-            + ' title="Nu s-a prezentat la eveniment">'
-            + '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">'
-            + '<circle cx="12" cy="12" r="9"/><path d="M8.5 8.5 15.5 15.5"/>'
-            + '</svg><span>Neprezentat</span></span>';
-        }
+      var caseta = deschideCaseta(panou, buton, sablonAbsent, '[data-absent-nume]');
+      if (!caseta) return;
 
-        toast('Am însemnat că nu s-a prezentat. A primit o stea și o notă pe profil.');
+      var form = caseta.querySelector('form');
+
+      form.addEventListener('submit', function (ev) {
+        ev.preventDefault();
+
+        trimiteNota({
+          csrf:   panou.getAttribute('data-csrf') || '',
+          slug:   panou.getAttribute('data-slug') || '',
+          fapta:  'absent',
+          membru: buton.getAttribute('data-absent')
+        }, form.querySelector('button[type="submit"]'), null, function () {
+          /**
+           * În locul stelelor și al butonului rămâne un singur cuvânt.
+           *
+           * Nu se sting, pleacă. Cine n-a venit nu se mai notează de nimeni —
+           * și mai ales nu de cel care tocmai a pus însemnarea: cu stelele
+           * rămase aprinse, ar fi putut alege peste o săptămână cinci și ar fi
+           * șters cu ele exact ce a scris. Aceeași regulă e ținută de
+           * api/evaluare.php, prin esteNeprezentat(), și de randeazaOm() la
+           * reîncărcare.
+           */
+          var rand  = buton.closest('.person');
+          var cutie = rand ? rand.querySelector('.person__note') : null;
+
+          if (cutie) {
+            cutie.innerHTML = '<span class="person__neprezentat"'
+              + ' title="Nu s-a prezentat la eveniment">'
+              + '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">'
+              + '<circle cx="12" cy="12" r="9"/><path d="M8.5 8.5 15.5 15.5"/>'
+              + '</svg><span>Neprezentat</span></span>';
+          }
+
+          inchideCaseta(panou);
+          toast('Am însemnat că nu s-a prezentat. A primit o stea și o notă pe profil.');
+        });
       });
     });
   });

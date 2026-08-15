@@ -133,8 +133,8 @@ inc/
                       acelea vin semnate. Cine e însemnat neprezentat nu se mai
                       notează de nimeni (esteNeprezentat). TOT AICI: cifrele de
                       pe profil și tabul „Istoric" (istoricEvenimente) — pe
-                      unde a fost omul, cu „Organizator" și „Absent" pe
-                      cartonașe
+                      unde a fost omul, DOAR evenimente încheiate, cu
+                      „Organizator" și „Absent" pe cartonașe
   multumiri.php     → e-mailul de mulțumire de după eveniment: cine îl
                       primește, când, și semnul că a plecat o singură dată
                       (evenimente.multumiri_trimise_la). Îl cheamă doar

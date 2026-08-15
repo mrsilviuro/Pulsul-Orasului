@@ -301,14 +301,27 @@ echo "\n=== ISTORICUL DE PE PROFIL ===\n";
  * Tabul de lângă evaluări: pe unde a fost omul. Cele de mai sus au pregătit
  * exact ce trebuie — două evenimente (unul trecut, unul viitor), participanți,
  * un om doar interesat, și o însemnare de neprezentare pe Ana.
+ *
+ * DOAR CE S-A ÎNCHEIAT. Un eveniment de peste nouă zile n-are ce căuta într-un
+ * istoric: omul n-a fost încă nicăieri. Rămâne unul singur din cele două.
  */
 $istoricAna = istoricEvenimente($ana);
 
-verifica('amândouă evenimentele', 2, count($istoricAna));
-verifica('cel mai nou întâi', 'tsteva-viitor', $istoricAna[0]['slug']);
+verifica('numai cel trecut', 1, count($istoricAna));
+verifica('și chiar el', 'tsteva-trecut', $istoricAna[0]['slug']);
 
 verifica('cine s-a arătat doar interesat n-are istoric', [], istoricEvenimente($strain));
 verifica('și nici cine n-are cont', [], istoricEvenimente(0));
+
+/**
+ * Al doilea fel de a fi încheiat: organizatorul apasă butonul, deși ziua abia
+ * urmează. Aceeași regulă ca peste tot (vezi evenimentIncheiat).
+ */
+incheieEveniment($viitor);
+verifica('cel încheiat cu mâna intră și el', 2, count(istoricEvenimente($ana)));
+verifica('și trece în față, că e mai nou', 'tsteva-viitor', istoricEvenimente($ana)[0]['slug']);
+
+$istoricAna = istoricEvenimente($ana);
 
 /**
  * Absența NU scoate evenimentul din listă — spre deosebire de cifra de sus.

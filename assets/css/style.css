@@ -2340,7 +2340,15 @@ body { overscroll-behavior-y: none; }
   height: var(--star-size, 18px);
   flex: none;
 }
-.stars__row--empty svg { fill: var(--surface-2); stroke: var(--border); stroke-width: 1; }
+/* Steaua stinsă are nevoie de contur, nu de umplutură: pe alb, `var(--border)`
+   la 18px e practic invizibil — un „Fără rating" fără nimic sub el, și o medie
+   de 2,8 din care nu se înțelege din câte.
+
+   Același contur ca la stelele pe care se apasă, din dreptul participanților
+   (`.stars-input--sm`): acolo problema s-a pus prima dată, tot pe fundal
+   deschis, și tot așa s-a rezolvat. Umplutura rămâne culoarea suprafeței, ca
+   steaua să fie un contur gol, nu un al doilea cerc plin. */
+.stars__row--empty svg { fill: var(--surface-2); stroke: var(--text-faint); stroke-width: 1.4; }
 .stars__row--full svg  { fill: #f5a623; stroke: #f5a623; stroke-width: 1; }
 
 .rating__stars--sm { --star-size: 14px; }

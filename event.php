@@ -628,14 +628,25 @@ require __DIR__ . '/inc/antet.php';
             <span class="tab__count" data-count-for="comentarii"><?= $cateComentarii ?></span>
           </button>
 
+          <?php if (!$eIncheiat): ?>
+          <!--
+            „Interesați" ține numai cât mai e ceva de hotărât.
+
+            După ce s-a încheiat, lista aceea nu mai spune nimic despre seara
+            care a fost: sunt oameni care s-au uitat într-acolo și n-au venit.
+            Cine a fost cu adevărat e în tabul de alături, iar între cele două
+            rămâne doar unul care contează. Panoul lui nici nu se mai
+            desenează, mai jos.
+          -->
           <button class="tab" type="button" role="tab" id="tab-interested"
                   aria-controls="panel-interested" aria-selected="false" tabindex="-1">
             <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
               <path d="m12 3.8 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.5 10l5.9-.9L12 3.8Z"/>
             </svg>
-            <span><?= $eIncheiat ? 'Au fost interesați' : 'Interesați' ?></span>
+            <span>Interesați</span>
             <span class="tab__count" data-count-for="interesat"><?= (int) $numarInterese['interesat'] ?></span>
           </button>
+          <?php endif; ?>
 
           <button class="tab" type="button" role="tab" id="tab-going"
                   aria-controls="panel-going" aria-selected="false" tabindex="-1">
@@ -747,6 +758,8 @@ require __DIR__ . '/inc/antet.php';
         ============================================================== -->
 
         <!-- ------------------------ PANOU: INTERESAȚI --------------------- -->
+        <!-- Numai cât mai e ceva de hotărât — vezi tabul lui, de mai sus. -->
+        <?php if (!$eIncheiat): ?>
         <div class="panel" id="panel-interested" role="tabpanel" aria-labelledby="tab-interested" tabindex="0" hidden
              data-oameni
              data-stare="interesat"
@@ -767,6 +780,7 @@ require __DIR__ . '/inc/antet.php';
             <button class="btn btn--ghost" type="button" data-mai-multi-buton>Vezi mai mult</button>
           </div>
         </div>
+        <?php endif; ?>
 
         <!-- ------------------------ PANOU: PARTICIPĂ ---------------------- -->
         <!--
@@ -809,7 +823,7 @@ require __DIR__ . '/inc/antet.php';
               caseta poate să le cuprindă pe amândouă, sub omul pe care s-a
               apăsat.
             -->
-            <li class="scoate-rand" data-scoate-form>
+            <li class="scoate-rand" data-caseta>
             <form class="scoate-form">
               <p class="scoate-form__titlu">Scoți de pe listă pe <strong data-scoate-nume></strong>?</p>
 
@@ -836,7 +850,43 @@ require __DIR__ . '/inc/antet.php';
 
               <div class="scoate-form__actiuni">
                 <button class="btn btn--primary btn--xs" type="submit">Scoate de pe listă</button>
-                <button class="btn btn--text" type="button" data-scoate-renunta>Renunță</button>
+                <button class="btn btn--text" type="button" data-renunta>Renunță</button>
+              </div>
+            </form>
+            </li>
+          </template>
+          <?php endif; ?>
+
+          <?php if ($contextEvaluare !== null && $eOrganizatorul): ?>
+          <!--
+            Caseta de confirmare a însemnării „Nu s-a prezentat".
+
+            Aceeași casetă ca la scoaterea de pe listă, cu aceleași clase și
+            același loc — sub omul pe care s-a apăsat — fiindcă e același fel
+            de faptă: ceva ce organizatorul face ALTUIA și nu se mai poate lua
+            înapoi. A fost o vreme un `confirm()` din browser, adică o fereastră
+            care sare peste toată pagina și nu seamănă cu nimic din site; pe
+            telefon, nici măcar cu site-ul de dedesubt.
+
+            Fără motiv, spre deosebire de scoatere: acolo textul pleacă în
+            e-mailul omului, care are dreptul să știe de ce. Aici nu se trimite
+            nimănui nimic de citit — se pune o stea și un text scris de noi.
+          -->
+          <template id="sablon-absent">
+            <li class="scoate-rand" data-caseta>
+            <form class="scoate-form">
+              <p class="scoate-form__titlu">
+                Însemnezi că <strong data-absent-nume></strong> nu s-a prezentat?
+              </p>
+
+              <p class="field__hint">
+                Primește o stea și o notă pe profil. Nu se poate lua înapoi,
+                iar de atunci încolo nu-l mai poate nota nimeni.
+              </p>
+
+              <div class="scoate-form__actiuni">
+                <button class="btn btn--primary btn--xs" type="submit">Da, nu s-a prezentat</button>
+                <button class="btn btn--text" type="button" data-renunta>Renunță</button>
               </div>
             </form>
             </li>

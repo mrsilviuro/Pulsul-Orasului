@@ -302,8 +302,17 @@ verifica('mai mulți, la plural', true,
     str_contains(vorbaDespreCatiSunt(12, 'participant', false), 'persoane</span></strong> au confirmat că vor participa.'));
 verifica('interesați, la prezent', true,
     str_contains(vorbaDespreCatiSunt(3, 'interesat', false), 'sunt interesate de acest eveniment.'));
-verifica('interesați, după eveniment', true,
-    str_contains(vorbaDespreCatiSunt(3, 'interesat', true), 'au fost interesate de acest eveniment.'));
+/**
+ * Interesații rămân la prezent oricare ar fi starea evenimentului, fiindcă la
+ * unul încheiat lista lor nu se mai arată deloc — nici tabul, nici panoul
+ * (vezi event.php). Sunt oameni care s-au uitat într-acolo și n-au venit, iar
+ * asta nu spune nimic despre seara care a fost.
+ */
+verifica('interesații rămân la prezent, oricum ar fi', true,
+    str_contains(vorbaDespreCatiSunt(3, 'interesat', true), 'sunt interesate de acest eveniment.'));
+verifica('și fără nimeni, tot așa',
+    'Nimeni nu s-a arătat încă interesat. Poți fi primul.',
+    vorbaDespreCatiSunt(0, 'interesat', true));
 
 // Numărul poartă `data-count-for`, ca main.js să-l schimbe odată cu cel de pe
 // tab și cu cel de pe butonul mare — toate au același atribut.

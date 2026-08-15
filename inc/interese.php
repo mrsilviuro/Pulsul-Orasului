@@ -731,11 +731,17 @@ function vorbaDespreCatiSunt(int $cati, string $stare, bool $incheiat): string
 {
     $eParticipare = $stare === 'participant';
 
+    /**
+     * La trecut există numai pentru participanți.
+     *
+     * Lista de interesați nu se mai arată deloc după ce evenimentul s-a
+     * încheiat — nici tabul, nici panoul (vezi event.php): sunt oameni care
+     * s-au uitat într-acolo și n-au venit, iar asta nu spune nimic despre
+     * seara care a fost. Deci n-are cine să citească un „au fost interesate".
+     */
     if ($cati === 0) {
-        if ($incheiat) {
-            return $eParticipare
-                ? 'Nu a confirmat nimeni participarea.'
-                : 'Nu s-a arătat nimeni interesat.';
+        if ($incheiat && $eParticipare) {
+            return 'Nu a confirmat nimeni participarea.';
         }
 
         return $eParticipare
@@ -754,9 +760,10 @@ function vorbaDespreCatiSunt(int $cati, string $stare, bool $incheiat): string
             : ($cati === 1 ? ' a confirmat că va participa.' : ' au confirmat că vor participa.'));
     }
 
-    return $numar . ($incheiat
-        ? ($cati === 1 ? ' a fost interesată de acest eveniment.' : ' au fost interesate de acest eveniment.')
-        : ($cati === 1 ? ' este interesată de acest eveniment.' : ' sunt interesate de acest eveniment.'));
+    // Tot la prezent, oricare ar fi starea evenimentului: vezi de ce, mai sus.
+    return $numar . ($cati === 1
+        ? ' este interesată de acest eveniment.'
+        : ' sunt interesate de acest eveniment.');
 }
 
 /**
