@@ -2328,6 +2328,13 @@ mult (încă N)" — ca la comentarii și ca la listele din taburi. Fără nicio
 părere scrisă se arată un singur rând: „Prenume nu a primit niciun feedback
 scris."
 
+**Steaua stinsă are nevoie de contur, nu de umplutură.** Pe alb, conturul de
+`var(--border)` la 18px e practic invizibil: un „Fără rating" fără nimic sub el,
+și o medie de 2,8 din care nu se înțelege din câte stele. Acum e același contur
+ca la stelele pe care se apasă, din dreptul participanților
+(`.stars-input--sm`) — acolo problema s-a pus prima dată, tot pe fundal deschis,
+și tot așa s-a rezolvat.
+
 Pe profilul propriu, lipit sub bare, scrie de unde vin cifrele: „Notele sunt
 date în mod anonim de oamenii cu care ai participat la evenimente." Stă acolo,
 nu la capătul de jos al secțiunii, fiindcă despre bare vorbește — e subsolul
@@ -2393,7 +2400,28 @@ Butoanele nu mai există în pagină, deci n-au ce fi apăsate; oprirea adevăra
 rămâne în `api/interes.php`, prin aceeași `evenimentAInceput()`, pentru o filă
 lăsată deschisă de dinainte.
 
-Verificările: `php teste/test-evaluari.php` (90 de cazuri, cere baza de date,
+Iar la **încheiere**, pleacă și tabul „Interesați" — și tabul, și panoul lui.
+Rămân două: „Comentarii" și „Au participat". Lista de interesați nu spune nimic
+despre seara care a fost, fiindcă sunt oameni care s-au uitat într-acolo și n-au
+venit; cine a fost cu adevărat e în tabul de alături.
+
+### „Nu s-a prezentat" se confirmă în pagină
+
+Aceeași casetă ca la scoaterea de pe listă, în același loc — sub omul pe care
+s-a apăsat — prin aceeași funcție (`deschideCaseta()` din `main.js`). E același
+fel de faptă: ceva ce organizatorul face altuia și nu se mai poate lua înapoi.
+
+A fost o vreme un `confirm()` din browser. E cel mai ușor de scris și cel mai
+prost lucru de arătat: o fereastră care sare peste toată pagina, cu alte litere
+și alte butoane decât tot restul site-ului, iar pe telefon lipită de bara de
+adrese. Fapta e destul de grea — o stea și o notă pe profilul altui om,
+definitiv — ca omul să merite s-o confirme uitându-se la rândul lui, nu la o
+casetă gri de sistem.
+
+Fără motiv, spre deosebire de scoatere: acolo textul pleacă în e-mailul omului,
+care are dreptul să știe de ce. Aici nu se trimite nimănui nimic de citit.
+
+Verificările: `php teste/test-evaluari.php` (92 de cazuri, cere baza de date,
 nu și serverul).
 
 
@@ -2408,9 +2436,13 @@ Jumătatea de jos a profilului stă de-acum în două taburi. Primul e ce era
 
 ### Ce intră în „Istoric"
 
-Tot ce se vede pe site și are numele lui pe lista de participanți: și ce
-urmează, și ce s-a încheiat, și ale lui, și ale altora — cele mai noi întâi.
-Lipsesc cele anulate și cele care n-au ajuns niciodată publice: la primele
+Evenimentele **încheiate** la care e pe lista de participanți — ale lui și ale
+altora, cele mai noi întâi. Încheiat înseamnă același lucru ca peste tot pe
+site: ori i-a trecut ziua, ori organizatorul a apăsat „Încheie evenimentul".
+Unul de sâmbăta viitoare n-are ce căuta într-un istoric: omul n-a fost încă
+nicăieri.
+
+Lipsesc și cele anulate, și cele care n-au ajuns niciodată publice: la primele
 nimeni n-a fost nicăieri, la celelalte n-avea cum să se înscrie cineva.
 
 **Nu se amestecă cu „Evenimente organizate"** de mai sus. Acolo se vede ce
@@ -2458,7 +2490,7 @@ O grijă mică, dar care s-a mai plătit o dată: `.card` are `display: flex`, c
 bate `hidden`-ul browserului. Fără `.card[hidden] { display: none; }`, butonul
 n-ar ascunde nimic — exact bug-ul avut la `.comment__replies`.
 
-Verificările: `php teste/test-evaluari.php` (90 de cazuri, cere baza de date,
+Verificările: `php teste/test-evaluari.php` (92 de cazuri, cere baza de date,
 nu și serverul).
 
 

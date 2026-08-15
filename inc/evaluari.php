@@ -335,17 +335,23 @@ function potNotaLaEveniment(array $eveniment, int $membruId): bool
 const ISTORIC_DEODATA = 6;
 
 /**
- * Toate evenimentele la care a fost omul ăsta, cele mai noi întâi.
+ * Evenimentele ÎNCHEIATE la care a fost omul ăsta, cele mai noi întâi.
  *
  * Tabul „Istoric" de pe profil. Nu se amestecă cu „Evenimente organizate" de
- * mai sus: acolo se vede ce PUNE LA CALE, adică ce urmează; aici ce a fost —
- * și ce urmează, și ce s-a încheiat, și ale lui, și ale altora.
+ * mai sus: acolo se vede ce PUNE LA CALE, adică ce urmează; aici, doar ce a
+ * fost. Un eveniment de sâmbăta viitoare n-are ce căuta într-un istoric —
+ * omul n-a fost încă nicăieri.
  *
- * Aceleași reguli de socoteală ca laCateEvenimenteAFost(), cu o singură
- * deosebire: aici NU se scot cele la care a fost însemnat absent. Cifra de sus
- * spune la câte a fost, deci absențele n-au ce căuta în ea; lista de aici e
- * istoria lui, iar din istorie nu se șterge o seară fiindcă n-a ajuns la ea.
- * Se scrie „Absent" pe cartonaș și rămâne la locul lui.
+ * ÎNCHEIAT înseamnă același lucru ca peste tot pe site (vezi
+ * evenimentIncheiat() din inc/evenimente.php): ori i-a trecut ziua, ori
+ * organizatorul a apăsat „Încheie evenimentul". Condiția e ruda scrisă pentru
+ * o interogare a lui filtruNeincheiat(), întoarsă pe dos — aici avem de ales
+ * rânduri din bază, nu de cercetat unul pe care îl ținem în mână.
+ *
+ * NU se scot cele la care a fost însemnat absent. Cifra de sus spune la câte a
+ * fost, deci absențele n-au ce căuta în ea; lista de aici e istoria lui, iar
+ * din istorie nu se șterge o seară fiindcă n-a ajuns la ea. Se scrie „Absent"
+ * pe cartonaș și rămâne la locul lui.
  *
  * Evenimentele ținute de el vin cu ele: organizatorul e trecut pe lista de
  * participanți ca oricare altul (vezi faOrganizatorulParticipant). Ca să se
@@ -377,9 +383,10 @@ function istoricEvenimente(int $membruId): array
           WHERE i.membru_id = ?
             AND i.stare = \'participant\'
             AND e.stare_moderare IN (\'aprobat\', \'incheiat\')
+            AND (e.stare_moderare = \'incheiat\' OR e.data_eveniment < ?)
           ORDER BY e.data_eveniment DESC, e.ora_inceput DESC, e.id DESC'
     );
-    $q->execute([$membruId]);
+    $q->execute([$membruId, date('Y-m-d')]);
 
     return $q->fetchAll();
 }

@@ -1966,8 +1966,13 @@ verifica('și nu-l mai cheamă să fie primul interesat', false,
 verifica('taburile rămân', true, str_contains($paginaTrecut['corp'], 'id="tab-going"'));
 verifica('cu eticheta la trecut', true,
     str_contains($paginaTrecut['corp'], '>Au participat</span>'));
-verifica('și cealaltă la fel', true,
-    str_contains($paginaTrecut['corp'], '>Au fost interesați</span>'));
+// Iar „Interesați" a plecat cu totul: la un eveniment încheiat, lista aceea
+// nu spune nimic despre seara care a fost — sunt oameni care s-au uitat
+// într-acolo și n-au venit.
+verifica('fără tabul „Interesați"', false,
+    str_contains($paginaTrecut['corp'], 'id="tab-interested"'));
+verifica('și fără panoul lui', false,
+    str_contains($paginaTrecut['corp'], 'id="panel-interested"'));
 
 // Numărătoarea rămâne: e istoria evenimentului, nu o invitație.
 salveazaInteres($idTrecut, $idAltul, 'participant');
@@ -2112,9 +2117,9 @@ verifica('deci n-are ce mai fi stins', false,
  * „Participă 12" sub un anunț trecut sună a invitație la ceva ce nu se mai
  * poate.
  */
-verifica('eticheta întâi devine „Au fost interesați"', true,
-    str_contains($paginaInch['corp'], '>Au fost interesați</span>'));
-verifica('a doua, „Au participat"', true,
+verifica('tabul „Interesați" a plecat', false,
+    str_contains($paginaInch['corp'], 'id="tab-interested"'));
+verifica('rămâne „Au participat"', true,
     str_contains($paginaInch['corp'], '>Au participat</span>'));
 verifica('fără prezent pe taburi', false,
     str_contains($paginaInch['corp'], '>Participă</span>'));
@@ -2169,12 +2174,17 @@ verifica('nu mai e niciun rând cu chipuri', false, str_contains($corpInch, 'fac
 verifica('nici la prezent', false, str_contains($corpInch, 'este interesat'));
 verifica('nici la trecut', false, str_contains($corpInch, 'a fost interesat sau a participat'));
 
-// Dar omul e tot pe listă, în tabul de dedesubt: numai vorba a plecat.
-salveazaInteres($idInch, $idOrg, 'interesat');
+// Dar participanții se văd tot în tabul de dedesubt: numai vorba a plecat.
 $corpInch = cerere($laInch, $anonim)['corp'];
 verifica('oamenii se văd în taburi', true, str_contains($corpInch, 'data-participant='));
 verifica('cu numărul lor pe tab', true,
-    preg_match('/data-count-for="interesat"[^>]*>1</', $corpInch) === 1);
+    preg_match('/data-count-for="participant"[^>]*>1</', $corpInch) === 1);
+
+// Iar cine s-a arătat doar interesat nu se mai numără nicăieri pe pagină.
+salveazaInteres($idInch, $idOrg, 'interesat');
+$corpInch = cerere($laInch, $anonim)['corp'];
+verifica('interesații nu mai apar deloc', false,
+    str_contains($corpInch, 'data-count-for="interesat"'));
 
 // …iar la unul încă activ, prezentul rămâne neatins.
 $idViitor = pune($idOrg, 'Care încă urmează', 'aprobat', 20);
