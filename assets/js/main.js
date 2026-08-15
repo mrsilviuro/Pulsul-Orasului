@@ -730,6 +730,169 @@
     window.addEventListener('hashchange', dupaAdresa);
   });
 
+  /* ---------------------------- PRIMA PAGINĂ ----------------------------
+     Filtrele de sus și „Vezi mai mult" de la coada listei.
+
+     SINGURUL loc de pe site unde o listă se cere din bucăți. Peste tot în
+     rest, tot ce e de arătat intră în pagină de la început și butonul doar dă
+     la o parte — merge, fiindcă acolo listele au un capăt firesc: câți oameni
+     încap la un eveniment, câte păreri primește un om. Prima pagină n-are
+     niciunul: peste un an sunt sute de evenimente, iar a le trimite pe toate
+     ca să se vadă zece ar fi o pagină de un megabyte pentru un ecran.
+
+     Tot ce se aduce vine gata desenat de pe server (vezi
+     randeazaListaEvenimente din inc/evenimente.php). Aici nu se construiește
+     niciun cartonaș: ar fi fost a doua descriere a aceluiași lucru, în alt
+     limbaj, care s-ar fi despărțit de prima la întâia corectură.
+
+     Fără JS, formularul de deasupra merge singur: e un `<form method="get">`
+     cu legături adevărate pentru categorii. Ce se face aici e doar să nu mai
+     fie nevoie de o reîncărcare.
+  ------------------------------------------------------------------------ */
+
+  /**
+   * `listaPrima`, nu `listaEv`: tot fișierul e o singură funcție mare, iar
+   * `var` ține de funcție, nu de bloc. Un al doilea `var listaEv` de mai jos
+   * (lista de evenimente de pe profil) o strivea pe asta — fără nicio eroare
+   * la încărcare, fiindcă hoistarea le face pe amândouă să existe. Se vedea
+   * abia la apăsare, ca „null are children". Numele lungi și anume nu costă
+   * nimic; ăsta a costat o oră.
+   */
+  var filtre = document.getElementById('filtre');
+  var listaPrima = document.querySelector('[data-lista-evenimente]');
+
+  if (filtre && listaPrima) {
+    var selectOras   = filtre.querySelector('[data-filtru-oras]');
+    var cutieMai     = document.querySelector('[data-mai-multe]');
+    var butonMai     = document.querySelector('[data-mai-multe-buton]');
+    var randGol      = document.querySelector('[data-lista-goala]');
+    var seIncarca    = false;
+
+    /** Ce e ales chiar acum. Categoria se ține aici, nu se citește din DOM. */
+    var categorieAleasa = (function () {
+      var activ = filtre.querySelector('.chip.is-active');
+      return activ ? (activ.getAttribute('data-filtru-categorie') || '') : '';
+    })();
+
+    function adresaCerere(deLa) {
+      var p = new URLSearchParams();
+
+      if (selectOras && selectOras.value) p.set('oras', selectOras.value);
+      if (categorieAleasa) p.set('categorie', categorieAleasa);
+      if (deLa > 0) p.set('de_la', String(deLa));
+
+      return 'api/lista-evenimente.php?' + p.toString();
+    }
+
+    /**
+     * Adresa din bara browserului merge după filtre.
+     *
+     * `replaceState`, nu `pushState`: fiecare apăsare pe o categorie ar fi
+     * lăsat altfel o treaptă în istoric, iar butonul „înapoi" ar fi trebuit
+     * apăsat de șapte ori ca să iasă din pagină. Ce rămâne e o adresă bună de
+     * dat mai departe și de reîncărcat.
+     */
+    function potrivesteAdresa() {
+      var p = new URLSearchParams();
+
+      if (selectOras && selectOras.value) p.set('oras', selectOras.value);
+      if (categorieAleasa) p.set('categorie', categorieAleasa);
+
+      var coada = p.toString();
+      history.replaceState(null, '', 'index.php' + (coada ? '?' + coada : ''));
+    }
+
+    /**
+     * Aduce un teanc. `deLa = 0` înseamnă „de la capăt": lista se înlocuiește,
+     * nu se lipește la ea — asta se întâmplă la fiecare schimbare de filtru.
+     */
+    function adu(deLa) {
+      if (seIncarca) return;
+      seIncarca = true;
+
+      var textInitial = butonMai ? butonMai.textContent : '';
+      if (butonMai) { butonMai.disabled = true; butonMai.textContent = 'Se încarcă…'; }
+
+      fetch(adresaCerere(deLa), { credentials: 'same-origin' })
+        .then(citesteRaspuns)
+        .then(function (rez) {
+          seIncarca = false;
+          if (butonMai) { butonMai.disabled = false; butonMai.textContent = textInitial; }
+
+          if (!rez.corp || !rez.corp.ok) { toast(mesajRaspunsNeasteptat(rez)); return; }
+
+          if (deLa === 0) {
+            listaPrima.innerHTML = rez.corp.html;
+          } else {
+            listaPrima.insertAdjacentHTML('beforeend', rez.corp.html);
+          }
+
+          if (cutieMai) cutieMai.hidden = !rez.corp.mai_sunt;
+          if (randGol)  randGol.hidden  = listaPrima.children.length > 0;
+        })
+        .catch(function () {
+          seIncarca = false;
+          if (butonMai) { butonMai.disabled = false; butonMai.textContent = textInitial; }
+          toast(mesajFaraLegatura());
+        });
+    }
+
+    /* ----------------------------- orașul ---------------------------- */
+
+    if (selectOras) {
+      selectOras.addEventListener('change', function () {
+        potrivesteAdresa();
+        adu(0);
+      });
+    }
+
+    /* --------------------------- categoriile -------------------------- */
+
+    // Ascultarea e pe formular, nu pe fiecare legătură: așa merge și dacă
+    // vreodată categoriile ajung să se schimbe fără reîncărcare.
+    filtre.addEventListener('click', function (e) {
+      var chip = e.target.closest('[data-filtru-categorie]');
+      if (!chip || !filtre.contains(chip)) return;
+
+      // Cu tasta apăsată pentru „deschide în filă nouă", legătura rămâne
+      // legătură: omul a cerut altă filă, nu o filtrare aici.
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+
+      e.preventDefault();
+
+      categorieAleasa = chip.getAttribute('data-filtru-categorie') || '';
+
+      filtre.querySelectorAll('[data-filtru-categorie]').forEach(function (alt) {
+        var on = alt === chip;
+        alt.classList.toggle('is-active', on);
+        if (on) { alt.setAttribute('aria-current', 'true'); }
+        else    { alt.removeAttribute('aria-current'); }
+      });
+
+      potrivesteAdresa();
+      adu(0);
+    });
+
+    /* -------------------------- „Vezi mai mult" ----------------------- */
+
+    if (butonMai) {
+      butonMai.addEventListener('click', function () {
+        adu(listaPrima.children.length);
+      });
+    }
+
+    /**
+     * Butonul „Arată" de lângă lista de orașe e pentru cine n-are JS. Noi
+     * avem, deci filtrarea se face la schimbarea din listă — iar butonul
+     * pleacă, ca să nu stea acolo unul care nu mai are ce face.
+     *
+     * E scris în `<noscript>`, deci nici n-ar trebui să ajungă în DOM; rândul
+     * ăsta e pentru browserele care îl lasă acolo.
+     */
+    var butonNoscript = filtre.querySelector('noscript');
+    if (butonNoscript) butonNoscript.remove();
+  }
+
   /* --- Copierea linkului evenimentului -------------------------------------
      Facebook și WhatsApp sunt linkuri obișnuite, deci merg fără JavaScript.
      Copierea nu are cum: are nevoie de clipboard.
