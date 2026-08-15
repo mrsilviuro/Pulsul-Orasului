@@ -40,7 +40,13 @@ require __DIR__ . '/inc/antet.php';
   <div class="wrap">
     <!--
       Ca să adaugi un slide nou: copiază un bloc <a class="slide"> și schimbă
-      href + src. Punctele de navigare se generează automat din JS.
+      href + src.
+
+      Fără săgeți și fără puncte de navigare, dinadins. Pe telefon stăteau
+      peste poză și mâncau din ea tocmai acolo unde e mai îngustă, iar
+      slide-urile se schimbă oricum singure; cine vrea altul îl aduce cu
+      degetul. Pe calculator rămân săgețile de pe tastatură, iar mouse-ul
+      oprește derularea la trecerea peste — vezi „SLIDESHOW" din main.js.
     -->
     <div class="slideshow" id="slideshow" data-interval="5000" aria-roledescription="carusel">
       <div class="slideshow__track" id="slideshow-track">
@@ -58,15 +64,6 @@ require __DIR__ . '/inc/antet.php';
         </a>
 
       </div>
-
-      <button class="slideshow__arrow slideshow__arrow--prev" type="button" data-dir="-1" aria-label="Slide-ul anterior">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 5-7 7 7 7"/></svg>
-      </button>
-      <button class="slideshow__arrow slideshow__arrow--next" type="button" data-dir="1" aria-label="Slide-ul următor">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
-      </button>
-
-      <div class="slideshow__dots" id="slideshow-dots" role="tablist" aria-label="Alege slide-ul"></div>
     </div>
   </div>
 </section>

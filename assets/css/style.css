@@ -307,76 +307,16 @@ button { cursor: pointer; border: 0; background: none; }
   object-fit: cover;
 }
 
-/* Săgeți */
-.slideshow__arrow {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 42px; height: 42px;
-  display: grid; place-items: center;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, .9);
-  color: #0e1116;
-  box-shadow: var(--shadow-md);
-  backdrop-filter: blur(8px);
-  opacity: 0;
-  transition: opacity .25s var(--ease), transform .25s var(--ease), background-color .2s var(--ease);
-  z-index: 2;
-}
-.slideshow__arrow svg { width: 20px; height: 20px; fill: none; stroke: currentColor;
-                        stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
-.slideshow__arrow--prev { left: 14px; }
-.slideshow__arrow--next { right: 14px; }
+/* Sliderul n-are nici săgeți, nici puncte de navigare.
+   Au existat, palide, arătate la trecerea cu mouse-ul. Pe telefon însă nu
+   există „trecere cu mouse-ul": stăteau permanent peste poză, iar acolo unde
+   ecranul e mai îngust tocmai ele mâncau din singurul lucru care conta.
+   Transparente ar fi fost tot acolo, doar mai greu de apăsat.
 
-/* Săgețile se arată abia când mouse-ul e pe slide, și atunci discret: sunt o
-   portiță, nu ceva de privit. Poza e lucrul important, ele stau peste ea.
-
-   Cine chiar se duce cu mouse-ul pe una o vede întreagă — un buton pe care
-   pui degetul, dar nu-l vezi, e un buton de care nu ești sigur că l-ai
-   apăsat. La fel la tastatură, unde focusul trebuie să se vadă. */
-.slideshow:hover .slideshow__arrow,
-.slideshow:focus-within .slideshow__arrow { opacity: .2; }
-/* Selectoarele sunt scrise întregi, cu `.slideshow` în față, ca să bată regula
-   de deasupra: acolo `:hover` numără cât o clasă, deci ea cântărește (0,3,0),
-   iar un `.slideshow__arrow:hover` singur ar fi rămas dedesubt oricât de jos
-   l-ai pune în fișier. */
-.slideshow:hover .slideshow__arrow:hover,
-.slideshow:focus-within .slideshow__arrow:focus-visible { opacity: 1; }
-.slideshow__arrow:hover { background: #fff; transform: translateY(-50%) scale(1.08); }
-.slideshow__arrow:active { transform: translateY(-50%) scale(.96); }
-
-/* Puncte.
-   Tot discrete, ca săgețile: spun pe al câtelea slide ești, nu cer nimic. Se
-   aprind când te duci cu mouse-ul pe ele sau când le prinde tastatura —
-   atunci nu mai sunt un semn, ci butoane pe care apeși. */
-.slideshow__dots {
-  position: absolute;
-  left: 50%; bottom: 14px;
-  transform: translateX(-50%);
-  display: flex; align-items: center; gap: 7px;
-  padding: 7px 11px;
-  border-radius: var(--radius-pill);
-  background: rgba(14, 17, 22, .38);
-  backdrop-filter: blur(10px);
-  opacity: .2;
-  transition: opacity .25s var(--ease);
-  z-index: 2;
-}
-.slideshow__dots:hover,
-.slideshow__dots:focus-within { opacity: 1; }
-.slideshow__dot {
-  width: 7px; height: 7px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, .5);
-  transition: width .3s var(--ease), background-color .3s var(--ease);
-}
-.slideshow__dot.is-active { width: 22px; border-radius: var(--radius-pill); background: #fff; }
-
-/* Pe touch nu există „mouse-ul e deasupra", deci săgețile rămân pe ecran — dar
-   tot palide, ca pe desktop. Degetul le nimerește și fără să strige. */
-@media (hover: none) {
-  .slideshow__arrow { opacity: .2; background: rgba(255, 255, 255, .82); }
-}
+   Ce le ține locul: slide-urile se schimbă singure (`data-interval`), degetul
+   le trage pe telefon, iar pe calculator merg săgețile de pe tastatură și
+   derularea se oprește când duci mouse-ul peste poză. Vezi „SLIDESHOW" din
+   main.js. */
 
 /* --------------------------- 6. CONȚINUT -------------------------------- */
 main { padding-block: 46px 64px; }
@@ -767,9 +707,6 @@ main { padding-block: 46px 64px; }
   .nav { padding-inline: 16px; }
   .nav__menu { padding-inline: 16px; }
   .slideshow { border-radius: var(--radius); }
-  .slideshow__arrow { width: 36px; height: 36px; }
-  .slideshow__arrow--prev { left: 8px; }
-  .slideshow__arrow--next { right: 8px; }
   .footer__top { grid-template-columns: 1fr; }
   .footer__bottom { justify-content: center; text-align: center; }
 }

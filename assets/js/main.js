@@ -98,7 +98,6 @@
 
   if (box) {
     var track    = document.getElementById('slideshow-track');
-    var dotsWrap = document.getElementById('slideshow-dots');
     var slides   = Array.prototype.slice.call(track.querySelectorAll('.slide'));
     var interval = parseInt(box.getAttribute('data-interval'), 10) || 5000;
     var index    = 0;
@@ -106,18 +105,6 @@
     var reduced  = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     if (slides.length) {
-      // Punctele se generează automat → adaugi un <a class="slide"> și gata.
-      var dots = slides.map(function (slide, i) {
-        var dot = document.createElement('button');
-        dot.type = 'button';
-        dot.className = 'slideshow__dot';
-        dot.setAttribute('role', 'tab');
-        dot.setAttribute('aria-label', 'Slide ' + (i + 1) + ' din ' + slides.length);
-        dot.addEventListener('click', function () { goTo(i); restart(); });
-        dotsWrap.appendChild(dot);
-        return dot;
-      });
-
       function goTo(i) {
         index = (i + slides.length) % slides.length;
         track.style.transform = 'translate3d(' + (-100 * index) + '%,0,0)';
@@ -127,10 +114,6 @@
           slide.setAttribute('aria-hidden', String(hidden));
           // slide-urile ascunse ies din ordinea de tabulare
           slide.setAttribute('tabindex', hidden ? '-1' : '0');
-        });
-        dots.forEach(function (dot, n) {
-          dot.classList.toggle('is-active', n === index);
-          dot.setAttribute('aria-selected', String(n === index));
         });
       }
 
@@ -143,15 +126,6 @@
       }
       function stop()    { if (timer) { clearInterval(timer); timer = null; } }
       function restart() { stop(); play(); }
-
-      // Săgeți
-      box.querySelectorAll('.slideshow__arrow').forEach(function (btn) {
-        btn.addEventListener('click', function (e) {
-          e.preventDefault();
-          next(parseInt(btn.getAttribute('data-dir'), 10));
-          restart();
-        });
-      });
 
       // Pauză la hover / focus / tab inactiv
       box.addEventListener('mouseenter', stop);
