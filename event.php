@@ -301,8 +301,6 @@ require __DIR__ . '/inc/antet.php';
     <nav class="crumbs" aria-label="Navigare">
       <a href="index.php">Acasă</a>
       <span aria-hidden="true">/</span>
-      <span><?= h($eveniment['categorie']) ?></span>
-      <span aria-hidden="true">/</span>
       <span class="crumbs__current"><?= h(inceputDeText($eveniment['titlu'], 60)) ?></span>
     </nav>
 
@@ -333,13 +331,13 @@ require __DIR__ . '/inc/antet.php';
              */
             $banda = [
                 'fel'   => 'anulat',
-                'text'  => 'Anulat de organizator. Anunțul nu se mai vede pe site; pagina asta o deschide doar staff-ul.',
+                'text'  => 'Anulat de organizator. Anunțul nu mai este vizibil pe site.',
                 'motiv' => (string) ($eveniment['motiv_anulare'] ?? ''),
             ];
         } elseif (!$ePublicat) {
             $banda = $eveniment['stare_moderare'] === 'respins'
-                ? ['fel' => 'respins',   'text' => 'Anunțul nu a trecut de verificare. Îl vezi doar tu.']
-                : ['fel' => 'asteptare', 'text' => 'În așteptare de aprobare. Îl vezi doar tu, până îl citim.'];
+                ? ['fel' => 'respins',   'text' => 'Anunțul nu a fost aprobat de moderatori.']
+                : ['fel' => 'asteptare', 'text' => 'Se așteaptă aprobarea din partea unui moderator.'];
         } elseif ($eIncheiat) {
             /**
              * Trecut, nu greșit. De aceea banda e cenușie, nu galbenă și nici
@@ -455,7 +453,7 @@ require __DIR__ . '/inc/antet.php';
 
         // Textul care pleacă pe WhatsApp și în clipboard. Scurt dinadins:
         // pe WhatsApp intră în căsuța de scris, iar omul îl termină cum vrea.
-        $textDistribuire = 'Uite ce eveniment am găsit: ' . $eveniment['titlu'];
+        $textDistribuire = 'Uite ce eveniment am găsit pe Pulsul Orașului: ' . $eveniment['titlu'];
       ?>
       <div class="post__share" role="group" aria-label="Distribuie evenimentul">
         <a class="icon-btn" target="_blank" rel="noopener noreferrer"
@@ -516,8 +514,8 @@ require __DIR__ . '/inc/antet.php';
                data-slug="<?= h((string) $eveniment['slug']) ?>"
                <?= $eLogat ? 'data-csrf="' . h(tokenCsrf()) . '"' : '' ?>>
         <div class="rsvp__head">
-          <h2 id="rsvp-title">Mergi la acest eveniment?</h2>
-          <p>Spune-le și celorlalți — apari în lista de mai jos.</p>
+          <h2 id="rsvp-title">Ce zici, te interesează?</h2>
+          <p>Spune-le și celorlalți. O să apari în lista de mai jos.</p>
         </div>
 
         <div class="rsvp__actions">
@@ -567,7 +565,7 @@ require __DIR__ . '/inc/antet.php';
         <?php endif; ?>
 
         <?php if (!$maiSuntLocuri && $stareaMea !== 'participant'): ?>
-        <p class="rsvp__plin">Nu mai sunt locuri disponibile la acest eveniment.</p>
+        <p class="rsvp__plin">Nu mai sunt locuri disponibile.</p>
         <?php endif; ?>
 
         <!-- ------------------- confirmarea participării -------------------
@@ -584,13 +582,12 @@ require __DIR__ . '/inc/antet.php';
 
           <p class="rsvp__confirm-text">
             Numele tău complet și numărul de telefon vor fi văzute de
-            organizator, care te poate suna sau scrie pe WhatsApp ca să
-            reconfirme înainte de eveniment.
+            organizator. Acesta te va putea contacta sau îți va putea scrie pe WhatsApp. Daca nu vei fi de găsit, organizatorul își rezervă dreptul să te șteargă din lista de participanți pentru a elibera locul.
           </p>
 
           <p class="rsvp__confirm-text">
-            Confirmând, spui că ai citit și ești de acord cu
-            <a href="#">Termenii și condițiile</a> platformei.
+            Confirmând această acțiune, declari în mod automat ca ai citit și ești de acord cu
+            <a href="tc.php">Termenii și condițiile</a> platformei PulsulOrasului.Ro
           </p>
 
           <?php if ($imiCereTelefon): ?>
@@ -604,7 +601,7 @@ require __DIR__ . '/inc/antet.php';
                    autocomplete="tel" maxlength="20" placeholder="0722334455"
                    aria-describedby="err-rsvp-telefon rsvp-telefon-hint">
             <p class="field__hint" id="rsvp-telefon-hint">
-              Se salvează în contul tău, ca să nu-l mai scrii data viitoare.
+              Se salvează automat în contul tău, ca să nu-l mai scrii din nou data viitoare.
               Îl poți schimba oricând din <a href="setari.php">setări</a>.
             </p>
             <p class="field__error" id="err-rsvp-telefon" hidden></p>
@@ -707,7 +704,7 @@ require __DIR__ . '/inc/antet.php';
                         aria-describedby="err-comentariu"></textarea>
               <p class="field__error" id="err-comentariu" hidden></p>
               <div class="comment-form__actions">
-                <p class="comment-form__hint">Fii civilizat. Comentariile jignitoare se șterg.</p>
+                <p class="comment-form__hint">Te rugăm să fii civilizat! Comentariile răutăcioase se șterg și pot aduce restricții ulterioare!</p>
                 <button class="btn btn--primary btn--sm" type="submit">Publică</button>
               </div>
             </div>
@@ -842,14 +839,14 @@ require __DIR__ . '/inc/antet.php';
             -->
             <li class="scoate-rand" data-caseta>
             <form class="scoate-form">
-              <p class="scoate-form__titlu">Scoți de pe listă pe <strong data-scoate-nume></strong>?</p>
+              <p class="scoate-form__titlu">Vrei să-l scoți din listă pe <strong data-scoate-nume></strong>?</p>
 
               <label class="sr-only" for="scoate-motiv">De ce îl scoți</label>
               <textarea id="scoate-motiv" rows="3" maxlength="<?= MOTIV_EXCLUDERE_MAX ?>"
-                        placeholder="De ce îl scoți de pe listă? (cel puțin <?= MOTIV_EXCLUDERE_MIN ?> caractere)"
+                        placeholder="Această acțiune necesită un motiv. Care ar fi acesta? (cel puțin <?= MOTIV_EXCLUDERE_MIN ?> caractere)"
                         aria-describedby="scoate-motiv-hint err-scoate"></textarea>
               <p class="field__hint" id="scoate-motiv-hint">
-                Textul ăsta pleacă întreg în e-mailul pe care îl primește.
+                Aceasta va primi un email de informare în care vom include și motivul menționat.
               </p>
               <p class="field__error" id="err-scoate" hidden></p>
 
@@ -862,11 +859,11 @@ require __DIR__ . '/inc/antet.php';
               -->
               <label class="check scoate-form__bifa">
                 <input type="checkbox" data-scoate-interzis>
-                <span>Nu se mai poate înscrie la acest eveniment</span>
+                <span>Doresc să previn reînscrierea lui în cadrul acestui eveniment sau activități!</span>
               </label>
 
               <div class="scoate-form__actiuni">
-                <button class="btn btn--primary btn--xs" type="submit">Scoate de pe listă</button>
+                <button class="btn btn--primary btn--xs" type="submit">Scoate-l de pe listă</button>
                 <button class="btn btn--text" type="button" data-renunta>Renunță</button>
               </div>
             </form>
@@ -897,8 +894,7 @@ require __DIR__ . '/inc/antet.php';
               </p>
 
               <p class="field__hint">
-                Primește o stea și o notă pe profil. Nu se poate lua înapoi,
-                iar de atunci încolo nu-l mai poate nota nimeni.
+                Aceasta va primi automat 1 stea împreună cu un feedback negativ pe profilul lui. Acțiunea este definitivă și nu se poate revoca!
               </p>
 
               <div class="scoate-form__actiuni">
@@ -930,7 +926,7 @@ require __DIR__ . '/inc/antet.php';
     ============================================================== -->
     <section class="related" aria-labelledby="related-title">
       <div class="section-head">
-        <h2 class="section-title" id="related-title">Ar putea să te intereseze</h2>
+        <h2 class="section-title" id="related-title">Ar putea să te intereseze și ...</h2>
         <a class="link-more" href="index.php">Prima pagină
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15"/><path d="m13 6 6 6-6 6"/></svg>
         </a>

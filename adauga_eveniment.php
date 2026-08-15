@@ -119,17 +119,16 @@ require __DIR__ . '/inc/antet.php';
       <?php if ($eEditare): ?>
       <a href="<?= h(urlEveniment((string) $ev['slug'])) ?>"><?= h(inceputDeText((string) $ev['titlu'], 40)) ?></a>
       <span aria-hidden="true">/</span>
-      <span class="crumbs__current">Schimbă</span>
+      <span class="crumbs__current">Editează</span>
       <?php else: ?>
       <span class="crumbs__current">Eveniment nou</span>
       <?php endif; ?>
     </nav>
 
     <?php if ($eEditare): ?>
-    <h1 class="setari__titlu">Schimbă evenimentul</h1>
+    <h1 class="setari__titlu">Editează activitatea</h1>
     <p class="setari__lead">
-      Orice schimbare trece din nou pe la noi: până îl citim, anunțul nu se mai
-      vede pe site. E singurul fel în care verificarea înseamnă ceva.
+      Orice modificare trebuie verificată și aprobată de un moderator. Până atunci, activitatea este invizibilă publicului larg.
     </p>
     <?php else: ?>
     <h1 class="setari__titlu">Publică un eveniment</h1>
@@ -162,7 +161,7 @@ require __DIR__ . '/inc/antet.php';
       </ul>
 
       <p class="card-set__lead">
-        Un eveniment se încheie singur a doua zi după data la care are loc.
+        Un eveniment este considerat încheiat în mod automat următoarea zi ce urmează zilei în care a avut loc.
         Până atunci, tot ce ai de făcut e să te ocupi de el.
       </p>
 
@@ -191,10 +190,10 @@ require __DIR__ . '/inc/antet.php';
           <h2 class="card-set__titlu">Despre ce e vorba</h2>
 
           <div class="field">
-            <label for="ev-titlu">Titlul evenimentului <span class="req" aria-hidden="true">*</span></label>
+            <label for="ev-titlu">Titlul evenimentului / activității <span class="req" aria-hidden="true">*</span></label>
             <input type="text" id="ev-titlu" name="titlu" maxlength="<?= TITLU_EVENIMENT_MAX ?>"
                    value="<?= h($val('titlu')) ?>"
-                   placeholder="Cursa de seară prin centrul vechi" required
+                   placeholder="Ex: Monopoly la terasă!" required
                    aria-describedby="err-ev-titlu">
             <p class="field__error" id="err-ev-titlu" hidden></p>
           </div>
@@ -238,7 +237,7 @@ require __DIR__ . '/inc/antet.php';
             <label for="ev-locatie">Unde are loc <span class="req" aria-hidden="true">*</span></label>
             <input type="text" id="ev-locatie" name="locatie" maxlength="<?= LOCATIE_MAX ?>"
                    value="<?= h($val('locatie')) ?>"
-                   placeholder="Piața Sfatului, lângă fântână" required
+                   placeholder="Ex: Pub-ul de pe centru!" required
                    aria-describedby="err-ev-locatie">
             <p class="field__error" id="err-ev-locatie" hidden></p>
           </div>
@@ -248,10 +247,8 @@ require __DIR__ . '/inc/antet.php';
         <section class="card-set">
           <h2 class="card-set__titlu">Poza de copertă <span class="field__optional">(opțional)</span></h2>
           <p class="card-set__lead">
-            E poza mare de sus, de la anunț. Cel puțin
-            <?= COPERTA_SURSA_MIN_LATIME ?>×<?= COPERTA_SURSA_MIN_INALTIME ?> pixeli. După ce
-            o alegi, o poți muta și mări în cadru — ce vezi acolo e exact ce se
-            salvează. Dacă nu pui niciuna, folosim imaginea categoriei.
+            Te rugăm să alegi o poză care să aiba legătură cu activitatea sau evenimentul pe care urmează să-l publici, de minim
+            <?= COPERTA_SURSA_MIN_LATIME ?>×<?= COPERTA_SURSA_MIN_INALTIME ?> pixeli. Acest lucru este opțional. Dacă nu vei încărca nici o poza, vom folosi noi una conform categoriei selectate.
           </p>
 
           <?php if ($copertaAcum !== ''): ?>
@@ -265,7 +262,7 @@ require __DIR__ . '/inc/antet.php';
             <img src="<?= h($copertaAcum) ?>" alt="Coperta de acum a evenimentului"
                  width="1600" height="900" decoding="async">
             <p class="coperta-acum__text">
-              Asta e poza de acum. Dacă nu alegi alta, rămâne ea.
+              Aceasta este imaginea de copertă actuală. O poți păstra sau poți alege alta.
             </p>
           </div>
           <?php endif; ?>
@@ -317,14 +314,14 @@ require __DIR__ . '/inc/antet.php';
             </p>
 
             <div class="crop__actiuni">
-              <button class="btn btn--ghost btn--sm" type="button" id="ev-coperta-renunt">Scoate poza</button>
+              <button class="btn btn--ghost btn--sm" type="button" id="ev-coperta-renunt">Șterge poza</button>
             </div>
           </div>
         </section>
 
         <!-- ----------------------- Când ------------------------- -->
         <section class="card-set">
-          <h2 class="card-set__titlu">Când</h2>
+          <h2 class="card-set__titlu">Când o să aibă loc?</h2>
 
           <!--
             Data se scrie ZZ-LL-AAAA, cum se scrie o dată în România. De ce nu
@@ -384,7 +381,7 @@ require __DIR__ . '/inc/antet.php';
               <label class="check check--mic">
                 <input type="checkbox" id="ev-fara-sfarsit" name="fara_ora_sfarsit" value="1"
                        <?= $faraOraSfarsit ? 'checked' : '' ?>>
-                <span>Nu se știe până când ține</span>
+                <span>Fără oră de sfârșit!</span>
               </label>
               <p class="field__error" id="err-ev-ora-sfarsit" hidden></p>
             </div>
@@ -393,7 +390,7 @@ require __DIR__ . '/inc/antet.php';
 
         <!-- -------------------- Cine și cât --------------------- -->
         <section class="card-set">
-          <h2 class="card-set__titlu">Cine poate veni și cât costă</h2>
+          <h2 class="card-set__titlu">Cine poate veni și cât costă?</h2>
 
           <div class="field">
             <label class="check">
@@ -500,7 +497,7 @@ require __DIR__ . '/inc/antet.php';
             -->
             <textarea id="ev-descriere" name="descriere" rows="10"
                       data-min="<?= DESCRIERE_MIN ?>" data-max="<?= DESCRIERE_MAX ?>"
-                      placeholder="Pornim din fața primăriei la ora 19:00…"
+                      placeholder="Salutare! Am primit cadou un set nou de Monopoly dar momentan nu am cu cine să mă joc. Dacă sunt interesați ..."
                       required aria-describedby="err-ev-descriere ev-numar"><?= h($val('descriere')) ?></textarea>
             <!-- „din minim 300", nu „din 300": 300 e pragul de la care se
                  poate trimite, nu o cotă de umplut. Scris fără „minim", un

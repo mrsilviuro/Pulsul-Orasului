@@ -313,7 +313,7 @@ require __DIR__ . '/inc/antet.php';
           </svg>
         </span>
         <span class="stat__value"><?= (int) $cateOrganizate ?></span>
-        <span class="stat__label">Evenimente organizate</span>
+        <span class="stat__label">Ieșiri organizate</span>
       </div>
 
       <div class="stat">
@@ -323,7 +323,7 @@ require __DIR__ . '/inc/antet.php';
           </svg>
         </span>
         <span class="stat__value"><?= (int) $cateParticipari ?></span>
-        <span class="stat__label">Prezent la evenimente</span>
+        <span class="stat__label">Prezent la activități</span>
       </div>
 
       <div class="stat">
@@ -351,9 +351,7 @@ require __DIR__ . '/inc/antet.php';
       <div class="section-head">
         <div>
           <!-- Pe profilul propriu vorbim cu omul, nu despre el. -->
-          <p class="eyebrow"><span class="pulse-dot" aria-hidden="true"></span>
-            <?= $eProfilulMeu ? 'Ce pui la cale' : 'Ce pune la cale' ?></p>
-          <h2 class="section-title" id="evenimente-title">Evenimente organizate</h2>
+          <h2 class="section-title" id="evenimente-title">Ieșiri organizate</h2>
         </div>
 
         <?php if ($eProfilulMeu && $evenimenteProfil !== []): ?>
@@ -373,7 +371,7 @@ require __DIR__ . '/inc/antet.php';
           <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M12 5v14"/><path d="M5 12h14"/>
           </svg>
-          <span>Eveniment nou</span>
+          <span>Propune o ieșire</span>
         </a>
         <?php endif; ?>
       </div>
@@ -389,7 +387,7 @@ require __DIR__ . '/inc/antet.php';
           <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M12 5v14"/><path d="M5 12h14"/>
           </svg>
-          <span>Eveniment nou</span>
+          <span>Propune o ieșire</span>
         </a>
         <?php else: ?>
         <p class="fara-nimic__text"><?= h($prenumeScurt) ?> nu organizează momentan nimic.</p>

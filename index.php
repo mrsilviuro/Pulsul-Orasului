@@ -78,8 +78,7 @@ require __DIR__ . '/inc/antet.php';
     <!-- Titlu secțiune -->
     <div class="section-head">
       <div>
-        <p class="eyebrow"><span class="pulse-dot" aria-hidden="true"></span> Live din oraș</p>
-        <h1 class="section-title">Ce se întâmplă acum</h1>
+        <h1 class="section-title">Ce facem zilele astea?</h1>
       </div>
       <!--
         Butonul se vede și fără cont: cine nu e înscris trebuie să afle că
@@ -95,7 +94,7 @@ require __DIR__ . '/inc/antet.php';
         <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
           <path d="M12 5v14"/><path d="M5 12h14"/>
         </svg>
-        <span>Eveniment nou</span>
+        <span>Propune o ieșire</span>
       </a>
     </div>
 
@@ -186,12 +185,12 @@ require __DIR__ . '/inc/antet.php';
     <section class="cta">
       <div class="cta__glow" aria-hidden="true"></div>
       <div class="cta__content">
-        <p class="eyebrow eyebrow--light">Scrie și tu</p>
-        <h2>Ai un eveniment în oraș? Publică-l aici.</h2>
-        <p class="cta__text">Pulsul Orașului e scris de oameni din oraș. Creează-ți cont și publică evenimentul tău în câteva minute — gratuit.</p>
+        <p class="eyebrow eyebrow--light">REDESCHIDEM ORAȘUL ÎMPREUNĂ</p>
+        <h2>Vrei să ieși afară dar n-ai cu cine?</h2>
+        <p class="cta__text">De la jocuri de weekend până la drumeții sau ieșiri cu motoarele. Adaugă activitatea ta pe site și cunoaște oameni faini din oraș.</p>
         <div class="cta__actions">
-          <a class="btn btn--primary" href="login.php#inregistrare">Alătură-te și tu</a>
-          <a class="btn btn--outline" href="despre.php">Cum funcționează</a>
+          <a class="btn btn--primary" href="adauga_eveniment.php">Propune o ieșire</a>
+          <a class="btn btn--outline" href="despre.php">Despre Pulsul Orașului</a>
         </div>
       </div>
     </section>
