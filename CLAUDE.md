@@ -139,8 +139,12 @@ inc/
                       urmează, fără cel curent, fără oraș)
   interese.php      → „Mergi la acest eveniment?" — cine e interesat, cine
                       vine, numărătoarea, locurile, rândul cu chipuri, listele
-                      din taburi (aceeași funcție pentru amândouă) ȘI
-                      scoaterea cuiva de pe cea de participanți
+                      din taburi (aceeași funcție pentru amândouă), scoaterea
+                      cuiva de pe cea de participanți ȘI
+                      oameniiDeInstiintatLaAnulare() — cine primește vestea
+                      când se anulează un eveniment (și cei care confirmaseră,
+                      și cei doar interesați; fără organizator, care tocmai a
+                      apăsat butonul)
   evaluari.php      → notele dintre participanți, după eveniment: cine poate
                       nota, media și distribuția de pe profil, „Nu s-a
                       prezentat". STELELE SINGURE sunt anonime și nici nu se
@@ -194,10 +198,11 @@ teste/              → test-validare.php (verificările din inc/validare.php)
                       (toate patru cer baza de date, nu și serverul)
                       test-tine-minte.php, test-setari.php, test-contact.php,
                       test-evenimente.php, test-prima-pagina.php,
-                      test-constructie.php
-                      (ultimele șase cer serverul pornit — vezi antetul lor;
-                      test-prima-pagina și test-constructie merg și fără, sar
-                      doar partea care cere serverul. ATENȚIE: test-constructie
+                      test-constructie.php, test-anulare.php
+                      (ultimele șapte cer serverul pornit — vezi antetul lor;
+                      test-prima-pagina, test-constructie și test-anulare merg
+                      și fără, sar doar partea care cere serverul. ATENȚIE:
+                      test-constructie
                       pornește și oprește `in_constructie` din inc/config.php,
                       și îl pune la loc cum l-a găsit)
 private/            → loguri (emailuri-trimise.log), protejat prin .htaccess
@@ -265,12 +270,11 @@ assets/css/style.css, assets/js/main.js, assets/img/
   înscrieri și comentarii) e o acțiune viitoare de staff — vezi `TODO`-ul din
   `anuleazaEveniment()`
 - Adresele frumoase: acum sunt `profil.php?m=<permalink>` și `event.php?slug=…`
-- Înștiințările: aproape nimeni nu află nimic prin e-mail. Pleacă doar
-  mulțumirea de după eveniment (cron/multumeste-participantilor.php) și
-  vestea că cineva a fost scos de pe listă. Cine primește un răspuns la
-  comentariu nu vede decât dacă se întoarce singur pe pagină, iar la anularea
-  unui eveniment vezi `TODO`-ul din `anuleazaEveniment()` — trebuie trimis
-  e-mail cu textul din `motiv_anulare`, ÎNAINTE de ștergerea făcută de staff
+- Înștiințările: încă nu pleacă mare lucru prin e-mail. Pleacă mulțumirea de
+  după eveniment (cron/multumeste-participantilor.php), vestea că cineva a fost
+  scos de pe listă și vestea că un eveniment s-a anulat
+  (api/anuleaza-eveniment.php). Cine primește un răspuns la comentariu nu vede
+  decât dacă se întoarce singur pe pagină
 - Comentariile: nu există raportare și nici pagină de moderare. Staff-ul umblă
   la ele de pe pagina evenimentului, ca oricare autor
 - Notele nu se pot retrage și nici raporta. Cine a primit o stea pe nedrept nu

@@ -4,15 +4,18 @@ declare(strict_types=1);
 /**
  * PulsulOrasului.Ro — anularea unui eveniment.
  *
- * Primește slugul și motivul, trece evenimentul în starea „anulat", răspunde
- * cu unde să meargă omul mai departe. Nu se șterge nimic: rândul rămâne pentru
- * staff și pentru e-mailurile care vor pleca spre cei înscriși.
+ * Primește slugul și motivul, trece evenimentul în starea „anulat", dă de
+ * veste tuturor celor de pe listă și răspunde cu unde să meargă omul mai
+ * departe. Nu se șterge nimic: rândul rămâne pentru staff, iar curățenia lui
+ * e o treabă de mai târziu.
  *
  * Confirmarea s-a dat deja în pagină, în două trepte; aici se verifică dacă
  * are voie și dacă motivul e scris cum trebuie.
  */
 
 require_once __DIR__ . '/../inc/evenimente.php';
+require_once __DIR__ . '/../inc/interese.php';
+require_once __DIR__ . '/../inc/email.php';
 
 if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
     raspunsJson(['ok' => false, 'mesaj' => 'Metodă nepermisă.'], 405);
@@ -79,7 +82,59 @@ if ($motiv['eroare'] !== '') {
     ], 422);
 }
 
+/**
+ * Oamenii se citesc ÎNAINTE de anulare, nu după.
+ *
+ * Nu fiindcă anularea ar șterge rândurile din `interese_evenimente` — nu le
+ * șterge — ci fiindcă asta e ordinea care rămâne adevărată și în ziua în care
+ * se va face curățenia de care vorbește anuleazaEveniment(). Cine citește
+ * lista înainte n-are cum să rămână cu mâna goală.
+ *
+ * Organizatorul nu e printre ei: el tocmai a apăsat butonul, iar la publicare
+ * s-a trecut singur pe lista de participanți.
+ */
+$evenimentId  = (int) $eveniment['id'];
+$deInstiintat = oameniiDeInstiintatLaAnulare($evenimentId, (int) $membru['id']);
+
 anuleazaEveniment($eveniment, $motiv['text']);
+
+/**
+ * Vestea pleacă DUPĂ ce anularea e scrisă în bază, nu înainte.
+ *
+ * Aceeași ordine ca la scoaterea cuiva de pe listă (api/exclude-participant.php):
+ * un e-mail trimis peste o scriere care apoi pică ar spune oamenilor un
+ * neadevăr — „nu mai are loc", pentru un eveniment care e tot acolo. Invers,
+ * dacă scrierea reușește și e-mailul nu pleacă, anularea rămâne făcută, iar
+ * asta se poate îndrepta.
+ *
+ * Nu oprim răspunsul dacă vreun mesaj nu pleacă: fapta e făcută, iar
+ * organizatorul trebuie să vadă că evenimentul e anulat, nu o eroare despre
+ * serverul de e-mail. Ce n-a mers ajunge în log.
+ */
+$adresaSite  = urlIntreg('index.php');
+$candAvutLoc = dataLunga((string) ($eveniment['data_eveniment'] ?? ''));
+
+$trimise = 0;
+$picate  = 0;
+
+foreach ($deInstiintat as $om) {
+    $plecat = emailAnulareEveniment(
+        (string) $om['email'],
+        (string) $om['prenume'],
+        (string) $eveniment['titlu'],
+        $candAvutLoc,
+        $motiv['text'],
+        $adresaSite,
+        (string) $om['stare'] === 'participant'
+    );
+
+    $plecat ? $trimise++ : $picate++;
+}
+
+if ($picate > 0) {
+    error_log('PulsulOrasului: ' . $picate . ' din ' . count($deInstiintat)
+            . ' e-mailuri de anulare n-au plecat pentru evenimentul #' . $evenimentId);
+}
 
 // Mesajul îl citește inc/subsol.php pe pagina următoare și îl arată o
 // singură dată, ca la intrarea cu Google.
@@ -90,4 +145,8 @@ raspunsJson([
     'ok'       => true,
     'redirect' => 'profil.php',
     'mesaj'    => 'Evenimentul a fost anulat.',
+
+    // Câți au aflat — pagina nu-l arată deocamdată, dar proba îl citește, iar
+    // organizatorul are dreptul să știe că vestea chiar a plecat.
+    'instiintati' => $trimise,
 ]);

@@ -904,14 +904,18 @@ function salveazaEveniment(int $membruId, array $curat, ?string $coperta): strin
  * Coperta NU se șterge de pe disc. Cât timp rândul e acolo și staff-ul îl mai
  * poate deschide, poza face parte din el; se duce odată cu el, la curățenie.
  *
- * TODO: la implementarea sistemului de interese/participări, ordinea e:
- *   1) AICI, în clipa anulării: e-mail către toți cei interesați/confirmați,
- *      cu textul din motiv_anulare. Ăsta e singurul pas automat.
- *   2) MAI TÂRZIU, ca acțiune de staff, nu automat: curățenia finală —
- *      ștergerea rândului anulat, a înscrierilor și a comentariilor lui, plus
- *      coperta de pe disc (stergeCopertaDeFisier).
- * Ordinea contează: dacă s-ar șterge întâi, n-ar mai avea cui trimite
- * e-mailul și nici ce să scrie în el.
+ * VESTEA NU PLEACĂ DE AICI. Funcția asta doar schimbă rândul; e-mailurile
+ * către cei de pe listă le trimite api/anuleaza-eveniment.php, imediat după ce
+ * cheamă funcția — aceeași împărțire ca la scoaterea cuiva de pe listă, unde
+ * excludeParticipant() scrie și API-ul trimite. Motivul: aici e stratul care
+ * atinge baza, iar un `require` de email.php în evenimente.php ar lega între
+ * ele două lucruri care n-au de ce să se cunoască.
+ *
+ * TODO: mai rămâne pasul al doilea, MAI TÂRZIU și ca acțiune de staff, nu
+ * automat: curățenia finală — ștergerea rândului anulat, a înscrierilor și a
+ * comentariilor lui, plus coperta de pe disc (stergeCopertaDeFisier).
+ * Ordinea contează și acolo: dacă s-ar șterge întâi rândurile din
+ * `interese_evenimente`, n-ar mai avea cine să afle nimic.
  */
 function anuleazaEveniment(array $eveniment, string $motiv): void
 {

@@ -492,6 +492,44 @@ function omulDeInstiintat(int $membruId): ?array
     return $rand !== false ? $rand : null;
 }
 
+/**
+ * Toți oamenii care trebuie să afle că evenimentul s-a anulat.
+ *
+ * ȘI cei care ziceau că vin, ȘI cei doar interesați. Al doilea grup n-a promis
+ * nimic, dar s-a uitat într-acolo tocmai fiindcă se gândea să meargă — iar cine
+ * ține sâmbăta liberă „poate mă duc" trebuie să afle că n-are unde, la fel ca
+ * cel care apucase să confirme.
+ *
+ * FĂRĂ ORGANIZATOR. El e cel care tocmai a apăsat pe „Anulează", iar
+ * faOrganizatorulParticipant() îl trece singur pe lista de participanți la
+ * publicare — deci fără rândul ăsta și-ar fi trimis singur vestea. $faraMembruId
+ * e el; se dă din afară, nu se citește aici, fiindcă cel care cheamă funcția îl
+ * are deja în mână.
+ *
+ * Numai conturile ACTIVE și cu adresă: cine și-a șters contul n-are unde primi
+ * nimic, iar rândul lui anonimizat n-are adresă. Aceeași grijă ca la
+ * omulDeInstiintat() de mai sus și la participantiiDeMultumit() din
+ * inc/multumiri.php.
+ *
+ * Se citesc ÎNAINTE de orice curățenie: rândurile din `interese_evenimente`
+ * sunt singurul loc unde scrie cine aștepta seara aceea.
+ */
+function oameniiDeInstiintatLaAnulare(int $evenimentId, int $faraMembruId = 0): array
+{
+    $q = db()->prepare(
+        'SELECT m.id, m.prenume, m.sex, m.email, i.stare
+           FROM interese_evenimente i
+           JOIN membri m ON m.id = i.membru_id AND m.stare = \'activ\'
+          WHERE i.eveniment_id = ?
+            AND i.membru_id <> ?
+            AND m.email <> \'\'
+          ORDER BY i.creat_la, i.id'
+    );
+    $q->execute([$evenimentId, $faraMembruId]);
+
+    return $q->fetchAll();
+}
+
 /* ======================= CUM ARATĂ PE ECRAN ========================== */
 
 /**

@@ -3352,3 +3352,79 @@ dacă pică ceva la mijloc. După fiecare schimbare **așteaptă până când se
 chiar o vede**: PHP ține fișierele compilate în OPcache și se uită dacă s-au
 schimbat pe disc doar din două în două secunde, iar proba pica pe un lacăt care
 era pus, dar nu apucase să se audă.
+
+
+## Vestea că un eveniment s-a anulat
+
+Un eveniment anulat nu se mai vede de nimeni în afară de staff. Până acum,
+oamenii care își făcuseră planuri pentru seara aceea aflau asta singuri —
+intrând pe o pagină care nu se mai deschidea. Acum primesc un e-mail în clipa
+în care organizatorul apasă „Anulează".
+
+`oameniiDeInstiintatLaAnulare()` din `inc/interese.php`,
+`emailAnulareEveniment()` din `inc/email.php`, trimiterea în
+`api/anuleaza-eveniment.php`.
+
+### Cine află
+
+**Și cei care confirmaseră, și cei doar interesați.** Al doilea grup n-a promis
+nimic, dar s-a uitat într-acolo tocmai fiindcă se gândea să meargă — iar cine
+și-a ținut sâmbăta liberă „poate mă duc" trebuie să afle că n-are unde, la fel
+ca cel care apucase să bifeze.
+
+**Fără organizator.** El e cel care tocmai a apăsat butonul, iar la publicare se
+trece singur pe lista de participanți (`faOrganizatorulParticipant`) — fără
+rândul care îl scoate, și-ar fi trimis singur vestea.
+
+Numai conturile active și cu adresă, ca peste tot: cine și-a șters contul n-are
+unde primi nimic, iar rândul lui anonimizat n-are adresă.
+
+### Ordinea
+
+Oamenii se citesc **înainte** de anulare; vestea pleacă **după** ce anularea e
+scrisă în bază.
+
+Prima jumătate nu contează azi — anularea nu șterge rândurile din
+`interese_evenimente` — dar rămâne adevărată în ziua în care se va face
+curățenia despre care vorbește `anuleazaEveniment()`. Cine citește lista
+înainte n-are cum să rămână cu mâna goală.
+
+A doua contează acum: aceeași ordine ca la scoaterea cuiva de pe listă. Un
+e-mail trimis peste o scriere care apoi pică ar spune oamenilor un neadevăr —
+„nu mai are loc", pentru un eveniment care e tot acolo. Invers, dacă scrierea
+reușește și e-mailul nu pleacă, anularea rămâne făcută, iar asta se poate
+îndrepta. Ce n-a plecat ajunge în log, dar nu oprește răspunsul: organizatorul
+trebuie să vadă că evenimentul e anulat, nu o eroare despre serverul de e-mail.
+
+### Mesajul n-are buton spre eveniment
+
+Ar fi părut lucrul firesc, și ar fi fost greșit: din clipa anulării, pagina se
+deschide doar pentru staff (`poateVedeaEvenimentul`). Un „Vezi evenimentul" ar
+fi dus fiecare om exact într-o ușă închisă, la capătul unui mesaj care deja îi
+strica planul. Butonul duce în oraș, unde mai sunt și altele.
+
+Ziua se spune din nou, întreagă. Mesajul poate fi citit peste o săptămână, iar
+„nu mai are loc" fără dată nu-i spune omului ce seară i s-a eliberat.
+
+O singură propoziție diferă între cele două feluri de oameni: cine confirmase
+primește o vorbă care recunoaște că își făcuse un plan, cine era doar interesat
+una mai ușoară. Vestea și motivul sunt aceleași pentru toți.
+
+Motivul intră ca paragraf obișnuit, deci trece prin aceeași ieșire ca restul
+textelor din șablon — scăpat în varianta HTML. Nimeni nu poate strecura
+etichete în e-mailul altcuiva prin caseta de motiv.
+
+### De ce nu pleacă din `anuleazaEveniment()`
+
+Funcția aceea e stratul care atinge baza. Trimiterea stă în API, imediat după
+ce o cheamă — aceeași împărțire ca la scoaterea de pe listă, unde
+`excludeParticipant()` scrie și API-ul trimite. Un `require` de `email.php` în
+`evenimente.php` ar lega două lucruri care n-au de ce să se cunoască.
+
+A doua anulare nu există: `evenimentDeEditat()` refuză un eveniment deja
+anulat, deci nu are cum să plece vestea de două ori.
+
+Verificările: `php teste/test-anulare.php http://127.0.0.1:8128` (39 de cazuri;
+fără adresă merge și fără server, 24). Nu trimite e-mailuri adevărate — cu
+`dezvoltare => true` mesajele se scriu în `private/emailuri-trimise.log`, și de
+acolo se citesc.

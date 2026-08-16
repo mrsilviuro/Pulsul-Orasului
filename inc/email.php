@@ -816,3 +816,67 @@ function emailMultumireParticipare(
 
     return trimiteEmail($catre, $subiect, $blocuri);
 }
+
+/**
+ * Vestea că un eveniment s-a anulat.
+ *
+ * Pleacă în clipa în care organizatorul apasă „Anulează", către toți cei care
+ * erau pe listă — ȘI cei care confirmaseră, ȘI cei doar interesați. Al doilea
+ * grup n-a promis nimic, dar și-a ținut ziua liberă „poate mă duc"; și el
+ * trebuie să afle că n-are unde.
+ *
+ * NU ARE BUTON SPRE EVENIMENT, deși ar fi părut lucrul firesc. Din clipa
+ * anulării, pagina lui se deschide doar pentru staff (vezi
+ * poateVedeaEvenimentul din inc/evenimente.php): un buton „Vezi evenimentul" ar
+ * fi dus fiecare om exact într-o ușă închisă, la capătul unui mesaj care deja
+ * îi strica planul. Butonul duce în oraș, unde mai sunt și altele.
+ *
+ * Motivul intră ca paragraf obișnuit, deci trece prin aceeași ieșire ca restul
+ * textelor din șablon — scăpat cu htmlspecialchars în varianta HTML. Nimeni nu
+ * poate strecura etichete în e-mailul altcuiva prin caseta de motiv.
+ *
+ * $eraParticipant schimbă o singură propoziție: cine confirmase primește o
+ * vorbă care recunoaște că își făcuse un plan; cine era doar interesat, una mai
+ * ușoară. Restul mesajului e la fel — vestea și motivul sunt aceleași pentru
+ * toți.
+ */
+function emailAnulareEveniment(
+    string $catre,
+    string $prenume,
+    string $titluEveniment,
+    string $candAvutLoc,
+    string $motiv,
+    string $adresaSite,
+    bool $eraParticipant
+): bool {
+    $primul = $eraParticipant
+        ? 'Îmi pare rău: „' . $titluEveniment . '" nu mai are loc. '
+          . 'Organizatorul l-a anulat, iar tu erai pe lista de participanți.'
+        : '„' . $titluEveniment . '" nu mai are loc. Organizatorul l-a anulat, '
+          . 'iar tu te arătaseși interesat de el.';
+
+    $paragrafe = [$primul];
+
+    // Ziua se spune din nou, întreagă: mesajul poate fi citit peste o săptămână,
+    // iar „nu mai are loc" fără dată nu-i spune omului ce zi i s-a eliberat.
+    if ($candAvutLoc !== '') {
+        $paragrafe[] = 'Era programat pentru ' . $candAvutLoc . '.';
+    }
+
+    $paragrafe[] = 'Motivul, așa cum a fost scris de organizator:';
+    $paragrafe[] = $motiv;
+
+    $blocuri = [
+        'salut'     => 'Bună, ' . $prenume . '!',
+        'paragrafe' => $paragrafe,
+        'buton'     => [
+            'text' => 'Vezi ce se mai întâmplă în oraș',
+            'href' => $adresaSite,
+        ],
+        'link_gol'  => $adresaSite,
+        'incheiere' => 'Nu trebuie să faci nimic — locul tău s-a eliberat singur. '
+                     . 'Dacă evenimentul se reia altă dată, va fi un anunț nou.',
+    ];
+
+    return trimiteEmail($catre, '„' . $titluEveniment . '" a fost anulat', $blocuri);
+}
