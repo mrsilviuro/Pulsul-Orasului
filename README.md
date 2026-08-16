@@ -3463,6 +3463,53 @@ trebuie să dispară imediat, nu la următoarea conectare.
 Refuzul e **403**, nu 404: aici nu e nimic de ascuns. Pagina evenimentului se
 vede oricum, deci un „nu există" ar fi o minciună fără niciun câștig.
 
+### Trei hotărâri din două butoane
+
+Sub caseta de motiv stă o bifă, **„Editare necesară", pusă din start**:
+
+| ce apeși | ce se întâmplă |
+|---|---|
+| Aprobă | `aprobat` |
+| Respinge, cu bifa pusă | rămâne `in_asteptare`, pleacă doar vestea |
+| Respinge, cu bifa scoasă | `respins`, **și se golește tot** ce s-a strâns în jur |
+
+Cea din mijloc e drumul obișnuit, și de aceea e bifată din start. Un anunț bun,
+dar cu o oră lipsă sau cu locul scris pe jumătate, nu merită respins: e mai bine
+să i se spună omului ce n-a mers și să poată drege, fără s-o ia de la capăt.
+E-mailul lui are alt ton — nu e un „nu", e un „aproape".
+
+Butonul și rândul de sub bifă se schimbă odată cu ea: „Cere îndreptarea" cu
+lămurirea liniștită, „Respinge anunțul" cu avertizarea roșie că ce se șterge nu
+se mai aduce înapoi. Două hotărâri foarte diferite n-au ce căuta sub același
+cuvânt.
+
+Verificarea „e deja în starea asta" **nu se pune la editare necesară**: acolo
+starea rămâne cea de acum, de obicei `in_asteptare`, iar asta e chiar rostul ei.
+Altfel drumul obișnuit ar fi fost singurul refuzat.
+
+### La respingerea adevărată se golește tot
+
+Comentarii (cu aprecierile lor, în cascadă), note, excluderi, înscrieri —
+`golesteDateleEvenimentului()`, într-o tranzacție, fiindcă sunt patru tabele și
+o cădere la jumătate ar lăsa comentarii fără participanți.
+
+**Rândul anunțului rămâne**: e al organizatorului, cu starea `respins`, ca să-l
+poată vedea și îndrepta. Se duce doar ce au făcut alții în jurul lui.
+
+De ce se golește: un anunț respins n-a fost niciodată public, deci ce s-a strâns
+în jurul lui e ori zgomot rămas de la o aprobare luată înapoi, ori urma unei
+greșeli. Iar dacă tot nu se publică, notele acelea ar rămâne pentru totdeauna pe
+profilurile unor oameni, legate de o seară care n-a existat.
+
+**Organizatorului nu i se spune.** E-mailul zice ce-l privește — că anunțul nu
+se publică — nu ce am făcut noi prin bază.
+
+Un efect al golirii, tratat: dacă un anunț respins e aprobat mai târziu,
+organizatorul nu mai era pe lista lui de participanți, iar de rândul acela
+atârnă mulțumirile de după eveniment și notele. De aceea aprobarea îl pune la
+loc, prin `faOrganizatorulParticipant()` — care e `INSERT IGNORE`, deci în cazul
+obișnuit nu face nimic.
+
 ### Ce se poate hotărî, și din ce
 
 Se pot pune două stări: `aprobat` și `respins`. `incheiat` și `anulat` nu sunt
@@ -3518,5 +3565,5 @@ spună de ce — cine caută motivul trebuie să se uite în e-mail. O coloană 
 Respingerea unui anunț **deja aprobat**, la care s-au înscris oameni, nu-i
 înștiințează pe aceia — spre deosebire de anulare, care o face.
 
-Verificările: `php teste/test-moderare.php http://127.0.0.1:8128` (66 de cazuri;
-fără adresă merge și fără server, 30).
+Verificările: `php teste/test-moderare.php http://127.0.0.1:8128` (107 cazuri;
+fără adresă merge și fără server, 50).

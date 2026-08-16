@@ -4,9 +4,20 @@ declare(strict_types=1);
 /**
  * PulsulOrasului.Ro — aprobarea sau respingerea unui anunț, de către staff.
  *
- * Primește slugul, starea cerută („aprobat" sau „respins") și — numai la
- * respingere — un motiv, care e opțional. Pune starea, dă de veste
- * organizatorului prin e-mail și răspunde cu unde să meargă omul mai departe.
+ * Primește slugul, starea cerută („aprobat" sau „respins"), un motiv opțional
+ * și bifa „editare necesară". Pune starea, dă de veste organizatorului prin
+ * e-mail și răspunde cu unde să meargă omul mai departe.
+ *
+ * TREI HOTĂRÂRI IES DIN DOUĂ BUTOANE:
+ *
+ *   Aprobă                        → 'aprobat'
+ *   Respinge, cu bifa pusă        → rămâne 'in_asteptare', pleacă doar vestea
+ *   Respinge, cu bifa scoasă      → 'respins', ȘI SE GOLEȘTE TOT ce s-a strâns
+ *                                   în jurul anunțului
+ *
+ * Cea din mijloc e drumul obișnuit: un anunț bun, dar cu o oră lipsă, nu
+ * merită respins — e mai bine să i se spună omului ce n-a mers și să poată
+ * drege, fără s-o ia de la capăt. De aceea bifa e pusă din start.
  *
  * BUTOANELE DIN PAGINĂ NU SUNT O DOVADĂ. Ele nici măcar nu se scriu în HTML
  * pentru cine nu e staff — dar asta e purtare frumoasă, nu pază. Cererea de
@@ -93,6 +104,23 @@ if ($motiv['eroare'] !== '') {
     ], 422);
 }
 
+/**
+ * Bifa „Editare necesară" — pusă din start în pagină.
+ *
+ * Are rost doar la respingere: la aprobare n-are ce însemna „mai trebuie
+ * lucrat". Trimisă odată cu o aprobare, se lasă deoparte fără vorbă, ca și
+ * motivul.
+ */
+$editare = $stare === 'respins' && !empty($date['editare']);
+
+/**
+ * Ce stare ajunge în bază. NU e mereu ce s-a apăsat.
+ *
+ * Cu bifa pusă, anunțul rămâne acolo unde e — în așteptare — și pleacă doar
+ * vestea. Asta e toată deosebirea dintre „îndreaptă-l" și „nu se publică".
+ */
+$stareNoua = $editare ? 'in_asteptare' : $stare;
+
 $motivScris = $stare === 'respins' ? $motiv['text'] : '';
 
 $slug      = trim((string) ($date['slug'] ?? ''));
@@ -130,7 +158,15 @@ if (!poateFiModerat($eveniment)) {
  * casă că el a făcut ceva ce n-a făcut. Se întâmplă des la doi moderatori pe
  * aceeași listă.
  */
-if ((string) $eveniment['stare_moderare'] === $stare) {
+/**
+ * Verificarea NU se pune la „editare necesară", dinadins.
+ *
+ * Acolo starea rămâne aceeași cu cea de acum — de cele mai multe ori
+ * „in_asteptare" — iar asta e chiar rostul ei. Un „e deja în așteptare" i-ar fi
+ * închis ușa exact la drumul obișnuit: un anunț care așteaptă, căruia i se cere
+ * o îndreptare.
+ */
+if (!$editare && (string) $eveniment['stare_moderare'] === $stareNoua) {
     raspunsJson([
         'ok'    => false,
         'mesaj' => 'Anunțul e deja ' . ($stare === 'aprobat' ? 'aprobat' : 'respins') . '.',
@@ -144,7 +180,38 @@ if ((string) $eveniment['stare_moderare'] === $stare) {
  */
 $organizator = omulDeInstiintat((int) $eveniment['membru_id']);
 
-moderezaEveniment($eveniment, $stare);
+moderezaEveniment($eveniment, $stareNoua);
+
+$evenimentId = (int) $eveniment['id'];
+$sters = [];
+
+/**
+ * La respingerea adevărată se golește tot ce s-a strâns în jurul anunțului:
+ * comentarii (cu aprecierile lor, în cascadă), note, excluderi și înscrieri.
+ *
+ * Doar acolo — nu și la „editare necesară", unde anunțul rămâne viu și oamenii
+ * care s-au înscris n-au greșit cu nimic.
+ *
+ * Rândul evenimentului RĂMÂNE: e al organizatorului, cu starea „respins", ca
+ * să-l poată vedea și îndrepta. Se duce doar ce au făcut alții în jurul lui.
+ */
+if ($stareNoua === 'respins') {
+    $sters = golesteDateleEvenimentului($evenimentId);
+}
+
+/**
+ * La aprobare, organizatorul se pune la loc pe lista de participanți.
+ *
+ * De obicei e deja acolo, pus de faOrganizatorulParticipant() la publicare, iar
+ * funcția e INSERT IGNORE — deci a doua chemare nu face nimic. Contează într-un
+ * singur caz, dar unul care se poate întâmpla: un anunț respins (căruia i s-au
+ * golit listele) și apoi aprobat la a doua citire ar fi rămas fără organizator
+ * pe lista lui, iar de rândul acela atârnă mulțumirile de după eveniment și
+ * notele dintre participanți.
+ */
+if ($stareNoua === 'aprobat') {
+    faOrganizatorulParticipant($evenimentId, (int) $eveniment['membru_id']);
+}
 
 /**
  * Vestea pleacă DUPĂ ce starea e scrisă în bază.
@@ -165,7 +232,7 @@ if ($organizator !== null) {
         (string) $organizator['prenume'],
         (string) $eveniment['titlu'],
         urlIntreg(urlEveniment((string) $eveniment['slug'])),
-        $stare === 'aprobat',
+        $editare ? 'editare' : $stare,
         $motivScris
     );
 
@@ -175,9 +242,11 @@ if ($organizator !== null) {
     }
 }
 
-$vorba = $stare === 'aprobat'
-    ? 'Anunțul a fost aprobat și se vede pe site.'
-    : 'Anunțul a fost respins. Îl vede doar organizatorul.';
+$vorba = match (true) {
+    $editare            => 'I-am cerut organizatorului o îndreptare. Anunțul rămâne în așteptare.',
+    $stare === 'aprobat' => 'Anunțul a fost aprobat și se vede pe site.',
+    default             => 'Anunțul a fost respins.',
+};
 
 // Mesajul îl citește inc/subsol.php pe pagina următoare și îl arată o singură
 // dată, ca la încheiere și la anulare.
@@ -193,11 +262,15 @@ $_SESSION['mesaj_bun'] = $vorba;
  */
 raspunsJson([
     'ok'       => true,
-    'stare'    => $stare,
+    'stare'    => $stareNoua,
+    'editare'  => $editare,
     'redirect' => urlEveniment((string) $eveniment['slug']),
     'mesaj'    => $vorba,
 
     // Dacă organizatorul a aflat. Pagina nu-l arată deocamdată, dar proba îl
     // citește — iar un „da" scris degeaba ar fi mai rău decât nimic.
     'instiintat' => $instiintat,
+
+    // Câte rânduri au plecat, la respingerea adevărată. Gol în rest.
+    'sters'      => $sters,
 ]);

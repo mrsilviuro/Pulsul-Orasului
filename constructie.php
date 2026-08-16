@@ -110,7 +110,7 @@ header('Retry-After: 86400');
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/css/style.css?v=68">
+<link rel="stylesheet" href="assets/css/style.css?v=69">
 </head>
 
 <!--
@@ -209,6 +209,6 @@ header('Retry-After: 86400');
 
 </main>
 
-<script src="assets/js/main.js?v=65"></script>
+<script src="assets/js/main.js?v=66"></script>
 </body>
 </html>

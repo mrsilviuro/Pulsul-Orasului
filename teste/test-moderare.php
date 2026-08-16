@@ -178,7 +178,7 @@ if (empty($config['dezvoltare'])) {
     /* --- aprobat --- */
     $nou = $citeste(function () {
         emailModerareAnunt(SEMN . 'org@invalid.local', 'Dan', 'Fotbal în parc',
-            'https://exemplu.test/event.php?slug=x', true);
+            'https://exemplu.test/event.php?slug=x', 'aprobat');
     });
 
     verifica('la aprobare, subiectul o spune', true,
@@ -189,7 +189,7 @@ if (empty($config['dezvoltare'])) {
     /* --- respins CU motiv --- */
     $nou = $citeste(function () {
         emailModerareAnunt(SEMN . 'org@invalid.local', 'Dan', 'Fotbal în parc',
-            'https://exemplu.test/event.php?slug=x', false, 'Lipsește adresa exactă.');
+            'https://exemplu.test/event.php?slug=x', 'respins', 'Lipsește adresa exactă.');
     });
 
     verifica('la respingere, subiectul o spune', true,
@@ -204,7 +204,7 @@ if (empty($config['dezvoltare'])) {
     /* --- respins FĂRĂ motiv --- */
     $nou = $citeste(function () {
         emailModerareAnunt(SEMN . 'org@invalid.local', 'Dan', 'Fotbal în parc',
-            'https://exemplu.test/event.php?slug=x', false, '');
+            'https://exemplu.test/event.php?slug=x', 'respins', '');
     });
 
     verifica('fără motiv, se spune pe față', true,
@@ -214,6 +214,30 @@ if (empty($config['dezvoltare'])) {
     verifica('și nu se pretinde că ar fi unul', false,
         str_contains($nou, 'Motivul, așa cum a fost scris'));
 
+    /* --- editare necesară: nici „da", nici „nu" --- */
+    $nou = $citeste(function () {
+        emailModerareAnunt(SEMN . 'org@invalid.local', 'Dan', 'Fotbal în parc',
+            'https://exemplu.test/event.php?slug=x', 'editare', 'Lipsește ora de început.');
+    });
+
+    verifica('la editare, subiectul cere schimbări', true,
+        str_contains($nou, 'mai are nevoie de câteva schimbări'));
+    verifica('și spune că NU e respins', true,
+        str_contains($faraRupturi($nou), 'Nu l-am respins'));
+    verifica('cu ce trebuie schimbat', true, str_contains($nou, 'Lipsește ora de început.'));
+    verifica('și cu îndemnul de a-l trimite din nou', true,
+        str_contains($faraRupturi($nou), 'trimite-l din nou'));
+    verifica('fără vorba „nu a fost aprobat"', false,
+        str_contains($nou, 'nu a fost aprobat'));
+
+    /* Și fără motiv, tot aceeași vorbă pentru lipsa lui. */
+    $nou = $citeste(function () {
+        emailModerareAnunt(SEMN . 'org@invalid.local', 'Dan', 'Fotbal în parc',
+            'https://exemplu.test/event.php?slug=x', 'editare', '');
+    });
+    verifica('la editare fără motiv, se spune la fel', true,
+        str_contains($faraRupturi($nou), 'Nu s-a specificat nici un motiv.'));
+
     /* Motivul e text de la om: scăpat în HTML, ca orice paragraf. */
     $sablon = sablonEmail('Test', [
         'paragrafe' => ['Motiv cu <script>alert(1)</script> în el.'],
@@ -221,6 +245,66 @@ if (empty($config['dezvoltare'])) {
     verifica('motivul nu poate strecura etichete', false,
         str_contains($sablon['html'], '<script>alert(1)</script>'));
 }
+
+/* ============ 2d. GOLIREA DATELOR LA RESPINGERE ===================== */
+
+sectiune('golirea datelor');
+
+require_once __DIR__ . '/../inc/comentarii.php';
+
+$ala  = faMembru('ala', false);
+$evGol = faEveniment('tst-mod-gol', $org, 'aprobat');
+$idGol = (int) $evGol['id'];
+
+/* Se strânge de toate în jurul lui. */
+faOrganizatorulParticipant($idGol, $org);
+salveazaInteres($idGol, $ala, 'participant');
+
+$idCom = salveazaComentariu($idGol, $ala, 'Un comentariu de probă.');
+comutaApreciere($idCom, $org);
+
+db()->prepare('INSERT INTO evaluari (eveniment_id, evaluat_id, evaluator_id, stele, creat_la, actualizat_la)
+               VALUES (?,?,?,?,?,?)')->execute([$idGol, $ala, $org, 5, acum(), acum()]);
+
+db()->prepare('INSERT INTO excluderi_evenimente (eveniment_id, membru_id, exclus_de_id, rol, motiv, interzis, creat_la)
+               VALUES (?,?,?,\'organizator\',?,1,?)')
+    ->execute([$idGol, $ala, $org, 'un motiv de probă', acum()]);
+
+$cate = function (string $tabel, int $id): int {
+    $q = db()->prepare('SELECT COUNT(*) FROM ' . $tabel . ' WHERE eveniment_id = ?');
+    $q->execute([$id]);
+    return (int) $q->fetchColumn();
+};
+
+$cateAprecieri = function (int $comentariuId): int {
+    $q = db()->prepare('SELECT COUNT(*) FROM comentarii_aprecieri WHERE comentariu_id = ?');
+    $q->execute([$comentariuId]);
+    return (int) $q->fetchColumn();
+};
+
+verifica('avem interese',   2, $cate('interese_evenimente', $idGol));
+verifica('avem comentarii', 1, $cate('comentarii', $idGol));
+verifica('avem aprecieri',  1, $cateAprecieri($idCom));
+verifica('avem evaluări',   1, $cate('evaluari', $idGol));
+verifica('avem excluderi',  1, $cate('excluderi_evenimente', $idGol));
+
+$sters = golesteDateleEvenimentului($idGol);
+
+verifica('interesele s-au dus',   0, $cate('interese_evenimente', $idGol));
+verifica('comentariile s-au dus', 0, $cate('comentarii', $idGol));
+verifica('și aprecierile, în cascadă', 0, $cateAprecieri($idCom));
+verifica('evaluările s-au dus',   0, $cate('evaluari', $idGol));
+verifica('excluderile s-au dus',  0, $cate('excluderi_evenimente', $idGol));
+
+verifica('se spune câte au plecat', 2, $sters['interese'] ?? -1);
+verifica('și câte comentarii',      1, $sters['comentarii'] ?? -1);
+
+/* Rândul evenimentului RĂMÂNE: e al organizatorului, ca să-l poată îndrepta. */
+verifica('dar anunțul rămâne în bază', true, evenimentDupaSlug('tst-mod-gol') !== null);
+
+/* Pe un eveniment fără nimic în jur, golirea nu e o eroare. */
+$sters = golesteDateleEvenimentului($idGol);
+verifica('a doua golire nu strică nimic', 0, $sters['interese'] ?? -1);
 
 /* ===================== 3. PRIN SERVER =============================== */
 
@@ -405,7 +489,102 @@ if ($BAZA === '') {
                 str_contains($nou, 'Nu s-a specificat nici un motiv'));
         }
 
+        /* --- „editare necesară": rămâne în așteptare --- */
+
+        db()->prepare('UPDATE evenimente SET stare_moderare = ? WHERE slug = ?')
+            ->execute(['in_asteptare', 'tst-mod-2']);
+
+        $inainte = is_file($logEmail) ? (int) filesize($logEmail) : 0;
+
+        $r = cere('/api/modereaza-eveniment.php', [
+            'csrf'    => $caSef['token'], 'slug' => 'tst-mod-2', 'stare' => 'respins',
+            'motiv'   => 'Lipsește ora de început.',
+            'editare' => true,
+        ], $caSef['cookie']);
+
+        $corp = json_decode($r['corp'], true) ?: [];
+
+        verifica('cu bifa pusă, cererea reușește', true, $corp['ok'] ?? false);
+        verifica('și răspunsul o spune',           true, $corp['editare'] ?? false);
+        verifica('iar anunțul RĂMÂNE în așteptare', 'in_asteptare',
+            (string) evenimentDupaSlug('tst-mod-2')['stare_moderare']);
+
+        if (!empty($config['dezvoltare'])) {
+            $nou = substr((string) file_get_contents($logEmail), $inainte);
+            verifica('organizatorul primește vestea', true,
+                str_contains($nou, 'mai are nevoie de câteva schimbări'));
+            verifica('cu ce are de îndreptat', true,
+                str_contains($nou, 'Lipsește ora de început.'));
+        }
+
+        /* Se poate cere îndreptarea de mai multe ori — nu e o stare nouă. */
+        $r = cere('/api/modereaza-eveniment.php', [
+            'csrf' => $caSef['token'], 'slug' => 'tst-mod-2', 'stare' => 'respins',
+            'editare' => true,
+        ], $caSef['cookie']);
+        verifica('și se poate cere din nou', true,
+            (json_decode($r['corp'], true) ?: [])['ok'] ?? false);
+
+        /* --- respingerea adevărată golește tot --- */
+
+        $evPlin = faEveniment('tst-mod-plin', $org, 'aprobat');
+        $idPlin = (int) $evPlin['id'];
+
+        faOrganizatorulParticipant($idPlin, $org);
+        salveazaInteres($idPlin, $ala, 'participant');
+        $idCom2 = salveazaComentariu($idPlin, $ala, 'Alt comentariu de probă.');
+
+        verifica('anunțul plin are interese',   2, $cate('interese_evenimente', $idPlin));
+        verifica('și comentarii',               1, $cate('comentarii', $idPlin));
+
+        /* Întâi cu bifa PUSĂ: nu se șterge nimic. */
+        $r = cere('/api/modereaza-eveniment.php', [
+            'csrf' => $caSef['token'], 'slug' => 'tst-mod-plin', 'stare' => 'respins',
+            'editare' => true,
+        ], $caSef['cookie']);
+
+        verifica('cu bifa pusă, nu se golește nimic', 2, $cate('interese_evenimente', $idPlin));
+        verifica('nici comentariile',                 1, $cate('comentarii', $idPlin));
+
+        /* Apoi cu bifa SCOASĂ: se duce tot. */
+        $r = cere('/api/modereaza-eveniment.php', [
+            'csrf' => $caSef['token'], 'slug' => 'tst-mod-plin', 'stare' => 'respins',
+            'editare' => false,
+        ], $caSef['cookie']);
+
+        $corp = json_decode($r['corp'], true) ?: [];
+
+        verifica('respingerea adevărată reușește', true, $corp['ok'] ?? false);
+        verifica('anunțul e respins', 'respins',
+            (string) evenimentDupaSlug('tst-mod-plin')['stare_moderare']);
+        verifica('interesele s-au golit',   0, $cate('interese_evenimente', $idPlin));
+        verifica('comentariile s-au golit', 0, $cate('comentarii', $idPlin));
+        verifica('și răspunsul spune câte', 2, $corp['sters']['interese'] ?? -1);
+        verifica('dar anunțul rămâne în bază', true,
+            evenimentDupaSlug('tst-mod-plin') !== null);
+
+        if (!empty($config['dezvoltare'])) {
+            $nou = substr((string) file_get_contents($logEmail), $inainte);
+            verifica('iar organizatorului nu i se spune că s-a șters ceva', false,
+                str_contains($nou, 'ters'));
+        }
+
+        /* Aprobat după o respingere: organizatorul se pune la loc pe listă. */
+        $r = cere('/api/modereaza-eveniment.php', [
+            'csrf' => $caSef['token'], 'slug' => 'tst-mod-plin', 'stare' => 'aprobat',
+        ], $caSef['cookie']);
+
+        verifica('aprobarea de după merge', true,
+            (json_decode($r['corp'], true) ?: [])['ok'] ?? false);
+        verifica('și organizatorul e iar pe lista lui', 1,
+            $cate('interese_evenimente', $idPlin));
+
         /* --- stări pe care nu le știm --- */
+
+        // Se ia starea de ACUM, nu se presupune: secțiunile de mai sus au
+        // umblat la ea, iar ce se verifică aici e că o stare necunoscută nu
+        // schimbă nimic — oricare ar fi ea.
+        $stareInainte = (string) evenimentDupaSlug('tst-mod-2')['stare_moderare'];
 
         $r = cere('/api/modereaza-eveniment.php', [
             'csrf' => $caSef['token'], 'slug' => 'tst-mod-2', 'stare' => 'incheiat',
@@ -417,7 +596,7 @@ if ($BAZA === '') {
         ], $caSef['cookie']);
         verifica('nici „anulat"', 422, $r['cod']);
 
-        verifica('iar anunțul a rămas respins', 'respins',
+        verifica('iar anunțul a rămas cum era', $stareInainte,
             (string) evenimentDupaSlug('tst-mod-2')['stare_moderare']);
 
         /* --- anulat și încheiat nu se mai moderează --- */
@@ -447,11 +626,25 @@ if ($BAZA === '') {
 
         /* --- butonul stării de acum lipsește --- */
 
-        $pag = cere('/event.php?slug=tst-mod-2', null, $caSef['cookie']);   // e respins
+        // Un anunț al lui, respins, pus anume pentru verificarea asta: cele de
+        // mai sus au trecut prin prea multe stări ca să se mai poată presupune
+        // ceva despre ele.
+        faEveniment('tst-mod-resp', $org, 'respins');
+
+        $pag = cere('/event.php?slug=tst-mod-resp', null, $caSef['cookie']);
         verifica('la un anunț respins nu se mai oferă „Respinge"', false,
             str_contains($pag['corp'], 'data-modereaza="respins"'));
         verifica('dar „Aprobă" se oferă', true,
             str_contains($pag['corp'], 'data-modereaza="aprobat"'));
+
+        // Iar la unul în așteptare se oferă amândouă.
+        faEveniment('tst-mod-astept', $org, 'in_asteptare');
+        $pag = cere('/event.php?slug=tst-mod-astept', null, $caSef['cookie']);
+        verifica('la unul în așteptare, amândouă', true,
+            str_contains($pag['corp'], 'data-modereaza="respins"')
+            && str_contains($pag['corp'], 'data-modereaza="aprobat"'));
+        verifica('cu bifa pusă din start', true,
+            str_contains($pag['corp'], 'checked data-moderare-editare'));
 
         /* --- un slug care nu duce nicăieri --- */
 

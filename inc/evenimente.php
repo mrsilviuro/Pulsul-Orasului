@@ -243,6 +243,60 @@ function moderezaEveniment(array $eveniment, string $stare): void
     $q->execute([$stare, acum(), (int) $eveniment['id']]);
 }
 
+/**
+ * Golește tot ce s-a strâns în jurul unui eveniment, la respingerea lui.
+ *
+ * RÂNDUL EVENIMENTULUI RĂMÂNE. Se duc doar lucrurile pe care le-au făcut
+ * oamenii în jurul lui: discuția, notele, listele. Anunțul rămâne al
+ * organizatorului, cu starea „respins", ca să-l poată vedea și îndrepta.
+ *
+ * De ce se golește: un anunț respins n-a fost niciodată public, deci ce s-a
+ * strâns în jurul lui e ori zgomot rămas de la o aprobare luată înapoi, ori
+ * urma unei greșeli. Iar dacă tot nu se va publica, notele acelea ar rămâne
+ * pentru totdeauna pe profilurile unor oameni, legate de o seară care n-a
+ * existat.
+ *
+ * Se șterge în TRANZACȚIE: sunt patru tabele, iar o cădere la jumătate ar lăsa
+ * un eveniment cu comentarii fără participanți sau cu note fără înscrieri.
+ * `comentarii_aprecieri` nu apare aici fiindcă pleacă singură, în cascadă după
+ * `comentarii` (vezi sql/015-comentarii.sql) — o ștergere scrisă de mână peste
+ * cascadă ar fi fost o a doua regulă care poate să nu mai fie adevărată mâine.
+ *
+ * Întoarce câte rânduri au plecat din fiecare, pentru log și pentru probe.
+ */
+function golesteDateleEvenimentului(int $evenimentId): array
+{
+    $pdo = db();
+    $pdo->beginTransaction();
+
+    try {
+        $sters = [];
+
+        /**
+         * Ordinea nu contează pentru bază — niciuna nu atârnă de alta, toate
+         * atârnă de eveniment — dar se scrie de la ce e mai „vorbit" spre ce e
+         * mai tehnic, ca lista să se citească.
+         */
+        foreach ([
+            'comentarii'            => 'comentarii',
+            'evaluari'              => 'evaluari',
+            'excluderi_evenimente'  => 'excluderi',
+            'interese_evenimente'   => 'interese',
+        ] as $tabel => $nume) {
+            $q = $pdo->prepare('DELETE FROM ' . $tabel . ' WHERE eveniment_id = ?');
+            $q->execute([$evenimentId]);
+            $sters[$nume] = $q->rowCount();
+        }
+
+        $pdo->commit();
+
+        return $sters;
+    } catch (Throwable $e) {
+        $pdo->rollBack();
+        throw $e;
+    }
+}
+
 function evenimenteActive(int $membruId): array
 {
     [$unde, $azi] = filtruNeincheiat();

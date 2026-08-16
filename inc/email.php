@@ -892,9 +892,25 @@ function emailAnulareEveniment(
  * inc/evenimente.php). La aprobare e pagina pe care o vede acum toată lumea; la
  * respingere, cea pe care o vede doar el, cu banda care spune de ce.
  *
- * MOTIVUL E OPȚIONAL, și numai la respingere. Aprobarea n-are ce explica.
+ * TREI HOTĂRÂRI, nu două — $hotarare:
+ *
+ *   'aprobat' — anunțul se vede de acum pe site
+ *   'editare' — mai are nevoie de câteva schimbări, dar rămâne în așteptare;
+ *               organizatorul îl îndreaptă și nu-l ia nimeni de la capăt
+ *   'respins' — nu se publică
+ *
+ * Cea din mijloc e cea care lipsea. Un anunț bun, dar cu o oră lipsă sau cu
+ * locul scris pe jumătate, nu merită respins: e mai bine să i se spună omului
+ * ce n-a mers și să poată drege. De aceea are alt ton — nu e un „nu", e un
+ * „aproape".
+ *
+ * MOTIVUL E OPȚIONAL, și numai la ultimele două. Aprobarea n-are ce explica.
  * Când lipsește, nu se tace: se spune pe față că nu s-a specificat niciunul și
  * omul e trimis să ne scrie — altfel ar rămâne cu un „nu" fără nicio ușă.
+ *
+ * Ce NU spune mesajul de respingere: că odată cu hotărârea s-au șters
+ * comentariile, notele și listele. Omului i se spune ce-l privește — că
+ * anunțul nu se publică — nu ce am făcut noi prin bază.
  *
  * Motivul intră ca paragraf obișnuit, deci trece prin aceeași ieșire ca restul
  * textelor din șablon — scăpat cu htmlspecialchars în varianta HTML. Nimeni nu
@@ -905,10 +921,44 @@ function emailModerareAnunt(
     string $prenume,
     string $titluEveniment,
     string $adresaEveniment,
-    bool $aprobat,
+    string $hotarare,
     string $motiv = ''
 ): bool {
-    if ($aprobat) {
+    /* ------------------------ mai are de lucru ------------------------ */
+
+    if ($hotarare === 'editare') {
+        $paragrafe = [
+            'Anunțul tău, „' . $titluEveniment . '", e aproape gata — dar mai are '
+            . 'nevoie de câteva schimbări înainte să-l putem publica. Nu l-am '
+            . 'respins: te așteaptă acolo unde l-ai lăsat.',
+        ];
+
+        if ($motiv !== '') {
+            $paragrafe[] = 'Ce ar trebui schimbat:';
+            $paragrafe[] = $motiv;
+        } else {
+            $paragrafe[] = 'Nu s-a specificat nici un motiv. Pentru orice nelămurire, '
+                         . 'te rugăm să ne contactezi.';
+        }
+
+        $paragrafe[] = 'Intră pe pagina lui, apasă „Editează" și trimite-l din nou. '
+                     . 'Îl citim iar imediat ce e gata.';
+
+        return trimiteEmail(
+            $catre,
+            '„' . $titluEveniment . '" mai are nevoie de câteva schimbări',
+            [
+                'salut'     => 'Bună, ' . $prenume . '!',
+                'paragrafe' => $paragrafe,
+                'buton'     => ['text' => 'Vezi anunțul', 'href' => $adresaEveniment],
+                'link_gol'  => $adresaEveniment,
+                'incheiere' => 'Nu trebuie s-o iei de la capăt — anunțul e tot al tău, '
+                             . 'așa cum l-ai scris.',
+            ]
+        );
+    }
+
+    if ($hotarare === 'aprobat') {
         $blocuri = [
             'salut'     => 'Bună, ' . $prenume . '!',
             'paragrafe' => [

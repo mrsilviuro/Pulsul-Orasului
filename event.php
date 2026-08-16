@@ -711,7 +711,7 @@ require __DIR__ . '/inc/antet.php';
         ============================================================== -->
         <div class="moderare__caseta" id="moderare-motiv-caseta" data-moderare-caseta hidden>
           <label class="moderare__eticheta" for="moderare-motiv">
-            De ce îl respingi? <span class="field__optional">(opțional)</span>
+            Ce nu e în regulă? <span class="field__optional">(opțional)</span>
           </label>
 
           <textarea class="moderare__motiv" id="moderare-motiv" rows="3"
@@ -724,9 +724,30 @@ require __DIR__ . '/inc/antet.php';
             mesajul spune că nu s-a specificat niciun motiv.
           </p>
 
+          <!-- ================== EDITARE NECESARĂ ======================
+            BIFATĂ DIN START, fiindcă e drumul obișnuit. Un anunț bun, dar cu o
+            oră lipsă sau cu locul scris pe jumătate, nu merită respins: e mai
+            bine să i se spună omului ce n-a mers și să poată drege, fără s-o ia
+            de la capăt.
+
+            Cu bifa pusă, anunțul RĂMÂNE în așteptare și pleacă doar vestea.
+            Scoasă, e o respingere adevărată — iar atunci se golește tot ce s-a
+            strâns în jurul anunțului. De aceea scrie asta sub ea: e singurul
+            lucru din tot blocul care nu se poate lua înapoi.
+          ============================================================== -->
+          <label class="check moderare__bifa">
+            <input type="checkbox" checked data-moderare-editare>
+            <span>Editare necesară</span>
+          </label>
+
+          <p class="moderare__urmare" data-moderare-urmare>
+            Anunțul rămâne în așteptare, iar organizatorul primește un e-mail cu
+            ce are de îndreptat.
+          </p>
+
           <div class="moderare__caseta-actiuni">
             <button class="btn btn--primary btn--xs" type="button" data-modereaza="respins">
-              Respinge anunțul
+              <span data-moderare-text-buton>Cere îndreptarea</span>
             </button>
             <button class="btn btn--text" type="button" data-moderare-renunta>Renunță</button>
           </div>

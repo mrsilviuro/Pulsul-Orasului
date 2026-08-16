@@ -3937,3 +3937,16 @@ body { overscroll-behavior-y: none; }
   .moderare__butoane { flex-direction: column; }
   .moderare__butoane .btn { width: 100%; }
 }
+
+/* Bifa „Editare necesară" și urmarea ei, în caseta de moderare. */
+.moderare__bifa { margin-top: 14px; }
+
+.moderare__urmare {
+  margin-top: 8px;
+  color: var(--text-faint);
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+/* Scoasă bifa, urmarea nu mai e o lămurire, e o avertizare: ce se șterge nu se
+   mai aduce înapoi. Singurul lucru din tot blocul care nu se ia înapoi. */
+.moderare__urmare--grea { color: var(--brand); }

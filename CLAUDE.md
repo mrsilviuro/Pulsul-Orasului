@@ -264,10 +264,12 @@ assets/css/style.css, assets/js/main.js, assets/img/
 - Pagina de termeni și condiții nu există. Linkurile spre ea sunt `href="#"`
   peste tot (înregistrare, subsol, confirmarea participării)
 - Moderarea: fiecare eveniment intră cu `stare_moderare = 'in_asteptare'` și se
-  vede organizatorului și staff-ului. Aprobarea și respingerea se fac de pe
-  pagina evenimentului, din blocul de la coada anunțului
-  (`api/modereaza-eveniment.php`). Nu există încă o LISTĂ a celor care
-  așteaptă: staff-ul ajunge la ele doar cu adresa în mână
+  vede organizatorului și staff-ului. Aprobarea, respingerea și „editare
+  necesară" se fac de pe pagina evenimentului, din blocul dintre anunț și
+  comentarii (`api/modereaza-eveniment.php`). ATENȚIE: respingerea cu bifa
+  scoasă GOLEȘTE comentariile, notele, excluderile și înscrierile anunțului
+  (`golesteDateleEvenimentului`) — rândul evenimentului rămâne. Nu există încă
+  o LISTĂ a celor care așteaptă: staff-ul ajunge la ele doar cu adresa în mână
 - Staff: există doar steagul `membri.este_staff` (se pune de mână, din
   phpMyAdmin) și funcția `esteStaff()` — staff înseamnă orice valoare în afară
   de 0. Ce deschide: vede ORICE eveniment, oricare i-ar fi starea

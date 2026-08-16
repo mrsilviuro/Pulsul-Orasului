@@ -1039,7 +1039,39 @@
     var moderareMotiv   = panouModerare.querySelector('[data-moderare-motiv]');
     var moderareDeschide = panouModerare.querySelector('[data-moderare-deschide]');
     var moderareRenunta = panouModerare.querySelector('[data-moderare-renunta]');
+    var moderareEditare = panouModerare.querySelector('[data-moderare-editare]');
+    var moderareUrmare  = panouModerare.querySelector('[data-moderare-urmare]');
+    var moderareTextButon = panouModerare.querySelector('[data-moderare-text-buton]');
     var moderarePleaca  = false;
+
+    /* --- Bifa „Editare necesară" ---
+       Nu schimbă doar ce se trimite, ci și ce SCRIE pe buton și dedesubt.
+       Cele două hotărâri sunt foarte diferite — una se ia înapoi, cealaltă
+       golește tot ce s-a strâns în jurul anunțului — iar un buton care spune
+       același lucru în amândouă situațiile ar fi ascuns tocmai deosebirea. */
+    function potriveste() {
+      if (!moderareEditare) return;
+
+      var cuEditare = moderareEditare.checked;
+
+      if (moderareTextButon) {
+        moderareTextButon.textContent = cuEditare ? 'Cere îndreptarea' : 'Respinge anunțul';
+      }
+
+      if (moderareUrmare) {
+        moderareUrmare.textContent = cuEditare
+          ? 'Anunțul rămâne în așteptare, iar organizatorul primește un e-mail cu '
+            + 'ce are de îndreptat.'
+          : 'Anunțul va fi respins, iar comentariile, notele și listele lui se '
+            + 'șterg. Nu se mai pot aduce înapoi.';
+        moderareUrmare.classList.toggle('moderare__urmare--grea', !cuEditare);
+      }
+    }
+
+    if (moderareEditare) {
+      moderareEditare.addEventListener('change', potriveste);
+      potriveste();
+    }
 
     /* --- Caseta cu motivul respingerii ---
        „Respinge" n-o trimite pe loc: deschide caseta de dedesubt, unde se poate
@@ -1082,7 +1114,9 @@
 
         moderarePleaca = true;
         buton.disabled = true;
-        buton.textContent = stare === 'aprobat' ? 'Se aprobă…' : 'Se respinge…';
+        buton.textContent = stare === 'aprobat'
+          ? 'Se aprobă…'
+          : ((moderareEditare && moderareEditare.checked) ? 'Se trimite…' : 'Se respinge…');
 
         function gata() {
           moderarePleaca = false;
@@ -1101,9 +1135,10 @@
             slug:  panouModerare.getAttribute('data-slug') || '',
             stare: stare,
 
-            // Numai la respingere are rost; la aprobare serverul îl lasă
+            // Numai la respingere au rost; la aprobare serverul le lasă
             // deoparte oricum.
-            motiv: (moderareMotiv && stare === 'respins') ? moderareMotiv.value : ''
+            motiv: (moderareMotiv && stare === 'respins') ? moderareMotiv.value : '',
+            editare: (moderareEditare && stare === 'respins') ? moderareEditare.checked : false
           })
         })
         .then(citesteRaspuns)
