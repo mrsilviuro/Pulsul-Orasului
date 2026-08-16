@@ -193,6 +193,56 @@ function evenimentPublicat(array $eveniment): bool
     return in_array($eveniment['stare_moderare'] ?? '', ['aprobat', 'incheiat'], true);
 }
 
+/* ============================== MODERAREA ============================ */
+
+/**
+ * Stările pe care le poate PUNE staff-ul, de pe pagina evenimentului.
+ *
+ * Doar astea două. „incheiat" și „anulat" nu sunt hotărâri de moderare, sunt
+ * fapte petrecute — le pune organizatorul sau ceasul, fiecare pe drumul lui.
+ */
+const STARI_DE_MODERAT = ['aprobat', 'respins'];
+
+/**
+ * Stările DIN care se poate modera.
+ *
+ * „in_asteptare" e cazul obișnuit: anunțul așteaptă să fie citit. Celelalte
+ * două sunt răzgândirea, în amândouă sensurile — un anunț respins din greșeală
+ * trebuie să poată fi aprobat, iar unul aprobat prea repede trebuie să poată fi
+ * oprit.
+ *
+ * ANULAT ȘI ÎNCHEIAT NU SUNT AICI, dinadins. Anulat e hotărârea
+ * organizatorului, luată în fața oamenilor înscriși, care au primit deja un
+ * e-mail cu motivul; o „aprobare" peste ea ar readuce pe site un eveniment
+ * despre care toată lumea a aflat că nu mai are loc. Încheiat înseamnă că
+ * seara aceea a trecut — n-are ce să mai fie aprobat sau respins din ea.
+ */
+const STARI_MODERABILE = ['in_asteptare', 'aprobat', 'respins'];
+
+/** Se poate umbla la starea evenimentului ăstuia? */
+function poateFiModerat(array $eveniment): bool
+{
+    return in_array($eveniment['stare_moderare'] ?? '', STARI_MODERABILE, true);
+}
+
+/**
+ * Pune starea hotărâtă de staff.
+ *
+ * Nu verifică nimic: cine are voie și ce stare e îngăduită se hotărăsc în
+ * api/modereaza-eveniment.php, unde se știe și cine cere. Aici e doar scrierea
+ * — aceeași împărțire ca la anuleazaEveniment() și incheieEveniment().
+ *
+ * `motiv_anulare` NU se atinge: e al anulării, iar de acolo nu se ajunge aici.
+ */
+function moderezaEveniment(array $eveniment, string $stare): void
+{
+    $q = db()->prepare(
+        'UPDATE evenimente SET stare_moderare = ?, actualizat_la = ? WHERE id = ?'
+    );
+
+    $q->execute([$stare, acum(), (int) $eveniment['id']]);
+}
+
 function evenimenteActive(int $membruId): array
 {
     [$unde, $azi] = filtruNeincheiat();
@@ -639,13 +689,24 @@ function evenimentDupaSlug(string $slug): ?array
  * pentru el ar fi o promisiune că se mai poate face ceva. Rândul rămâne în
  * bază pentru cine face curățenia și pentru e-mailurile care trebuie trimise.
  *
+ * STAFF-UL VEDE TOT. Nu e un drept dat de dragul lui, ci singurul fel în care
+ * moderarea poate exista: butoanele „Aprobă" și „Respinge" stau pe pagina
+ * evenimentului, iar un anunț în așteptare e tocmai cel care are nevoie de ele.
+ * Cât timp pagina nu se deschidea decât pentru organizator, omul de casă n-avea
+ * de unde să apese nimic — anunțurile care așteptau erau invizibile exact
+ * pentru cine trebuia să le citească.
+ *
  * $membruId e 0 pentru cine nu e conectat, deci nu poate nimeri peste
  * membru_id-ul nimănui.
  */
 function poateVedeaEvenimentul(array $eveniment, int $membruId, bool $eStaff = false): bool
 {
+    if ($eStaff) {
+        return true;
+    }
+
     if ($eveniment['stare_moderare'] === 'anulat') {
-        return $eStaff;
+        return false;
     }
 
     if ((int) $eveniment['membru_id'] === $membruId && $membruId > 0) {

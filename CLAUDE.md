@@ -202,8 +202,8 @@ teste/              → test-validare.php (verificările din inc/validare.php)
                       (toate patru cer baza de date, nu și serverul)
                       test-tine-minte.php, test-setari.php, test-contact.php,
                       test-evenimente.php, test-prima-pagina.php,
-                      test-constructie.php, test-anulare.php
-                      (ultimele șapte cer serverul pornit — vezi antetul lor;
+                      test-constructie.php, test-anulare.php, test-moderare.php
+                      (ultimele opt cer serverul pornit — vezi antetul lor;
                       test-prima-pagina, test-constructie și test-anulare merg
                       și fără, sar doar partea care cere serverul. ATENȚIE:
                       test-constructie
@@ -263,12 +263,17 @@ assets/css/style.css, assets/js/main.js, assets/img/
   nici pagină care să-i arate omului de unde a fost scos: află doar din e-mail
 - Pagina de termeni și condiții nu există. Linkurile spre ea sunt `href="#"`
   peste tot (înregistrare, subsol, confirmarea participării)
-- Moderarea: fiecare eveniment intră cu `stare_moderare = 'in_asteptare'`; se
-  vede doar organizatorului, pe profilul lui și pe pagina evenimentului; nu
-  există interfață de aprobare
+- Moderarea: fiecare eveniment intră cu `stare_moderare = 'in_asteptare'` și se
+  vede organizatorului și staff-ului. Aprobarea și respingerea se fac de pe
+  pagina evenimentului, din blocul de la coada anunțului
+  (`api/modereaza-eveniment.php`). Nu există încă o LISTĂ a celor care
+  așteaptă: staff-ul ajunge la ele doar cu adresa în mână
 - Staff: există doar steagul `membri.este_staff` (se pune de mână, din
-  phpMyAdmin) și funcția `esteStaff()`. Singurul lucru pe care îl deschide e
-  pagina unui eveniment anulat. Nu există pagină de administrare
+  phpMyAdmin) și funcția `esteStaff()` — staff înseamnă orice valoare în afară
+  de 0. Ce deschide: vede ORICE eveniment, oricare i-ar fi starea
+  (poateVedeaEvenimentul), poate aproba și respinge anunțuri, poate scoate
+  oameni de pe liste și trece de lacătul de șantier. Nu există pagină de
+  administrare
 - Curățenia evenimentelor anulate: rândul cu `stare_moderare = 'anulat'` rămâne
   în bază pentru totdeauna. Ștergerea lui (cu tot cu coperta de pe disc,
   înscrieri și comentarii) e o acțiune viitoare de staff — vezi `TODO`-ul din

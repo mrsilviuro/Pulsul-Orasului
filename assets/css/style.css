@@ -3818,3 +3818,80 @@ body { overscroll-behavior-y: none; }
 @media (prefers-reduced-motion: reduce) {
   .constructie__fundal img { filter: blur(10px) saturate(1.1); will-change: auto; }
 }
+
+/* =========================================================================
+   MODERAREA (event.php, doar pentru staff)
+   -------------------------------------------------------------------------
+   Blocul de la coada anunțului, cu „Aprobă" și „Respinge". Pentru cine nu e om
+   de casă nu se scrie deloc în pagină — nu e ascuns cu CSS, fiindcă un buton
+   ascuns rămâne un buton.
+
+   Arată altfel decât restul paginii, dinadins: e o unealtă a casei, nu ceva ce
+   ține de eveniment. Linia punctată e semnul că nu face parte din anunț.
+   ========================================================================= */
+
+.moderare {
+  margin-top: 26px;
+  padding: 18px 20px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-2);
+}
+
+.moderare__cap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.moderare__titlu {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: .01em;
+}
+.moderare__titlu .ico {
+  width: 17px; height: 17px;
+  color: var(--text-faint);
+  fill: none; stroke: currentColor;
+  stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
+}
+
+.moderare__stare { color: var(--text-soft); font-size: 13.5px; }
+.moderare__stare strong { color: var(--text); font-weight: 600; }
+
+.moderare__lamurire {
+  margin-top: 6px;
+  color: var(--text-faint);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.moderare__butoane { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+.moderare__butoane .ico {
+  width: 16px; height: 16px;
+  fill: none; stroke: currentColor;
+  stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round;
+}
+
+/* „Respinge" nu e roșu ca butonul mărcii: nu e o faptă de temut, se ia înapoi
+   cu butonul de alături. Roșul îl păstrăm pentru ce nu se mai poate desface. */
+.moderare__respinge { color: var(--text-soft); }
+.moderare__respinge:hover { color: var(--brand); border-color: var(--brand); }
+
+.moderare__eroare {
+  margin-top: 12px;
+  color: var(--brand);
+  font-size: 13.5px;
+}
+.moderare__eroare[hidden] { display: none; }
+
+@media (max-width: 480px) {
+  /* Pe telefon, unul sub altul și late cât blocul: se apasă cu degetul. */
+  .moderare__butoane { flex-direction: column; }
+  .moderare__butoane .btn { width: 100%; }
+}

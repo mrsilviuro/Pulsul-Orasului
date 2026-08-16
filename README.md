@@ -3428,3 +3428,63 @@ Verificările: `php teste/test-anulare.php http://127.0.0.1:8128` (39 de cazuri;
 fără adresă merge și fără server, 24). Nu trimite e-mailuri adevărate — cu
 `dezvoltare => true` mesajele se scriu în `private/emailuri-trimise.log`, și de
 acolo se citesc.
+
+
+## „Aprobă" și „Respinge", pe pagina anunțului
+
+Fiecare eveniment intră cu `stare_moderare = 'in_asteptare'`. Până acum n-avea
+cine să-l scoată de acolo: steagul se schimba de mână, din phpMyAdmin.
+
+`STARI_MODERABILE` și `moderezaEveniment()` din `inc/evenimente.php`,
+`api/modereaza-eveniment.php`, blocul de la coada articolului din `event.php`.
+
+### Staff-ul trebuia întâi să poată VEDEA anunțul
+
+Butoanele stau pe pagina evenimentului, iar un anunț în așteptare e tocmai cel
+care are nevoie de ele — dar `poateVedeaEvenimentul()` nu deschidea pagina unui
+anunț neaprobat decât pentru organizator. Adică exact anunțurile care așteptau
+erau invizibile pentru cine trebuia să le citească.
+
+Așa că staff-ul vede acum orice eveniment, oricare i-ar fi starea. Nu e un drept
+dat de dragul lui: fără el, moderarea n-ar fi putut exista pe pagina anunțului.
+
+### Blocul nu se ascunde, lipsește
+
+Pentru cine nu e om de casă, blocul nici nu se scrie în HTML. Nu e `display:
+none`, fiindcă un buton ascuns rămâne un buton — se găsește din consolă și se
+apasă. Iar `api/modereaza-eveniment.php` întreabă din nou cine cere, cu
+`esteStaff()`, care citește din bază la fiecare cerere: un drept luat înapoi
+trebuie să dispară imediat, nu la următoarea conectare.
+
+Refuzul e **403**, nu 404: aici nu e nimic de ascuns. Pagina evenimentului se
+vede oricum, deci un „nu există" ar fi o minciună fără niciun câștig.
+
+### Ce se poate hotărî, și din ce
+
+Se pot pune două stări: `aprobat` și `respins`. `incheiat` și `anulat` nu sunt
+hotărâri de moderare, sunt fapte petrecute — le pune organizatorul sau ceasul.
+
+Se poate modera din `in_asteptare` (cazul obișnuit) și din celelalte două, în
+amândouă sensurile: un anunț respins din greșeală trebuie să poată fi aprobat,
+iar unul aprobat prea repede trebuie să poată fi oprit. De aceea butoanele n-au
+treaptă de confirmare — ce se poate lua înapoi nu merită o întrebare în plus.
+
+**Din `anulat` și `incheiat` nu se poate.** Anulat e hotărârea organizatorului,
+luată în fața oamenilor înscriși, care au primit deja un e-mail cu motivul; o
+aprobare peste ea ar readuce pe site un eveniment despre care toată lumea a
+aflat că nu mai are loc. Încheiat înseamnă că seara aceea a trecut.
+
+Butonul stării de acum lipsește din pagină: n-ai ce aproba de două ori.
+Serverul răspunde oricum cu „e deja aprobat" — se întâmplă la doi moderatori pe
+aceeași listă — dar mai bine nu-l pui pe om să apese ca să afle.
+
+### Ce nu face încă
+
+Nu trimite niciun e-mail. Organizatorul află că i-a fost aprobat sau respins
+anunțul întorcându-se pe pagina lui, unde scrie în bandă. Iar respingerea unui
+anunț **deja aprobat**, la care s-au înscris oameni, nu-i înștiințează pe aceia
+— spre deosebire de anulare, care o face. Amândouă merită gândite când va exista
+o listă de moderare.
+
+Verificările: `php teste/test-moderare.php http://127.0.0.1:8128` (39 de cazuri;
+fără adresă merge și fără server, 11).

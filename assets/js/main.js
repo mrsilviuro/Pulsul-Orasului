@@ -1021,6 +1021,86 @@
     });
   }
 
+  /* --- Moderarea, pentru staff --------------------------------------------
+     „Aprobă" și „Respinge", la coada anunțului. Blocul lor nici nu ajunge în
+     pagină pentru cine nu e om de casă (vezi event.php), iar serverul întreabă
+     din nou la fiecare apăsare — un buton care nu e în HTML se poate oricând
+     face dintr-o consolă.
+
+     Fără treaptă de confirmare, spre deosebire de încheiere sau de anulare:
+     hotărârea asta se poate lua înapoi oricând, cu butonul de alături. Ce nu
+     se poate desface merită o întrebare; ce se poate, nu.
+  */
+  var panouModerare = document.querySelector('[data-moderare]');
+
+  if (panouModerare) {
+    var moderareEroare = panouModerare.querySelector('[data-moderare-eroare]');
+    var moderarePleaca = false;
+
+    panouModerare.querySelectorAll('[data-modereaza]').forEach(function (buton) {
+      buton.addEventListener('click', function () {
+        if (moderarePleaca) return;
+
+        var stare = buton.getAttribute('data-modereaza');
+        var textInitial = buton.innerHTML;
+
+        moderarePleaca = true;
+        buton.disabled = true;
+        buton.textContent = stare === 'aprobat' ? 'Se aprobă…' : 'Se respinge…';
+
+        function gata() {
+          moderarePleaca = false;
+          buton.disabled = false;
+          buton.innerHTML = textInitial;
+        }
+
+        if (moderareEroare) { moderareEroare.hidden = true; }
+
+        fetch('api/modereaza-eveniment.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({
+            csrf:  panouModerare.getAttribute('data-csrf') || '',
+            slug:  panouModerare.getAttribute('data-slug') || '',
+            stare: stare
+          })
+        })
+        .then(citesteRaspuns)
+        .then(function (rez) {
+          if (!rez.corp) { gata(); toast(mesajRaspunsNeasteptat(rez)); return; }
+          var c = rez.corp;
+
+          if (!c.ok) {
+            gata();
+
+            // Ce n-a mers rămâne scris în panou, nu doar într-un toast care
+            // pleacă: „e deja aprobat" e o lămurire, nu o veste de o clipă.
+            if (moderareEroare) {
+              moderareEroare.textContent = c.mesaj || 'Nu am putut schimba starea.';
+              moderareEroare.hidden = false;
+            } else {
+              toast(c.mesaj || 'Nu am putut schimba starea.');
+            }
+            return;
+          }
+
+          /* Reîncărcarea e chiar lucrul care arată ce s-a schimbat: banda de
+             stare de sus, butoanele de aici și, la aprobare, tot ce se poate
+             face pe o pagină publicată. Nu încercăm să le potrivim din JS. */
+          toast(c.mesaj || 'Gata.');
+          setTimeout(function () {
+            window.location.href = c.redirect || window.location.href;
+          }, 700);
+        })
+        .catch(function () {
+          gata();
+          toast(mesajFaraLegatura());
+        });
+      });
+    });
+  }
+
   /* --- Butoanele de participare -------------------------------------------
      „Mă interesează" e o însemnare: se trimite pe loc. „Voi participa" e o
      hotărâre care dă numele și numărul de telefon mai departe, deci trece
