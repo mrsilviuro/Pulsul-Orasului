@@ -1034,8 +1034,44 @@
   var panouModerare = document.querySelector('[data-moderare]');
 
   if (panouModerare) {
-    var moderareEroare = panouModerare.querySelector('[data-moderare-eroare]');
-    var moderarePleaca = false;
+    var moderareEroare  = panouModerare.querySelector('[data-moderare-eroare]');
+    var moderareCaseta  = panouModerare.querySelector('[data-moderare-caseta]');
+    var moderareMotiv   = panouModerare.querySelector('[data-moderare-motiv]');
+    var moderareDeschide = panouModerare.querySelector('[data-moderare-deschide]');
+    var moderareRenunta = panouModerare.querySelector('[data-moderare-renunta]');
+    var moderarePleaca  = false;
+
+    /* --- Caseta cu motivul respingerii ---
+       „Respinge" n-o trimite pe loc: deschide caseta de dedesubt, unde se poate
+       scrie de ce. Motivul e opțional — se poate apăsa direct pe „Respinge
+       anunțul", cu caseta goală — dar deschiderea ei e clipa în care omul de
+       casă e întrebat dacă are ceva de spus. Aprobarea n-are ce explica, deci
+       pleacă dintr-o apăsare. */
+    function inchideCasetaModerare(inapoiPeButon) {
+      if (!moderareCaseta || moderareCaseta.hidden) return;
+
+      moderareCaseta.hidden = true;
+      if (moderareDeschide) {
+        moderareDeschide.setAttribute('aria-expanded', 'false');
+        if (inapoiPeButon) moderareDeschide.focus();
+      }
+    }
+
+    if (moderareDeschide && moderareCaseta) {
+      moderareDeschide.addEventListener('click', function () {
+        moderareCaseta.hidden = false;
+        moderareDeschide.setAttribute('aria-expanded', 'true');
+        if (moderareMotiv) moderareMotiv.focus();
+      });
+    }
+
+    if (moderareRenunta) {
+      moderareRenunta.addEventListener('click', function () { inchideCasetaModerare(true); });
+    }
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') inchideCasetaModerare(true);
+    });
 
     panouModerare.querySelectorAll('[data-modereaza]').forEach(function (buton) {
       buton.addEventListener('click', function () {
@@ -1063,7 +1099,11 @@
           body: JSON.stringify({
             csrf:  panouModerare.getAttribute('data-csrf') || '',
             slug:  panouModerare.getAttribute('data-slug') || '',
-            stare: stare
+            stare: stare,
+
+            // Numai la respingere are rost; la aprobare serverul îl lasă
+            // deoparte oricum.
+            motiv: (moderareMotiv && stare === 'respins') ? moderareMotiv.value : ''
           })
         })
         .then(citesteRaspuns)
@@ -1076,11 +1116,14 @@
 
             // Ce n-a mers rămâne scris în panou, nu doar într-un toast care
             // pleacă: „e deja aprobat" e o lămurire, nu o veste de o clipă.
+            var necaz = (c.erori && c.erori.motiv) || c.mesaj
+                      || 'Nu am putut schimba starea.';
+
             if (moderareEroare) {
-              moderareEroare.textContent = c.mesaj || 'Nu am putut schimba starea.';
+              moderareEroare.textContent = necaz;
               moderareEroare.hidden = false;
             } else {
-              toast(c.mesaj || 'Nu am putut schimba starea.');
+              toast(necaz);
             }
             return;
           }

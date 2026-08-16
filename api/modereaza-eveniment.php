@@ -4,10 +4,9 @@ declare(strict_types=1);
 /**
  * PulsulOrasului.Ro — aprobarea sau respingerea unui anunț, de către staff.
  *
- * Primește slugul și starea cerută („aprobat" sau „respins"), o pune, răspunde
- * cu unde să meargă omul mai departe. Nu se șterge nimic și nu se cere niciun
- * motiv: hotărârea se vede în starea anunțului, iar organizatorul o citește pe
- * pagina lui.
+ * Primește slugul, starea cerută („aprobat" sau „respins") și — numai la
+ * respingere — un motiv, care e opțional. Pune starea, dă de veste
+ * organizatorului prin e-mail și răspunde cu unde să meargă omul mai departe.
  *
  * BUTOANELE DIN PAGINĂ NU SUNT O DOVADĂ. Ele nici măcar nu se scriu în HTML
  * pentru cine nu e staff — dar asta e purtare frumoasă, nu pază. Cererea de
@@ -16,6 +15,8 @@ declare(strict_types=1);
  */
 
 require_once __DIR__ . '/../inc/evenimente.php';
+require_once __DIR__ . '/../inc/interese.php';
+require_once __DIR__ . '/../inc/email.php';
 
 if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
     raspunsJson(['ok' => false, 'mesaj' => 'Metodă nepermisă.'], 405);
@@ -76,6 +77,24 @@ if (!in_array($stare, STARI_DE_MODERAT, true)) {
     ], 422);
 }
 
+/**
+ * Motivul e OPȚIONAL și are rost doar la respingere.
+ *
+ * Aprobarea n-are ce explica, deci un motiv trimis odată cu ea se lasă
+ * deoparte fără vorbă: nu e o greșeală a nimănui, doar un câmp care n-a fost
+ * golit în pagină.
+ */
+$motiv = verificaMotivRespingere($date['motiv'] ?? null);
+
+if ($motiv['eroare'] !== '') {
+    raspunsJson([
+        'ok'    => false,
+        'erori' => ['motiv' => $motiv['eroare']],
+    ], 422);
+}
+
+$motivScris = $stare === 'respins' ? $motiv['text'] : '';
+
 $slug      = trim((string) ($date['slug'] ?? ''));
 $eveniment = evenimentDupaSlug($slug);
 
@@ -118,7 +137,43 @@ if ((string) $eveniment['stare_moderare'] === $stare) {
     ], 409);
 }
 
+/**
+ * Organizatorul se citește ÎNAINTE de scriere, ca peste tot: dacă între timp
+ * și-a șters contul, n-am mai avea unde trimite, iar omulDeInstiintat()
+ * întoarce null pentru un cont care nu mai e activ.
+ */
+$organizator = omulDeInstiintat((int) $eveniment['membru_id']);
+
 moderezaEveniment($eveniment, $stare);
+
+/**
+ * Vestea pleacă DUPĂ ce starea e scrisă în bază.
+ *
+ * Aceeași ordine ca la anulare și la scoaterea de pe listă: un e-mail trimis
+ * peste o scriere care apoi pică i-ar spune omului un neadevăr. Invers, dacă
+ * scrierea reușește și e-mailul nu pleacă, hotărârea rămâne luată — iar asta se
+ * poate îndrepta.
+ *
+ * Nu oprim răspunsul dacă mesajul nu pleacă: fapta e făcută, iar omul de casă
+ * trebuie să vadă starea nouă, nu o eroare despre serverul de e-mail.
+ */
+$instiintat = false;
+
+if ($organizator !== null) {
+    $instiintat = emailModerareAnunt(
+        (string) $organizator['email'],
+        (string) $organizator['prenume'],
+        (string) $eveniment['titlu'],
+        urlIntreg(urlEveniment((string) $eveniment['slug'])),
+        $stare === 'aprobat',
+        $motivScris
+    );
+
+    if (!$instiintat) {
+        error_log('PulsulOrasului: nu am putut trimite e-mailul de moderare '
+                . 'pentru evenimentul #' . (int) $eveniment['id']);
+    }
+}
 
 $vorba = $stare === 'aprobat'
     ? 'Anunțul a fost aprobat și se vede pe site.'
@@ -141,4 +196,8 @@ raspunsJson([
     'stare'    => $stare,
     'redirect' => urlEveniment((string) $eveniment['slug']),
     'mesaj'    => $vorba,
+
+    // Dacă organizatorul a aflat. Pagina nu-l arată deocamdată, dar proba îl
+    // citește — iar un „da" scris degeaba ar fi mai rău decât nimic.
+    'instiintat' => $instiintat,
 ]);

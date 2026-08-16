@@ -40,6 +40,16 @@ const MOTIV_ANULARE_MAX   = 1000;
 const COMENTARIU_MIN = 2;    // caractere — vezi verificaComentariu()
 const COMENTARIU_MAX = 2000;
 
+/**
+ * Motivul respingerii unui anunț, scris de staff
+ *
+ * Fără minim, spre deosebire de motivul anulării: uneori anunțul e limpede
+ * greșit și n-ai ce scrie, iar a-l sili pe omul de casă să compună o frază ar
+ * naște fraze de umplut („nu se poate"). Când lipsește, e-mailul spune asta pe
+ * față și îl trimite pe organizator la noi.
+ */
+const MOTIV_RESPINGERE_MAX = 1000;
+
 /* Scoaterea cuiva de pe lista de participanți */
 const MOTIV_EXCLUDERE_MIN = 15;   // caractere — vezi verificaMotivExcludere()
 const MOTIV_EXCLUDERE_MAX = 1000;
@@ -784,6 +794,31 @@ function verificaMotivAnulare($cerut): array
     if ($cate > MOTIV_ANULARE_MAX) {
         return [
             'eroare' => 'Motivul e prea lung (cel mult ' . MOTIV_ANULARE_MAX . ' de caractere).',
+            'text'   => '',
+        ];
+    }
+
+    return ['eroare' => '', 'text' => $motiv];
+}
+
+/**
+ * De ce a fost respins un anunț — scris de staff, pentru organizator.
+ *
+ * OPȚIONAL, spre deosebire de motivul anulării. Acolo textul pleacă spre zeci
+ * de oameni care își făcuseră un plan și au dreptul la o explicație; aici merge
+ * spre unul singur, iar uneori anunțul e limpede greșit și n-ai ce scrie. A-l
+ * sili pe omul de casă să compună o frază ar naște fraze de umplut.
+ *
+ * Textul gol nu e o eroare: e-mailul spune atunci pe față că nu s-a specificat
+ * niciun motiv și îl trimite pe organizator să ne scrie.
+ */
+function verificaMotivRespingere($cerut): array
+{
+    $motiv = curataTextPeRanduri(is_string($cerut) ? $cerut : '');
+
+    if (mb_strlen($motiv, 'UTF-8') > MOTIV_RESPINGERE_MAX) {
+        return [
+            'eroare' => 'Motivul e prea lung (cel mult ' . MOTIV_RESPINGERE_MAX . ' de caractere).',
             'text'   => '',
         ];
     }

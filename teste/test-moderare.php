@@ -17,6 +17,8 @@ declare(strict_types=1);
  */
 
 require_once __DIR__ . '/../inc/evenimente.php';
+require_once __DIR__ . '/../inc/interese.php';
+require_once __DIR__ . '/../inc/email.php';
 
 $BAZA = $argv[1] ?? '';
 
@@ -128,6 +130,98 @@ moderezaEveniment(evenimentDupaSlug('tst-mod-1'), 'aprobat');
 verifica('motivul anulării rămâne neatins', 'un motiv oarecare',
     (string) evenimentDupaSlug('tst-mod-1')['motiv_anulare']);
 
+/* ===================== 2b. MOTIVUL RESPINGERII ====================== */
+
+sectiune('motivul respingerii');
+
+verifica('lipsa lui nu e o eroare',    '', verificaMotivRespingere('')['eroare']);
+verifica('nici a unui text de spații', '', verificaMotivRespingere('   ')['eroare']);
+verifica('și rămâne gol',              '', verificaMotivRespingere('   ')['text']);
+verifica('nici altceva decât text',    '', verificaMotivRespingere(null)['eroare']);
+
+verifica('unul scurt trece', 'nu', verificaMotivRespingere('nu')['text']);
+verifica('spațiile de la capete se taie', 'prea vag',
+    verificaMotivRespingere('  prea vag  ')['text']);
+
+$prea = str_repeat('ă', MOTIV_RESPINGERE_MAX + 1);
+verifica('unul prea lung nu trece', true,
+    str_starts_with(verificaMotivRespingere($prea)['eroare'], 'Motivul e prea lung'));
+verifica('exact la limită trece', MOTIV_RESPINGERE_MAX,
+    mb_strlen(verificaMotivRespingere(str_repeat('ă', MOTIV_RESPINGERE_MAX))['text'], 'UTF-8'));
+
+/* ===================== 2c. CUM ARATĂ E-MAILUL ======================= */
+
+sectiune('e-mailul către organizator');
+
+global $config;
+
+$logEmail = __DIR__ . '/../private/emailuri-trimise.log';
+
+if (empty($config['dezvoltare'])) {
+    echo "  (`dezvoltare` e oprit în config.php — partea asta s-a sărit)\n";
+} else {
+    $citeste = function (callable $ce) use ($logEmail): string {
+        $inainte = is_file($logEmail) ? (int) filesize($logEmail) : 0;
+        $ce();
+        return substr((string) file_get_contents($logEmail), $inainte);
+    };
+
+    /**
+     * Varianta de text simplu a e-mailului rupe rândurile pe la 70 de semne,
+     * deci o propoziție lungă e tăiată în două de un rând nou. Pentru a o căuta
+     * întreagă, spațiile albe se strâng într-unul singur.
+     */
+    $faraRupturi = static function (string $text): string {
+        return (string) preg_replace('/\s+/u', ' ', $text);
+    };
+
+    /* --- aprobat --- */
+    $nou = $citeste(function () {
+        emailModerareAnunt(SEMN . 'org@invalid.local', 'Dan', 'Fotbal în parc',
+            'https://exemplu.test/event.php?slug=x', true);
+    });
+
+    verifica('la aprobare, subiectul o spune', true,
+        str_contains($nou, 'Fotbal în parc" a fost aprobat'));
+    verifica('și că se vede pe site', true, str_contains($nou, 'se vede'));
+    verifica('fără vorbe despre motive', false, str_contains($nou, 'motiv'));
+
+    /* --- respins CU motiv --- */
+    $nou = $citeste(function () {
+        emailModerareAnunt(SEMN . 'org@invalid.local', 'Dan', 'Fotbal în parc',
+            'https://exemplu.test/event.php?slug=x', false, 'Lipsește adresa exactă.');
+    });
+
+    verifica('la respingere, subiectul o spune', true,
+        str_contains($nou, 'Fotbal în parc" nu a fost aprobat'));
+    verifica('motivul scris ajunge întreg', true,
+        str_contains($nou, 'Lipsește adresa exactă.'));
+    verifica('și se spune al cui e', true, str_contains($nou, 'Motivul, așa cum a fost scris'));
+    verifica('fără vorba pentru lipsa lui', false,
+        str_contains($nou, 'Nu s-a specificat nici un motiv'));
+    verifica('cu îndemnul de a-l îndrepta', true, str_contains($nou, 'îndrepți'));
+
+    /* --- respins FĂRĂ motiv --- */
+    $nou = $citeste(function () {
+        emailModerareAnunt(SEMN . 'org@invalid.local', 'Dan', 'Fotbal în parc',
+            'https://exemplu.test/event.php?slug=x', false, '');
+    });
+
+    verifica('fără motiv, se spune pe față', true,
+        str_contains($faraRupturi($nou),
+            'Nu s-a specificat nici un motiv. Pentru orice nelămurire, '
+            . 'te rugăm să ne contactezi.'));
+    verifica('și nu se pretinde că ar fi unul', false,
+        str_contains($nou, 'Motivul, așa cum a fost scris'));
+
+    /* Motivul e text de la om: scăpat în HTML, ca orice paragraf. */
+    $sablon = sablonEmail('Test', [
+        'paragrafe' => ['Motiv cu <script>alert(1)</script> în el.'],
+    ]);
+    verifica('motivul nu poate strecura etichete', false,
+        str_contains($sablon['html'], '<script>alert(1)</script>'));
+}
+
 /* ===================== 3. PRIN SERVER =============================== */
 
 if ($BAZA === '') {
@@ -237,6 +331,8 @@ if ($BAZA === '') {
 
         /* --- omul de casă poate --- */
 
+        $inainteDeAprobare = is_file($logEmail) ? (int) filesize($logEmail) : 0;
+
         $r = cere('/api/modereaza-eveniment.php', [
             'csrf' => $caSef['token'], 'slug' => 'tst-mod-2', 'stare' => 'aprobat',
         ], $caSef['cookie']);
@@ -255,13 +351,59 @@ if ($BAZA === '') {
         ], $caSef['cookie']);
         verifica('aprobat de două ori nu se poate', 409, $r['cod']);
 
-        /* Respingerea unui anunț aprobat: răzgândirea merge. */
+        verifica('și organizatorul a fost înștiințat', true,
+            $corp['instiintat'] ?? false);
+
+        if (!empty($config['dezvoltare'])) {
+            $nou = substr((string) file_get_contents($logEmail), $inainteDeAprobare);
+            verifica('i-a plecat mesajul de aprobare', true,
+                str_contains($nou, SEMN . 'org@invalid.local'));
+            verifica('cu vestea bună', true, str_contains($nou, 'a fost aprobat'));
+        }
+
+        /* Respingerea unui anunț aprobat, cu motiv: răzgândirea merge. */
+        $inainte = is_file($logEmail) ? (int) filesize($logEmail) : 0;
+
         $r = cere('/api/modereaza-eveniment.php', [
-            'csrf' => $caSef['token'], 'slug' => 'tst-mod-2', 'stare' => 'respins',
+            'csrf'  => $caSef['token'], 'slug' => 'tst-mod-2', 'stare' => 'respins',
+            'motiv' => 'Lipsește ora de început.',
         ], $caSef['cookie']);
         verifica('răzgândirea merge', true, (json_decode($r['corp'], true) ?: [])['ok'] ?? false);
         verifica('și se scrie',       'respins',
             (string) evenimentDupaSlug('tst-mod-2')['stare_moderare']);
+
+        if (!empty($config['dezvoltare'])) {
+            $nou = substr((string) file_get_contents($logEmail), $inainte);
+            verifica('motivul ajunge în e-mail', true,
+                str_contains($nou, 'Lipsește ora de început.'));
+        }
+
+        /* Un motiv prea lung nu trece, și atunci nu se schimbă nimic. */
+        db()->prepare('UPDATE evenimente SET stare_moderare = ? WHERE slug = ?')
+            ->execute(['in_asteptare', 'tst-mod-2']);
+
+        $r = cere('/api/modereaza-eveniment.php', [
+            'csrf'  => $caSef['token'], 'slug' => 'tst-mod-2', 'stare' => 'respins',
+            'motiv' => str_repeat('a', MOTIV_RESPINGERE_MAX + 1),
+        ], $caSef['cookie']);
+        verifica('un motiv prea lung e refuzat', 422, $r['cod']);
+        verifica('și anunțul rămâne cum era', 'in_asteptare',
+            (string) evenimentDupaSlug('tst-mod-2')['stare_moderare']);
+
+        /* Fără motiv, respingerea merge oricum — e opțional. */
+        $inainte = is_file($logEmail) ? (int) filesize($logEmail) : 0;
+
+        $r = cere('/api/modereaza-eveniment.php', [
+            'csrf' => $caSef['token'], 'slug' => 'tst-mod-2', 'stare' => 'respins',
+        ], $caSef['cookie']);
+        verifica('fără motiv, respingerea merge', true,
+            (json_decode($r['corp'], true) ?: [])['ok'] ?? false);
+
+        if (!empty($config['dezvoltare'])) {
+            $nou = substr((string) file_get_contents($logEmail), $inainte);
+            verifica('iar e-mailul spune că n-a fost niciunul', true,
+                str_contains($nou, 'Nu s-a specificat nici un motiv'));
+        }
 
         /* --- stări pe care nu le știm --- */
 

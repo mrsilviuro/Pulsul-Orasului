@@ -628,6 +628,115 @@ require __DIR__ . '/inc/antet.php';
       <?php endif; /* !$aInceput */ ?>
       <?php endif; /* $ePublicat */ ?>
 
+      <?php if ($eStaff && poateFiModerat($eveniment)): ?>
+      <!-- ========================= MODERAREA ==============================
+        Numai pentru staff, și numai la un anunț care mai poate fi hotărât —
+        nici anulat, nici încheiat (vezi STARI_MODERABILE din inc/evenimente.php).
+
+        NU E ASCUNSĂ CU CSS: pentru cine nu e om de casă, blocul ăsta nici nu se
+        scrie în pagină. Un buton ascuns rămâne un buton — se găsește din consolă
+        și se apasă. Iar api/modereaza-eveniment.php întreabă din nou cine cere,
+        fiindcă o cerere poate veni și de altundeva decât de pe pagina asta.
+
+        Stă între anunț și discuție: hotărârea se ia după ce ai citit ce a scris
+        omul, dar înainte să te pierzi prin comentarii — care oricum nu au ce
+        căuta în socoteala asta.
+      ============================================================== -->
+      <section class="moderare" aria-labelledby="moderare-title"
+               data-moderare
+               data-slug="<?= h((string) $eveniment['slug']) ?>"
+               data-csrf="<?= h(tokenCsrf()) ?>">
+
+        <div class="moderare__cap">
+          <h2 class="moderare__titlu" id="moderare-title">
+            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 3 4 6.5v5c0 4.6 3.2 8.4 8 9.5 4.8-1.1 8-4.9 8-9.5v-5L12 3Z"/>
+            </svg>
+            Moderare
+          </h2>
+
+          <p class="moderare__stare">
+            Acum:
+            <strong><?= h(match ((string) $eveniment['stare_moderare']) {
+                'aprobat' => 'aprobat, se vede pe site',
+                'respins' => 'respins, îl vede doar organizatorul',
+                default   => 'în așteptare',
+            }) ?></strong>
+          </p>
+        </div>
+
+        <p class="moderare__lamurire">
+          Organizatorul primește un e-mail cu hotărârea. Se poate schimba
+          oricând: un anunț respins din greșeală poate fi aprobat, iar unul
+          aprobat prea repede poate fi oprit.
+        </p>
+
+        <div class="moderare__butoane">
+          <!--
+            Butonul stării de acum lipsește: n-ai ce aproba de două ori. Serverul
+            răspunde oricum cu „e deja aprobat", dar mai bine nu-l pui pe om să
+            apese ca să afle.
+          -->
+          <?php if ((string) $eveniment['stare_moderare'] !== 'aprobat'): ?>
+          <button class="btn btn--primary btn--sm" type="button" data-modereaza="aprobat">
+            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="m5 12.5 4.5 4.5L19 7.5"/>
+            </svg>
+            <span>Aprobă</span>
+          </button>
+          <?php endif; ?>
+
+          <?php if ((string) $eveniment['stare_moderare'] !== 'respins'): ?>
+          <!--
+            „Respinge" deschide caseta de mai jos în loc să trimită pe loc:
+            acolo se scrie motivul, care pleacă în e-mailul organizatorului.
+            Aprobarea n-are ce explica, deci pleacă dintr-o apăsare.
+          -->
+          <button class="btn btn--ghost btn--sm moderare__respinge" type="button"
+                  data-moderare-deschide aria-expanded="false" aria-controls="moderare-motiv-caseta">
+            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M6 6l12 12"/><path d="M18 6 6 18"/>
+            </svg>
+            <span>Respinge</span>
+          </button>
+          <?php endif; ?>
+        </div>
+
+        <?php if ((string) $eveniment['stare_moderare'] !== 'respins'): ?>
+        <!-- ==================== MOTIVUL RESPINGERII ====================
+          Se deschide la apăsarea pe „Respinge". Motivul e OPȚIONAL: uneori
+          anunțul e limpede greșit și n-ai ce scrie. Când lipsește, e-mailul
+          spune asta pe față și îl trimite pe om la noi — vezi
+          inc/email.php, emailModerareAnunt().
+        ============================================================== -->
+        <div class="moderare__caseta" id="moderare-motiv-caseta" data-moderare-caseta hidden>
+          <label class="moderare__eticheta" for="moderare-motiv">
+            De ce îl respingi? <span class="field__optional">(opțional)</span>
+          </label>
+
+          <textarea class="moderare__motiv" id="moderare-motiv" rows="3"
+                    maxlength="<?= MOTIV_RESPINGERE_MAX ?>"
+                    placeholder="Ce ar trebui schimbat ca să poată fi publicat?"
+                    data-moderare-motiv aria-describedby="moderare-motiv-hint"></textarea>
+
+          <p class="field__hint" id="moderare-motiv-hint">
+            Textul ăsta pleacă întreg în e-mailul organizatorului. Fără el,
+            mesajul spune că nu s-a specificat niciun motiv.
+          </p>
+
+          <div class="moderare__caseta-actiuni">
+            <button class="btn btn--primary btn--xs" type="button" data-modereaza="respins">
+              Respinge anunțul
+            </button>
+            <button class="btn btn--text" type="button" data-moderare-renunta>Renunță</button>
+          </div>
+        </div>
+        <?php endif; ?>
+
+        <p class="moderare__eroare" data-moderare-eroare role="alert" hidden></p>
+      </section>
+      <?php endif; ?>
+
       <!-- ====================== TABURI: DISCUȚII ========================== -->
       <section class="tabs-section" aria-labelledby="tabs-title">
         <h2 class="sr-only" id="tabs-title">Discuții și participanți</h2>
@@ -908,76 +1017,6 @@ require __DIR__ . '/inc/antet.php';
         </div>
       </section>
     </article>
-
-    <?php if ($eStaff && poateFiModerat($eveniment)): ?>
-    <!-- ========================= MODERAREA ==============================
-      Numai pentru staff, și numai la un anunț care mai poate fi hotărât —
-      nici anulat, nici încheiat (vezi STARI_MODERABILE din inc/evenimente.php).
-
-      NU E ASCUNSĂ CU CSS: pentru cine nu e om de casă, blocul ăsta nici nu se
-      scrie în pagină. Un buton ascuns rămâne un buton — se găsește din consolă
-      și se apasă. Iar api/modereaza-eveniment.php întreabă din nou cine cere,
-      fiindcă o cerere poate veni și de altundeva decât de pe pagina asta.
-
-      Stă la coada articolului, sub tot ce e de citit: e o hotărâre care se ia
-      DUPĂ ce ai citit anunțul, nu un buton pe care dai peste el din mers.
-    ============================================================== -->
-    <section class="moderare" aria-labelledby="moderare-title"
-             data-moderare
-             data-slug="<?= h((string) $eveniment['slug']) ?>"
-             data-csrf="<?= h(tokenCsrf()) ?>">
-
-      <div class="moderare__cap">
-        <h2 class="moderare__titlu" id="moderare-title">
-          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M12 3 4 6.5v5c0 4.6 3.2 8.4 8 9.5 4.8-1.1 8-4.9 8-9.5v-5L12 3Z"/>
-          </svg>
-          Moderare
-        </h2>
-
-        <p class="moderare__stare">
-          Acum:
-          <strong><?= h(match ((string) $eveniment['stare_moderare']) {
-              'aprobat' => 'aprobat, se vede pe site',
-              'respins' => 'respins, îl vede doar organizatorul',
-              default   => 'în așteptare',
-          }) ?></strong>
-        </p>
-      </div>
-
-      <p class="moderare__lamurire">
-        Hotărârea se poate schimba oricând: un anunț respins din greșeală poate
-        fi aprobat, iar unul aprobat prea repede poate fi oprit.
-      </p>
-
-      <div class="moderare__butoane">
-        <!--
-          Butonul stării de acum lipsește: n-ai ce aproba de două ori. Serverul
-          răspunde oricum cu „e deja aprobat", dar mai bine nu-l pui pe om să
-          apese ca să afle.
-        -->
-        <?php if ((string) $eveniment['stare_moderare'] !== 'aprobat'): ?>
-        <button class="btn btn--primary btn--sm" type="button" data-modereaza="aprobat">
-          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="m5 12.5 4.5 4.5L19 7.5"/>
-          </svg>
-          <span>Aprobă</span>
-        </button>
-        <?php endif; ?>
-
-        <?php if ((string) $eveniment['stare_moderare'] !== 'respins'): ?>
-        <button class="btn btn--ghost btn--sm moderare__respinge" type="button" data-modereaza="respins">
-          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M6 6l12 12"/><path d="M18 6 6 18"/>
-          </svg>
-          <span>Respinge</span>
-        </button>
-        <?php endif; ?>
-      </div>
-
-      <p class="moderare__eroare" data-moderare-eroare role="alert" hidden></p>
-    </section>
-    <?php endif; ?>
 
     <?php if ($sugerate !== []): ?>
     <!-- ======================= AR PUTEA SĂ TE INTERESEZE ==================

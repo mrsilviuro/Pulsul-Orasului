@@ -3448,6 +3448,10 @@ erau invizibile pentru cine trebuia să le citească.
 Așa că staff-ul vede acum orice eveniment, oricare i-ar fi starea. Nu e un drept
 dat de dragul lui: fără el, moderarea n-ar fi putut exista pe pagina anunțului.
 
+Blocul stă **între anunț și discuție**: hotărârea se ia după ce ai citit ce a
+scris omul, dar înainte să te pierzi prin comentarii — care oricum n-au ce
+căuta în socoteala asta.
+
 ### Blocul nu se ascunde, lipsește
 
 Pentru cine nu e om de casă, blocul nici nu se scrie în HTML. Nu e `display:
@@ -3478,13 +3482,41 @@ Butonul stării de acum lipsește din pagină: n-ai ce aproba de două ori.
 Serverul răspunde oricum cu „e deja aprobat" — se întâmplă la doi moderatori pe
 aceeași listă — dar mai bine nu-l pui pe om să apese ca să afle.
 
+### Organizatorul află printr-un e-mail
+
+La aprobare, un mesaj scurt: anunțul se vede de acum pe site. La respingere,
+unul care spune ce s-a hotărât, de ce, și pe unde se merge mai departe — orice
+schimbare îl pune înapoi în așteptare.
+
+**Motivul respingerii e opțional.** Spre deosebire de motivul anulării, care
+pleacă spre zeci de oameni ce își făcuseră un plan și au dreptul la o
+explicație, ăsta merge spre unul singur — iar uneori anunțul e limpede greșit
+și n-ai ce scrie. A-l sili pe omul de casă să compună o frază ar naște fraze de
+umplut („nu se poate").
+
+Când lipsește, mesajul **nu tace și nu se preface**: scrie „Nu s-a specificat
+nici un motiv. Pentru orice nelămurire, te rugăm să ne contactezi." Un „nu"
+fără explicație și fără nicio ușă e cel mai prost fel de a închide o discuție.
+
+„Respinge" nu trimite pe loc: deschide o casetă unde se poate scrie motivul.
+Nu e o treaptă de confirmare — hotărârea rămâne reversibilă — e clipa în care
+omul de casă e întrebat dacă are ceva de spus. Aprobarea n-are ce explica, deci
+pleacă dintr-o apăsare.
+
+Vestea pleacă **după** ce starea e scrisă în bază, ca la anulare: un e-mail
+trimis peste o scriere care apoi pică i-ar spune omului un neadevăr. Dacă
+mesajul nu pleacă, hotărârea rămâne luată și necazul ajunge în log — omul de
+casă trebuie să vadă starea nouă, nu o eroare despre serverul de e-mail.
+
 ### Ce nu face încă
 
-Nu trimite niciun e-mail. Organizatorul află că i-a fost aprobat sau respins
-anunțul întorcându-se pe pagina lui, unde scrie în bandă. Iar respingerea unui
-anunț **deja aprobat**, la care s-au înscris oameni, nu-i înștiințează pe aceia
-— spre deosebire de anulare, care o face. Amândouă merită gândite când va exista
-o listă de moderare.
+Motivul respingerii **nu se păstrează în bază**: pleacă în e-mail și atât.
+Banda de pe pagina organizatorului spune doar că n-a fost aprobat, fără să
+spună de ce — cine caută motivul trebuie să se uite în e-mail. O coloană ca
+`motiv_anulare` ar rezolva-o.
 
-Verificările: `php teste/test-moderare.php http://127.0.0.1:8128` (39 de cazuri;
-fără adresă merge și fără server, 11).
+Respingerea unui anunț **deja aprobat**, la care s-au înscris oameni, nu-i
+înștiințează pe aceia — spre deosebire de anulare, care o face.
+
+Verificările: `php teste/test-moderare.php http://127.0.0.1:8128` (66 de cazuri;
+fără adresă merge și fără server, 30).

@@ -880,3 +880,80 @@ function emailAnulareEveniment(
 
     return trimiteEmail($catre, '„' . $titluEveniment . '" a fost anulat', $blocuri);
 }
+
+/**
+ * Hotărârea moderării, spusă organizatorului.
+ *
+ * Pleacă în clipa în care staff-ul apasă „Aprobă" sau „Respinge", pe pagina
+ * anunțului. Un singur om îl primește — cel care l-a scris.
+ *
+ * Butonul duce pe pagina anunțului în amândouă cazurile, fiindcă organizatorul
+ * își vede evenimentul oricare i-ar fi starea (vezi poateVedeaEvenimentul din
+ * inc/evenimente.php). La aprobare e pagina pe care o vede acum toată lumea; la
+ * respingere, cea pe care o vede doar el, cu banda care spune de ce.
+ *
+ * MOTIVUL E OPȚIONAL, și numai la respingere. Aprobarea n-are ce explica.
+ * Când lipsește, nu se tace: se spune pe față că nu s-a specificat niciunul și
+ * omul e trimis să ne scrie — altfel ar rămâne cu un „nu" fără nicio ușă.
+ *
+ * Motivul intră ca paragraf obișnuit, deci trece prin aceeași ieșire ca restul
+ * textelor din șablon — scăpat cu htmlspecialchars în varianta HTML. Nimeni nu
+ * poate strecura etichete în e-mailul altcuiva prin caseta de motiv.
+ */
+function emailModerareAnunt(
+    string $catre,
+    string $prenume,
+    string $titluEveniment,
+    string $adresaEveniment,
+    bool $aprobat,
+    string $motiv = ''
+): bool {
+    if ($aprobat) {
+        $blocuri = [
+            'salut'     => 'Bună, ' . $prenume . '!',
+            'paragrafe' => [
+                'Anunțul tău, „' . $titluEveniment . '", a fost aprobat și se vede '
+                . 'de acum pe site. Oamenii îl pot găsi și se pot înscrie.',
+                'Dacă îl schimbi, trece din nou pe la noi înainte să reapară — '
+                . 'așa se poate publica orice, iar verificarea rămâne ceva.',
+            ],
+            'buton'     => ['text' => 'Vezi anunțul', 'href' => $adresaEveniment],
+            'link_gol'  => $adresaEveniment,
+            'incheiere' => 'Mulțumim că pui ceva la cale pentru oraș.',
+        ];
+
+        return trimiteEmail($catre, '„' . $titluEveniment . '" a fost aprobat', $blocuri);
+    }
+
+    $paragrafe = [
+        'Anunțul tău, „' . $titluEveniment . '", nu a fost aprobat, deci nu se vede '
+        . 'pe site. Îl vezi în continuare tu, pe pagina lui.',
+    ];
+
+    if ($motiv !== '') {
+        $paragrafe[] = 'Motivul, așa cum a fost scris:';
+        $paragrafe[] = $motiv;
+    } else {
+        /**
+         * Fără motiv, mesajul nu tace și nu se preface.
+         *
+         * Un „nu" fără nicio explicație și fără nicio ușă e cel mai prost fel
+         * de a închide o discuție. Așa, omul știe și că n-a fost scris nimic,
+         * și pe unde să întrebe.
+         */
+        $paragrafe[] = 'Nu s-a specificat nici un motiv. Pentru orice nelămurire, '
+                     . 'te rugăm să ne contactezi.';
+    }
+
+    $paragrafe[] = 'Poți să-l îndrepți din pagina de editare și să-l trimiți din nou: '
+                 . 'orice schimbare îl pune înapoi în așteptare, iar noi îl citim iar.';
+
+    $blocuri = [
+        'salut'     => 'Bună, ' . $prenume . '!',
+        'paragrafe' => $paragrafe,
+        'buton'     => ['text' => 'Vezi anunțul', 'href' => $adresaEveniment],
+        'link_gol'  => $adresaEveniment,
+    ];
+
+    return trimiteEmail($catre, '„' . $titluEveniment . '" nu a fost aprobat', $blocuri);
+}
