@@ -92,12 +92,6 @@ if ($evenimente === []) {
            . ' — trimise la ' . $ev['multumiri_trimise_la'] . "\n";
     }
 
-    echo "  Un eveniment se servește o singură dată. Ca să-l încerci din nou,\n"
-       . "  golește-i ștampila:\n"
-       . "    UPDATE evenimente SET multumiri_trimise_la = NULL WHERE slug = '…';\n"
-       . '  Și ai nevoie de cel puțin ' . MULTUMIRI_MINIM_OAMENI
-       . " oameni pe lista de participanți — sub atât nu pleacă nimic.\n";
-
     exit(0);
 }
 
