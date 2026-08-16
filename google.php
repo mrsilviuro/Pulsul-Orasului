@@ -139,6 +139,22 @@ if ($membru) {
         inapoiCuNecaz('Contul nu e activ. Verifică e-mailul de confirmare.');
     }
 
+    /**
+     * Cât e site-ul în lucru, intră doar oamenii de casă — pe orice ușă.
+     *
+     * Aceeași regulă și în același loc ca la intrarea cu parolă: ÎNAINTE de
+     * autentifica(), ca sesiunea să nu se facă deloc. Altfel omul ar fi rămas
+     * conectat în spatele unui site închis, fără nicio pagină la care să
+     * ajungă.
+     *
+     * esteStaff() primește rândul citit mai sus; dacă acela n-are coloana
+     * (SELECT-urile de aici cer doar câteva câmpuri), o citește singur din
+     * bază după id — vezi inc/auth.php.
+     */
+    if (siteInConstructie() && !esteStaff($membru)) {
+        inapoiCuNecaz('Site-ul e în lucru. Îți dăm de veste imediat ce deschidem.');
+    }
+
     $u = db()->prepare('UPDATE membri SET autentificat_la = ? WHERE id = ?');
     $u->execute([acum(), (int) $membru['id']]);
 
@@ -168,6 +184,20 @@ if ($membru) {
 }
 
 /* ------------------ 3d. E om nou: îi mai cerem două date -------------- */
+
+/**
+ * Dar nu cât e site-ul în lucru: atunci nu se fac conturi noi, pe nicio ușă.
+ *
+ * Oprirea e AICI, nu în finalizare.php, fiindcă aici se află întâi că omul
+ * n-are cont. Așa, `finalizare.php` și API-ul lui nici nu trebuie ținute
+ * deschise în lista din inc/constructie.php: la ele nu se mai ajunge.
+ *
+ * Mesajul e același cu cel de la intrarea cu parolă, dinadins: nu spune dacă
+ * adresa are sau n-are cont la noi.
+ */
+if (siteInConstructie()) {
+    inapoiCuNecaz('Site-ul e în lucru. Îți dăm de veste imediat ce deschidem.');
+}
 
 /**
  * Google ne dă numele și adresa, dar nu și data nașterii sau sexul — iar pe

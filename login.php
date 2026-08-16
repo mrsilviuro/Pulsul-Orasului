@@ -27,15 +27,16 @@ $tocmaiIesit = isset($_GET['iesit']);
 /**
  * Cât timp site-ul e în lucru, pagina asta e singura ușă — dar e mai îngustă.
  *
- * Se scot din ea cele două drumuri care n-ar duce nicăieri: înregistrarea
- * (api/inregistrare.php e închis) și intrarea cu Google (google.php la fel,
- * fiindcă drumul prin el se poate termina cu un cont NOU, iar cât e închis nu
- * se fac conturi noi).
+ * Rămân AMÂNDOUĂ felurile de intrare, cu parolă și cu Google: omul de casă
+ * care și-a făcut contul prin Google n-are parolă la noi, deci fără butonul
+ * acela n-ar avea pe unde intra. Regula e aceeași pe amândouă — cine nu e
+ * staff nu trece, iar sesiune nu se face deloc (vezi api/autentificare.php și
+ * google.php).
  *
- * Le scoatem din pagină, nu le ascundem cu CSS: un formular care se vede și
- * nu merge e mai supărător decât unul care lipsește. Cine e de-al casei intră
- * cu e-mail și parolă, iar cine nu e n-are ce face aici nici într-un fel, nici
- * în altul — vezi api/autentificare.php.
+ * Se scoate doar ÎNREGISTRAREA: conturile noi nu se fac cât ține lucrarea, pe
+ * nicio ușă, iar `api/inregistrare.php` e închis. Scoasă din pagină, nu
+ * ascunsă cu CSS — un formular care se vede și nu merge e mai supărător decât
+ * unul care lipsește.
  */
 $inConstructie = siteInConstructie();
 
@@ -130,16 +131,35 @@ require __DIR__ . '/inc/antet.php';
           <?php else: ?>
           <h1 class="auth__title">Bine ai revenit</h1>
           <p class="auth__lead">Intră în cont ca să publici evenimente și să participi la discuții.</p>
+          <?php endif; ?>
 
           <?php
+            /**
+             * Butonul de Google se arată ȘI cât e site-ul în lucru.
+             *
+             * E a doua ușă de intrare, nu una de rezervă: omul de casă care
+             * și-a făcut contul cu Google n-are parolă la noi, deci fără el
+             * n-ar avea pe unde intra deloc. Regula e aceeași pe amândouă —
+             * cine nu e staff nu trece, iar conturile noi nu se fac; vezi
+             * google.php.
+             */
             $textButon       = 'Continuă cu Google';
             $textDespartitor = 'sau cu e-mail';
             $redirectDupa    = $inapoiLa;
             require __DIR__ . '/inc/buton-google.php';
           ?>
-          <?php endif; ?>
 
-          <form class="form" id="login-form" novalidate>
+          <!--
+            `method="post"` deși formularul e trimis din JavaScript și nu
+            ajunge niciodată aici de bunăvoie.
+
+            E plasa de sub el: dacă JS-ul cade din orice motiv, browserul
+            trimite formularul cum știe el — iar fără `method` îl trimite prin
+            GET, adică pune parola în bara de adrese, de unde ajunge în
+            istoric, în logurile serverului și în Referer. S-a și întâmplat.
+            Cu `post`, cel mai rău caz e o pagină reîncărcată degeaba.
+          -->
+          <form class="form" id="login-form" method="post" novalidate>
 
             <input type="hidden" name="csrf" value="<?= h($csrf) ?>">
 
@@ -267,7 +287,9 @@ require __DIR__ . '/inc/antet.php';
             require __DIR__ . '/inc/buton-google.php';
           ?>
 
-          <form class="form" id="register-form" novalidate>
+          <!-- `method="post"` din același motiv ca la formularul de intrare:
+               fără el, o cădere a JS-ului ar duce parola în bara de adrese. -->
+          <form class="form" id="register-form" method="post" novalidate>
 
             <input type="hidden" name="csrf" value="<?= h($csrf) ?>">
 

@@ -2750,10 +2750,23 @@
   }
 
 
-  /* ------------------ 7. AUTENTIFICARE / ÎNREGISTRARE ------------------- */
-  var authTabs = document.getElementById('auth-tabs');
+  /* ------------------ 7. AUTENTIFICARE / ÎNREGISTRARE -------------------
+     Blocul ăsta atârna, tot, de existența TABURILOR. Când pagina de intrare a
+     rămas fără ele — cât e site-ul în lucru se arată doar autentificarea —
+     nimic dinăuntru nu s-a mai legat: nici formularul de login.
 
-  if (authTabs) {
+     Iar un formular fără JavaScript legat de el nu stă degeaba: browserul îl
+     trimite el, cum știe. Cum n-are `method`, îl trimitea prin GET, adică
+     PAROLA AJUNGEA ÎN BARA DE ADRESE — și de acolo în istoric, în loguri și în
+     Referer. Pe ecran nu se întâmpla „nimic", fiindcă pagina se reîncărca la
+     fel.
+
+     De aceea acum se leagă dacă e ORICARE dintre ele: taburile sau formularul
+     de intrare. Fiecare folosire a taburilor de mai jos și-a primit paza ei. */
+  var authTabs  = document.getElementById('auth-tabs');
+  var loginFormPrezent = document.getElementById('login-form');
+
+  if (authTabs || loginFormPrezent) {
 
     /* --- Deschide tabul corect din URL sau din butoanele de sub formular --- */
     // login.php#inregistrare sau ?tab=inregistrare deschide direct înregistrarea.
@@ -2766,17 +2779,18 @@
     }
 
     var wanted = tabFromUrl();
-    if (wanted) authTabs.selectTabById(wanted);
+    if (authTabs && wanted) authTabs.selectTabById(wanted);
 
     // Linkul din meniu duce tot pe pagina asta, deci nu se reîncarcă nimic:
     // ascultăm schimbarea hash-ului ca să comutăm totuși tabul.
     window.addEventListener('hashchange', function () {
       var next = tabFromUrl();
-      if (next) authTabs.selectTabById(next);
+      if (authTabs && next) authTabs.selectTabById(next);
     });
 
     document.querySelectorAll('[data-go-tab]').forEach(function (btn) {
       btn.addEventListener('click', function () {
+        if (!authTabs) return;
         authTabs.selectTabById(btn.getAttribute('data-go-tab'));
         authTabs.scrollIntoView({ block: 'nearest' });
       });

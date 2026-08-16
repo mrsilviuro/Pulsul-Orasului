@@ -52,11 +52,15 @@ function siteInConstructie(): bool
  *                          conectat în clipa în care s-a pus lacătul trebuie
  *                          să poată ieși din cont, altfel ar rămâne cu o
  *                          sesiune pe care n-o poate încheia.
+ *   google.php           — a doua ușă de intrare, la fel de bună ca prima:
+ *                          omul de casă care și-a făcut contul cu Google n-are
+ *                          parolă la noi, deci fără ea n-ar avea pe unde intra
+ *                          deloc.
  *
- * Google NU e pe listă, dinadins: intrarea prin el trece prin trei adrese și
- * se poate termina cu un cont NOU, iar cât e site-ul închis nu se fac conturi
- * noi. Oamenii de casă intră cu e-mail și parolă. De aceea butonul lui nici nu
- * se arată pe login.php în timpul lucrărilor — vezi acolo.
+ * `finalizare.php` și `api/finalizare-google.php` NU sunt pe listă, deși țin
+ * de același drum: ele fac un cont NOU, iar cât e site-ul închis nu se fac
+ * conturi noi. Nici nu se ajunge la ele — google.php se oprește singur înainte,
+ * când vede că omul care s-a întors de la Google n-are încă un cont aici.
  */
 function usileDeschiseInConstructie(): array
 {
@@ -66,6 +70,7 @@ function usileDeschiseInConstructie(): array
         'iesire.php',
         'api/autentificare.php',
         'api/newsletter.php',
+        'google.php',
     ];
 }
 

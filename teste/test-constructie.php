@@ -18,6 +18,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../inc/constructie.php';
 require_once __DIR__ . '/../inc/auth.php';
+require_once __DIR__ . '/../inc/google.php';   // pentru googleEsteConfigurat()
 
 $BAZA = $argv[1] ?? '';
 
@@ -187,12 +188,18 @@ sectiune('ușile');
 $usi = usileDeschiseInConstructie();
 
 foreach (['constructie.php', 'login.php', 'iesire.php',
-          'api/autentificare.php', 'api/newsletter.php'] as $usa) {
+          'api/autentificare.php', 'api/newsletter.php',
+          // A doua ușă de intrare: cine și-a făcut contul cu Google n-are
+          // parolă la noi, deci fără ea n-ar avea pe unde intra deloc.
+          'google.php'] as $usa) {
     verifica('„' . $usa . '" e deschisă', true, in_array($usa, $usi, true));
 }
 
 foreach (['index.php', 'event.php', 'contact.php', 'profil.php',
-          'google.php', 'api/inregistrare.php', 'api/lista-evenimente.php'] as $inchisa) {
+          'api/inregistrare.php', 'api/lista-evenimente.php',
+          // Drumul lui Google e deschis până unde se INTRĂ; de unde încolo s-ar
+          // face un cont NOU, rămâne închis.
+          'finalizare.php', 'api/finalizare-google.php'] as $inchisa) {
     verifica('„' . $inchisa . '" NU e deschisă', false, in_array($inchisa, $usi, true));
 }
 
@@ -205,6 +212,50 @@ foreach ($usi as $usa) {
 
 /* Din linia de comandă nu se pune niciun lacăt: cronurile nu sunt vizitatori. */
 verifica('din CLI nu se pune lacăt', false, cerereDinBrowser());
+
+/* ===================== 3b. CINE E OM DE CASĂ ======================== */
+
+sectiune('cine e om de casă');
+
+/**
+ * Staff înseamnă ORICE valoare în afară de 0 — nu neapărat 1.
+ *
+ * Coloana se pune de mână, din phpMyAdmin. Cine scrie acolo un 2 pentru
+ * „administrator" se așteaptă să fie tot om de casă, nu să cadă înapoi printre
+ * vizitatori fără să afle de ce.
+ */
+verifica('0 nu e staff',        false, esteStaff(['id' => 1, 'este_staff' => 0]));
+verifica('„0" ca text, la fel', false, esteStaff(['id' => 1, 'este_staff' => '0']));
+verifica('1 e staff',           true,  esteStaff(['id' => 1, 'este_staff' => 1]));
+verifica('2 e tot staff',       true,  esteStaff(['id' => 1, 'este_staff' => 2]));
+verifica('și „1" ca text',      true,  esteStaff(['id' => 1, 'este_staff' => '1']));
+
+/**
+ * Rândul fără coloană nu se mai ghicește: se citește din bază, după id.
+ *
+ * Aici era buba care închidea ușa omului de casă. Interogarea de la intrare nu
+ * cerea `este_staff`, iar `?? 0` lua lipsa drept „nu e staff" și tăcea: parolă
+ * bună, cont bun, dar tratat ca un vizitator oarecare.
+ */
+$idStaff = (int) db()->query(
+    'SELECT id FROM membri WHERE este_staff <> 0 ORDER BY id LIMIT 1'
+)->fetchColumn();
+
+$idOm = (int) db()->query(
+    'SELECT id FROM membri WHERE este_staff = 0 ORDER BY id LIMIT 1'
+)->fetchColumn();
+
+if ($idStaff > 0 && $idOm > 0) {
+    verifica('rândul fără coloană se lămurește din bază (staff)',
+        true, esteStaff(['id' => $idStaff]));
+    verifica('și pentru cine nu e staff',
+        false, esteStaff(['id' => $idOm]));
+} else {
+    echo "  (n-am găsit în bază și staff, și ne-staff — s-a sărit)\n";
+}
+
+verifica('fără id și fără coloană, nu e staff', false, esteStaff(['nume' => 'X']));
+verifica('rândul gol nu e staff',               false, esteStaff([]));
 
 /* ===================== 4. PRIN SERVER =============================== */
 
@@ -295,8 +346,46 @@ if ($BAZA === '') {
     $r = cere('/login.php');
     verifica('intrarea în cont e deschisă', 200, $r['cod']);
     verifica('dar fără înregistrare', false, str_contains($r['corp'], 'id="panel-register"'));
-    verifica('și fără butonul Google',  false, str_contains($r['corp'], 'buton-google'));
     verifica('spune că se lucrează', true, str_contains($r['corp'], 'Site-ul e în lucru'));
+
+    /**
+     * Formularul trebuie să trimită prin POST, nu prin GET.
+     *
+     * Fără `method="post"`, o cădere a JS-ului îl lasă pe browser să-l trimită
+     * cum știe el — adică prin GET, cu PAROLA ÎN BARA DE ADRESE, de unde ajunge
+     * în istoric, în logurile serverului și în Referer. S-a și întâmplat, când
+     * pagina a rămas fără taburi și blocul de JS n-a mai pornit.
+     */
+    verifica('formularul de intrare trimite prin POST', true,
+        (bool) preg_match('/<form[^>]*id="login-form"[^>]*method="post"/i', $r['corp']));
+
+    /**
+     * Butonul de Google rămâne pe pagină și cât e site-ul în lucru: omul de
+     * casă care și-a făcut contul prin el n-are parolă la noi, deci fără
+     * butonul ăsta n-ar avea pe unde intra deloc.
+     *
+     * Se arată doar dacă Google e configurat în config.php — dacă nu e, nu se
+     * arată nicăieri pe site, și nu asta se verifică aici.
+     */
+    if (googleEsteConfigurat()) {
+        verifica('butonul de Google e la locul lui', true,
+            str_contains($r['corp'], 'google.php'));
+    } else {
+        echo "  (Google nu e configurat în config.php — butonul s-a sărit)\n";
+    }
+
+    // Ușa lui e deschisă în lacăt: nu răspunde cu redirecționarea spre afiș.
+    $r = cere('/google.php');
+    verifica('google.php nu e trimis la afiș', true,
+        !str_contains($r['unde'], 'constructie.php'), $r['cod'] . ' → ' . $r['unde']);
+
+    // Dar cele care FAC un cont nou rămân închise.
+    $r = cere('/finalizare.php');
+    verifica('finalizarea unui cont nou e închisă', 302, $r['cod']);
+    verifica('și duce la afiș', true, str_contains($r['unde'], 'constructie.php'));
+
+    $r = cere('/api/finalizare-google.php', ['ceva' => 1]);
+    verifica('și API-ul ei, la fel', 503, $r['cod']);
 
     /* --- intrarea în cont, cu lacătul pus --- */
 

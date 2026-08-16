@@ -3242,11 +3242,16 @@ ceva: o comparație pe URL ar fi trebuit să se apere singură de
 `/api/../index.php`, de bara în plus și de literele mari — adică exact felul de
 verificare scrisă de mână care lasă mereu ceva să treacă.
 
-Google **nu** e pe listă. Intrarea prin el trece prin trei adrese și se poate
-încheia cu un cont nou, iar cât e site-ul închis nu se fac conturi noi. De
-aceea butonul lui nici nu se arată pe `login.php` atunci, împreună cu tot tabul
-de înregistrare: un formular care se vede și nu merge e mai supărător decât
-unul care lipsește.
+`google.php` e și el pe listă, și trebuie să fie: omul de casă care și-a făcut
+contul cu Google **n-are parolă la noi**, deci fără ușa aia n-ar avea pe unde
+intra deloc. Drumul lui e deschis până unde se *intră*; de unde încolo s-ar
+face un cont nou — `finalizare.php` și API-ul ei — rămâne închis, iar
+`google.php` se oprește singur când vede că omul întors de la Google n-are încă
+un cont aici. Așa, cele două pagini nici nu trebuie ținute deschise: la ele nu
+se mai ajunge.
+
+Ce se scoate din `login.php` e doar tabul de înregistrare: un formular care se
+vede și nu merge e mai supărător decât unul care lipsește.
 
 ### Cine nu e staff nu apucă să se conecteze
 
@@ -3260,9 +3265,38 @@ Nu se numără ca încercare greșită. Parola a fost bună, iar omul n-a făcut
 rău — ar fi fost cel mai nedrept fel de blocare: trei intrări corecte și contul
 încuiat zece minute, fiindcă site-ul e în lucru.
 
-Interogarea de la intrare a trebuit să înceapă să aducă și `este_staff`. Fără
-coloană, `esteStaff()` citea un câmp lipsă, îl lua drept 0 și închidea ușa
-tocmai celui care trebuia s-o poată deschide.
+### „E om de casă?" nu se mai ghicește
+
+Interogarea de la intrare nu aducea `este_staff`, iar `esteStaff()` lua lipsa
+coloanei drept „nu e staff" și tăcea. Cu lacătul pus, tăcerea aia a devenit o
+ușă închisă în nasul omului de casă: parolă bună, cont bun, dar tratat ca un
+vizitator oarecare. Aceleași trei interogări din `google.php` aveau aceeași
+lipsă.
+
+Acum `esteStaff()` nu mai ghicește: dacă rândul primit n-are coloana, o citește
+din bază după `id`. E o citire în plus, pe un drum care oricum tocmai a făcut
+câteva, și scapă odată pentru totdeauna de întrebarea „am pus coloana în
+SELECT-ul ăsta?".
+
+Staff înseamnă **orice valoare în afară de 0**, nu „= 1". Coloana se pune de
+mână, din phpMyAdmin, iar cine scrie acolo un 2 pentru „administrator" se
+așteaptă să fie tot om de casă, nu să cadă înapoi printre vizitatori fără să
+afle de ce.
+
+### Formularul de intrare trimite prin POST
+
+Tot blocul de JavaScript al paginii de cont atârna de existența **taburilor**.
+Când pagina a rămas fără ele — cât e site-ul în lucru se arată doar
+autentificarea — nimic dinăuntru nu s-a mai legat, nici formularul de login.
+
+Iar un formular fără JavaScript legat de el nu stă degeaba: browserul îl trimite
+el, cum știe. Cum n-avea `method`, îl trimitea prin **GET** — adică parola
+ajungea în bara de adrese, și de acolo în istoric, în logurile serverului și în
+`Referer`. Pe ecran „nu se întâmpla nimic", fiindcă pagina se reîncărca la fel.
+
+Două lucruri s-au schimbat: blocul se leagă acum dacă există *ori* taburile,
+*ori* formularul de intrare; iar amândouă formularele au primit `method="post"`,
+ca plasă de sub ele. Cel mai rău caz e o pagină reîncărcată degeaba.
 
 ### Afișul
 
@@ -3311,8 +3345,8 @@ Regula adresei de e-mail s-a mutat în `verificaEmail()`. O aveau scrisă la fel
 înregistrarea și formularul de contact; a treia copie ar fi însemnat că într-o
 zi o adresă trece pe undeva și e refuzată în altă parte.
 
-Verificările: `php teste/test-constructie.php http://127.0.0.1:8128` (71 de
-cazuri; fără adresă merge și fără server, 35). Partea cu serverul pornește și
+Verificările: `php teste/test-constructie.php http://127.0.0.1:8128` (85 de
+cazuri; fără adresă merge și fără server, 45). Partea cu serverul pornește și
 oprește `in_constructie` din `config.php` și îl pune la loc cum l-a găsit — și
 dacă pică ceva la mijloc. După fiecare schimbare **așteaptă până când serverul
 chiar o vede**: PHP ține fișierele compilate în OPcache și se uită dacă s-au

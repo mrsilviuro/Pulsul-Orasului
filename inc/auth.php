@@ -172,7 +172,46 @@ function esteStaff(?array $membru = null): bool
 {
     $membru ??= membruCurent();
 
-    return $membru !== null && (int) ($membru['este_staff'] ?? 0) === 1;
+    if ($membru === null) {
+        return false;
+    }
+
+    /**
+     * Rândul primit poate să NU aibă coloana, fiindcă vine dintr-un SELECT
+     * care n-a cerut-o — așa se întâmplă la intrarea în cont și la cea cu
+     * Google, unde se citesc doar câteva câmpuri.
+     *
+     * Înainte, `$membru['este_staff'] ?? 0` lua lipsa drept „nu e staff" și
+     * tăcea. Odată cu lacătul de șantier, tăcerea aia a devenit o ușă
+     * închisă în nasul omului de casă: parolă bună, cont bun, dar coloana
+     * nefiind în SELECT, serverul îl socotea un vizitator oarecare.
+     *
+     * Acum lipsa nu se mai ghicește: se întreabă baza. E o citire în plus, pe
+     * un drum care oricum tocmai a făcut câteva, și scapă odată pentru
+     * totdeauna de întrebarea „am pus coloana în SELECT-ul ăsta?".
+     */
+    if (!array_key_exists('este_staff', $membru)) {
+        $id = (int) ($membru['id'] ?? 0);
+
+        if ($id <= 0) {
+            return false;
+        }
+
+        $q = db()->prepare('SELECT este_staff FROM membri WHERE id = ? LIMIT 1');
+        $q->execute([$id]);
+
+        $membru['este_staff'] = $q->fetchColumn();
+    }
+
+    /**
+     * Staff înseamnă ORICE valoare în afară de 0.
+     *
+     * Nu „= 1": coloana e pusă de mână, din phpMyAdmin, iar cine scrie acolo
+     * un 2 pentru „administrator" se așteaptă să fie tot om de casă, nu să
+     * cadă înapoi printre vizitatori fără să afle de ce. Zero e singurul
+     * răspuns limpede pentru „nu".
+     */
+    return (int) $membru['este_staff'] !== 0;
 }
 
 /**
