@@ -83,6 +83,44 @@ function evenimenteFaraMultumiri(int $celMult = 200): array
 }
 
 /**
+ * Evenimentele încheiate cărora LE-AU PLECAT deja mulțumirile.
+ *
+ * Nu e nevoie de ea ca să se trimită ceva — e nevoie ca să se poată răspunde la
+ * întrebarea „de ce nu trimite nimic?".
+ *
+ * Fără ea, cronul spunea „nimic de trimis" și atât, iar asta înseamnă două
+ * lucruri complet diferite: ori chiar n-a avut loc nimic, ori evenimentele au
+ * fost servite demult și ștampila lor le ține deoparte pentru totdeauna. Al
+ * doilea caz e cel care încurcă pe oricine încearcă să vadă dacă merge:
+ * pune un eveniment pe „încheiat", cronul îl consumă în tăcere (poate fără să
+ * trimită nimic, dacă erau prea puțini oameni), iar de atunci încolo tace.
+ *
+ * Cele mai proaspăt servite întâi: la o încercare, aia e cea despre care se
+ * întreabă.
+ */
+function multumiriDejaTrimise(int $celMult = 5): array
+{
+    $q = db()->prepare(
+        'SELECT id, titlu, slug, data_eveniment, multumiri_trimise_la
+           FROM evenimente
+          WHERE multumiri_trimise_la IS NOT NULL
+          ORDER BY multumiri_trimise_la DESC
+          LIMIT ' . max(1, $celMult)
+    );
+    $q->execute();
+
+    return $q->fetchAll();
+}
+
+/** Câte evenimente au primit deja mulțumirile. */
+function cateMultumiriTrimise(): int
+{
+    return (int) db()->query(
+        'SELECT COUNT(*) FROM evenimente WHERE multumiri_trimise_la IS NOT NULL'
+    )->fetchColumn();
+}
+
+/**
  * Cine primește mesajul: oamenii de pe lista de participanți.
  *
  * Nu oameniiCuStarea(), deși ar fi fost la îndemână: aceea aduce ce trebuie

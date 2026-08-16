@@ -239,6 +239,70 @@ verifica('cel care urmează se numără', 1, laCateEvenimenteAFost($ana));
 verifica('fără cont, zero', 0, laCateEvenimenteAFost(0));
 verifica('și la absențe la fel', 0, laCateEvenimenteNuAVenit(0));
 
+/* ============ 5. DE CE NU TRIMITE NIMIC (diagnosticul) ============= */
+
+echo "\n--- ștampila care ține evenimentul deoparte ---\n";
+
+/**
+ * Un eveniment servit o dată nu mai apare niciodată în listă — nici dacă îi
+ * pui oameni pe listă după aceea, nici dacă îl treci din nou pe „încheiat".
+ *
+ * Ăsta e chiar felul în care cronul „nu găsește nimic" deși în bază sunt
+ * evenimente încheiate: ștampila e pusă, uneori fără să fi plecat vreun mesaj
+ * (când erau prea puțini oameni). De aceea cronul spune acum și de ce tace.
+ */
+$deProba = faEveniment('tstmul-diag', $organizator, '-3 days', 'incheiat');
+$idDiag  = (int) $deProba['id'];
+
+verifica('un eveniment încheiat proaspăt e în listă', true,
+    in_array('tstmul-diag', aleNoastre(evenimenteFaraMultumiri()), true));
+
+verifica('și nu e printre cele servite', false,
+    in_array('tstmul-diag', aleNoastre(multumiriDejaTrimise(200)), true));
+
+$serviteInainte = cateMultumiriTrimise();
+
+// Fără oameni pe listă nu pleacă nimic — dar ștampila se pune oricum.
+$rezultat = trimiteMultumiriPentruEveniment($deProba);
+
+verifica('fără oameni nu pleacă niciun mesaj', 0, $rezultat['trimise']);
+verifica('dar ștampila se pune', $serviteInainte + 1, cateMultumiriTrimise());
+
+verifica('iar de-acum nu mai e în listă', false,
+    in_array('tstmul-diag', aleNoastre(evenimenteFaraMultumiri()), true));
+
+verifica('ci printre cele servite', true,
+    in_array('tstmul-diag', aleNoastre(multumiriDejaTrimise(200)), true));
+
+/**
+ * Nici oamenii adăugați pe urmă nu-l mai scot din tăcere. Asta caută cineva
+ * care încearcă din nou și nu înțelege de ce nu se întâmplă nimic.
+ */
+salveazaInteres($idDiag, $ana, 'participant');
+salveazaInteres($idDiag, $vlad, 'participant');
+
+verifica('nici cu oameni adăugați pe urmă nu se întoarce', false,
+    in_array('tstmul-diag', aleNoastre(evenimenteFaraMultumiri()), true));
+
+// Golirea ștampilei e singurul fel de a-l încerca din nou.
+db()->prepare('UPDATE evenimente SET multumiri_trimise_la = NULL WHERE id = ?')
+    ->execute([$idDiag]);
+
+verifica('golită ștampila, se întoarce în listă', true,
+    in_array('tstmul-diag', aleNoastre(evenimenteFaraMultumiri()), true));
+
+$rezultat = trimiteMultumiriPentruEveniment($deProba);
+verifica('și acum chiar pleacă mesajele', 2, $rezultat['trimise']);
+
+/* Cele mai proaspăt servite se arată primele: aia se caută la o încercare. */
+$servite = multumiriDejaTrimise(200);
+
+if (count($servite) >= 2) {
+    verifica('cele servite vin de la cel mai proaspăt', true,
+        strcmp((string) $servite[0]['multumiri_trimise_la'],
+               (string) $servite[1]['multumiri_trimise_la']) >= 0);
+}
+
 /* =========================== curățenie ============================= */
 
 curata();

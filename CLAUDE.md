@@ -157,7 +157,11 @@ inc/
   multumiri.php     → e-mailul de mulțumire de după eveniment: cine îl
                       primește, când, și semnul că a plecat o singură dată
                       (evenimente.multumiri_trimise_la). Îl cheamă doar
-                      cron/multumeste-participantilor.php
+                      cron/multumeste-participantilor.php. ATENȚIE la ștampilă:
+                      se pune ȘI când n-a plecat niciun mesaj (sub
+                      MULTUMIRI_MINIM_OAMENI pe listă), iar de atunci
+                      evenimentul nu mai apare niciodată. Cronul spune asta
+                      când nu găsește nimic — multumiriDejaTrimise()
   comentarii.php    → discuția de sub eveniment: cele două niveluri,
                       aprecierile, ștergerea cu piatră de mormânt, ȘI cum
                       arată pe ecran (HTML-ul se scrie doar aici)

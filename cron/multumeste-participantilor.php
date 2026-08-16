@@ -51,13 +51,6 @@ $inceput = time();
 
 echo '[' . date('Y-m-d H:i:s') . "] Caut evenimente încheiate fără mulțumiri…\n";
 
-$evenimente = evenimenteFaraMultumiri();
-
-if ($evenimente === []) {
-    echo "  nimic de trimis.\n";
-    exit(0);
-}
-
 /**
  * „1 eveniment", „3 evenimente", „21 de evenimente".
  *
@@ -67,6 +60,46 @@ if ($evenimente === []) {
 $cateEvenimente = static function (int $cate): string {
     return numaratoare($cate, $cate === 1 ? 'eveniment' : 'evenimente');
 };
+
+$evenimente = evenimenteFaraMultumiri();
+
+/**
+ * „Nimic de trimis" înseamnă două lucruri foarte diferite, iar până acum le
+ * spunea pe amândouă la fel.
+ *
+ * Ori chiar n-a avut loc nimic, ori evenimentele au fost servite demult și
+ * ștampila din `multumiri_trimise_la` le ține deoparte pentru totdeauna. Al
+ * doilea caz încurcă pe oricine încearcă să vadă dacă merge: pui un eveniment
+ * pe „încheiat", cronul îl consumă la prima trecere — poate fără să trimită
+ * nimic, dacă erau prea puțini oameni pe listă — iar de atunci încolo tace,
+ * orice ai mai face cu el.
+ *
+ * Deci, când n-are ce trimite, spune de ce.
+ */
+if ($evenimente === []) {
+    $servite = cateMultumiriTrimise();
+
+    if ($servite === 0) {
+        echo "  nimic de trimis: niciun eveniment încheiat fără mulțumiri.\n";
+        exit(0);
+    }
+
+    echo '  nimic de trimis. ' . $cateEvenimente($servite)
+       . " au primit deja mulțumirile:\n";
+
+    foreach (multumiriDejaTrimise() as $ev) {
+        echo '    „' . $ev['titlu'] . '" (' . $ev['data_eveniment'] . ')'
+           . ' — trimise la ' . $ev['multumiri_trimise_la'] . "\n";
+    }
+
+    echo "  Un eveniment se servește o singură dată. Ca să-l încerci din nou,\n"
+       . "  golește-i ștampila:\n"
+       . "    UPDATE evenimente SET multumiri_trimise_la = NULL WHERE slug = '…';\n"
+       . '  Și ai nevoie de cel puțin ' . MULTUMIRI_MINIM_OAMENI
+       . " oameni pe lista de participanți — sub atât nu pleacă nimic.\n";
+
+    exit(0);
+}
 
 /**
  * Încercarea uscată arată exact ce s-ar întâmpla, fără să atingă nimic: nici
