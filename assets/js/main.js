@@ -1972,6 +1972,40 @@
       });
     }
 
+    /* --------------------------- raportul ------------------------------ */
+
+    /**
+     * Steagul de raportat: o apăsare îl pune, a doua îl ia înapoi.
+     *
+     * Butonul nu se scrie deloc pentru autorul comentariului și nici pentru
+     * cine nu e conectat (vezi poateRaporta din inc/comentarii.php), deci aici
+     * nu mai e nimic de cernut — dar serverul întreabă oricum din nou.
+     *
+     * Nu se arată niciun număr: câți au raportat e treaba staff-ului. Omul vede
+     * doar dacă el însuși a raportat, din culoarea steagului.
+     */
+    function raporteaza(buton) {
+      var li = buton.closest('.comment');
+      var id = li.getAttribute('data-comentariu');
+      var vorba = buton.querySelector('[data-raport-text]');
+
+      trimiteComentariu({ fapta: 'raporteaza', id: id }, buton, null, function (c) {
+        var raportat = !!c.raportat;
+
+        buton.setAttribute('aria-pressed', String(raportat));
+        buton.classList.toggle('is-raportat', raportat);
+
+        buton.setAttribute('title', raportat
+          ? 'Ai raportat comentariul. Apasă ca să retragi.'
+          : 'Raportează comentariul');
+        buton.setAttribute('aria-label', raportat ? 'Retrage raportul' : 'Raportează comentariul');
+
+        if (vorba) vorba.textContent = raportat ? 'Raportat' : 'Raportează';
+
+        toast(c.mesaj || (raportat ? 'Comentariul a fost raportat.' : 'Ai retras raportul.'));
+      });
+    }
+
     /* ------------------ o singură ureche pentru tot --------------------- */
 
     /**
@@ -2008,6 +2042,12 @@
         }
 
         apreciaza(buton);
+        return;
+      }
+
+      /* --- raport --- */
+      if (buton.hasAttribute('data-raport')) {
+        raporteaza(buton);
         return;
       }
 

@@ -128,6 +128,10 @@ switch ($fapta) {
         apreciazaComentariul($date, $eveniment, $membruId);
         break;
 
+    case 'raporteaza':
+        raporteazaComentariul($date, $eveniment, $membruId);
+        break;
+
     default:
         raspunsJson(['ok' => false, 'mesaj' => 'Nu știu ce să fac cu asta.'], 422);
 }
@@ -359,6 +363,52 @@ function stergeComentariul(array $date, array $eveniment, int $membruId, bool $e
 }
 
 /* -------------------------- d) aprecierea ---------------------------- */
+
+/**
+ * Raportează un comentariu, sau ia raportul înapoi.
+ *
+ * Un singur buton pentru amândouă: spre server pleacă „am apăsat", nu „vreau
+ * să raportez". Starea adevărată o știe baza, deci o filă rămasă deschisă de
+ * ieri nu poate cere altceva decât se cuvine.
+ *
+ * CINE ARE VOIE se hotărăște cu poateRaporta(), aceeași funcție care hotărăște
+ * și dacă butonul se scrie în pagină. În pagină butonul nici nu apare pentru
+ * autorul comentariului — dar asta e purtare frumoasă, nu pază: cererea de
+ * față poate veni de oriunde, cu orice id în ea.
+ *
+ * Numărul rapoartelor NU se întoarce. Nu se arată nimănui în pagină: un contor
+ * la vedere ar fi devenit o unealtă de rușinare publică, și încă una ușor de
+ * umflat de câțiva prieteni. Omul află doar dacă el însuși a raportat.
+ */
+function raporteazaComentariul(array $date, array $eveniment, int $membruId): void
+{
+    $comentariu = comentariulCerut($date['id'] ?? 0, (int) $eveniment['id']);
+
+    if (!poateRaporta($comentariu, $membruId)) {
+        /**
+         * Un singur mesaj pentru amândouă piedicile — al lui, sau golit.
+         *
+         * Nu e nimic de ascuns aici (comentariul se vede oricum pe pagină), dar
+         * nici n-are rost să numărăm motivele: cine ajunge aici a trimis cererea
+         * de mână, iar cine apasă butonul din pagină nu ajunge niciodată.
+         */
+        raspunsJson([
+            'ok'    => false,
+            'mesaj' => 'Comentariul ăsta nu poate fi raportat.',
+        ], 403);
+    }
+
+    $rezultat = comutaRaport((int) $comentariu['id'], $membruId);
+
+    raspunsJson([
+        'ok'       => true,
+        'id'       => (int) $comentariu['id'],
+        'raportat' => $rezultat['raportat'],
+        'mesaj'    => $rezultat['raportat']
+            ? 'Mulțumim. Comentariul a fost trimis spre verificare.'
+            : 'Ai retras raportul.',
+    ]);
+}
 
 function apreciazaComentariul(array $date, array $eveniment, int $membruId): void
 {
