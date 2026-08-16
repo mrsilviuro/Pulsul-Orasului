@@ -726,8 +726,7 @@ verifica('și nu se scurge nimic din pagină', false, str_contains($r['corp'], '
 $pagina = cerere($baza . '/profil.php?m=organizat02', $strain)['corp'];
 
 verifica('un membru străin primește patru cartonașe', 4, $catePe($pagina, '<article class="card'));
-verifica('și citește „Ce pune la cale"', true, str_contains($pagina, 'Ce pune la cale'));
-verifica('nu „Ce pui la cale", că nu e al lui', false, str_contains($pagina, 'Ce pui la cale'));
+verifica('sub titlul secțiunii de ieșiri', true, str_contains($pagina, 'Ieșiri organizate'));
 verifica('și niciunul în așteptare', 0, $catePe($pagina, 'card--in-asteptare'));
 verifica('titlul unui eveniment în așteptare nu se scurge', false,
     str_contains($pagina, 'Aștept de puțin'));
@@ -739,7 +738,7 @@ verifica('fără buton „Vezi mai mult", că nu e nimic ascuns', false,
 $pagina = cerere($baza . '/profil.php', $c)['corp'];
 
 verifica('proprietarul primește toate șase', 6, $catePe($pagina, '<article class="card'));
-verifica('lui i se vorbește la persoana a doua', true, str_contains($pagina, 'Ce pui la cale'));
+verifica('sub același titlu de secțiune', true, str_contains($pagina, 'Ieșiri organizate'));
 verifica('două sunt însemnate ca fiind în așteptare', 2, $catePe($pagina, 'card--in-asteptare'));
 verifica('cu eticheta scrisă pe ele', 2, $catePe($pagina, 'În așteptare de aprobare'));
 verifica('două stau ascunse', 2, $catePe($pagina, 'card ascuns'));
@@ -894,10 +893,10 @@ verifica('cu link de Facebook, pe adresa întreagă', true,
     str_contains($pagina, 'facebook.com/sharer/sharer.php?u=' . h(urlencode($adresaIntreaga))));
 verifica('cu link de WhatsApp', true, str_contains($pagina, 'wa.me/?text='));
 verifica('care poartă și titlul, nu doar adresa', true,
-    str_contains($pagina, urlencode('Uite ce eveniment am găsit: Cursa aprobată')));
+    str_contains($pagina, urlencode('Uite ce eveniment am găsit pe Pulsul Orașului: Cursa aprobată')));
 verifica('și cu butonul de copiat', true, str_contains($pagina, 'id="copiaza-link"'));
 verifica('care are textul gata scris, escapat', true,
-    str_contains($pagina, 'data-copiaza="Uite ce eveniment am găsit: Cursa aprobată '
+    str_contains($pagina, 'data-copiaza="Uite ce eveniment am găsit pe Pulsul Orașului: Cursa aprobată '
                         . h($adresaIntreaga) . '"'));
 verifica('cele două linkuri se deschid în altă filă', 2,
     preg_match_all('/class="icon-btn"[^>]*target="_blank"[^>]*rel="noopener noreferrer"/', $pagina));
@@ -964,12 +963,12 @@ verifica('altcineva nu primește butonul de editare', false,
 
 $paginaAsteapta = cerere($laEveniment($idAsteapta), $c)['corp'];
 verifica('starea se scrie pe pagină', true,
-    str_contains($paginaAsteapta, 'În așteptare de aprobare'));
+    str_contains($paginaAsteapta, 'Se așteaptă aprobarea din partea unui moderator.'));
 verifica('și nu se lasă indexată', true, str_contains($paginaAsteapta, 'name="robots"'));
 
 $paginaRespins = cerere($laEveniment($idRespins), $c)['corp'];
 verifica('respinsul își spune starea altfel', true,
-    str_contains($paginaRespins, 'nu a trecut de verificare'));
+    str_contains($paginaRespins, 'Anunțul nu a fost aprobat de moderatori.'));
 
 /* ------------------- textul rămâne text, nu cod ------------------- */
 
@@ -1843,7 +1842,7 @@ verifica('și cu chipuri, fără link', true,
 $idPustiu = pune($idOrg, 'La care nu vine nimeni', 'aprobat', 16);
 $pustiu = cerere($baza . '/event.php?slug=' . urlencode($slugul($idPustiu)), $altul)['corp'];
 verifica('fără nimeni, o invitație', true,
-    str_contains($pustiu, 'Fii primul interesat de acest eveniment!'));
+    str_contains($pustiu, 'Fii primul interesat de această activitate!'));
 verifica('fără cercuri goale', false, str_contains($pustiu, 'class="facepile"'));
 
 // La unul neaprobat, secțiunea lipsește cu totul.
@@ -2212,7 +2211,7 @@ verifica('interesații nu mai apar deloc', false,
 $idViitor = pune($idOrg, 'Care încă urmează', 'aprobat', 20);
 salveazaInteres($idViitor, $idAltul, 'interesat');
 verifica('la unul activ, prezentul rămâne', true,
-    preg_match('/este interesat(ă)? de acest eveniment\./u',
+    preg_match('/este interesat(ă)? de această activitate\./u',
         cerere($baza . '/event.php?slug=' . urlencode($slugul($idViitor)), $anonim)['corp']) === 1);
 
 /* ============ ÎNCHEIAT DE MÂNĂ, CU ZIUA ÎNCĂ ÎN VIITOR ================

@@ -487,6 +487,104 @@ verifica('și fără drum spre profil', false,
 verifica('nici insigna de participant nu mai stă pe el', 0,
     substr_count($htmlDupa, '<span class="badge">Participant</span>'));
 
+/* ========================== RAPOARTELE ============================== */
+
+echo "\n=== RAPOARTELE ===\n";
+
+$deRaportat = salveazaComentariu($evenimentId, $participant, 'Un comentariu de raportat.');
+$alRaportat = comentariuDupaId($deRaportat);
+
+/* --- cine poate raporta --- */
+
+verifica('un străin poate raporta',  true,  poateRaporta($alRaportat, $strain));
+verifica('și staff-ul poate',        true,  poateRaporta($alRaportat, $staff));
+verifica('AUTORUL nu poate',         false, poateRaporta($alRaportat, $participant));
+verifica('nici cine nu e conectat',  false, poateRaporta($alRaportat, 0));
+
+/* Un comentariu golit n-are ce să fie raportat. */
+$golit = salveazaComentariu($evenimentId, $participant, 'Ăsta se golește.');
+salveazaComentariu($evenimentId, $strain, 'Un răspuns, ca să rămână piatra.', [
+    'id' => $golit, 'parinte_id' => null, 'membru_id' => $participant,
+]);
+stergeComentariu(comentariuDupaId($golit));
+verifica('un comentariu golit nu se raportează', false,
+    poateRaporta(comentariuDupaId($golit), $strain));
+
+/* --- comutarea --- */
+
+verifica('la început, niciun raport', 0, numaraRapoarte($deRaportat));
+
+$r = comutaRaport($deRaportat, $strain);
+verifica('prima apăsare raportează', true, $r['raportat']);
+verifica('și se numără',             1,    numaraRapoarte($deRaportat));
+
+$r = comutaRaport($deRaportat, $strain);
+verifica('a doua îl ia înapoi', false, $r['raportat']);
+verifica('și numărul scade',    0,     numaraRapoarte($deRaportat));
+
+/**
+ * Doi oameni, două rapoarte care nu se calcă.
+ *
+ * Ăsta e motivul pentru care rapoartele stau într-un tabel, nu într-o coloană
+ * pe comentariu: cu un simplu semn, al doilea om care apasă l-ar fi stins pe
+ * al primului.
+ */
+comutaRaport($deRaportat, $strain);
+comutaRaport($deRaportat, $staff);
+verifica('doi oameni, două rapoarte', 2, numaraRapoarte($deRaportat));
+
+comutaRaport($deRaportat, $strain);
+verifica('unul îl retrage, al celuilalt rămâne', 1, numaraRapoarte($deRaportat));
+
+/* --- cum arată pe ecran --- */
+
+$htmlStrainRap = randeazaComentarii(
+    grupeazaComentarii(comentariileEvenimentului($evenimentId, $strain)),
+    context($eveniment, $strain));
+
+verifica('străinul vede steagul', true, str_contains($htmlStrainRap, 'data-raport'));
+
+$htmlAutor = randeazaComentarii(
+    grupeazaComentarii(comentariileEvenimentului($evenimentId, $participant)),
+    context($eveniment, $participant));
+
+/**
+ * Autorul nu-l vede pe al lui. Are alte comentarii pe pagină, ale altora, deci
+ * se caută anume în rândul lui.
+ */
+$randulLui = '';
+foreach (explode('data-comentariu="', $htmlAutor) as $bucata) {
+    if (str_starts_with($bucata, (string) $deRaportat . '"')) { $randulLui = $bucata; break; }
+}
+
+verifica('am găsit rândul autorului', true, $randulLui !== '');
+verifica('iar el NU are steag pe comentariul lui', false,
+    str_contains(explode('</article>', $randulLui)[0], 'data-raport'));
+
+/* Steagul aprins pentru cine a raportat deja. */
+comutaRaport($deRaportat, $strain);
+
+$htmlDupaRaport = randeazaComentarii(
+    grupeazaComentarii(comentariileEvenimentului($evenimentId, $strain)),
+    context($eveniment, $strain));
+
+verifica('cine a raportat vede steagul aprins', true,
+    str_contains($htmlDupaRaport, 'is-raportat'));
+verifica('și butonul o spune și cu vorba', true,
+    str_contains($htmlDupaRaport, 'aria-pressed="true"'));
+
+/* Numărul NU se arată nicăieri: e treaba staff-ului. */
+verifica('numărul rapoartelor nu ajunge în pagină', false,
+    str_contains($htmlDupaRaport, 'data-raport-count'));
+
+/* Ștergerea comentariului își ia rapoartele cu ea, în cascadă. */
+$idCuRaport = salveazaComentariu($evenimentId, $participant, 'Ăsta se șterge de tot.');
+comutaRaport($idCuRaport, $strain);
+verifica('are un raport', 1, numaraRapoarte($idCuRaport));
+
+stergeComentariu(comentariuDupaId($idCuRaport));
+verifica('șters de tot, rapoartele pleacă în cascadă', 0, numaraRapoarte($idCuRaport));
+
 /* =========================== curățenie ============================= */
 
 curata();

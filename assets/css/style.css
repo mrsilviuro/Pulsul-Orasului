@@ -1283,6 +1283,32 @@ main { padding-block: 46px 64px; }
 .comment__tool[aria-pressed="true"] { color: var(--brand); }
 .comment__tool[aria-pressed="true"] .ico { fill: var(--brand-soft); }
 
+/* --- Steagul de raportat -------------------------------------------------
+   Ultimul din rând și cel mai șters: e o faptă rară, nu una de îndemnat.
+   Pentru autorul comentariului nu se scrie deloc în pagină (vezi
+   poateRaporta din inc/comentarii.php), deci n-are stare „stinsă".
+
+   Nu poartă niciun număr, spre deosebire de aprecieri: câți au raportat e
+   treaba staff-ului. Un contor la vedere ar fi devenit o unealtă de rușinare
+   publică, și încă una ușor de umflat de câțiva prieteni. */
+.comment__tool--raport { position: relative; margin-left: auto; opacity: .55; }
+.comment__tool--raport:hover,
+.comment__tool--raport:focus-visible { opacity: 1; }
+
+/* Degetul apucă mai mult decât se vede.
+   Steagul e singura unealtă fără text lângă el, deci și cea mai mică: 27×17px
+   pe telefon, sub orice prag de apăsat cu degetul. Suprafața de dedesubt îl
+   duce pe la 39×35 fără să miște nimic în rând — o umflare din `padding` ar fi
+   crescut înălțimea rândului de unelte la toate comentariile.
+   Marginea laterală (6px) rămâne sub spațiul dintre unelte (14px), ca să nu
+   fure apăsarea vecinului. */
+.comment__tool--raport::after { content: ''; position: absolute; inset: -9px -6px; }
+
+/* Raportat de mine: steagul se umple, ca să se vadă dintr-o privire că
+   apăsarea următoare îl ia înapoi. */
+.comment__tool--raport.is-raportat { opacity: 1; color: var(--brand); }
+.comment__tool--raport.is-raportat .ico { fill: var(--brand-soft); }
+
 /* Comentariile ascunse până la „Vezi mai multe" (main.js pune `hidden`).
    Scris pe față, nu lăsat pe seama purtării implicite a atributului: e prea
    ușor ca o regulă viitoare cu `display` pe .comment să-l stingă în tăcere. */

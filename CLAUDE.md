@@ -164,7 +164,14 @@ inc/
                       când nu găsește nimic — multumiriDejaTrimise()
   comentarii.php    → discuția de sub eveniment: cele două niveluri,
                       aprecierile, ștergerea cu piatră de mormânt, ȘI cum
-                      arată pe ecran (HTML-ul se scrie doar aici)
+                      arată pe ecran (HTML-ul se scrie doar aici). TOT AICI
+                      raportarea: poateRaporta() (oricine e conectat, în afară
+                      de autorul comentariului — lui nu i se scrie steagul
+                      deloc) și comutaRaport() (apasă = raportează, apasă iar =
+                      retrage). NUMĂRUL rapoartelor nu ajunge niciodată în
+                      pagină: omul vede doar dacă EL a raportat.
+                      numaraRapoarte() există pentru lista de mai târziu a
+                      staff-ului
   afisare-eveniment.php → CUM ARATĂ un eveniment pe ecran (antet, copertă,
                       caseta cu detalii, descrierea). Folosit și de event.php,
                       și de previzualizare.php — schimbă aici, nu în pagini
@@ -195,7 +202,8 @@ sql/                → schema.sql + migrări numerotate (002, 003, 004, 005-goo
                       011-anulare-eveniment, 012-oras-eveniment,
                       013-interese-evenimente, 014-incheiere-eveniment,
                       015-comentarii, 016-excluderi-evenimente, 017-evaluari,
-                      018-multumiri-eveniment, 019-newsletter)
+                      018-multumiri-eveniment, 019-newsletter,
+                      020-rapoarte-comentarii)
 teste/              → test-validare.php (verificările din inc/validare.php)
                       test-comentarii.php, test-participanti.php,
                       test-evaluari.php, test-multumiri.php
@@ -286,8 +294,11 @@ assets/css/style.css, assets/js/main.js, assets/img/
   scos de pe listă și vestea că un eveniment s-a anulat
   (api/anuleaza-eveniment.php). Cine primește un răspuns la comentariu nu vede
   decât dacă se întoarce singur pe pagină
-- Comentariile: nu există raportare și nici pagină de moderare. Staff-ul umblă
-  la ele de pe pagina evenimentului, ca oricare autor
+- Comentariile se pot raporta (steagul de la capătul rândului de unelte), dar
+  rapoartele nu se văd nicăieri: nu există pagină care să le adune, deci
+  singurul fel de a afla ce s-a raportat e `SELECT` pe `comentarii_rapoarte`
+  din phpMyAdmin. Nici pagină de moderare a comentariilor nu există — staff-ul
+  umblă la ele de pe pagina evenimentului, ca oricare autor
 - Notele nu se pot retrage și nici raporta. Cine a primit o stea pe nedrept nu
   are cui să spună — nu există pagină de moderare a evaluărilor. Nici
   „Nu s-a prezentat" nu se ia înapoi: e definitivă, dinadins, ca organizatorul

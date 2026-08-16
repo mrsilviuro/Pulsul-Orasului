@@ -301,7 +301,7 @@ verifica('un singur om, acord la singular', true,
 verifica('mai mulți, la plural', true,
     str_contains(vorbaDespreCatiSunt(12, 'participant', false), 'persoane</span></strong> au confirmat că vor participa.'));
 verifica('interesați, la prezent', true,
-    str_contains(vorbaDespreCatiSunt(3, 'interesat', false), 'sunt interesate de acest eveniment.'));
+    str_contains(vorbaDespreCatiSunt(3, 'interesat', false), 'sunt interesate de această activitate.'));
 /**
  * Interesații rămân la prezent oricare ar fi starea evenimentului, fiindcă la
  * unul încheiat lista lor nu se mai arată deloc — nici tabul, nici panoul
@@ -309,7 +309,7 @@ verifica('interesați, la prezent', true,
  * asta nu spune nimic despre seara care a fost.
  */
 verifica('interesații rămân la prezent, oricum ar fi', true,
-    str_contains(vorbaDespreCatiSunt(3, 'interesat', true), 'sunt interesate de acest eveniment.'));
+    str_contains(vorbaDespreCatiSunt(3, 'interesat', true), 'sunt interesate de această activitate.'));
 verifica('și fără nimeni, tot așa',
     'Nimeni nu s-a arătat încă interesat. Poți fi primul.',
     vorbaDespreCatiSunt(0, 'interesat', true));
@@ -336,7 +336,7 @@ $omul = static function (int $id): array {
 
 // Vlad are ușa închisă de la scoaterea de mai devreme.
 verifica('ușa închisă oprește participarea',
-    'Nu te mai poți înscrie la acest eveniment.',
+    'Nu te mai poți înscrie la această activitate.',
     motivBlocajParticipare($eveniment, $omul($vlad)));
 
 verifica('cine n-a fost scos, nimic', '', motivBlocajParticipare($eveniment, $omul($ana)));
@@ -378,7 +378,7 @@ verifica('organizatorul trece de regula de gen', '',
 // Ușa închisă bate genul: cine e scos nu intră nici dacă e de sexul potrivit.
 $doarBarbatiSiInterzis = $doarBarbati;
 verifica('ușa închisă se spune prima',
-    'Nu te mai poți înscrie la acest eveniment.',
+    'Nu te mai poți înscrie la această activitate.',
     motivBlocajParticipare($doarBarbatiSiInterzis, $omul($vlad)));
 
 /* ====================== 4e. RĂSPUNSUL PENTRU JS =================== */

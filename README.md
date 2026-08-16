@@ -1984,6 +1984,46 @@ zece.
 Vizitatorul neconectat vede butonul și numărul — e o veste bună pentru discuție
 — dar apăsarea îl duce la `login.php`, cu întoarcere fix pe evenimentul ăsta.
 
+### Raportarea
+
+Un steag mic, la capătul rândului de unelte. Apeși — comentariul e raportat;
+apeși iar — raportul se retrage. Rândurile stau în `comentarii_rapoarte`
+(`sql/020`), cu perechea (comentariu, om) drept cheie primară, iar comutarea se
+face cu exact pattern-ul de la aprecieri: se încearcă întâi `DELETE`, iar dacă
+n-a șters nimic, se scrie acum. Serverul primește „s-a apăsat", nu „raportează"
+— o filă rămasă deschisă de ieri nu poate cere o stare care între timp s-a
+schimbat.
+
+De ce un tabel și nu o coloană `raportat` pe comentariu, cum ar fi fost mai la
+îndemână: fiindcă raportul se ia înapoi. Cu un singur semn, al doilea om care
+apasă l-ar fi stins pe al primului, iar același om ar fi putut apăsa de o sută
+de ori.
+
+**Numărul rapoartelor nu ajunge niciodată în pagină.** Omul vede doar dacă
+_el_ a raportat; câți au raportat e treaba staff-ului. Un contor la vedere ar fi
+devenit o unealtă de rușinare publică, și încă una ușor de umflat de câțiva
+prieteni. `numaraRapoarte()` există, dar deocamdată n-o cheamă decât viitoarea
+listă de moderare.
+
+Cine vede steagul:
+
+| Cine | Vede steagul |
+|---|---|
+| vizitator neconectat | nu |
+| autorul comentariului | nu |
+| oricine altcineva, conectat | da |
+| staff | da (n-are drepturi în plus aici) |
+
+Pentru autor nu se scrie deloc în HTML, nu se desenează stins: un buton care
+spune „nu poți" ar fi fost o invitație în plus la o faptă pe care n-o cere
+nimeni. Regula e una singură, `poateRaporta()` — o cheamă și randarea, și
+`api/comentarii.php`, care întreabă din nou tot ce s-a întrebat în pagină.
+
+Un comentariu **golit** (piatră de mormânt) nu se mai raportează: n-a mai rămas
+nimic de citit acolo. Rapoartele lui rămân însă în bază — staff-ul are dreptul
+să vadă ce s-a raportat, chiar dacă autorul a șters între timp. Abia ștergerea
+de tot a comentariului le duce cu ea, în cascadă.
+
 ### Ștergerea, și de ce nu e mereu o ștergere
 
 | Ce se șterge | Ce se întâmplă |
@@ -2013,7 +2053,7 @@ garantează nimic. Ștergerea răspunsurilor odată cu principalul o face
 
 ### Staff-ul
 
-Cine are `1` în `membri.este_staff` poate edita și șterge orice comentariu, ca
+Cine are altceva decât `0` în `membri.este_staff` poate edita și șterge orice comentariu, ca
 și cum ar fi al lui. Aceeași funcție hotărăște și dacă butonul se desenează în
 pagină, și dacă cererea trece prin API:
 

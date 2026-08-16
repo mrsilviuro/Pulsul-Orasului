@@ -62,6 +62,12 @@ function comentariileEvenimentului(int $evenimentId, int $membruId = 0): array
                 (SELECT COUNT(*) FROM comentarii_aprecieri a
                   WHERE a.comentariu_id = c.id AND a.membru_id = ?) AS apreciat,
 
+                -- Dacă EU am raportat comentariul ăsta. Numărul rapoartelor nu
+                -- se aduce dinadins: nu se arată nimănui în pagină (vezi
+                -- sql/020-rapoarte-comentarii.sql), deci n-are ce căuta aici.
+                (SELECT COUNT(*) FROM comentarii_rapoarte r
+                  WHERE r.comentariu_id = c.id AND r.membru_id = ?) AS raportat,
+
                 -- Insigna „Participant". Se citește din același tabel din care
                 -- se numără participanții de pe butoane, ca să nu spună două
                 -- lucruri diferite despre același om.
@@ -76,7 +82,7 @@ function comentariileEvenimentului(int $evenimentId, int $membruId = 0): array
           ORDER BY c.id'
     );
 
-    $q->execute([$membruId, $evenimentId]);
+    $q->execute([$membruId, $membruId, $evenimentId]);
 
     return $q->fetchAll();
 }
@@ -403,6 +409,84 @@ function comutaApreciere(int $comentariuId, int $membruId): array
     return ['apreciat' => $apreciat, 'cate' => (int) $q->fetchColumn()];
 }
 
+/* ============================== RAPOARTELE =========================== */
+
+/**
+ * Are omul ăsta de unde raporta comentariul ăsta?
+ *
+ * Trei condiții, toate din bun-simț:
+ *
+ *   - trebuie să fie CONECTAT. Un raport anonim n-ar putea fi nici luat
+ *     înapoi, nici cântărit de staff: cinci rapoarte de la același om, de pe
+ *     cinci file, arată ca cinci oameni;
+ *   - NU POATE FI AL LUI. Cine nu-și mai vrea comentariul îl șterge — are
+ *     butonul alături. Un buton de raportat pe propria vorbă n-ar duce
+ *     nicăieri și ar cere staff-ului să citească o pâră a omului despre el
+ *     însuși;
+ *   - comentariul să nu fie deja GOLIT. La o piatră de mormânt („Acest
+ *     comentariu a fost șters") nu mai e nimic de citit și nimic de raportat.
+ *
+ * Aceeași funcție hotărăște și dacă se scrie butonul în pagină, și dacă trece
+ * cererea prin api/comentarii.php. Un singur loc, două uși.
+ */
+function poateRaporta(array $comentariu, int $membruId): bool
+{
+    if ($membruId <= 0) {
+        return false;
+    }
+
+    if ((int) ($comentariu['sters'] ?? 0) === 1) {
+        return false;
+    }
+
+    return (int) $comentariu['membru_id'] !== $membruId;
+}
+
+/**
+ * Raportează comentariul, sau ia raportul înapoi dacă era deja dat.
+ *
+ * Un singur buton pentru amândouă, ca la apreciere: spre server pleacă „am
+ * apăsat", nu „vreau să raportez". Așa o filă rămasă deschisă de ieri nu poate
+ * cere altceva decât se cuvine — starea adevărată o știe baza, nu browserul.
+ *
+ * Întoarce dacă e raportat ACUM. Numărul rapoartelor nu se întoarce: nu se
+ * arată nimănui în pagină. Un contor la vedere ar fi devenit o unealtă de
+ * rușinare publică, și încă una ușor de umflat de câțiva prieteni.
+ */
+function comutaRaport(int $comentariuId, int $membruId): array
+{
+    $sters = db()->prepare(
+        'DELETE FROM comentarii_rapoarte WHERE comentariu_id = ? AND membru_id = ?'
+    );
+    $sters->execute([$comentariuId, $membruId]);
+
+    $raportat = $sters->rowCount() === 0;
+
+    if ($raportat) {
+        db()->prepare(
+            'INSERT IGNORE INTO comentarii_rapoarte (comentariu_id, membru_id, creat_la)
+             VALUES (?,?,?)'
+        )->execute([$comentariuId, $membruId, acum()]);
+    }
+
+    return ['raportat' => $raportat];
+}
+
+/**
+ * Câte rapoarte are un comentariu.
+ *
+ * Nu se cheamă de nicăieri din pagină — numărul nu se arată — dar e cifra de
+ * care va avea nevoie lista de moderare, și e mai bine să stea aici, lângă
+ * celelalte, decât să fie scrisă atunci într-un SELECT de pe altă pagină.
+ */
+function numaraRapoarte(int $comentariuId): int
+{
+    $q = db()->prepare('SELECT COUNT(*) FROM comentarii_rapoarte WHERE comentariu_id = ?');
+    $q->execute([$comentariuId]);
+
+    return (int) $q->fetchColumn();
+}
+
 /* ========================= CUM SE ARATĂ PE ECRAN ====================== */
 
 /** Contul din spatele comentariului mai e al cuiva? */
@@ -689,6 +773,36 @@ function randeazaUneltele(array $c, array $context): string
     if ($alMeu || !empty($context['e_staff'])) {
         $unelte .= '<button class="comment__tool" type="button" data-edit>Editează</button>'
                  . '<button class="comment__tool comment__tool--sterge" type="button" data-delete>Șterge</button>';
+    }
+
+    /**
+     * Steagul de raportat, la capătul rândului.
+     *
+     * Nu se scrie deloc pentru cine n-are ce raporta — nici pentru autorul
+     * comentariului, nici pentru cine nu e conectat. Un buton stins, care
+     * spune „nu poți", ar fi fost o invitație în plus la o faptă pe care n-o
+     * cere nimeni.
+     *
+     * E ultimul din rând, dinadins: „Apreciază" și „Răspunde" sunt lucruri pe
+     * care le faci des, ăsta e unul pe care îl faci rar. Iar semnul lui e mic
+     * și fără număr — vezi comutaRaport().
+     */
+    if (poateRaporta($c, (int) $context['membru_id'])) {
+        $raportat = (int) ($c['raportat'] ?? 0) > 0;
+
+        $unelte .= '<button class="comment__tool comment__tool--raport'
+                 . ($raportat ? ' is-raportat' : '') . '" type="button" data-raport'
+                 . ' aria-pressed="' . ($raportat ? 'true' : 'false') . '"'
+                 . ' title="' . ($raportat ? 'Ai raportat comentariul. Apasă ca să retragi.'
+                                           : 'Raportează comentariul') . '"'
+                 . ' aria-label="' . ($raportat ? 'Retrage raportul' : 'Raportează comentariul') . '">'
+                 . '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">'
+                 . '<path d="M5 21V4"/>'
+                 . '<path d="M5 4.8h9.6l-.9 3.4h5.1l-1.2 5.2H5"/>'
+                 . '</svg>'
+                 . '<span class="sr-only" data-raport-text>'
+                 . ($raportat ? 'Raportat' : 'Raportează') . '</span>'
+                 . '</button>';
     }
 
     return '<div class="comment__tools">' . $unelte . '</div>';
