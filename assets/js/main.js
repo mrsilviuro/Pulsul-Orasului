@@ -4504,12 +4504,18 @@
     newsForm.addEventListener('submit', function (e) {
       e.preventDefault();
 
-      var bifa = document.getElementById('st-newsletter');
+      var bifa    = document.getElementById('st-newsletter');
+      var bifaCom = document.getElementById('st-comentarii');
 
       trimiteSetare(newsForm, newsForm.querySelector('button[type=submit]'),
-        { sectiune: 'newsletter', newsletter: bifa.checked ? '1' : '' },
+        {
+          sectiune: 'newsletter',
+          newsletter: bifa && bifa.checked ? '1' : '',
+          // Bifa a doua e citită la fel: netrimisă înseamnă „nu vreau".
+          email_comentarii: bifaCom && bifaCom.checked ? '1' : ''
+        },
         function (c) {
-          if (!c.ok) { toast(c.mesaj || 'Nu am putut salva preferința.'); return; }
+          if (!c.ok) { toast(c.mesaj || 'Nu am putut salva preferințele.'); return; }
           toast(c.mesaj || 'Salvat.');
         });
     });

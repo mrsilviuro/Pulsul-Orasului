@@ -1271,7 +1271,19 @@ main { padding-block: 46px 64px; }
   color: var(--text);
 }
 
-.comment__tools { display: flex; align-items: center; gap: 14px; margin-top: 8px; }
+/* Rândul de unelte de sub un comentariu.
+   `flex-wrap` nu e o înfrumusețare, e ce ține pagina în ecran. Fără el, rândul
+   întreg (apreciere, Răspunde, Editează, Șterge, steag) nu se poate rupe, deci
+   lățimea lui minimă e suma butoanelor — iar ea urcă din părinte în părinte
+   până la lista de comentarii, care se umflă și duce toată pagina la derulare
+   pe orizontală. Se vedea pe telefon, la un răspuns (care mai are și 50px de
+   retragere), unde steagul ieșea din ecran.
+   Spațiul e scris pe două valori: 6px între rânduri, când se rupe, și 12px
+   între butoane. */
+.comment__tools {
+  display: flex; align-items: center; flex-wrap: wrap;
+  gap: 6px 12px; margin-top: 8px;
+}
 .comment__tool {
   display: inline-flex; align-items: center; gap: 5px;
   font-size: 13px; font-weight: 600;
@@ -1604,6 +1616,15 @@ html.cu-lupa, html.cu-lupa body { overflow: hidden; }
   /* Pe telefon, chipul e tot 38px, dar indentarea de 68px ar fi lăsat
      răspunsurilor o coloană de câteva cuvinte. */
   .comment__replies { margin-left: 20px; padding-left: 12px; }
+  /* Uneltele stau mai strânse: pe lățimea unui telefon, cinci butoane cu 12px
+     între ele se rup pe două rânduri la aproape fiecare comentariu. Cu 8px
+     încap pe unul singur, iar acolo unde tot nu încap se rup — nu ies. */
+  .comment__tools { gap: 6px 8px; }
+  /* Steagul nu mai e împins în marginea din dreapta: pe un rând care se poate
+     rupe, marginea automată îl lăsa singur la capătul primului rând, în timp
+     ce „Șterge" cobora pe al doilea — arăta ca o greșeală. Aici merge după
+     celelalte, în rând, și se rupe odată cu ele. */
+  .comment__tool--raport { margin-left: 0; }
   .tab { padding: 11px 12px; font-size: 14px; }
 }
 
@@ -3589,6 +3610,11 @@ body { overscroll-behavior-y: none; }
    care își aduce propria linie de sus. Aici zona are deja una, iar două linii
    una sub alta arată ca o greșeală. */
 .zona-anulare .stergere-confirm { margin-top: 0; padding-top: 0; border-top: 0; }
+
+/* Ce rămâne în locul butonului după ce evenimentul a început. Aceeași linie de
+   sus, ca zona să nu-și schimbe forma — doar un rând de explicație în locul
+   apăsării, fără roșu: nu s-a stricat nimic, doar a trecut ora. */
+.zona-anulare--trecut { font-size: 14.5px; line-height: 1.6; color: var(--text-faint); }
 
 /* Cele două butoane de sub formular. Pe ecran lat stau unul lângă altul,
    „Previzualizează" mai șters: e o privire, nu o hotărâre. */

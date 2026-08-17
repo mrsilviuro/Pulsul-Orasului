@@ -4,8 +4,8 @@ declare(strict_types=1);
 /**
  * PulsulOrasului.Ro — comentariile de sub un eveniment.
  *
- * Patru lucruri se pot cere de aici: scrierea unui comentariu (principal sau
- * răspuns), corectura, ștergerea și aprecierea.
+ * Cinci lucruri se pot cere de aici: scrierea unui comentariu (principal sau
+ * răspuns), corectura, ștergerea, aprecierea și raportarea.
  *
  * Comentariul se întoarce mereu GATA DESENAT, din aceleași funcții care îl
  * scriu la încărcarea paginii (inc/comentarii.php). Nu se lipește HTML în JS:
@@ -16,6 +16,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../inc/comentarii.php';
 require_once __DIR__ . '/../inc/interese.php';
+require_once __DIR__ . '/../inc/email.php';
 
 /**
  * Cât se așteaptă între două comentarii ale aceluiași om.
@@ -264,6 +265,20 @@ function adaugaComentariul(array $date, array $eveniment, int $membruId, bool $e
 
     $rand = $desenat['rand'];
 
+    /**
+     * Vestea pleacă DUPĂ ce comentariul e scris în bază, niciodată înainte.
+     *
+     * Aceeași ordine ca la anularea unui eveniment: un e-mail trimis peste o
+     * scriere care apoi pică ar trimite omul la un comentariu care nu există.
+     * Invers, dacă scrierea reușește și mesajul nu pleacă, comentariul e tot
+     * acolo — se vede pe pagină, ca înainte de a exista înștiințarea asta.
+     *
+     * De aceea nici nu oprim răspunsul dacă mesajul n-a plecat: cel care a
+     * scris n-are nicio vină și n-are ce face cu o eroare despre serverul de
+     * e-mail. Comentariul lui e publicat; ce n-a mers ajunge în log.
+     */
+    instiinteazaDeComentariu($eveniment, $rand, $catre, $membruId);
+
     raspunsJson([
         'ok'     => true,
         'id'     => $id,
@@ -275,6 +290,43 @@ function adaugaComentariul(array $date, array $eveniment, int $membruId, bool $e
         'numar'  => numaraComentarii($evenimentId),
         'mesaj'  => $catre === null ? 'Comentariul tău a fost publicat.' : 'Răspunsul tău a fost publicat.',
     ]);
+}
+
+/**
+ * Dă de veste omului pe care îl privește comentariul tocmai scris.
+ *
+ * CINE E ACELA se hotărăște în omDeInstiintatLaComentariu() (inc/comentarii.php)
+ * — organizatorul la un comentariu principal, cel căruia i se răspunde la un
+ * răspuns — și tot acolo se citește bifa din setări. Aici se compune adresa și
+ * se trimite, fiindcă asta e treaba unui punct de intrare, nu a stratului care
+ * atinge baza.
+ *
+ * Adresa duce fix la comentariu, cu ancoră: „#c123" e id-ul pus pe articol în
+ * randeazaComentariu(). Fără ea, omul ar fi aterizat în capul unei pagini
+ * lungi și ar fi trebuit să caute singur ce i s-a scris.
+ *
+ * Nu întoarce nimic și nu oprește nimic: un mesaj care nu pleacă nu are voie
+ * să strice publicarea unui comentariu.
+ */
+function instiinteazaDeComentariu(array $eveniment, array $rand, ?array $catre, int $autorId): void
+{
+    $om = omDeInstiintatLaComentariu($eveniment, $autorId, $catre);
+
+    if ($om === null) {
+        return;
+    }
+
+    $adresa = urlIntreg(urlEveniment((string) $eveniment['slug'])) . '#c' . (int) $rand['id'];
+
+    emailComentariuNou(
+        (string) $om['email'],
+        (string) $om['prenume'],
+        $catre === null ? 'comentariu' : 'raspuns',
+        numeleDinComentariu($rand),
+        (string) $eveniment['titlu'],
+        (string) $rand['text'],
+        $adresa
+    );
 }
 
 /* -------------------------- b) corectura ----------------------------- */

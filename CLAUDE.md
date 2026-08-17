@@ -129,7 +129,13 @@ inc/
                       bază. TOT AICI cele două întrebări de care atârnă ce se
                       poate face pe pagina unui eveniment: evenimentIncheiat()
                       și evenimentAInceput() — iar „încheiat" înseamnă
-                      ÎNTOTDEAUNA și „a început", oricât ar arăta ceasul. TOT
+                      ÎNTOTDEAUNA și „a început", oricât ar arăta ceasul. De
+                      al doilea atârnă poateFiAnulat(): din clipa în care
+                      evenimentul a început, anularea DISPARE — și butonul din
+                      adauga_eveniment.php, și fapta din
+                      api/anuleaza-eveniment.php (409). O veste de „nu mai are
+                      loc" trimisă la ora la care lumea e deja acolo nu mai
+                      ajută pe nimeni; ce rămâne e „Încheie evenimentul". TOT
                       AICI: categoriiCuEvenimente() (doar cele cu cel puțin un
                       eveniment public — filtrele de pe prima pagină; formularul
                       de publicare folosește mai departe categoriiEvenimente(),
@@ -171,7 +177,13 @@ inc/
                       retrage). NUMĂRUL rapoartelor nu ajunge niciodată în
                       pagină: omul vede doar dacă EL a raportat.
                       numaraRapoarte() există pentru lista de mai târziu a
-                      staff-ului
+                      staff-ului. TOT AICI: omDeInstiintatLaComentariu() — cine
+                      află pe e-mail că s-a scris ceva. La un comentariu
+                      PRINCIPAL, organizatorul; la un RĂSPUNS, cel căruia i s-a
+                      apăsat butonul (oricât de adânc). Niciodată omul însuși,
+                      cine a stins bifa `email_comentarii` din setări sau un
+                      cont care nu mai e activ. Mesajul îl trimite
+                      api/comentarii.php, nu fișierul ăsta
   afisare-eveniment.php → CUM ARATĂ un eveniment pe ecran (antet, copertă,
                       caseta cu detalii, descrierea). Folosit și de event.php,
                       și de previzualizare.php — schimbă aici, nu în pagini
@@ -203,7 +215,8 @@ sql/                → schema.sql + migrări numerotate (002, 003, 004, 005-goo
                       013-interese-evenimente, 014-incheiere-eveniment,
                       015-comentarii, 016-excluderi-evenimente, 017-evaluari,
                       018-multumiri-eveniment, 019-newsletter,
-                      020-rapoarte-comentarii)
+                      020-rapoarte-comentarii,
+                      021-instiintari-comentarii)
 teste/              → test-validare.php (verificările din inc/validare.php)
                       test-comentarii.php, test-participanti.php,
                       test-evaluari.php, test-multumiri.php
@@ -289,11 +302,13 @@ assets/css/style.css, assets/js/main.js, assets/img/
   înscrieri și comentarii) e o acțiune viitoare de staff — vezi `TODO`-ul din
   `anuleazaEveniment()`
 - Adresele frumoase: acum sunt `profil.php?m=<permalink>` și `event.php?slug=…`
-- Înștiințările: încă nu pleacă mare lucru prin e-mail. Pleacă mulțumirea de
-  după eveniment (cron/multumeste-participantilor.php), vestea că cineva a fost
-  scos de pe listă și vestea că un eveniment s-a anulat
-  (api/anuleaza-eveniment.php). Cine primește un răspuns la comentariu nu vede
-  decât dacă se întoarce singur pe pagină
+- Înștiințările pe e-mail care pleacă azi: mulțumirea de după eveniment
+  (cron/multumeste-participantilor.php), vestea că cineva a fost scos de pe
+  listă, vestea că un eveniment s-a anulat (api/anuleaza-eveniment.php),
+  hotărârea moderării (api/modereaza-eveniment.php) și comentariile noi
+  (api/comentarii.php → instiinteazaDeComentariu, cu bifa `email_comentarii`
+  din setări). NU pleacă nimic când cineva se înscrie la un eveniment, când
+  se apreciază un comentariu sau când se raportează ceva
 - Comentariile se pot raporta (steagul de la capătul rândului de unelte), dar
   rapoartele nu se văd nicăieri: nu există pagină care să le adune, deci
   singurul fel de a afla ce s-a raportat e `SELECT` pe `comentarii_rapoarte`

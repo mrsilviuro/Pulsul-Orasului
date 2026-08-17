@@ -67,6 +67,24 @@ if ($eveniment === null) {
 }
 
 /**
+ * A trecut ora de început — nu se mai anulează.
+ *
+ * În pagină butonul nici nu se mai desenează (vezi adauga_eveniment.php), dar
+ * asta e purtare frumoasă, nu pază: pagina poate fi deschisă cu cinci minute
+ * înainte de ora evenimentului și apăsată după. Aici e ceasul care hotărăște,
+ * la fiecare cerere, cu aceeași funcție care a hotărât și dacă se vede butonul.
+ *
+ * 409, nu 403: n-are legătură cu drepturile omului — evenimentul e al lui — ci
+ * cu starea lucrurilor, care s-a schimbat între timp.
+ */
+if (!poateFiAnulat($eveniment)) {
+    raspunsJson([
+        'ok'    => false,
+        'mesaj' => 'Evenimentul a început deja, așa că nu mai poate fi anulat.',
+    ], 409);
+}
+
+/**
  * Motivul e obligatoriu, verificat pe server ca orice altceva.
  *
  * Nu e o formalitate: textul ăsta va pleca prin e-mail spre toți cei care

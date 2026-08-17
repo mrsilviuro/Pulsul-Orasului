@@ -711,11 +711,31 @@ Același număr poate fi scris în multe feluri: `0722 33 44 55`,
 `+40 722 334 455`, `0040-722-334-455`. Toate ajung în bază la fel,
 `0722334455`, ca două scrieri ale aceluiași telefon să nu pară două numere.
 
-### Newsletterul
+### E-mailurile de la noi
 
-O bifă, pornită din start. Coloana e `NOT NULL DEFAULT 1`, deci și conturile
-care există deja se trezesc cu ea pornită, fără vreun `UPDATE` de migrare.
-Trimiterea propriu-zisă nu e făcută încă.
+Două bife, amândouă pornite din start. Coloanele sunt `NOT NULL DEFAULT 1`, deci
+și conturile care există deja se trezesc cu ele pornite, fără vreun `UPDATE` de
+migrare.
+
+| Bifa | Coloana | Ce oprește |
+|---|---|---|
+| „…e-mail cu evenimente noi" | `newsletter` | trimiterea nu e făcută încă |
+| „…când cineva comentează sau îmi răspunde" | `email_comentarii` | înștiințările din `api/comentarii.php` |
+
+**Două coloane, nu una,** deși stau în același formular. `newsletter` înseamnă
+„trimiteți-mi ce se mai întâmplă prin oraș" — ceva ce n-am cerut anume.
+`email_comentarii` înseamnă „spuneți-mi când cineva îmi răspunde mie". Cine
+stinge reclamele nu cere prin asta să i se ascundă și răspunsurile la propriile
+vorbe.
+
+**Un singur buton, totuși:** amândouă răspund la aceeași întrebare și pleacă
+într-o singură cerere, cu un singur `UPDATE`. Două butoane alăturate ar fi pus
+omul să apese de două ori pentru o hotărâre. Ca peste tot, o bifă scoasă nu
+ajunge deloc în datele trimise de browser — absența ei **este** răspunsul „nu
+vreau".
+
+Anonimizarea contului le stinge pe amândouă (`inc/stergere.php`), deși adresa
+oricum nu mai e a nimănui.
 
 ### Ștergerea contului, cu răgaz de 30 de zile
 
@@ -2024,6 +2044,48 @@ nimic de citit acolo. Rapoartele lui rămân însă în bază — staff-ul are d
 să vadă ce s-a raportat, chiar dacă autorul a șters între timp. Abia ștergerea
 de tot a comentariului le duce cu ea, în cascadă.
 
+### Cine află pe e-mail
+
+Un comentariu scris în gol nu ajuta pe nimeni: organizatorul nu vedea întrebarea
+decât dacă intra din nou pe pagină, iar cine primea un răspuns nu afla niciodată.
+De aici încolo pleacă un mesaj — către **un singur om**, de fiecare dată:
+
+| Ce s-a scris | Cine află |
+|---|---|
+| comentariu **principal** | organizatorul evenimentului |
+| **răspuns** la un comentariu principal | autorul acelui comentariu |
+| **răspuns** la un răspuns | autorul comentariului pe care s-a apăsat |
+
+Organizatorul **nu** primește nimic pentru răspunsurile de sub anunțul lui. La o
+discuție de treizeci de rânduri ar fi primit treizeci de mesaje despre vorbe care
+nu-i erau adresate, și ar fi stins bifa după al treilea.
+
+Nu primesc niciodată nimic: omul însuși (cine își răspunde singur, sau comentează
+sub propriul anunț, știe deja), cine a stins `email_comentarii` din setări, și un
+cont care nu mai e activ — suspendat sau anonimizat.
+
+Regula stă într-un singur loc, `omDeInstiintatLaComentariu()` din
+`inc/comentarii.php`, care întoarce omul sau `null`. **Nu trimite el mesajul:**
+asta face `instiinteazaDeComentariu()` din `api/comentarii.php`, exact aceeași
+împărțire ca la anularea unui eveniment. Acolo e stratul care atinge baza, iar un
+`require` de `email.php` în `comentarii.php` ar lega două lucruri care n-au de ce
+să se cunoască.
+
+**Textul comentariului intră întreg în e-mail**, ca citat, cu rândurile scrise de
+om păstrate (`nl2br` peste textul deja scăpat cu `h()`, în ordinea asta — invers,
+`<br />`-urile noastre s-ar fi văzut ca text). Un „ai primit un răspuns, intră pe
+site" e chiar felul de mesaj pe care nu-l mai deschide nimeni a doua oară; cu
+vorbele în față, omul știe pe loc dacă are ce răspunde.
+
+Butonul duce fix la comentariu: `event.php?slug=…#c123`, unde `c123` e `id`-ul
+pus pe `<article class="comment__body">` în `randeazaComentariu()`. Acolo, și nu
+pe `<li>`-ul din jur, fiindcă `<li>`-ul se scrie în trei locuri (lista întreagă,
+răspunsurile, și răspunsul întors de API), iar articolul într-unul singur.
+
+Vestea pleacă **după** ce comentariul e scris în bază, niciodată înainte — și un
+mesaj care nu pleacă nu oprește publicarea. Cel care a scris n-are nicio vină și
+n-are ce face cu o eroare despre serverul de e-mail; ce n-a mers ajunge în log.
+
 ### Ștergerea, și de ce nu e mereu o ștergere
 
 | Ce se șterge | Ce se întâmplă |
@@ -2844,7 +2906,15 @@ CSS: dacă se schimbă culoarea sau subsolul, se schimbă peste tot dintr-un loc
 Se trimit: confirmarea adresei (la înregistrare și la retrimitere), bun venit,
 parola temporară, înștiințarea că parola a fost schimbată, cele două despre
 ștergerea contului, mesajul de contact, vestea că cineva a fost scos de pe
-lista unui eveniment, și mulțumirea de după eveniment.
+lista unui eveniment, mulțumirea de după eveniment, vestea că un eveniment s-a
+anulat, hotărârea moderării, și înștiințarea că cineva a comentat sau a
+răspuns.
+
+Blocurile din care se compune un mesaj (`sablonEmail`): `salut`, `paragrafe`,
+`citat`, `cod`, `buton`, `link_gol`, `atentie`, `incheiere`. `citat` e cutia cu
+dungă în stânga în care intră vorbele altcuiva — textul unui comentariu, de
+pildă; în varianta de text simplu se scrie cu „> " la începutul fiecărui rând,
+cum se citează de când e e-mailul.
 
 ### De ce e-mailul se scrie altfel decât o pagină
 
@@ -3229,7 +3299,11 @@ server și nume de tabele.
 
 ## De făcut mai departe
 
-Paginile de categorie și moderarea evenimentelor.
+Paginile de categorie, și paginile de administrare care lipsesc: lista
+anunțurilor care așteaptă aprobarea, lista comentariilor raportate
+(`comentarii_rapoarte` se umple, dar nu se citește de nicăieri) și moderarea
+notelor. Moderarea anunțurilor în sine există, dar se face de pe pagina fiecărui
+anunț, cu adresa în mână.
 
 
 ## Site închis pentru lucrări
@@ -3404,6 +3478,33 @@ intrând pe o pagină care nu se mai deschidea. Acum primesc un e-mail în clipa
 `oameniiDeInstiintatLaAnulare()` din `inc/interese.php`,
 `emailAnulareEveniment()` din `inc/email.php`, trimiterea în
 `api/anuleaza-eveniment.php`.
+
+### Până când se poate anula
+
+**Până la ora de început, nu mai târziu.** Din clipa în care evenimentul a
+început, butonul dispare din `adauga_eveniment.php` și `api/anuleaza-eveniment.php`
+răspunde **409**.
+
+Nu e o regulă de formă. Anularea e o veste: „nu mai are loc, nu veni". Trimisă la
+ora la care lumea e deja în parc, vestea aia nu mai ajută pe nimeni și îi pune pe
+drumuri exact pe cei care au venit. Ce rămâne în loc e **„Încheie evenimentul"**,
+de pe pagina anunțului: spune adevărul de după — a avut loc, s-a terminat — și nu
+trimite niciun e-mail.
+
+Întrebarea o pune `poateFiAnulat()` din `inc/evenimente.php`, aceeași funcție
+pentru pagină și pentru server. Ceasul e cel al PHP-ului, prin
+`evenimentAInceput()`: un eveniment care ține până seara e „început" de la ora lui
+de start, nu de la sfârșit — de la primul om intrat pe ușă, anunțul nu mai poate fi
+luat înapoi.
+
+În pagină zona nu se desenează stinsă, ci **dispare de tot**; în locul ei rămâne un
+rând care spune de ce. Un buton pe care scrie „anulează" și care nu anulează e mai
+rău decât niciun buton, iar organizatorul care l-a văzut ieri l-ar căuta azi
+degeaba. Verificarea de pe server nu e o repetare de prisos: pagina poate fi
+deschisă cu cinci minute înainte de ora evenimentului și apăsată după.
+
+**409, nu 403.** N-are legătură cu drepturile omului — evenimentul e al lui — ci
+cu starea lucrurilor, care s-a schimbat între timp.
 
 ### Cine află
 

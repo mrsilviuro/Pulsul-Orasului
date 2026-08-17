@@ -487,6 +487,61 @@ function numaraRapoarte(int $comentariuId): int
     return (int) $q->fetchColumn();
 }
 
+/* ======================= CINE AFLĂ PE E-MAIL ========================= */
+
+/**
+ * Cui i se scrie când apare un comentariu nou — sau nimănui.
+ *
+ * DOUĂ SITUAȚII, un singur om de fiecare dată:
+ *
+ *   - comentariu PRINCIPAL → organizatorul evenimentului. E anunțul lui, iar
+ *     el e cel care are ce răspunde la o întrebare pusă acolo;
+ *   - RĂSPUNS → cel căruia i se răspunde, oricât de adânc ar fi în discuție.
+ *     Și la un răspuns dat unui răspuns, și la unul dat sub un comentariu
+ *     principal, omul înștiințat e AUTORUL comentariului pe care s-a apăsat.
+ *
+ * Organizatorul NU primește nimic pentru răspunsurile de sub anunțul lui.
+ * Altfel, la o discuție de treizeci de rânduri ar fi primit treizeci de
+ * mesaje pentru vorbe care nu-i erau adresate, și ar fi stins bifa după al
+ * treilea.
+ *
+ * CINE NU PRIMEȘTE NICIODATĂ:
+ *
+ *   - omul însuși. Cine își răspunde singur, sau cine comentează sub propriul
+ *     anunț, știe deja;
+ *   - cine a stins bifa din setări (`email_comentarii`);
+ *   - un cont care nu mai e activ — suspendat sau anonimizat. La cel
+ *     anonimizat adresa nici nu mai e a cuiva (vezi inc/stergere.php).
+ *
+ * Întoarce rândul omului (id, email, prenume) sau null. NU trimite nimic:
+ * e-mailul pleacă din api/comentarii.php, ca la anularea unui eveniment. Aici
+ * e stratul care atinge baza, iar un `require` de email.php în fișierul ăsta
+ * ar lega două lucruri care n-au de ce să se cunoască.
+ */
+function omDeInstiintatLaComentariu(array $eveniment, int $autorId, ?array $catre): ?array
+{
+    $cineId = $catre !== null
+        ? (int) $catre['membru_id']
+        : (int) ($eveniment['membru_id'] ?? 0);
+
+    // El însuși, sau un comentariu rămas fără autor.
+    if ($cineId <= 0 || $cineId === $autorId) {
+        return null;
+    }
+
+    $q = db()->prepare(
+        'SELECT id, email, prenume
+           FROM membri
+          WHERE id = ? AND stare = \'activ\' AND email_comentarii = 1
+          LIMIT 1'
+    );
+    $q->execute([$cineId]);
+
+    $om = $q->fetch();
+
+    return $om === false ? null : $om;
+}
+
 /* ========================= CUM SE ARATĂ PE ECRAN ====================== */
 
 /** Contul din spatele comentariului mai e al cuiva? */
@@ -711,7 +766,18 @@ function randeazaComentariu(array $c, array $context): string
 
     $unelte = randeazaUneltele($c, $context);
 
-    return '<article class="comment__body">'
+    /**
+     * `id` pe articol, nu pe `<li>`-ul din jur.
+     *
+     * E ținta linkului din e-mailul de înștiințare: „…/event.php?slug=x#c123"
+     * duce browserul fix la comentariul despre care e vorba, oriunde ar fi el
+     * în discuție. Aici, fiindcă `<li>`-ul se scrie în TREI locuri (lista
+     * întreagă, răspunsurile, și răspunsul întors de api/comentarii.php), iar
+     * articolul într-unul singur — ăsta.
+     *
+     * Piatra de mormânt n-are id: la un comentariu golit nu trimitem pe nimeni.
+     */
+    return '<article class="comment__body" id="c' . $id . '">'
          . '<img class="comment__avatar" src="' . h($poza) . '" alt=""'
          . ' width="96" height="96" loading="lazy" decoding="async">'
          . '<div class="comment__main">'

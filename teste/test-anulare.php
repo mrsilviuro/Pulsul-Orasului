@@ -238,7 +238,53 @@ verifica('ci text scăpat',                      true,
 verifica('în textul simplu rămâne cum a fost scris', true,
     str_contains($sablon['text'], '<script>alert(1)</script>'));
 
-/* ===================== 3. PRIN SERVER =============================== */
+/* ================ 3. DUPĂ CE A ÎNCEPUT, NU SE MAI ANULEAZĂ =========== */
+
+sectiune('ceasul închide anularea');
+
+/**
+ * Anularea e o veste: „nu mai are loc, nu veni". Odată ce evenimentul a
+ * început, vestea aia nu mai ajută pe nimeni și îi pune pe drumuri exact pe
+ * cei care au venit — deci butonul dispare, iar API-ul răspunde 409.
+ *
+ * Regula o ține poateFiAnulat(), aceeași funcție pentru pagină și pentru
+ * server. Aici se verifică funcția; partea de API e mai jos.
+ */
+$candva = static function (string $data, string $ora): array {
+    return [
+        'id'             => 0,
+        'stare_moderare' => 'aprobat',
+        'data_eveniment' => $data,
+        'ora_inceput'    => $ora,
+    ];
+};
+
+verifica('unul de peste o săptămână se poate anula', true,
+    poateFiAnulat($candva(date('Y-m-d', strtotime('+7 days')), '18:00:00')));
+
+verifica('și unul de azi, dar de peste un ceas', true,
+    poateFiAnulat($candva(date('Y-m-d'), date('H:i:s', time() + 3600))));
+
+verifica('cel care tocmai a început, NU', false,
+    poateFiAnulat($candva(date('Y-m-d'), date('H:i:s', time() - 60))));
+
+verifica('nici cel de ieri', false,
+    poateFiAnulat($candva(date('Y-m-d', strtotime('-1 day')), '18:00:00')));
+
+// Fără oră scrisă, ziua începe la miezul nopții — ca în evenimentAInceput().
+verifica('fără oră, ziua de azi e deja începută', false,
+    poateFiAnulat($candva(date('Y-m-d'), '')));
+
+$anulatDeja = $candva(date('Y-m-d', strtotime('+7 days')), '18:00:00');
+$anulatDeja['stare_moderare'] = 'anulat';
+verifica('ce e anulat nu se mai anulează o dată', false, poateFiAnulat($anulatDeja));
+
+$incheiatDeja = $candva(date('Y-m-d', strtotime('+7 days')), '18:00:00');
+$incheiatDeja['stare_moderare'] = 'incheiat';
+verifica('nici ce e încheiat de mână, deși ziua e în viitor', false,
+    poateFiAnulat($incheiatDeja));
+
+/* ===================== 4. PRIN SERVER =============================== */
 
 if ($BAZA === '') {
     echo "\n(partea de API s-a sărit — dă o adresă ca s-o rulezi:"
@@ -364,9 +410,38 @@ if ($BAZA === '') {
                 str_contains($nou, SEMN . 'vine@invalid.local'));
         }
 
+        /**
+         * Ceasul, prin server. Evenimentul se mută cu ziua în urmă — deci a
+         * început — iar cererea trebuie respinsă chiar dacă tot ce ține de om
+         * e în regulă: e al lui, e conectat, token-ul e bun, motivul e lung.
+         */
+        db()->prepare('UPDATE evenimente SET stare_moderare = ?, data_eveniment = ?,
+                              ora_inceput = ? WHERE id = ?')
+            ->execute(['aprobat', date('Y-m-d'), date('H:i:s', time() - 3600), $evenimentId]);
+
+        $inainte = is_file($logEmail) ? (int) filesize($logEmail) : 0;
+
+        $r = cere('/api/anuleaza-eveniment.php', [
+            'csrf'  => $token,
+            'slug'  => 'tst-anul-ev',
+            'motiv' => 'S-a stricat vremea și nu mai avem unde să ne adăpostim.',
+        ], $cookie);
+
+        verifica('evenimentul început nu se mai anulează', 409, $r['cod']);
+
+        $stare->execute([$evenimentId]);
+        verifica('și rămâne aprobat', 'aprobat', ($stare->fetch()['stare_moderare'] ?? ''));
+
+        if (!empty($config['dezvoltare'])) {
+            $nou = substr((string) file_get_contents($logEmail), $inainte);
+            verifica('fără nicio veste plecată degeaba', false,
+                str_contains($nou, SEMN . 'vine@invalid.local'));
+        }
+
         /* Motivul prea scurt nu trece — și atunci nu se anulează nimic. */
-        db()->prepare('UPDATE evenimente SET stare_moderare = ? WHERE id = ?')
-            ->execute(['aprobat', $evenimentId]);
+        db()->prepare('UPDATE evenimente SET stare_moderare = ?, data_eveniment = ?,
+                              ora_inceput = ? WHERE id = ?')
+            ->execute(['aprobat', date('Y-m-d', strtotime('+6 days')), '18:00:00', $evenimentId]);
 
         $inainte = is_file($logEmail) ? (int) filesize($logEmail) : 0;
 
