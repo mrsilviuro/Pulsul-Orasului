@@ -45,6 +45,18 @@ const PAROLA = 'ParolaDeProba#2026';
 function curata(): void
 {
     db()->prepare('DELETE FROM evenimente WHERE slug LIKE ?')->execute(['tst-mod-%']);
+
+    /**
+     * Și după organizator, nu doar după slug.
+     *
+     * Anunțurile puse prin salveazaEveniment() își iau slugul din titlu, cu o
+     * coadă întâmplătoare — deci nu încep cu „tst-mod-". Fără rândul ăsta ar fi
+     * rămas în bază, iar ștergerea oamenilor de probă s-ar fi lovit de cheia
+     * străină care leagă evenimentul de cel care l-a pus.
+     */
+    db()->prepare('DELETE e FROM evenimente e JOIN membri m ON m.id = e.membru_id
+                    WHERE m.permalink LIKE ?')->execute(['tstmod-%']);
+
     db()->prepare('DELETE FROM membri WHERE email LIKE ?')->execute([SEMN . '%']);
     db()->prepare('DELETE FROM membri WHERE permalink LIKE ?')->execute(['tstmod-%']);
 }
@@ -306,7 +318,117 @@ verifica('dar anunțul rămâne în bază', true, evenimentDupaSlug('tst-mod-gol
 $sters = golesteDateleEvenimentului($idGol);
 verifica('a doua golire nu strică nimic', 0, $sters['interese'] ?? -1);
 
-/* ===================== 3. PRIN SERVER =============================== */
+/* ============ 3. STAFF-UL PUBLICĂ DIRECT, ȘI POATE ȚINE DEOPARTE ===== */
+
+sectiune('publicarea de către staff');
+
+/* --- cele două întrebări, singure --- */
+
+verifica('un om obișnuit trimite spre aprobare', 'in_asteptare', starePentruPublicare(false));
+verifica('omul de casă publică de-a dreptul',   'aprobat',      starePentruPublicare(true));
+
+verifica('bifa de la staff se ascultă', true,
+    ascundePeProfil(['ascuns_pe_profil' => '1'], true));
+verifica('nebifată înseamnă nu', false, ascundePeProfil([], true));
+verifica('un „0" trimis de mână, la fel', false,
+    ascundePeProfil(['ascuns_pe_profil' => '0'], true));
+
+/**
+ * Cel mai important rând din secțiunea asta: bifa nu există pentru cine nu e
+ * staff, oricât ar scrie în cererea trimisă. Caseta nici nu se desenează în
+ * formularul lui, deci un „1" venit de acolo e scris de mână.
+ */
+verifica('dar de la oricine altcineva, NU', false,
+    ascundePeProfil(['ascuns_pe_profil' => '1'], false));
+
+/* --- ce ajunge în bază --- */
+
+$campuri = static function (string $titlu): array {
+    return [
+        'categorie_id'     => (int) db()->query('SELECT MIN(id) FROM categorii')->fetchColumn(),
+        'titlu'            => $titlu,
+        'data_eveniment'   => date('Y-m-d', strtotime('+9 days')),
+        'ora_inceput'      => '18:00:00',
+        'ora_sfarsit'      => null,
+        'oras'             => oraseDisponibile()[0] ?? 'Roman',
+        'locatie'          => 'Centru',
+        'cost'             => null,
+        'varsta_minima'    => null,
+        'participanti_min' => null,
+        'participanti_max' => null,
+        'descriere'        => str_repeat('Text de probă. ', 25),
+        'gen_participanti' => 'nespecificat',
+    ];
+};
+
+// Limita de evenimente active nu ne stă în drum: aici se verifică starea și
+// bifa, nu numărătoarea, iar salveazaEveniment() n-o întreabă oricum.
+$slugSef = salveazaEveniment($sef, $campuri('Anunțul orașului'), null, true, true);
+$slugOm  = salveazaEveniment($org, $campuri('Ieșirea unui om'),  null, false, false);
+
+$alSefului = evenimentDupaSlug($slugSef);
+$alOmului  = evenimentDupaSlug($slugOm);
+
+verifica('anunțul staff-ului intră aprobat',    'aprobat',      $alSefului['stare_moderare']);
+verifica('al unui om obișnuit, în așteptare',   'in_asteptare', $alOmului['stare_moderare']);
+verifica('și e însemnat ca ținut deoparte',      1, (int) $alSefului['ascuns_pe_profil']);
+verifica('celălalt, nu',                         0, (int) $alOmului['ascuns_pe_profil']);
+
+/* --- ce se vede pe profil --- */
+
+$slugurile = static function (array $lista): array {
+    return array_map(static fn (array $e): string => (string) $e['slug'], $lista);
+};
+
+// Un al doilea anunț al omului de casă, de data asta la vedere: fără el n-am
+// ști dacă lipsa celuilalt vine din bifă sau din faptul că e al staff-ului.
+$slugLaVedere = salveazaEveniment($sef, $campuri('Ieșirea mea, a omului'), null, true, false);
+
+$peProfil = $slugurile(evenimenteDePeProfil($sef, true));
+
+verifica('ce e ținut deoparte lipsește de pe profil', false, in_array($slugSef, $peProfil, true));
+verifica('dar celălalt e acolo',                      true,  in_array($slugLaVedere, $peProfil, true));
+
+/**
+ * Și pentru EL. Dacă i s-ar arăta doar lui, ar crede de fiecare dată că bifa
+ * n-a mers — iar profilul lui n-ar arăta la fel pentru el și pentru lume.
+ */
+verifica('lipsește și când își vede propriul profil', false,
+    in_array($slugSef, $slugurile(evenimenteDePeProfil($sef, false)), true));
+
+verifica('nici cifra de deasupra nu-l numără', 1, cateEvenimenteOrganizate($sef));
+
+/* --- istoricul: al lui nu, al celorlalți da --- */
+
+require_once __DIR__ . '/../inc/evaluari.php';
+
+$vizitator = faMembru('viz', false);
+
+// Amândouă anunțurile se mută în trecut și se încheie, ca să intre în istoric.
+foreach ([$slugSef, $slugLaVedere] as $s) {
+    $id = (int) evenimentDupaSlug($s)['id'];
+    db()->prepare('UPDATE evenimente SET data_eveniment = ?, stare_moderare = \'incheiat\'
+                    WHERE id = ?')->execute([date('Y-m-d', strtotime('-3 days')), $id]);
+    salveazaInteres($id, $vizitator, 'participant');
+}
+
+$istoricSef = $slugurile(istoricEvenimente($sef));
+$istoricViz = $slugurile(istoricEvenimente($vizitator));
+
+verifica('din istoricul lui lipsește',          false, in_array($slugSef, $istoricSef, true));
+verifica('cel la vedere rămâne în istoricul lui', true, in_array($slugLaVedere, $istoricSef, true));
+
+/**
+ * Pentru cine a FOST acolo, seara aceea a existat. Bifa spune „nu e o ieșire
+ * de-a MEA", nu „ștergeți evenimentul din viețile tuturor".
+ */
+verifica('dar în al participantului e la locul lui', true,
+    in_array($slugSef, $istoricViz, true));
+
+verifica('și cifra lui îl numără', 2, laCateEvenimenteAFost($vizitator));
+verifica('a organizatorului, nu',  1, laCateEvenimenteAFost($sef));
+
+/* ===================== 4. PRIN SERVER =============================== */
 
 if ($BAZA === '') {
     echo "\n(partea de API s-a sărit — dă o adresă ca s-o rulezi:"
@@ -657,6 +779,132 @@ if ($BAZA === '') {
 
         $r = cere('/api/modereaza-eveniment.php', null, $caSef['cookie']);
         verifica('nu primește GET', 405, $r['cod']);
+
+        /* ============ FORMULARUL DE PUBLICARE, PENTRU FIECARE ========= */
+
+        /**
+         * api/eveniment.php primește un formular, nu JSON: e singurul care
+         * poate purta și un fișier. Fără copertă, „urlencoded" umple $_POST
+         * la fel de bine ca „multipart", deci nu ne trebuie un plic întreg.
+         */
+        $cereFormular = static function (array $campuri, string $cookie) use ($BAZA): array {
+            $ctx = ['http' => [
+                'method'        => 'POST',
+                'header'        => "Content-Type: application/x-www-form-urlencoded\r\n"
+                                 . ($cookie !== '' ? "Cookie: $cookie\r\n" : ''),
+                'content'       => http_build_query($campuri),
+                'ignore_errors' => true,
+            ]];
+
+            $raspuns = @file_get_contents($BAZA . '/api/eveniment.php', false,
+                stream_context_create($ctx));
+
+            $cod = 0;
+            foreach ($http_response_header ?? [] as $rand) {
+                if (preg_match('#^HTTP/\S+ (\d+)#', $rand, $m) === 1) { $cod = (int) $m[1]; }
+            }
+
+            return ['cod' => $cod, 'corp' => json_decode((string) $raspuns, true) ?: []];
+        };
+
+        /**
+         * Limita de evenimente active se ridică ÎNAINTE de a cere pagina.
+         * Amândoi au deja anunțuri din secțiunile de mai sus, iar cine a atins
+         * limita nu primește formularul deloc — primește panoul care-i spune
+         * să aștepte, fără buton și fără token. Aici se verifică ce scrie pe
+         * buton, nu numărătoarea; aceea își are testul ei în test-evenimente.
+         */
+        db()->prepare('UPDATE membri SET limita_evenimente_active = 20 WHERE permalink LIKE ?')
+            ->execute(['tstmod-%']);
+
+        /* --- ce scrie pe buton, și dacă se vede bifa --- */
+
+        $formOrg = intra(SEMN . 'org@invalid.local', '/adauga_eveniment.php');
+        $formSef = intra(SEMN . 'sef@invalid.local', '/adauga_eveniment.php');
+
+        verifica('omului obișnuit îi scrie „Trimite spre aprobare"', true,
+            str_contains($formOrg['corp'], 'Trimite spre aprobare'));
+        verifica('și nu „Publică evenimentul"', false,
+            str_contains($formOrg['corp'], 'Publică evenimentul'));
+        verifica('nici bifa de ținut deoparte n-o vede', false,
+            str_contains($formOrg['corp'], 'name="ascuns_pe_profil"'));
+
+        verifica('omului de casă îi scrie „Publică evenimentul"', true,
+            str_contains($formSef['corp'], 'Publică evenimentul'));
+        verifica('și nu „Trimite spre aprobare"', false,
+            str_contains($formSef['corp'], 'Trimite spre aprobare'));
+        verifica('lui i se desenează și bifa', true,
+            str_contains($formSef['corp'], 'name="ascuns_pe_profil"'));
+        verifica('nebifată din start', false,
+            str_contains($formSef['corp'], 'name="ascuns_pe_profil" value="1"' . "\n"
+                       . '                   checked'));
+
+        /* --- ce ajunge în bază prin API --- */
+
+        /** Slugul din adresa întoarsă de API: „event.php?slug=…". */
+        $slugDinUrl = static function ($url): string {
+            parse_str((string) parse_url((string) $url, PHP_URL_QUERY), $parti);
+            return (string) ($parti['slug'] ?? '');
+        };
+
+        $anunt = static function (string $titlu, array $peste = []): array {
+            return array_merge([
+                'titlu'            => $titlu,
+                'categorie_id'     => (string) db()->query('SELECT MIN(id) FROM categorii')->fetchColumn(),
+                'oras'             => oraseDisponibile()[0] ?? 'Roman',
+                'locatie'          => 'Centru vechi',
+                // Data se scrie ca în formular, zi-lună-an.
+                'data_eveniment'   => date('d-m-Y', strtotime('+11 days')),
+                'ora_inceput'      => '18:00',
+                // Bifele care spun „nu se știe"; fără ele, câmpurile golite
+                // sunt luate drept răspunsuri lipsă, nu drept nespecificate.
+                'fara_ora_sfarsit'      => '1',
+                'gratuit'               => '1',
+                'fara_participanti_min' => '1',
+                'fara_participanti_max' => '1',
+                'gen_participanti' => 'nespecificat',
+                'descriere'        => str_repeat('Text de probă pentru anunț. ', 15),
+            ], $peste);
+        };
+
+        $r = $cereFormular($anunt('Anunț pus de omul de casă', [
+            'csrf'             => $formSef['token'],
+            'ascuns_pe_profil' => '1',
+        ]), $formSef['cookie']);
+
+        verifica('staff-ul publică', 200, $r['cod']);
+        verifica('iar mesajul nu mai vorbește de aprobare', 'Evenimentul a fost publicat.',
+            (string) ($r['corp']['mesaj'] ?? ''));
+
+        $pus = evenimentDupaSlug($slugDinUrl($r['corp']['url'] ?? ''));
+
+        verifica('anunțul lui e aprobat pe loc', 'aprobat',
+            (string) ($pus['stare_moderare'] ?? ''));
+        verifica('și ținut deoparte de profil', 1, (int) ($pus['ascuns_pe_profil'] ?? 0));
+
+        /* --- același lucru cerut de cine nu e staff --- */
+
+        $r = $cereFormular($anunt('Anunț pus de un om obișnuit', [
+            'csrf'             => $formOrg['token'],
+            'ascuns_pe_profil' => '1',
+        ]), $formOrg['cookie']);
+
+        verifica('și el poate publica', 200, $r['cod']);
+        verifica('dar mesajul lui vorbește de aprobare',
+            'Evenimentul tău a fost trimis spre aprobare.',
+            (string) ($r['corp']['mesaj'] ?? ''));
+
+        $pus = evenimentDupaSlug($slugDinUrl($r['corp']['url'] ?? ''));
+
+        verifica('anunțul lui rămâne în așteptare', 'in_asteptare',
+            (string) ($pus['stare_moderare'] ?? ''));
+
+        /**
+         * Bifa trimisă de mână, de cine n-o vede în pagină, nu schimbă nimic.
+         * Asta e regula; caseta din formular e doar purtare frumoasă.
+         */
+        verifica('iar bifa trimisă de mână e ignorată', 0,
+            (int) ($pus['ascuns_pe_profil'] ?? 1));
     }
 }
 

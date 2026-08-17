@@ -3706,5 +3706,73 @@ spună de ce — cine caută motivul trebuie să se uite în e-mail. O coloană 
 Respingerea unui anunț **deja aprobat**, la care s-au înscris oameni, nu-i
 înștiințează pe aceia — spre deosebire de anulare, care o face.
 
-Verificările: `php teste/test-moderare.php http://127.0.0.1:8128` (107 cazuri;
-fără adresă merge și fără server, 50).
+Verificările: `php teste/test-moderare.php http://127.0.0.1:8128` (141 de
+cazuri; fără adresă merge și fără server, 69).
+
+
+## Staff-ul publică direct
+
+Pentru cine are `membri.este_staff` diferit de `0`, formularul de pe
+`adauga_eveniment.php` arată puțin altfel:
+
+| | Om obișnuit | Staff |
+|---|---|---|
+| butonul | „Trimite spre aprobare" | **„Publică evenimentul"** |
+| starea la salvare | `in_asteptare` | **`aprobat`** |
+| panoul de după | „Îl citim și, dacă e totul în regulă, apare pe site." | „Se vede de acum pe site, fără să mai treacă pe la nimeni." |
+| bifa „nu-l arăta pe profil" | nu există | **da** |
+
+Un anunț al omului de casă n-are pe cine să aștepte: el E cel pe la care ar fi
+trecut. Fără schimbarea asta, ar fi trebuit să-și deschidă propriul anunț și să
+apese „Aprobă" la ce tocmai scrisese.
+
+Regula stă în `starePentruPublicare()` din `inc/evenimente.php` — o funcție de
+o linie, scrisă ca funcție fiindcă o cer trei locuri: salvarea, editarea și
+pagina care alege ce scrie pe buton. **Și la editare**, nu doar la publicare:
+altfel o virgulă îndreptată de staff în propriul anunț l-ar fi scos de pe site
+până la o a doua apăsare.
+
+### Bifa „Nu arăta evenimentul pe profilul meu"
+
+Stă între ultimul chenar („Detalii") și butoane — ultimul lucru de hotărât
+înainte de apăsare, nu unul dintre câmpurile anunțului. Nebifată din start:
+alegerea obișnuită e ca anunțul să se vadă pe profilul celui care l-a pus.
+
+E pentru anunțurile puse **în numele orașului**, care n-au ce căuta pe profilul
+personal al omului de casă, la „Ieșiri organizate", ca și cum ar fi ieșirile
+lui.
+
+**Ce ascunde, și ce nu.** Coloana e `evenimente.ascuns_pe_profil` (`sql/022`) și
+lucrează în trei locuri, toate pe profil:
+
+| Unde | Ce se întâmplă |
+|---|---|
+| lista „Ieșiri organizate" | lipsește (`evenimenteDePeProfil`) |
+| cifra „Evenimente organizate" | nu-l numără (`cateEvenimenteOrganizate`) |
+| tabul „Istoric" | lipsește — **doar de pe profilul organizatorului** |
+
+Nicăieri altundeva. Anunțul rămâne întreg pe prima pagină, în filtre, în „Ar
+putea să te intereseze" și pe pagina lui, cu numele organizatorului la vedere.
+Nu e o coloană de anonimat — e una care spune „ăsta nu e o ieșire de-a mea".
+
+Jumătatea cu `e.membru_id` din condiția istoricului nu e de prisos: fără ea, un
+anunț al orașului ar fi dispărut din istoricul celor cincizeci de oameni care au
+fost la el. Pentru cine a fost acolo, seara aceea a existat.
+
+Lipsește **și de pe profilul lui, când și-l vede el însuși**. Dacă i s-ar arăta
+doar lui, ar crede de fiecare dată că bifa n-a mers, iar profilul lui ar arăta
+altfel pentru el decât pentru lume.
+
+**Ascultată numai de la staff.** `ascundePeProfil()` întoarce `false` pentru
+oricine altcineva, oricât ar scrie în cererea trimisă — caseta nici nu se
+desenează în formularul lui, deci un „1" venit de acolo e scris de mână. Ca
+peste tot, ce se vede în pagină e purtare frumoasă; regula e în
+`api/eveniment.php`, care întreabă baza la fiecare cerere.
+
+### Ce nu se schimbă
+
+**Limita de evenimente active se aplică și staff-ului.** Cine publică multe
+anunțuri ale orașului se lovește de ea la al doilea; se ridică din
+`membri.limita_evenimente_active`, de mână, din phpMyAdmin. N-am legat-o de
+`este_staff` fiindcă limita e o socoteală despre câte anunțuri poate ține un om
+deodată, nu o măsură de încredere.

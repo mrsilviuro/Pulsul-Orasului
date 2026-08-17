@@ -3616,6 +3616,12 @@ body { overscroll-behavior-y: none; }
    apăsării, fără roșu: nu s-a stricat nimic, doar a trecut ora. */
 .zona-anulare--trecut { font-size: 14.5px; line-height: 1.6; color: var(--text-faint); }
 
+/* Bifa staff-ului, între ultimul chenar și butoane. Nu stă într-o casetă a ei:
+   n-are ce câmp să grupeze, e o singură hotărâre de luat înainte de apăsare.
+   Marginea de jos o desparte de butoane, ca să nu pară eticheta lor. */
+.ev-ascunde { margin-bottom: 18px; }
+.ev-ascunde .field__hint { margin-top: 6px; padding-left: 30px; }
+
 /* Cele două butoane de sub formular. Pe ecran lat stau unul lângă altul,
    „Previzualizează" mai șters: e o privire, nu o hotărâre. */
 .ev-butoane { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }

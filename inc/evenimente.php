@@ -641,6 +641,12 @@ function categoriaCeruta(?string $cerut): string
  *
  * Ordinea: întâi cele în așteptare (sunt treaba ta, nu a vizitatorului), apoi
  * după dată, cea mai apropiată prima.
+ *
+ * ÎN AFARĂ de cele însemnate `ascuns_pe_profil` — anunțurile pe care staff-ul
+ * le-a pus în numele orașului, nu ca ieșiri de-ale lui (vezi sql/022). Alea
+ * lipsesc de aici și pentru vizitator, ȘI pentru omul care le-a pus: dacă
+ * i s-ar arăta doar lui, ar crede de fiecare dată că bifa n-a mers. Anunțul
+ * rămâne întreg pe prima pagină și pe pagina lui.
  */
 function evenimenteDePeProfil(int $membruId, bool $vedeSiCeleInAsteptare): array
 {
@@ -656,6 +662,7 @@ function evenimenteDePeProfil(int $membruId, bool $vedeSiCeleInAsteptare): array
            FROM evenimente e
            JOIN categorii c ON c.id = e.categorie_id
           WHERE e.membru_id = ?
+            AND e.ascuns_pe_profil = 0
             AND e.stare_moderare IN (' . $semne . ')
             -- fără prefix de tabel: „data_eveniment" e doar în evenimente, iar
             -- bucata vine gata scrisă din filtruNeincheiat() — dacă i-am lipi
@@ -683,6 +690,10 @@ function evenimenteDePeProfil(int $membruId, bool $vedeSiCeleInAsteptare): array
  * Ce așteaptă moderarea sau a fost respins nu se numără: n-a ajuns niciodată
  * un eveniment adevărat, deci n-are ce căuta într-o cifră pe care o vede toată
  * lumea.
+ *
+ * Nici ce e ținut deoparte de profil (`ascuns_pe_profil`). Cifra stă chiar
+ * deasupra listei; dacă ar număra și ce nu se vede în ea, ar scrie „12" peste
+ * nouă cartonașe și n-ar avea nimeni de unde ști de ce.
  */
 function cateEvenimenteOrganizate(int $membruId): int
 {
@@ -691,7 +702,8 @@ function cateEvenimenteOrganizate(int $membruId): int
         // a avut loc. Fără el, cifra ar scădea în clipa în care organizatorul
         // apasă „Încheie evenimentul" — adică exact când a făcut treaba.
         'SELECT COUNT(*) FROM evenimente
-          WHERE membru_id = ? AND stare_moderare IN (\'aprobat\', \'incheiat\')'
+          WHERE membru_id = ? AND ascuns_pe_profil = 0
+            AND stare_moderare IN (\'aprobat\', \'incheiat\')'
     );
     $q->execute([$membruId]);
 
@@ -927,6 +939,50 @@ function evenimentDeEditat(string $slug, int $membruId): ?array
 /* ============================= SALVAREA =============================== */
 
 /**
+ * Cu ce stare intră un anunț la publicare sau la o corectură.
+ *
+ * Pentru toată lumea, „in_asteptare": nimic nu apare pe site până nu trece pe
+ * la un om. Pentru staff, „aprobat" de-a dreptul — omul de casă E cel pe la
+ * care ar fi trecut, iar un anunț care se așteaptă pe el însuși n-ar face
+ * decât să adauge un drum în plus, pe pagina anunțului, ca să apese „Aprobă"
+ * la ce tocmai a scris.
+ *
+ * ȘI LA EDITARE, nu doar la publicare. Altfel, o virgulă îndreptată de staff
+ * în propriul anunț l-ar fi scos de pe site până la o a doua apăsare.
+ *
+ * Scrisă ca funcție, nu ca un `if` în fiecare loc, fiindcă o cer trei:
+ * salvarea, actualizarea și pagina care alege ce scrie pe buton. Un `if`
+ * copiat de trei ori e un `if` care într-o zi va spune altceva într-unul din
+ * ele.
+ */
+function starePentruPublicare(bool $eStaff): string
+{
+    return $eStaff ? 'aprobat' : 'in_asteptare';
+}
+
+/**
+ * Ține anunțul ăsta deoparte de profilul celui care l-a pus?
+ *
+ * Bifa se vede și se ascultă NUMAI de la staff. Pentru oricine altcineva
+ * răspunsul e „nu", oricât ar scrie în cererea trimisă: caseta nici nu se
+ * desenează în formularul lui, deci un „da" venit de acolo nu poate fi decât
+ * scris de mână.
+ *
+ * Din bază intră ca 0/1; din formular vine ca „1" sau lipsește cu totul — o
+ * bifă nebifată nu ajunge deloc în date, iar absența ei E răspunsul „nu".
+ */
+function ascundePeProfil(array $date, bool $eStaff): bool
+{
+    if (!$eStaff) {
+        return false;
+    }
+
+    $valoare = $date['ascuns_pe_profil'] ?? null;
+
+    return !empty($valoare) && $valoare !== 'false' && $valoare !== '0';
+}
+
+/**
  * Scrie evenimentul în bază. $curat vine gata verificat din verificaEveniment().
  *
  * Slugul se încearcă de câteva ori: coada lui e întâmplătoare, deci o
@@ -936,15 +992,27 @@ function evenimentDeEditat(string $slug, int $membruId): ?array
  * Înapoi vine slugul, nu id-ul: după salvare, singurul lucru de care are
  * nevoie cine a chemat funcția e adresa paginii, ca omul să se poată duce
  * direct la evenimentul lui.
+ *
+ * $eStaff hotărăște două lucruri, amândouă prin funcțiile de mai sus: cu ce
+ * stare intră anunțul (starePentruPublicare) și dacă bifa de ținut deoparte
+ * are vreun cuvânt (ascundePeProfil). Se primește gata calculat, nu se
+ * întreabă aici: cine e omul se știe la intrarea în API, nu în stratul care
+ * scrie în bază.
  */
-function salveazaEveniment(int $membruId, array $curat, ?string $coperta): string
-{
+function salveazaEveniment(
+    int $membruId,
+    array $curat,
+    ?string $coperta,
+    bool $eStaff = false,
+    bool $ascunsPeProfil = false
+): string {
     $sql = 'INSERT INTO evenimente
                 (membru_id, categorie_id, titlu, slug, coperta,
                  data_eveniment, ora_inceput, ora_sfarsit, oras, locatie,
                  cost, varsta_minima, participanti_min, participanti_max,
-                 descriere, gen_participanti, stare_moderare, creat_la, actualizat_la)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)';
+                 descriere, gen_participanti, stare_moderare, ascuns_pe_profil,
+                 creat_la, actualizat_la)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)';
 
     for ($incercare = 1; $incercare <= 5; $incercare++) {
         $slug = slugEveniment($curat['titlu']);
@@ -968,8 +1036,10 @@ function salveazaEveniment(int $membruId, array $curat, ?string $coperta): strin
                 $curat['participanti_max'],
                 $curat['descriere'],
                 $curat['gen_participanti'],
-                // Nimic nu apare pe site până nu trece pe la om.
-                'in_asteptare',
+                // Nimic nu apare pe site până nu trece pe la om — în afară de
+                // ce pune chiar omul acela. Vezi starePentruPublicare().
+                starePentruPublicare($eStaff),
+                $ascunsPeProfil ? 1 : 0,
                 acum(),
                 acum(),
             ]);
@@ -1111,9 +1181,18 @@ function incheieEveniment(array $eveniment): void
  * Starea de moderare se întoarce mereu la „în așteptare", oricare ar fi fost.
  * Altfel s-ar putea publica orice: trimiți un anunț cumsecade, îl aprobăm, iar
  * a doua zi îi schimbi tot conținutul fără să mai treacă pe la nimeni.
+ *
+ * Pentru staff rămâne „aprobat" (starePentruPublicare): omul de casă e chiar
+ * cel pe la care ar fi trecut anunțul, iar o virgulă îndreptată de el nu are
+ * de ce să-i scoată anunțul de pe site până apasă a doua oară.
  */
-function actualizeazaEveniment(int $id, array $curat, ?string $copertaNoua): void
-{
+function actualizeazaEveniment(
+    int $id,
+    array $curat,
+    ?string $copertaNoua,
+    bool $eStaff = false,
+    bool $ascunsPeProfil = false
+): void {
     $campuri = [
         'categorie_id'     => $curat['categorie_id'],
         'titlu'            => $curat['titlu'],
@@ -1128,7 +1207,8 @@ function actualizeazaEveniment(int $id, array $curat, ?string $copertaNoua): voi
         'participanti_max' => $curat['participanti_max'],
         'descriere'        => $curat['descriere'],
         'gen_participanti' => $curat['gen_participanti'],
-        'stare_moderare'   => 'in_asteptare',
+        'stare_moderare'   => starePentruPublicare($eStaff),
+        'ascuns_pe_profil' => $ascunsPeProfil ? 1 : 0,
         'actualizat_la'    => acum(),
     ];
 
