@@ -55,6 +55,23 @@ if ($slug !== '') {
 $eEditare = $ev !== null;
 
 /**
+ * Omul de casă publică direct: anunțul lui nu mai are pe cine să aștepte.
+ *
+ * De steagul ăsta atârnă trei lucruri pe pagina asta — ce scrie pe buton, ce
+ * scrie în panoul de după, și dacă se desenează bifa „nu-l arăta pe profil".
+ * Toate trei sunt purtare frumoasă; regula o ține api/eveniment.php, care
+ * întreabă din nou baza la fiecare cerere.
+ */
+$eStaff = esteStaff($membru);
+
+/**
+ * Bifa de ținut deoparte: la editare urmează ce e în bază, la un formular gol
+ * pornește STINSĂ. Alegerea obișnuită e ca anunțul să se vadă pe profilul
+ * celui care l-a pus — cealaltă e pentru ce se publică în numele orașului.
+ */
+$ascunsPeProfil = $eEditare && (int) ($ev['ascuns_pe_profil'] ?? 0) === 1;
+
+/**
  * Limita de evenimente active se cere doar la unul nou.
  *
  * La editare, limita s-ar aplica chiar evenimentului care se editează: omul cu
@@ -507,6 +524,30 @@ require __DIR__ . '/inc/antet.php';
           </div>
         </section>
 
+        <?php if ($eStaff): ?>
+        <!--
+          Numai pentru oamenii de casă, și numai fiindcă numai ei au ce pune
+          în numele orașului. Bifa nu se desenează pentru ceilalți — nu stinsă,
+          ci deloc: o casetă pe care n-o poți apăsa e o întrebare pusă degeaba.
+          Cererea lor nici n-ar fi ascultată, oricât ar scrie în ea (vezi
+          ascundePeProfil din inc/evenimente.php).
+
+          Stă între „Detalii" și butoane, dinadins: e ultimul lucru de hotărât
+          înainte de apăsare, nu unul dintre câmpurile anunțului.
+        -->
+        <div class="field ev-ascunde">
+          <label class="check">
+            <input type="checkbox" id="ev-ascuns" name="ascuns_pe_profil" value="1"
+                   <?= $ascunsPeProfil ? 'checked' : '' ?>>
+            <span>Nu arăta evenimentul pe profilul meu, la „Ieșiri organizate".</span>
+          </label>
+          <p class="field__hint">
+            Anunțul rămâne întreg pe site — pe prima pagină, în căutare și pe
+            pagina lui. Doar de pe profilul tău lipsește.
+          </p>
+        </div>
+        <?php endif; ?>
+
         <!--
           Previzualizarea trece prin aceleași verificări ca trimiterea; dacă
           ceva nu e în regulă, erorile apar aici, pe formular, și fila nouă nu
@@ -522,7 +563,11 @@ require __DIR__ . '/inc/antet.php';
             </svg>
             <span>Previzualizează</span>
           </button>
-          <button class="btn btn--primary btn--block" type="submit">Trimite spre aprobare</button>
+          <!-- Pentru staff nu mai e o cerere, e o publicare: anunțul apare pe
+               site în clipa apăsării. Vezi starePentruPublicare(). -->
+          <button class="btn btn--primary btn--block" type="submit"><?=
+            $eStaff ? 'Publică evenimentul' : 'Trimite spre aprobare'
+          ?></button>
         </div>
 
         <!-- Portița pentru browserele care nu lasă o filă să se deschidă
@@ -612,12 +657,15 @@ require __DIR__ . '/inc/antet.php';
             <circle cx="12" cy="12" r="9"/><path d="m8.2 12.3 2.6 2.6 5-5.2"/>
           </svg>
         </span>
-        <h2 class="done__title">Evenimentul tău a fost trimis spre aprobare</h2>
+        <h2 class="done__title"><?=
+          $eStaff ? 'Evenimentul a fost publicat' : 'Evenimentul tău a fost trimis spre aprobare'
+        ?></h2>
         <!-- Fără termen promis: nu există încă nimeni care să apese „aprobă",
              iar un „în aceeași zi" scris aici ar fi o vorbă goală. -->
-        <p class="done__text">
-          Îl citim și, dacă e totul în regulă, apare pe site.
-        </p>
+        <p class="done__text"><?=
+          $eStaff ? 'Se vede de acum pe site, fără să mai treacă pe la nimeni.'
+                  : 'Îl citim și, dacă e totul în regulă, apare pe site.'
+        ?></p>
         <div class="done__actions">
           <!--
             Cel mai firesc lucru după trimitere e să te uiți cum a ieșit, nu

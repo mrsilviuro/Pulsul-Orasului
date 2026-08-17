@@ -4895,7 +4895,8 @@
     /**
      * Erorile de la server, puse fiecare lângă câmpul ei.
      *
-     * Scrisă o dată fiindcă o cer două butoane: „Trimite spre aprobare" și
+     * Scrisă o dată fiindcă o cer două butoane: cel de trimitere („Trimite
+     * spre aprobare", sau „Publică evenimentul" la staff) și
      * „Previzualizează". Amândouă trec prin aceleași verificări pe server,
      * deci trebuie să arate la fel și când ceva nu e în regulă.
      */

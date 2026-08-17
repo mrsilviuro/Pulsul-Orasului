@@ -359,6 +359,13 @@ const ISTORIC_DEODATA = 6;
  *
  * Cele anulate și cele care n-au ajuns niciodată publice lipsesc: la primele
  * nimeni n-a fost nicăieri, la celelalte n-avea cum să se înscrie cineva.
+ *
+ * Anunțurile însemnate `ascuns_pe_profil` (vezi sql/022) lipsesc și ele — DAR
+ * numai de pe profilul celui care le-a pus. Pentru oricine altcineva rămân la
+ * locul lor: e o seară adevărată, la care omul chiar a fost, iar bifa aceea
+ * spune „nu e o ieșire de-a MEA", nu „ștergeți evenimentul din viețile
+ * tuturor". Fără jumătatea cu `e.membru_id`, un anunț al orașului ar fi
+ * dispărut din istoricul a cincizeci de oameni care au fost la el.
  */
 function istoricEvenimente(int $membruId): array
 {
@@ -382,6 +389,9 @@ function istoricEvenimente(int $membruId): array
            JOIN categorii  c ON c.id = e.categorie_id
           WHERE i.membru_id = ?
             AND i.stare = \'participant\'
+            -- Ținut deoparte de profil, dar numai de al ORGANIZATORULUI: vezi
+            -- explicația de deasupra funcției.
+            AND NOT (e.ascuns_pe_profil = 1 AND e.membru_id = i.membru_id)
             AND e.stare_moderare IN (\'aprobat\', \'incheiat\')
             AND (e.stare_moderare = \'incheiat\' OR e.data_eveniment < ?)
           ORDER BY e.data_eveniment DESC, e.ora_inceput DESC, e.id DESC'
@@ -461,6 +471,9 @@ function laCateEvenimenteAFost(int $membruId): int
            JOIN evenimente e ON e.id = i.eveniment_id
           WHERE i.membru_id = ?
             AND i.stare = \'participant\'
+            -- Aceeași scoatere ca la lista de dedesubt (istoricEvenimente), ca
+            -- cifra să numere exact cartonașele care se văd sub ea.
+            AND NOT (e.ascuns_pe_profil = 1 AND e.membru_id = i.membru_id)
             AND e.stare_moderare IN (\'aprobat\', \'incheiat\')
             AND NOT EXISTS (
                   SELECT 1 FROM evaluari ev

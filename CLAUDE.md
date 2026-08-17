@@ -142,7 +142,13 @@ inc/
                       cu toate, ca o categorie goală să se poată umple) și
                       evenimenteSugerate() („Ar putea să te intereseze" de pe
                       pagina unui eveniment: două la întâmplare, doar ce
-                      urmează, fără cel curent, fără oraș)
+                      urmează, fără cel curent, fără oraș). ȘI cele două
+                      întrebări de la publicare: starePentruPublicare() (staff
+                      → „aprobat" de-a dreptul, restul → „in_asteptare"; ȘI la
+                      editare, altfel o virgulă îndreptată de staff i-ar scoate
+                      anunțul de pe site) și ascundePeProfil() (bifa „nu-l
+                      arăta pe profilul meu", ascultată NUMAI de la staff,
+                      oricât ar scrie în cerere — vezi sql/022)
   interese.php      → „Mergi la acest eveniment?" — cine e interesat, cine
                       vine, numărătoarea, locurile, rândul cu chipuri, listele
                       din taburi (aceeași funcție pentru amândouă), scoaterea
@@ -216,7 +222,8 @@ sql/                → schema.sql + migrări numerotate (002, 003, 004, 005-goo
                       015-comentarii, 016-excluderi-evenimente, 017-evaluari,
                       018-multumiri-eveniment, 019-newsletter,
                       020-rapoarte-comentarii,
-                      021-instiintari-comentarii)
+                      021-instiintari-comentarii,
+                      022-evenimente-staff)
 teste/              → test-validare.php (verificările din inc/validare.php)
                       test-comentarii.php, test-participanti.php,
                       test-evaluari.php, test-multumiri.php
@@ -294,9 +301,13 @@ assets/css/style.css, assets/js/main.js, assets/img/
 - Staff: există doar steagul `membri.este_staff` (se pune de mână, din
   phpMyAdmin) și funcția `esteStaff()` — staff înseamnă orice valoare în afară
   de 0. Ce deschide: vede ORICE eveniment, oricare i-ar fi starea
-  (poateVedeaEvenimentul), poate aproba și respinge anunțuri, poate scoate
-  oameni de pe liste și trece de lacătul de șantier. Nu există pagină de
-  administrare
+  (poateVedeaEvenimentul), poate aproba și respinge anunțuri, PUBLICĂ DIRECT
+  (anunțul lui intră „aprobat", iar butonul din formular scrie „Publică
+  evenimentul") și poate bifa „nu-l arăta pe profilul meu", poate scoate oameni
+  de pe liste și trece de lacătul de șantier. Nu există pagină de administrare.
+  ATENȚIE: limita de evenimente active se aplică și lui — cine publică multe
+  anunțuri ale orașului are nevoie de `membri.limita_evenimente_active` ridicată
+  de mână, din phpMyAdmin
 - Curățenia evenimentelor anulate: rândul cu `stare_moderare = 'anulat'` rămâne
   în bază pentru totdeauna. Ștergerea lui (cu tot cu coperta de pe disc,
   înscrieri și comentarii) e o acțiune viitoare de staff — vezi `TODO`-ul din

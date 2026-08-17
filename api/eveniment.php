@@ -47,6 +47,18 @@ opresteDacaTrebuieParolaNoua(true);
 
 $membruId = (int) $membru['id'];
 
+/**
+ * Omul de casă publică direct, fără să mai treacă anunțul pe la nimeni — el E
+ * cel pe la care ar fi trecut. Tot de asta atârnă și bifa „nu-l arăta pe
+ * profil": pentru oricine altcineva ea nu există, oricât ar scrie în cerere.
+ *
+ * Se citește AICI, din baza de date la fiecare cerere (esteStaff), nu din ce
+ * a trimis formularul. Butonul care scrie „Publică evenimentul" e o purtare
+ * frumoasă; regula e rândul ăsta.
+ */
+$eStaff = esteStaff($membru);
+$ascuns = ascundePeProfil($_POST, $eStaff);
+
 /* ============== 1. Eveniment nou, sau unul care se schimbă? ============ */
 
 /**
@@ -148,7 +160,7 @@ if (is_array($fisier) && (int) ($fisier['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLO
 
 try {
     if ($deEditat !== null) {
-        actualizeazaEveniment((int) $deEditat['id'], $curat, $coperta);
+        actualizeazaEveniment((int) $deEditat['id'], $curat, $coperta, $eStaff, $ascuns);
         $slug = (string) $deEditat['slug'];
 
         // Poza veche se șterge abia după ce rândul s-a schimbat cu bine.
@@ -158,7 +170,7 @@ try {
             stergeCopertaDeFisier($deEditat['coperta'] ?? null);
         }
     } else {
-        $slug = salveazaEveniment($membruId, $curat, $coperta);
+        $slug = salveazaEveniment($membruId, $curat, $coperta, $eStaff, $ascuns);
     }
 } catch (PDOException $e) {
     // Fișierul nou n-are de ce să rămână dacă rândul n-a intrat.
@@ -171,6 +183,8 @@ try {
 // să știe slugul când s-a tipărit.
 raspunsJson([
     'ok'    => true,
-    'mesaj' => 'Evenimentul tău a fost trimis spre aprobare.',
+    'mesaj' => $eStaff
+        ? 'Evenimentul a fost publicat.'
+        : 'Evenimentul tău a fost trimis spre aprobare.',
     'url'   => $slug !== '' ? urlEveniment($slug) : '',
 ]);
