@@ -89,7 +89,7 @@ if ($sectiune === 'telefon') {
     ]);
 }
 
-/* ---------------------------- Newsletterul ---------------------------- */
+/* ------------------------ Ce e-mailuri vrea omul ---------------------- */
 
 if ($sectiune === 'newsletter') {
     /**
@@ -98,17 +98,42 @@ if ($sectiune === 'newsletter') {
      * O bifă netrimisă de browser nu ajunge în date deloc, deci absența ei e
      * chiar răspunsul „nu vreau".
      */
-    $vrea = !empty($date['newsletter']) && $date['newsletter'] !== 'false';
+    $daLimpede = static fn (string $cheie): bool =>
+        !empty($date[$cheie]) && $date[$cheie] !== 'false';
 
-    db()->prepare('UPDATE membri SET newsletter = ? WHERE id = ?')
-        ->execute([$vrea ? 1 : 0, (int) $membru['id']]);
+    $vrea      = $daLimpede('newsletter');
+    $vreaComen = $daLimpede('email_comentarii');
+
+    /**
+     * Amândouă într-o singură scriere, fiindcă vin dintr-un singur formular:
+     * două UPDATE-uri ar fi putut lăsa una salvată și cealaltă nu, dacă pica
+     * ceva la mijloc — iar omul ar fi văzut „salvat" pentru o hotărâre făcută
+     * pe jumătate.
+     */
+    db()->prepare('UPDATE membri SET newsletter = ?, email_comentarii = ? WHERE id = ?')
+        ->execute([$vrea ? 1 : 0, $vreaComen ? 1 : 0, (int) $membru['id']]);
+
+    /**
+     * Mesajul spune ce s-a ales, nu doar „gata".
+     *
+     * Cu două bife, un singur „Salvat" n-ar mai fi spus nimic: omul care a
+     * stins una și a lăsat-o pe cealaltă n-ar fi știut dacă s-a înțeles care.
+     */
+    if ($vrea && $vreaComen) {
+        $mesaj = 'Gata, primești și evenimentele noi, și răspunsurile la comentarii.';
+    } elseif ($vrea) {
+        $mesaj = 'Îți scriem când apar evenimente noi, dar nu și la comentarii.';
+    } elseif ($vreaComen) {
+        $mesaj = 'Îți scriem doar când cineva îți comentează sau îți răspunde.';
+    } else {
+        $mesaj = 'Gata, nu-ți mai trimitem niciun e-mail de felul ăsta.';
+    }
 
     raspunsJson([
-        'ok'         => true,
-        'newsletter' => $vrea,
-        'mesaj'      => $vrea
-            ? 'Gata, îți scriem când apar evenimente noi.'
-            : 'Nu-ți mai trimitem e-mailuri cu evenimente.',
+        'ok'               => true,
+        'newsletter'       => $vrea,
+        'email_comentarii' => $vreaComen,
+        'mesaj'            => $mesaj,
     ]);
 }
 

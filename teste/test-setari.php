@@ -271,21 +271,56 @@ verifica('gol înseamnă NULL, nu șir gol', null, coloana($idClasic, 'telefon')
 verifica('tabela membri e întreagă după injecție', 1,
     (int) db()->query('SELECT COUNT(*) FROM membri WHERE id = ' . $idClasic)->fetchColumn());
 
-echo "\n=== 3. NEWSLETTERUL ===\n";
+echo "\n=== 3. CE E-MAILURI VREA OMUL ===\n";
 
-verifica('pornit din start la conturile care există deja', 1, (int) coloana($idClasic, 'newsletter'));
+/**
+ * Două bife într-un singur formular, deci într-o singură cerere. De aceea
+ * fiecare apel de mai jos le trimite pe amândouă: exact ce trimite și
+ * browserul, unde o bifă scoasă nu ajunge deloc în date.
+ */
+$preferinte = static function (string $vesti, string $comentarii) use ($baza, $c) {
+    return json_din(cerere($baza . '/api/setari.php', $c, [
+        'csrf'             => csrf($c),
+        'sectiune'         => 'newsletter',
+        'newsletter'       => $vesti,
+        'email_comentarii' => $comentarii,
+    ]));
+};
 
-$r = json_din(cerere($baza . '/api/setari.php', $c, [
-    'csrf' => csrf($c), 'sectiune' => 'newsletter', 'newsletter' => '',
-]));
-verifica('se poate opri', 0, (int) coloana($idClasic, 'newsletter'));
-verifica('bifa apare nebifată în pagină', false,
-    str_contains(cerere($baza . '/setari.php', $c)['corp'], 'id="st-newsletter"' . "\n" . '                   checked'));
+verifica('vestile, pornite din start la conturile care există deja',
+    1, (int) coloana($idClasic, 'newsletter'));
+verifica('și înștiințările la comentarii, la fel',
+    1, (int) coloana($idClasic, 'email_comentarii'));
 
-$r = json_din(cerere($baza . '/api/setari.php', $c, [
-    'csrf' => csrf($c), 'sectiune' => 'newsletter', 'newsletter' => '1',
-]));
-verifica('se poate porni la loc', 1, (int) coloana($idClasic, 'newsletter'));
+/* Numai vestile se sting. */
+$preferinte('', '1');
+verifica('vestile se pot opri',                 0, (int) coloana($idClasic, 'newsletter'));
+verifica('fără să atingă comentariile',        1, (int) coloana($idClasic, 'email_comentarii'));
+verifica('bifa vestilor apare nebifată în pagină', false,
+    str_contains(cerere($baza . '/setari.php', $c)['corp'], 'name="newsletter"' . "\n" . '                   checked'));
+
+/* Și invers: numai comentariile. */
+$preferinte('1', '');
+verifica('comentariile se pot opri singure',    0, (int) coloana($idClasic, 'email_comentarii'));
+verifica('iar vestile pornesc la loc',          1, (int) coloana($idClasic, 'newsletter'));
+verifica('bifa comentariilor apare nebifată în pagină', false,
+    str_contains(cerere($baza . '/setari.php', $c)['corp'], 'name="email_comentarii"' . "\n" . '                   checked'));
+
+/* Amândouă stinse: mesajul o spune pe față. */
+$r = $preferinte('', '');
+verifica('amândouă stinse',  0, (int) coloana($idClasic, 'newsletter')
+                              + (int) coloana($idClasic, 'email_comentarii'));
+verifica('iar mesajul spune că nu mai pleacă nimic', true,
+    str_contains((string) ($r['mesaj'] ?? ''), 'niciun e-mail'));
+
+/* Amândouă pornite. */
+$r = $preferinte('1', '1');
+verifica('amândouă pornite', 2, (int) coloana($idClasic, 'newsletter')
+                              + (int) coloana($idClasic, 'email_comentarii'));
+verifica('răspunsul le spune pe amândouă', true,
+    ($r['newsletter'] ?? null) === true && ($r['email_comentarii'] ?? null) === true);
+verifica('bifa comentariilor e bifată în pagină', true,
+    str_contains(cerere($baza . '/setari.php', $c)['corp'], 'name="email_comentarii"' . "\n" . '                   checked'));
 
 echo "\n=== APĂRAREA PUNCTELOR DE INTRARE ===\n";
 

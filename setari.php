@@ -28,13 +28,19 @@ if ($membru === null) {
  * Conturile deschise cu Google au parola_hash NULL — nu e o lipsă, e chiar
  * felul lor de a fi. Lor nu avem ce parolă veche să le cerem.
  */
-$q = db()->prepare('SELECT parola_hash, telefon, newsletter FROM membri WHERE id = ? LIMIT 1');
+$q = db()->prepare('SELECT parola_hash, telefon, newsletter, email_comentarii
+                      FROM membri WHERE id = ? LIMIT 1');
 $q->execute([(int) $membru['id']]);
 $setari = $q->fetch() ?: [];
 
 $areParola  = !empty($setari['parola_hash']);
 $telefon    = (string) ($setari['telefon'] ?? '');
 $newsletter = !isset($setari['newsletter']) || (int) $setari['newsletter'] === 1;
+
+// Ca la newsletter: lipsa coloanei înseamnă „pornit". Amândouă sunt pornite din
+// start (vezi sql/021), iar un rând citit dintr-o bază mai veche nu trebuie să
+// arate bifa stinsă cât timp serverul îi scrie oricum.
+$emailComentarii = !isset($setari['email_comentarii']) || (int) $setari['email_comentarii'] === 1;
 
 $titlu     = 'Setările contului — PulsulOrasului.Ro';
 $descriere = 'Parola, telefonul și preferințele contului tău.';
@@ -165,9 +171,18 @@ require __DIR__ . '/inc/antet.php';
       </form>
     </section>
 
-    <!-- ======================= 3. NEWSLETTERUL ======================== -->
+    <!-- ======================= 3. E-MAILURILE ========================= -->
+    <!--
+      Două bife, un singur buton: amândouă răspund la aceeași întrebare — ce
+      e-mailuri vrea omul — și se salvează în aceeași cerere. Două butoane
+      alăturate, fiecare cu câte o bifă, ar fi pus omul să apese de două ori
+      pentru o singură hotărâre.
+
+      Sunt însă DOUĂ coloane în bază, nu una (vezi sql/021): reclamele și
+      răspunsurile la propriile vorbe nu se sting împreună.
+    -->
     <section class="card-set" aria-labelledby="t-news">
-      <h2 class="card-set__titlu" id="t-news">E-mailuri cu evenimente</h2>
+      <h2 class="card-set__titlu" id="t-news">E-mailuri de la noi</h2>
 
       <form class="form" id="newsletter-form" novalidate>
         <input type="hidden" name="csrf" value="<?= h($csrf) ?>">
@@ -180,7 +195,16 @@ require __DIR__ . '/inc/antet.php';
           </label>
         </div>
 
-        <button class="btn btn--primary" type="submit">Salvează preferința</button>
+        <div class="field">
+          <label class="check">
+            <input type="checkbox" id="st-comentarii" name="email_comentarii"
+                   <?= $emailComentarii ? 'checked' : '' ?>>
+            <span>Vreau să primesc e-mail când cineva comentează la evenimentul meu
+                  sau îmi răspunde la un comentariu.</span>
+          </label>
+        </div>
+
+        <button class="btn btn--primary" type="submit">Salvează preferințele</button>
       </form>
     </section>
 

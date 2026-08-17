@@ -585,6 +585,106 @@ verifica('are un raport', 1, numaraRapoarte($idCuRaport));
 stergeComentariu(comentariuDupaId($idCuRaport));
 verifica('șters de tot, rapoartele pleacă în cascadă', 0, numaraRapoarte($idCuRaport));
 
+/* ===================== 12. CINE AFLĂ PE E-MAIL ====================== */
+
+echo "\n=== ÎNȘTIINȚĂRILE ===\n";
+
+/**
+ * Aici se verifică doar CINE ar trebui înștiințat. Trimiterea propriu-zisă e
+ * în api/comentarii.php (instiinteazaDeComentariu) și nu se cheamă de aici:
+ * testul ăsta nu pornește serverul, iar un e-mail plecat dintr-un test ar fi
+ * exact felul de lucru care ajunge într-o zi în lume.
+ */
+
+$cine = static fn (?array $om): ?int => $om === null ? null : (int) $om['id'];
+
+/* ------------------------ comentariu principal --------------------- */
+
+// Un străin scrie sub anunț → află organizatorul.
+verifica('la un comentariu principal, află organizatorul',
+    $organizator, $cine(omDeInstiintatLaComentariu($eveniment, $strain, null)));
+
+// Organizatorul scrie sub propriul anunț → nu-și scrie singur.
+verifica('organizatorul nu-și scrie singur',
+    null, $cine(omDeInstiintatLaComentariu($eveniment, $organizator, null)));
+
+/* ----------------------------- răspunsuri --------------------------- */
+
+$alStrainului = salveazaComentariu($evenimentId, $strain, 'Întrebare de la un străin.');
+$catreStrain  = comentariuDupaId($alStrainului);
+
+verifica('la un răspuns, află autorul comentariului',
+    $strain, $cine(omDeInstiintatLaComentariu($eveniment, $organizator, $catreStrain)));
+
+verifica('și nu organizatorul, când răspunsul nu-i e adresat',
+    $strain, $cine(omDeInstiintatLaComentariu($eveniment, $participant, $catreStrain)));
+
+verifica('cine își răspunde singur nu primește nimic',
+    null, $cine(omDeInstiintatLaComentariu($eveniment, $strain, $catreStrain)));
+
+/**
+ * Răspunsul dat unui RĂSPUNS. Comentariul ajunge tot pe nivelul al doilea (vezi
+ * salveazaComentariu), dar vestea pleacă spre cel căruia i s-a apăsat butonul,
+ * nu spre autorul principalului de deasupra.
+ */
+// Un om nou, nu $participant: acela a trecut prin ștergere de cont mai sus, iar
+// un cont anonimizat n-ar mai primi nimic — verificarea ar fi trecut degeaba.
+$mijlocas   = faMembru('mij', 'Barbu', 'Cristina');
+$alTreilea  = salveazaComentariu($evenimentId, $mijlocas, 'Răspund eu.', $catreStrain);
+$catreElMij = comentariuDupaId($alTreilea);
+
+verifica('la un răspuns dat unui răspuns, află tot cel apăsat',
+    $mijlocas, $cine(omDeInstiintatLaComentariu($eveniment, $strain, $catreElMij)));
+
+/* ------------------------- bifa din setări -------------------------- */
+
+db()->prepare('UPDATE membri SET email_comentarii = 0 WHERE id = ?')->execute([$organizator]);
+
+verifica('cu bifa stinsă, organizatorul nu mai primește nimic',
+    null, $cine(omDeInstiintatLaComentariu($eveniment, $strain, null)));
+
+db()->prepare('UPDATE membri SET email_comentarii = 1 WHERE id = ?')->execute([$organizator]);
+
+verifica('pusă la loc, primește iar',
+    $organizator, $cine(omDeInstiintatLaComentariu($eveniment, $strain, null)));
+
+/* -------------------------- conturi plecate ------------------------- */
+
+$plecat   = faMembru('plec', 'Toma', 'Radu');
+$alPlecat = comentariuDupaId(salveazaComentariu($evenimentId, $plecat, 'Scriu și plec.'));
+
+verifica('cât e activ, primește', $plecat,
+    $cine(omDeInstiintatLaComentariu($eveniment, $strain, $alPlecat)));
+
+anonimizeazaMembru($plecat);
+
+verifica('contul anonimizat nu mai primește nimic', null,
+    $cine(omDeInstiintatLaComentariu($eveniment, $strain, $alPlecat)));
+
+db()->prepare('UPDATE membri SET stare = \'suspendat\' WHERE id = ?')->execute([$mijlocas]);
+
+verifica('nici contul suspendat', null,
+    $cine(omDeInstiintatLaComentariu($eveniment, $strain, $catreElMij)));
+
+db()->prepare('UPDATE membri SET stare = \'activ\' WHERE id = ?')->execute([$mijlocas]);
+
+verifica('scos din suspendare, primește iar', $mijlocas,
+    $cine(omDeInstiintatLaComentariu($eveniment, $strain, $catreElMij)));
+
+/* ------------------- ancora spre care duce mesajul ------------------ */
+
+/**
+ * Linkul din e-mail e „…#c<id>", iar ținta lui e id-ul de pe articol. Dacă
+ * dispare de acolo, mesajul rămâne valid dar aterizează în capul paginii — o
+ * stricăciune tăcută, care nu se vede în niciun alt test.
+ */
+$htmlAncora = randeazaComentarii(
+    grupeazaComentarii(comentariileEvenimentului($evenimentId, $strain)),
+    context($eveniment, $strain));
+
+verifica('comentariul poartă ancora spre care trimite e-mailul', true,
+    str_contains($htmlAncora, 'id="c' . $alStrainului . '"'));
+
 /* =========================== curățenie ============================= */
 
 curata();

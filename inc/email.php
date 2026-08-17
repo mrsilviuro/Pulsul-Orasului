@@ -340,6 +340,38 @@ function sablonEmail(string $titlu, array $blocuri): array
              . h($paragraf) . '</p>';
     }
 
+    /* --------------------------- citatul ------------------------------ */
+
+    /**
+     * Vorbele altcuiva, arătate ca vorbele altcuiva.
+     *
+     * Nu e cutia de la `cod`: aceea e făcută pentru șase caractere de tastat,
+     * cu litere mari și rărite. Aici e un text de citit, poate lung, scris de
+     * un om — și trebuie să se vadă limpede unde începe și unde se termină,
+     * altfel s-ar amesteca cu ce spunem noi. De aceea o dungă în stânga și un
+     * fundal stins, ca un citat dintr-o carte.
+     *
+     * Rândurile scrise de om se păstrează: `nl2br` peste textul DEJA scăpat cu
+     * h(). În ordinea asta, nu invers — altfel `<br />`-urile puse de noi ar fi
+     * fost scăpate și ele, și s-ar fi văzut ca text.
+     */
+    if (!empty($blocuri['citat']['text'])) {
+        $h[] = '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" '
+             . 'style="margin:20px 0;"><tr><td '
+             . 'style="background:#f7f8fa;border-left:3px solid ' . $margine . ';'
+             . 'border-radius:0 8px 8px 0;padding:16px 18px;font-family:' . $font . ';">';
+
+        if (!empty($blocuri['citat']['cine'])) {
+            $h[] = '<div style="font-size:13.5px;font-weight:bold;color:' . $text . ';'
+                 . 'margin:0 0 8px 0;">' . h($blocuri['citat']['cine']) . '</div>';
+        }
+
+        $h[] = '<div style="font-size:15.5px;line-height:1.6;color:' . $textMoale . ';">'
+             . nl2br(h((string) $blocuri['citat']['text'])) . '</div>';
+
+        $h[] = '</td></tr></table>';
+    }
+
     /* --------------------------- codul -------------------------------- */
     if (!empty($blocuri['cod']['valoare'])) {
         $h[] = '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" '
@@ -453,6 +485,22 @@ function sablonEmail(string $titlu, array $blocuri): array
 
     foreach (($blocuri['paragrafe'] ?? []) as $paragraf) {
         $t[] = wordwrap($paragraf, 72, "\n", false);
+        $t[] = '';
+    }
+
+    /**
+     * În text simplu, citatul se cunoaște după „> " la începutul fiecărui rând
+     * — cum se citează de când e e-mailul. Ruperea se face înainte, ca prefixul
+     * să ajungă și pe rândurile născute din wordwrap, nu doar pe cele scrise de
+     * om.
+     */
+    if (!empty($blocuri['citat']['text'])) {
+        if (!empty($blocuri['citat']['cine'])) {
+            $t[] = $blocuri['citat']['cine'] . ':';
+        }
+
+        $rupt = wordwrap((string) $blocuri['citat']['text'], 68, "\n", false);
+        $t[] = '> ' . str_replace("\n", "\n> ", $rupt);
         $t[] = '';
     }
 
@@ -1006,4 +1054,70 @@ function emailModerareAnunt(
     ];
 
     return trimiteEmail($catre, '„' . $titluEveniment . '" nu a fost aprobat', $blocuri);
+}
+
+/**
+ * „Cineva ți-a scris" — înștiințarea de sub un anunț.
+ *
+ * DOUĂ MESAJE, o singură funcție, fiindcă poartă același lucru: vorbele
+ * cuiva, adresa la care se răspunde și un buton care duce fix acolo. Ce
+ * deosebește:
+ *
+ *   'comentariu' — cineva a scris sub anunțul TĂU. Îl primește organizatorul;
+ *   'raspuns'    — cineva a răspuns comentariului TĂU. Îl primește autorul
+ *                  comentariului pe care s-a apăsat, oricât de adânc ar fi.
+ *
+ * Cine primește (unul singur de fiecare dată) și cine nu primește niciodată se
+ * hotărăsc în omDeInstiintatLaComentariu() din inc/comentarii.php — inclusiv
+ * bifa din setări. Aici se scrie doar mesajul.
+ *
+ * TEXTUL COMENTARIULUI intră întreg în e-mail, ca citat. Nu e o risipă: un
+ * „ai primit un răspuns, intră pe site" e chiar felul de mesaj pe care nu-l
+ * mai deschide nimeni a doua oară. Cu vorbele în față, omul știe pe loc dacă
+ * are ce răspunde.
+ *
+ * Textul trece prin blocul de citat al șablonului, deci e scăpat cu h() în
+ * varianta HTML, ca orice altceva. Nimeni nu poate strecura etichete în
+ * e-mailul altcuiva printr-un comentariu.
+ */
+function emailComentariuNou(
+    string $catre,
+    string $prenume,
+    string $fel,
+    string $numeAutor,
+    string $titluEveniment,
+    string $textComentariu,
+    string $adresaComentariu
+): bool {
+    $eRaspuns = $fel === 'raspuns';
+
+    if ($eRaspuns) {
+        $subiect   = $numeAutor . ' ți-a răspuns la comentariu';
+        $paragrafe = [
+            $numeAutor . ' ți-a răspuns la comentariul de sub „' . $titluEveniment . '".',
+        ];
+        $incheiere = 'Dacă nu mai vrei mesajele astea, le poți stinge din setările '
+                   . 'contului. Comentariile rămân, doar e-mailul se oprește.';
+    } else {
+        $subiect   = 'Un comentariu nou la „' . $titluEveniment . '"';
+        $paragrafe = [
+            $numeAutor . ' a scris un comentariu la anunțul tău, „' . $titluEveniment . '".',
+        ];
+        $incheiere = 'Primești mesajul ăsta fiindcă e anunțul tău. Dacă nu-l mai vrei, '
+                   . 'îl poți stinge din setările contului.';
+    }
+
+    $blocuri = [
+        'salut'     => 'Bună, ' . $prenume . '!',
+        'paragrafe' => $paragrafe,
+        'citat'     => ['cine' => $numeAutor, 'text' => $textComentariu],
+        'buton'     => [
+            'text' => $eRaspuns ? 'Vezi răspunsul' : 'Răspunde',
+            'href' => $adresaComentariu,
+        ],
+        'link_gol'  => $adresaComentariu,
+        'incheiere' => $incheiere,
+    ];
+
+    return trimiteEmail($catre, $subiect, $blocuri);
 }

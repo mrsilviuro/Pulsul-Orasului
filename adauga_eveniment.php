@@ -533,11 +533,16 @@ require __DIR__ . '/inc/antet.php';
           <a id="ev-previz-link" href="#" target="_blank" rel="noopener">Deschide previzualizarea</a>
         </p>
 
-        <?php if ($eEditare): ?>
+        <?php if ($eEditare && poateFiAnulat($ev)): ?>
         <!--
           Anularea evenimentului. Stă despărțită de restul formularului și în
           roșu stins, ca zona de ștergere a contului din setări: e singura
           apăsare de pe pagina asta care nu se poate lua înapoi.
+
+          DISPARE DE TOT din clipa în care evenimentul a început — vezi
+          poateFiAnulat() din inc/evenimente.php. Nu se desenează stinsă: un
+          buton pe care scrie „anulează" și care nu anulează e mai rău decât
+          niciun buton. În locul ei rămâne rândul de mai jos, care spune de ce.
 
           Confirmarea e desenată de noi, în pagină, nu cu window.confirm(): o
           fereastră a browserului arată altfel pe Windows, pe Android și pe
@@ -585,6 +590,16 @@ require __DIR__ . '/inc/antet.php';
             </div>
           </div>
         </div>
+        <?php elseif ($eEditare): ?>
+        <!--
+          A început. În locul butonului, un rând care spune de ce nu mai e —
+          altfel organizatorul care l-a văzut ieri l-ar căuta azi degeaba și ar
+          crede că s-a stricat pagina.
+        -->
+        <p class="zona-anulare zona-anulare--trecut">
+          Evenimentul a început deja, așa că nu mai poate fi anulat. Dacă s-a
+          terminat mai devreme, îl poți încheia de pe pagina lui.
+        </p>
         <?php endif; ?>
       </form>
     </div>

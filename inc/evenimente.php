@@ -1009,6 +1009,35 @@ function salveazaEveniment(int $membruId, array $curat, ?string $coperta): strin
 }
 
 /**
+ * Se mai poate anula evenimentul ăsta?
+ *
+ * Până la ora de început, da. Din clipa în care a început, NU — și nu fiindcă
+ * ar fi o regulă frumoasă, ci fiindcă anularea e o veste: „nu mai are loc, nu
+ * veni". Trimisă la ora la care lumea e deja acolo, vestea aia nu mai ajută pe
+ * nimeni și îi pune pe drumuri exact pe cei care au venit.
+ *
+ * Ce rămâne în loc: „Încheie evenimentul", care spune adevărul de după — a
+ * avut loc, s-a terminat — și nu trimite niciun e-mail.
+ *
+ * ATENȚIE, ceasul e cel al PHP-ului, prin evenimentAInceput(): un eveniment
+ * care ține până seara e „început" de la ora lui de start, nu de la sfârșit.
+ * De la primul om intrat pe ușă, anunțul nu mai poate fi luat înapoi.
+ *
+ * Proprietatea NU se verifică aici: o ține evenimentDeEditat(), care oprește
+ * din start și ce e „anulat" sau „incheiat". Funcția asta răspunde la o
+ * singură întrebare, ca să poată fi pusă și de pagină (pentru buton), și de
+ * api/anuleaza-eveniment.php (pentru faptă).
+ */
+function poateFiAnulat(array $eveniment): bool
+{
+    if (in_array($eveniment['stare_moderare'] ?? '', ['anulat', 'incheiat'], true)) {
+        return false;
+    }
+
+    return !evenimentAInceput($eveniment);
+}
+
+/**
  * Anulează un eveniment: o stare nouă și un motiv, nu o ștergere.
  *
  * Ștergea rândul, la început. Era greșit: de un eveniment atârnă oameni care
