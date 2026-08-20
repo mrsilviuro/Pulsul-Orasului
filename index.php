@@ -126,21 +126,32 @@ require __DIR__ . '/inc/antet.php';
     </p>
 
     <!--
-      Butonul se vede și fără cont: cine nu e înscris trebuie să afle că poate
-      publica, nu să descopere după ce se înregistrează.
+      CELE DOUĂ FELURI DE A INTRA ÎN JOC, unul lângă altul.
 
-      Cine nu e conectat ajunge la pagina de intrare, dar cu drumul de
-      întoarcere în adresă — după autentificare pică direct pe formular, nu pe
-      prima pagină, de unde ar trebui să caute butonul din nou.
+      „Propune o ieșire" e pentru cine își ia răspunderea; „Pune-ți o dorință"
+      e treapta de dinaintea ei, pentru cine n-ar organiza, dar ar veni la
+      ceva. Aici e locul unde omul se hotărăște, deci aici stau amândouă.
+
+      Amândouă se văd și fără cont: cine nu e înscris trebuie să afle că poate
+      face lucrurile astea, nu să descopere după ce se înregistrează. Cine nu e
+      conectat ajunge la pagina de intrare, dar cu drumul de întoarcere în
+      adresă — după autentificare pică direct unde voia.
+
+      Al doilea DISPARE pentru cine are deja o dorință în lucru: ce i-a rămas
+      de aflat („e pe tablă până joi") scrie sub tablă, nu pe un buton.
     -->
-    <a class="btn btn--primary hero__cta" href="<?= $logat
-          ? 'adauga_eveniment.php'
-          : 'login.php?redirect=' . h(urlencode('/adauga_eveniment.php')) ?>">
-      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M12 5v14"/><path d="M5 12h14"/>
-      </svg>
-      <span>Propune o ieșire</span>
-    </a>
+    <div class="hero__butoane">
+      <a class="btn btn--primary hero__cta" href="<?= $logat
+            ? 'adauga_eveniment.php'
+            : 'login.php?redirect=' . h(urlencode('/adauga_eveniment.php')) ?>">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 5v14"/><path d="M5 12h14"/>
+        </svg>
+        <span>Propune o ieșire</span>
+      </a>
+
+      <?= butonulDorintei($logat, $voieLaDorinta['stare']) ?>
+    </div>
   </div>
 
   <a class="hero__jos" href="#main">
@@ -160,12 +171,15 @@ require __DIR__ . '/inc/antet.php';
       măcar să spună ce i-ar plăcea să se facă, iar cine caută o idee o
       găsește aici.
 
-      TREI STĂRI, ȘI TOATE TREC PRIN ACELAȘI COLȚ DE PAGINĂ:
-        - sunt dorințe → tabla se desenează, cu butonul sub ea
+      BUTONUL NU E AICI: stă sus, în fereastra de bun venit, lângă „Propune o
+      ieșire" (butonulDorintei din inc/dorinte.php). Aici rămâne doar vorba
+      despre dorința omului, dacă are una în lucru.
+
+      TREI STĂRI:
+        - sunt dorințe → tabla se desenează
         - nu sunt      → tabla nu se desenează DELOC (o tablă goală cu „încă
                          nimeni n-a scris nimic" ar fi un anunț de pustiu chiar
-                         în capul paginii), iar butonul se mută în capul
-                         listei, unde stătea „Propune o ieșire"
+                         în capul paginii), iar vorba trece în capul listei
         - formularul deschis → ia locul tablei
 
       ORDINEA DIN DOM NU E CEA DE PE ECRAN, ȘI E DINADINS. Formularul stă
@@ -190,6 +204,11 @@ require __DIR__ . '/inc/antet.php';
     /* Formularul se desenează pentru cine mai poate pune o dorință — sau
        pentru cine tocmai a trimis una, ca să vadă mulțumirea. */
     $poateDori = $dorintaGata || ($logat && $voieLaDorinta['stare'] === 'poate');
+
+    /* Vorba despre dorința lui, dacă are una în lucru. Poate fi '' — atunci
+       nu se desenează nici casa în care ar fi stat. */
+    $zonaDorinte = randeazaZonaDorinte($logat, $voieLaDorinta['stare'],
+                                       $voieLaDorinta['dorinta']);
     ?>
 
     <?php if ($areTabla || $poateDori): ?>
@@ -286,10 +305,8 @@ require __DIR__ . '/inc/antet.php';
 
       <?= $tablaHtml ?>
 
-      <?php if ($areTabla): ?>
-      <div class="tabla__unelte">
-        <?= randeazaZonaDorinte($logat, $voieLaDorinta['stare'], $voieLaDorinta['dorinta']) ?>
-      </div>
+      <?php if ($areTabla && $zonaDorinte !== ''): ?>
+      <div class="tabla__unelte"><?= $zonaDorinte ?></div>
       <?php endif; ?>
     </section>
     <?php endif; ?>
@@ -297,18 +314,16 @@ require __DIR__ . '/inc/antet.php';
     <!--
       Titlu secțiune. `h2`, nu `h1`: numele site-ului din prima fereastră e
       titlul paginii, iar pe o pagină nu stau două titluri de rang întâi.
-      Butonul „Propune o ieșire" s-a mutat și el sus, lângă nume.
+      Butoanele s-au mutat amândouă sus, în fereastra de bun venit.
 
-      Aici ajunge „Pune-ți o dorință" NUMAI când nu e nicio dorință de arătat:
-      atunci tabla nu se desenează, iar butonul ei ar fi rămas fără casă.
+      Aici ajunge doar vorba despre dorința omului („e pe tablă până joi"), și
+      numai când tabla nu se desenează — altfel are casa ei, sub tablă.
     -->
     <div class="section-head">
       <div>
         <h2 class="section-title">Ce facem zilele astea?</h2>
       </div>
-      <?php if (!$areTabla): ?>
-      <?= randeazaZonaDorinte($logat, $voieLaDorinta['stare'], $voieLaDorinta['dorinta']) ?>
-      <?php endif; ?>
+      <?php if (!$areTabla): ?><?= $zonaDorinte ?><?php endif; ?>
     </div>
 
     <!-- ============================ FILTRELE ============================

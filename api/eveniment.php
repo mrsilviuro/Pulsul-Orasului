@@ -80,6 +80,22 @@ if ($slugCerut !== '') {
             'mesaj' => 'Evenimentul nu mai există sau nu e al tău.',
         ], 404);
     }
+
+    /**
+     * A început: nu se mai schimbă nimic.
+     *
+     * 409, nu 404: evenimentul există și e al lui, doar că a trecut clipa. Un
+     * 404 l-ar fi trimis să caute unde nu e. Aceeași întrebare o pune și
+     * pagina cu formularul, dar ea poate fi deschisă de mult — cererea asta e
+     * ultima poartă.
+     */
+    if (!poateFiEditat($deEditat)) {
+        raspunsJson([
+            'ok'    => false,
+            'mesaj' => 'Evenimentul a început, așa că nu mai poate fi schimbat. '
+                     . 'De pe pagina lui îl poți încă anula sau încheia.',
+        ], 409);
+    }
 }
 
 /* ==================== 2. Are voie să publice acum? ==================== */
@@ -104,7 +120,20 @@ if ($deEditat === null) {
 
 /* ========================= 3. Câmpurile ============================== */
 
-$rezultat = verificaEveniment($_POST, idCategoriiValide(), oraseDisponibile());
+/**
+ * Al cincilea argument e clipa de început DE ACUM, din bază — sau null la un
+ * eveniment nou.
+ *
+ * De el atârnă regula celor două ceasuri: la editare se cere doar dacă omul
+ * chiar MUTĂ evenimentul. Altminteri, cine îndreaptă o virgulă cu o oră
+ * înainte de start ar fi fost trimis să-și amâne ieșirea cu două ore.
+ */
+$inceputulDeAcum = $deEditat === null
+    ? null
+    : (string) $deEditat['data_eveniment'] . ' ' . (string) $deEditat['ora_inceput'];
+
+$rezultat = verificaEveniment($_POST, idCategoriiValide(), oraseDisponibile(),
+                              null, $inceputulDeAcum);
 
 if ($rezultat['erori'] !== []) {
     raspunsJson(['ok' => false, 'erori' => $rezultat['erori']], 422);

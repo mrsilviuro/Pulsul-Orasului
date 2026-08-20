@@ -33,6 +33,19 @@ const DESCRIERE_MAX       = 8000;
 const COST_MAX            = 99999.99;
 const PARTICIPANTI_MAX    = 65535; // cât încape în SMALLINT UNSIGNED
 const ANI_INAINTE_MAX     = 2;     // cât de departe în viitor poate fi pus un eveniment
+
+/**
+ * Cât de curând poate începe un eveniment nou-publicat
+ *
+ * Data singură se uită doar la ZI: la ora 15:00 se putea publica ceva „azi, de
+ * la 14:00", adică deja început. Verificarea din verificaEveniment() pune data
+ * și ora cap la cap și cere cel puțin atâtea ceasuri de-acum încolo.
+ *
+ * Două, fiindcă un anunț trece întâi pe la moderare și pe urmă trebuie să
+ * apuce să-l și vadă cineva. Sub atât, ieșirea e a organizatorului și a
+ * nimănui altcuiva.
+ */
+const ORE_MINIM_INAINTE   = 2;
 const MOTIV_ANULARE_MIN   = 15;    // caractere, ca la descriere — vezi verificaMotivAnulare()
 const MOTIV_ANULARE_MAX   = 1000;
 
@@ -424,7 +437,8 @@ function inceputDeText(string $text, int $caractere = 160): string
  * Întoarce ['erori' => [...], 'curat' => [...]].
  */
 function verificaEveniment(array $date, array $categoriiValide, array $oraseValide = [],
-                           ?DateTimeImmutable $azi = null): array
+                           ?DateTimeImmutable $azi = null,
+                           ?string $inceputulDeAcum = null): array
 {
     $azi   = $azi ?? new DateTimeImmutable('today');
     $erori = [];
@@ -522,6 +536,46 @@ function verificaEveniment(array $date, array $categoriiValide, array $oraseVali
             // Nu comparăm cele două ore: un eveniment poate începe la 22:00 și
             // se poate termina la 02:00. Ar fi o „greșeală" care nu e greșeală.
             $curat['ora_sfarsit'] = $sfarsit . ':00';
+        }
+    }
+
+    /* ------------------- Cât de curând poate începe -------------------- */
+    /**
+     * Cel puțin două ceasuri de-acum încolo (ORE_MINIM_INAINTE).
+     *
+     * Data singură nu era de ajuns: ea se uită doar la ZI, deci la ora 15:00
+     * se putea publica liniștit ceva „azi, de la 14:00" — un eveniment care
+     * începuse deja în clipa în care apărea pe site. Verificarea de aici pune
+     * data și ora cap la cap și se uită la CLIPA de început, nu la zi.
+     *
+     * Cele două ceasuri nu sunt un număr rotund ales la întâmplare: un anunț
+     * trece întâi pe la moderare, iar pe urmă trebuie să apuce să-l vadă
+     * cineva. Sub atât, ieșirea e a organizatorului și a nimănui altcuiva.
+     *
+     * LA EDITARE, regula se aplică doar dacă se SCHIMBĂ clipa de început.
+     * Altfel, cine voia să îndrepte o virgulă cu o oră înainte de start ar fi
+     * fost trimis să-și mute evenimentul cu două ore mai încolo — ceea ce n-a
+     * cerut nimeni. `$inceputulDeAcum` e ce scrie în bază acum („2026-08-20
+     * 19:00:00"); pentru un eveniment nou e null.
+     *
+     * Se pune ultima, după ce data și ora au trecut fiecare de ale ei: fără
+     * amândouă curate n-avem ce lipi cap la cap, iar omul are deja de citit un
+     * mesaj despre câmpul pe care l-a greșit.
+     */
+    if (isset($curat['data_eveniment'], $curat['ora_inceput'])) {
+        $inceputNou = $curat['data_eveniment'] . ' ' . $curat['ora_inceput'];
+        $seSchimba  = $inceputulDeAcum === null || $inceputNou !== $inceputulDeAcum;
+
+        if ($seSchimba) {
+            $clipa = strtotime($inceputNou);
+            $prag  = time() + ORE_MINIM_INAINTE * 3600;
+
+            if ($clipa !== false && $clipa < $prag) {
+                $erori['ora_inceput'] =
+                    'Alege o oră cu cel puțin ' . ORE_MINIM_INAINTE
+                  . ' ore înainte — cel mai devreme ' . date('H:i', $prag)
+                  . ', ' . dataLunga(date('Y-m-d', $prag), false) . '.';
+            }
         }
     }
 
@@ -691,8 +745,13 @@ function slugEveniment(string $titlu): string
  *
  * Ziua săptămânii e acolo fiindcă asta caută omul întâi când se uită la un
  * eveniment: nu „16", ci „e sâmbătă sau e într-o zi de lucru?".
+ *
+ * Cu `$cuAnul = false` iese „Duminică, 16 august". Pentru lucrurile care se
+ * petrec în zilele astea — o dorință care iese de pe tablă săptămâna viitoare
+ * — anul nu spune nimic: e limpede că e cel de-acum, iar scris ar fi doar
+ * patru cifre în plus de citit.
  */
-function dataLunga(?string $data): string
+function dataLunga(?string $data, bool $cuAnul = true): string
 {
     if ($data === null || $data === '') {
         return '';
@@ -709,7 +768,7 @@ function dataLunga(?string $data): string
 
     return mb_strtoupper(mb_substr($zi, 0, 1, 'UTF-8'), 'UTF-8') . mb_substr($zi, 1, null, 'UTF-8')
         . ', ' . $moment->format('j') . ' ' . numeleLunilor()[(int) $moment->format('n')]
-        . ' ' . $moment->format('Y');
+        . ($cuAnul ? ' ' . $moment->format('Y') : '');
 }
 
 /** Ora fără secunde: „19:00:00" din bază devine „19:00". */

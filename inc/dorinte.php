@@ -354,9 +354,7 @@ function randeazaTablaDorinte(array $dorinte): string
 function randeazaZonaDorinte(bool $eLogat, string $stare, ?array $dorinta = null): string
 {
     if (!$eLogat) {
-        return '<a class="btn btn--ghost btn--sm tabla__cere"'
-             . ' href="login.php?redirect=' . h(urlencode('/index.php#dorinta-formular')) . '">'
-             . stelutaDorinta() . '<span>Pune-ți o dorință</span></a>';
+        return '';
     }
 
     if ($stare === 'asteapta') {
@@ -367,16 +365,61 @@ function randeazaZonaDorinte(bool $eLogat, string $stare, ?array $dorinta = null
 
     if ($stare === 'e_pe_tabla') {
         $iese = $dorinta === null ? null : dorintaIeseDePeTabla($dorinta);
-        $cand = $iese === null ? '' : dataScurta(date('Y-m-d', $iese));
+
+        /**
+         * „joi, 27 august", nu „27 aug 2026": data e la câteva zile distanță,
+         * iar ziua săptămânii spune mai mult decât anul, care se înțelege.
+         *
+         * Cu literă mică: dataLunga() o scrie cu majusculă, fiindcă de obicei
+         * stă singură, la începutul unui rând („Joi, 27 august, ora 19:00").
+         * Aici intră în mijlocul unei fraze — „până Joi" ar fi fost o
+         * majusculă în mijlocul propoziției.
+         */
+        $cand = '';
+
+        if ($iese !== null) {
+            $scris = dataLunga(date('Y-m-d', $iese), false);
+            $cand  = mb_strtolower(mb_substr($scris, 0, 1, 'UTF-8'), 'UTF-8')
+                   . mb_substr($scris, 1, null, 'UTF-8');
+        }
 
         return '<p class="tabla__stare">'
              . 'Dorința ta e pe tablă'
-             . ($cand === '' ? '' : ' până pe ' . h($cand))
+             . ($cand === '' ? '' : ' până ' . h($cand))
              . '. Poți pune alta după ce iese.'
              . '</p>';
     }
 
-    return '<a class="btn btn--ghost btn--sm tabla__cere" href="#dorinta-formular">'
+    return '';
+}
+
+/**
+ * Butonul „Pune-ți o dorință", cel din fereastra de bun venit.
+ *
+ * Stă lângă „Propune o ieșire", fiindcă acolo se hotărăște omul ce vrea să
+ * facă: ori pune la cale o ieșire, ori spune doar ce i-ar plăcea. Sub tablă nu
+ * mai e nimic de apăsat — acolo rămân doar vorbele despre dorința lui, dacă
+ * are una (randeazaZonaDorinte).
+ *
+ * Întoarce '' pentru cine are deja o dorință în lucru: un buton care duce la
+ * un formular pe care serverul îl refuză oricum n-are ce căuta pe ecran.
+ *
+ * E o LEGĂTURĂ, nu un buton de JS: fără JavaScript, `#dorinta-formular`
+ * deschide formularul prin `:target` (vezi „TABLA CU DORINȚE" din style.css),
+ * iar cine nu e conectat ajunge la pagina de intrare, cu drumul de întoarcere
+ * în adresă.
+ */
+function butonulDorintei(bool $eLogat, string $stare): string
+{
+    if ($eLogat && $stare !== 'poate') {
+        return '';
+    }
+
+    $unde = $eLogat
+        ? '#dorinta-formular'
+        : 'login.php?redirect=' . h(urlencode('/index.php#dorinta-formular'));
+
+    return '<a class="btn btn--ghost hero__cta hero__cta--dorinta" href="' . $unde . '">'
          . stelutaDorinta() . '<span>Pune-ți o dorință</span></a>';
 }
 

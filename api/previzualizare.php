@@ -46,12 +46,25 @@ $membruId = (int) $membru['id'];
 /* ===================== 1. Aceleași verificări ========================= */
 
 /**
+ * Ce se editează, dacă se editează ceva. Se caută AICI, înaintea verificării,
+ * fiindcă de el atârnă regula celor două ceasuri: la editare se cere doar dacă
+ * omul chiar mută evenimentul. Mai jos, tot rândul ăsta dă și coperta.
+ */
+$slugCerut = trim((string) ($_POST['slug'] ?? ''));
+$deEditat  = $slugCerut === '' ? null : evenimentDeEditat($slugCerut, $membruId);
+
+$inceputulDeAcum = $deEditat === null
+    ? null
+    : (string) $deEditat['data_eveniment'] . ' ' . (string) $deEditat['ora_inceput'];
+
+/**
  * verificaEveniment(), fix funcția de la salvare.
  *
  * Nu o copie „mai îngăduitoare": dacă previzualizarea ar trece peste ceva ce
  * salvarea refuză, omul ar vedea o pagină frumoasă și apoi un teanc de erori.
  */
-$rezultat = verificaEveniment($_POST, idCategoriiValide(), oraseDisponibile());
+$rezultat = verificaEveniment($_POST, idCategoriiValide(), oraseDisponibile(),
+                              null, $inceputulDeAcum);
 
 if ($rezultat['erori'] !== []) {
     raspunsJson(['ok' => false, 'erori' => $rezultat['erori']], 422);
@@ -97,14 +110,9 @@ $coperta    = '';
 if (($_POST['coperta_noua'] ?? '') !== '') {
     $copertaFel = 'browser';
 } else {
-    $slugCerut = trim((string) ($_POST['slug'] ?? ''));
-
-    if ($slugCerut !== '') {
-        $deEditat = evenimentDeEditat($slugCerut, $membruId);
-
-        if ($deEditat !== null) {
-            $coperta = urlCoperta($deEditat['coperta'] ?? null);
-        }
+    // $deEditat s-a căutat mai sus, o dată pentru amândouă treburile.
+    if ($deEditat !== null) {
+        $coperta = urlCoperta($deEditat['coperta'] ?? null);
     }
 
     if ($coperta !== '') {

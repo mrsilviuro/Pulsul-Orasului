@@ -345,6 +345,70 @@ verifica('orașul curat pleacă spre bază', 'Roman',
 verifica('un formular întreg nu are erori', [],
     verificaEveniment($campuriBune(), $categorii, $orase)['erori']);
 
+echo "\n=== CÂT DE CURÂND POATE ÎNCEPE ===\n";
+
+/**
+ * Data singură se uită doar la ZI. Fără verificarea clipei, la ora 15:00 se
+ * putea publica ceva „azi, de la 14:00" — un eveniment început în clipa în
+ * care apărea pe site.
+ */
+$laOra = static fn (int $peste, array $peste2 = []): array => verificaEveniment(
+    $campuriBune(array_merge([
+        'data_eveniment' => date('d-m-Y', time() + $peste),
+        'ora_inceput'    => date('H:i',   time() + $peste),
+    ], $peste2)),
+    $categorii, $orase
+);
+
+verifica('peste o oră → eroare pe oră', true,
+    isset($laOra(3600)['erori']['ora_inceput']));
+verifica('și mesajul spune de la cât se poate', true,
+    str_contains($laOra(3600)['erori']['ora_inceput'] ?? '', 'cel mai devreme'));
+
+verifica('acum o oră → tot eroare', true,
+    isset($laOra(-3600)['erori']['ora_inceput']));
+
+// Ziua trecută cade la data, nu la oră — acolo o așteaptă omul.
+verifica('ieri → eroare pe dată', true,
+    isset($laOra(-26 * 3600)['erori']['data_eveniment']));
+
+verifica('peste trei ore → trece', [], $laOra(3 * 3600)['erori']);
+verifica('peste zece zile → trece', [], verificaEveniment(
+    $campuriBune(), $categorii, $orase)['erori']);
+
+/**
+ * La EDITARE, regula se cere doar dacă omul chiar mută evenimentul. Altfel,
+ * cine îndreaptă o virgulă cu o oră înainte de start ar fi fost trimis să-și
+ * amâne ieșirea cu două ore.
+ */
+$peste60   = time() + 3600;
+$campuri60 = $campuriBune([
+    'data_eveniment' => date('d-m-Y', $peste60),
+    'ora_inceput'    => date('H:i',   $peste60),
+]);
+$vechiul60 = date('Y-m-d', $peste60) . ' ' . date('H:i', $peste60) . ':00';
+
+verifica('editat fără să-i schimbe ora, trece', [],
+    verificaEveniment($campuri60, $categorii, $orase, null, $vechiul60)['erori']);
+
+verifica('dar mutat și mai aproape, nu', true,
+    isset(verificaEveniment(
+        $campuriBune([
+            'data_eveniment' => date('d-m-Y', time() + 1800),
+            'ora_inceput'    => date('H:i',   time() + 1800),
+        ]),
+        $categorii, $orase, null, $vechiul60
+    )['erori']['ora_inceput']));
+
+verifica('și mutat mai încolo de prag, iarăși trece', [],
+    verificaEveniment(
+        $campuriBune([
+            'data_eveniment' => date('d-m-Y', time() + 5 * 3600),
+            'ora_inceput'    => date('H:i',   time() + 5 * 3600),
+        ]),
+        $categorii, $orase, null, $vechiul60
+    )['erori']);
+
 echo "\n=== MOTIVUL ANULĂRII ===\n";
 
 $motiv = static fn ($t): string => verificaMotivAnulare($t)['eroare'] === ''

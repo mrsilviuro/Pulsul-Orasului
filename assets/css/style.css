@@ -397,8 +397,34 @@ button { cursor: pointer; border: 0; background: none; }
   color: var(--text-soft);
 }
 
-.hero__cta { margin-top: 30px; padding: 14px 30px; font-size: 15.5px; }
+/* Cele două feluri de a intra în joc, unul lângă altul. Se rup pe două
+   rânduri când nu mai încap — pe telefon se întâmplă mai mereu. */
+.hero__butoane {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 30px;
+}
+
+.hero__cta { padding: 14px 30px; font-size: 15.5px; }
 .hero__cta .ico { width: 19px; height: 19px; }
+
+/* Al doilea buton e mai șters dinadins: „Propune o ieșire" e lucrul pe care
+   îl vrem mai mult. Fundalul lui e translucid, ca desenul de dedesubt să se
+   ghicească prin el — pe alb curat ar fi părut un cartonaș lipit peste poză. */
+.hero__cta--dorinta {
+  background: rgba(255, 255, 255, .74);
+  backdrop-filter: blur(6px);
+}
+.hero__cta--dorinta:hover { background: var(--surface); }
+
+[data-theme="dark"] .hero__cta--dorinta { background: rgba(21, 26, 34, .68); }
+[data-theme="dark"] .hero__cta--dorinta:hover { background: var(--surface); }
+
+/* Steluța e ceva mai mică decât plusul de pe butonul vecin: are mai multe
+   colțuri, deci la aceeași măsură ar fi părut mai mare decât el. */
+.hero__cta--dorinta .ico { width: 17px; height: 17px; }
 
 /* ---- săgeata de jos ---- */
 .hero__jos {
@@ -556,7 +582,6 @@ button { cursor: pointer; border: 0; background: none; }
   font-size: 13.5px;
   color: var(--text-soft);
 }
-.tabla__cere .ico { width: 16px; height: 16px; }
 
 /* ---- cutia cu formularul ---- */
 .tabla__cutie {
@@ -1077,7 +1102,7 @@ main { padding-block: 46px 64px; }
     background-position: 50% 74%;
   }
   .hero__vorba { margin-top: 14px; }
-  .hero__cta { margin-top: 26px; }
+  .hero__butoane { margin-top: 26px; }
 
   /* Pe telefon, 26px de margine laterală înseamnă un rând de text cu vreo
      patru cuvinte mai scurt. Dorința e oricum scurtă; aerul, nu. */
@@ -4015,9 +4040,13 @@ body { overscroll-behavior-y: none; }
    Marginea de sus e mică dinadins. Zona vine la capătul formularului, care e
    o grilă, deci între ea și butoane e deja spațiul dintre rândurile grilei;
    adunate, făceau un gol cât o secțiune goală. */
+/* Linia de sus stă la fel de departe de ce e deasupra ei cât e de butonul de
+   dedesubt. Cu 8px sus și 16px jos, lipită de caseta de interes de pe pagina
+   evenimentului, părea a fi marginea aceleia, nu începutul altei zone.
+   Cele două cifre se schimbă împreună sau deloc. */
 .zona-anulare {
-  margin-top: 8px;
-  padding-top: 16px;
+  margin-top: 18px;
+  padding-top: 18px;
   border-top: 1px solid var(--border);
 }
 
@@ -4025,11 +4054,6 @@ body { overscroll-behavior-y: none; }
    care își aduce propria linie de sus. Aici zona are deja una, iar două linii
    una sub alta arată ca o greșeală. */
 .zona-anulare .stergere-confirm { margin-top: 0; padding-top: 0; border-top: 0; }
-
-/* Ce rămâne în locul butonului după ce evenimentul a început. Aceeași linie de
-   sus, ca zona să nu-și schimbe forma — doar un rând de explicație în locul
-   apăsării, fără roșu: nu s-a stricat nimic, doar a trecut ora. */
-.zona-anulare--trecut { font-size: 14.5px; line-height: 1.6; color: var(--text-faint); }
 
 /* Bifa staff-ului, între ultimul chenar și butoane. Nu stă într-o casetă a ei:
    n-are ce câmp să grupeze, e o singură hotărâre de luat înainte de apăsare.

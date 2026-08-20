@@ -83,6 +83,29 @@ Tot codul stă în `inc/dorinte.php`; tabelul, în `sql/023-dorinte.sql`.
 Regula „o singură dorință" se ține **la scriere** (`puneODorinta`), nu în
 butonul de pe ecran: două file deschise deodată ar fi trimis amândouă.
 
+### Unde stă butonul
+
+**„Pune-ți o dorință" e în fereastra de bun venit**, lângă „Propune o ieșire" —
+acolo se hotărăște omul ce vrea să facă: ori pune la cale o ieșire, ori spune
+doar ce i-ar plăcea. Îl desenează `butonulDorintei()`.
+
+Butonul **dispare** pentru cine are deja o dorință în lucru: ar fi dus la un
+formular pe care serverul îl refuză oricum. Ce-i rămâne de aflat scrie sub
+tablă, prin `randeazaZonaDorinte()`:
+
+| starea lui | ce se vede în fereastră | ce scrie sub tablă |
+|---|---|---|
+| n-are niciuna | butonul | nimic |
+| a trimis una, se citește | — | „Dorința ta așteaptă să fie citită." |
+| e pe tablă | — | „Dorința ta e pe tablă până joi, 27 august." |
+
+Data e scrisă cu ziua săptămânii și **fără an** (`dataLunga($d, false)`): ziua
+săptămânii e ce caută omul întâi („mai am până joi"), iar anul, la șapte zile
+depărtare, nu spune nimic. În mijlocul frazei intră cu literă mică.
+
+Când tabla nu se desenează (n-are nicio dorință), vorba trece în capul listei,
+lângă „Ce facem zilele astea?".
+
 ### Cum se aprobă o dorință
 
 Nu există (încă) pagină de moderare. Din phpMyAdmin:
@@ -111,7 +134,7 @@ intrat `NOW()`-ul lui MySQL, din alt fus, într-un lucru care se numără în zi
   linie de JS.
 - **Când nu e nicio dorință, tabla nu se desenează deloc** — o tablă goală cu
   „încă nimeni n-a scris nimic" ar fi un anunț de pustiu chiar în capul
-  paginii. Butonul se mută atunci lângă „Ce facem zilele astea?".
+  paginii. Butonul nu se clatină: el stă în fereastra de bun venit oricum.
 - **Dorința cuiva care și-a șters contul dispare de pe tablă**, fiindcă tabla
   cere `membri.stare = 'activ'`, iar contul anonimizat nu mai e. Rândul rămâne
   în bază.
@@ -1812,6 +1835,42 @@ scris. Scrisă de două ori, ar fi de ajuns ca una să rămână în urmă pentr
 cineva să poată edita evenimentul altuia. Punctul de intrare **nu** se bazează
 pe faptul că formularul s-a deschis: cererea poate veni de oriunde, cu orice
 slug în ea.
+
+### Editarea se închide când începe evenimentul
+
+Din clipa orei de start, anunțul nu se mai schimbă: butonul „Editează" nu se
+mai desenează, pagina de editare trimite înapoi la pagina evenimentului, iar
+punctul de intrare răspunde **409**. Ce era de îndreptat se îndrepta înainte —
+după ora de start oamenii sunt deja pe drum, iar o schimbare de loc sau de oră
+le-ar ajunge sub ochi prea târziu ca să mai folosească cuiva.
+
+Ce rămâne de făcut e chiar pe pagina evenimentului: **„Anulează evenimentul"**
+încă o oră (vezi mai jos) și **„Încheie evenimentul"** oricând.
+
+Întrebarea o pune `poateFiEditat()`, și e ALTA decât `poateFiAnulat()`:
+
+| | se stinge la |
+|---|---|
+| `poateFiEditat()` | ora de start, la minutul zero |
+| `poateFiAnulat()` | o oră după ora de start (`MINUTE_ANULARE_DUPA_INCEPUT`) |
+
+De aceea regula **nu** stă în `evenimentDeEditat()`: de acela atârnă și
+anularea (`api/anuleaza-eveniment.php` îl cheamă ca să afle al cui e anunțul).
+Închisă acolo, ar fi luat înapoi tocmai ora de răgaz care e rostul întreg al
+butonului de anulare de pe pagină.
+
+### Cel mai devreme peste două ore
+
+Un eveniment nu poate începe mai devreme de **două ceasuri** de-acum
+(`ORE_MINIM_INAINTE`). Data singură se uita doar la ZI: la ora 15:00 se putea
+publica liniștit ceva „azi, de la 14:00" — un eveniment deja început în clipa
+în care apărea pe site. Verificarea pune data și ora cap la cap și se uită la
+clipa de început.
+
+La **editare** regula se cere doar dacă se schimbă chiar clipa de început —
+altfel, cine îndreaptă o virgulă cu o oră înainte de start ar fi fost trimis
+să-și amâne ieșirea cu două ore. `verificaEveniment()` primește pentru asta un
+al cincilea argument: ce scrie acum în bază, sau `null` la un eveniment nou.
 
 ### Ce se schimbă la salvare, și ce nu
 

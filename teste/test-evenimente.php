@@ -625,6 +625,104 @@ verifica('fișier care nu e poză: respins', true, !empty($r['erori']['coperta']
 verifica('și nimic n-a ajuns pe disc', 0,
     count(glob(dirname(__DIR__) . '/' . COPERTA_DOSAR . '/*.jpg') ?: []));
 
+echo "\n=== CÂT DE CURÂND POATE ÎNCEPE ===\n";
+
+/**
+ * Data singură se uita doar la ZI: la ora 15:00 se putea publica ceva „azi, de
+ * la 14:00" — un eveniment început în clipa în care apărea pe site. Acum
+ * verificarea pune data și ora cap la cap și cere cel puțin două ceasuri
+ * (ORE_MINIM_INAINTE).
+ */
+$r = trimite($c, [
+    'titlu'          => 'Ceva care începe cam prea repede',
+    'data_eveniment' => date('d-m-Y', time() + 3600),
+    'ora_inceput'    => date('H:i',   time() + 3600),
+]);
+verifica('peste o oră: respins', true, !empty($r['erori']['ora_inceput']));
+verifica('și n-a intrat în bază', 0, cateEvenimente());
+
+$r = trimite($c, [
+    'titlu'          => 'Ceva care a început deja',
+    'data_eveniment' => date('d-m-Y', time() - 3600),
+    'ora_inceput'    => date('H:i',   time() - 3600),
+]);
+verifica('o oră în urmă, azi: respins', true,
+    !empty($r['erori']['ora_inceput']) || !empty($r['erori']['data_eveniment']));
+verifica('nici acela n-a intrat', 0, cateEvenimente());
+
+$r = trimite($c, [
+    'titlu'          => 'Ceva de peste trei ceasuri',
+    'data_eveniment' => date('d-m-Y', time() + 3 * 3600),
+    'ora_inceput'    => date('H:i',   time() + 3 * 3600),
+]);
+verifica('peste trei ore: primit', true, !empty($r['ok']));
+
+/* ============ EDITAREA SE ÎNCHIDE CÂND ÎNCEPE EVENIMENTUL ============ */
+
+echo "\n=== EDITAREA, DUPĂ CE A ÎNCEPUT ===\n";
+
+$evAlNostru = ultimulEveniment();
+$slugAlNostru = (string) $evAlNostru['slug'];
+
+/* Îl mutăm cu o oră în urmă: a început, dar e încă în fereastra de anulare. */
+db()->prepare('UPDATE evenimente SET data_eveniment = ?, ora_inceput = ? WHERE id = ?')
+    ->execute([date('Y-m-d'), date('H:i:s', time() - 1800), (int) $evAlNostru['id']]);
+
+// `trimite()` întoarce doar trupul răspunsului, nu și codul — de aceea se
+// verifică mesajul, care e al acestei porți și numai al ei.
+$r = trimite($c, ['slug' => $slugAlNostru, 'titlu' => 'Titlu schimbat după start']);
+verifica('a început → editarea e refuzată', false, !empty($r['ok']));
+verifica('și i se spune de ce', true,
+    str_contains((string) ($r['mesaj'] ?? ''), 'a început'));
+verifica('cu îndrumarea spre ce mai poate face', true,
+    str_contains((string) ($r['mesaj'] ?? ''), 'anula sau încheia'));
+verifica('și titlul a rămas cel vechi', (string) $evAlNostru['titlu'],
+    (string) (ultimulEveniment()['titlu'] ?? ''));
+
+/* Mutat înapoi în viitor, se editează din nou. */
+db()->prepare('UPDATE evenimente SET data_eveniment = ?, ora_inceput = ? WHERE id = ?')
+    ->execute([date('Y-m-d', strtotime('+10 days')), '19:00:00', (int) $evAlNostru['id']]);
+
+$r = trimite($c, [
+    'slug'           => $slugAlNostru,
+    'titlu'          => 'Titlu schimbat înainte de start',
+    'data_eveniment' => date('d-m-Y', strtotime('+10 days')),
+    'ora_inceput'    => '19:00',
+]);
+verifica('înainte de start, editarea merge', true, !empty($r['ok']));
+verifica('și titlul chiar s-a schimbat', 'Titlu schimbat înainte de start',
+    (string) (ultimulEveniment()['titlu'] ?? ''));
+
+/**
+ * Editată fără să i se schimbe ora, chiar și cu startul la mai puțin de două
+ * ceasuri: trece. Altfel, cine îndreaptă o virgulă cu o oră înainte de start
+ * ar fi fost trimis să-și amâne ieșirea.
+ */
+$peste90 = time() + 90 * 60;
+db()->prepare('UPDATE evenimente SET data_eveniment = ?, ora_inceput = ? WHERE id = ?')
+    ->execute([date('Y-m-d', $peste90), date('H:i', $peste90) . ':00', (int) $evAlNostru['id']]);
+
+$r = trimite($c, [
+    'slug'           => $slugAlNostru,
+    'titlu'          => 'O virgulă îndreptată în ultima oră',
+    'data_eveniment' => date('d-m-Y', $peste90),
+    'ora_inceput'    => date('H:i', $peste90),
+]);
+verifica('la 90 de minute de start, o corectură tot trece', true, !empty($r['ok']));
+
+/* Dar mutat și mai aproape, nu. */
+$r = trimite($c, [
+    'slug'           => $slugAlNostru,
+    'titlu'          => 'Mutat și mai aproape',
+    'data_eveniment' => date('d-m-Y', time() + 1800),
+    'ora_inceput'    => date('H:i',   time() + 1800),
+]);
+verifica('dar mutat și mai aproape, nu', true, !empty($r['erori']['ora_inceput']));
+
+/* Curățăm, ca restul probei să pornească de la zero. */
+db()->prepare('DELETE FROM evenimente WHERE id = ?')->execute([(int) $evAlNostru['id']]);
+verifica('am făcut curat', 0, cateEvenimente());
+
 echo "\n=== APĂRAREA PUNCTULUI DE INTRARE ===\n";
 
 $r = cerere($baza . '/api/eveniment.php', $c, ['csrf' => 'gresit', 'titlu' => 'x']);
