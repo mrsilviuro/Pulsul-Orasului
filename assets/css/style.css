@@ -1294,8 +1294,11 @@ main { padding-block: 46px 64px; }
 .comment__cine {
   display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
 }
+/* Ora, „(editat)" și steagul de raportat, pe un rând care se poate rupe: pe
+   telefon, „acum 3 minute · Raportează" trece de lățimea coloanei la un
+   răspuns (care mai are și retragerea lui). Rupt, coboară doar steagul. */
 .comment__cand {
-  display: flex; align-items: center; gap: 6px;
+  display: flex; align-items: center; flex-wrap: wrap; gap: 2px 6px;
   line-height: 1.3;
 }
 .comment__author { font-size: 14.5px; font-weight: 700; color: var(--text);
@@ -1347,30 +1350,51 @@ main { padding-block: 46px 64px; }
 .comment__tool[aria-pressed="true"] .ico { fill: var(--brand-soft); }
 
 /* --- Steagul de raportat -------------------------------------------------
-   Ultimul din rând și cel mai șters: e o faptă rară, nu una de îndemnat.
-   Pentru autorul comentariului nu se scrie deloc în pagină (vezi
-   poateRaporta din inc/comentarii.php), deci n-are stare „stinsă".
+   Stă în ANTET, după ora comentariului, nu în rândul de unelte de jos. Alea
+   sunt lucruri pe care le faci tu (îți place, răspunzi, îți corectezi vorba);
+   raportul e ceva ce faci despre comentariul altuia, deci se citește mai bine
+   lângă eticheta lui.
+
+   Mic și șters, ca ora de lângă el: e o faptă rară, nu una de îndemnat. Pentru
+   autorul comentariului nu se scrie deloc în pagină (vezi poateRaporta din
+   inc/comentarii.php), deci n-are stare „stinsă".
 
    Nu poartă niciun număr, spre deosebire de aprecieri: câți au raportat e
    treaba staff-ului. Un contor la vedere ar fi devenit o unealtă de rușinare
-   publică, și încă una ușor de umflat de câțiva prieteni. */
-.comment__tool--raport { position: relative; margin-left: auto; opacity: .55; }
-.comment__tool--raport:hover,
-.comment__tool--raport:focus-visible { opacity: 1; }
+   publică, și încă una ușor de umflat de câțiva prieteni.
+
+   Punctul dinaintea lui îl desparte de oră fără o bară verticală și fără încă
+   un spațiu gol — același semn ca între data și locul unui eveniment. */
+.comment__raport {
+  position: relative;
+  display: inline-flex; align-items: center; gap: 5px;
+  margin-left: 4px;
+  font: inherit;
+  font-weight: 600;
+  color: var(--text-faint);
+  opacity: .75;
+  transition: color .18s var(--ease), opacity .18s var(--ease);
+}
+.comment__raport::before {
+  content: '·';
+  margin-right: 4px;
+  opacity: .7;
+}
+.comment__raport .ico { width: 13px; height: 13px; }
+.comment__raport:hover,
+.comment__raport:focus-visible { opacity: 1; color: var(--brand); }
 
 /* Degetul apucă mai mult decât se vede.
-   Steagul e singura unealtă fără text lângă el, deci și cea mai mică: 27×17px
-   pe telefon, sub orice prag de apăsat cu degetul. Suprafața de dedesubt îl
-   duce pe la 39×35 fără să miște nimic în rând — o umflare din `padding` ar fi
-   crescut înălțimea rândului de unelte la toate comentariile.
-   Marginea laterală (6px) rămâne sub spațiul dintre unelte (14px), ca să nu
-   fure apăsarea vecinului. */
-.comment__tool--raport::after { content: ''; position: absolute; inset: -9px -6px; }
+   Rândul antetului e scris cu 13px, deci butonul are vreo 17px înălțime — sub
+   orice prag de apăsat cu degetul. Suprafața de dedesubt îl crește cu 9px sus
+   și jos, fără să miște nimic în rând: o umflare din `padding` ar fi împins
+   ora comentariului la toate comentariile de pe pagină. */
+.comment__raport::after { content: ''; position: absolute; inset: -9px -4px; }
 
-/* Raportat de mine: steagul se umple, ca să se vadă dintr-o privire că
-   apăsarea următoare îl ia înapoi. */
-.comment__tool--raport.is-raportat { opacity: 1; color: var(--brand); }
-.comment__tool--raport.is-raportat .ico { fill: var(--brand-soft); }
+/* Raportat de mine: steagul se umple și scrie „Raportat", ca să se vadă
+   dintr-o privire că apăsarea următoare îl ia înapoi. */
+.comment__raport.is-raportat { opacity: 1; color: var(--brand); }
+.comment__raport.is-raportat .ico { fill: var(--brand-soft); }
 
 /* Comentariile ascunse până la „Vezi mai multe" (main.js pune `hidden`).
    Scris pe față, nu lăsat pe seama purtării implicite a atributului: e prea
@@ -1671,11 +1695,6 @@ html.cu-lupa, html.cu-lupa body { overflow: hidden; }
      între ele se rup pe două rânduri la aproape fiecare comentariu. Cu 8px
      încap pe unul singur, iar acolo unde tot nu încap se rup — nu ies. */
   .comment__tools { gap: 6px 8px; }
-  /* Steagul nu mai e împins în marginea din dreapta: pe un rând care se poate
-     rupe, marginea automată îl lăsa singur la capătul primului rând, în timp
-     ce „Șterge" cobora pe al doilea — arăta ca o greșeală. Aici merge după
-     celelalte, în rând, și se rupe odată cu ele. */
-  .comment__tool--raport { margin-left: 0; }
   .tab { padding: 11px 12px; font-size: 14px; }
 }
 

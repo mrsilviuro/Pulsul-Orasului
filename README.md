@@ -2006,8 +2006,9 @@ Vizitatorul neconectat vede butonul și numărul — e o veste bună pentru disc
 
 ### Raportarea
 
-Un steag mic, la capătul rândului de unelte. Apeși — comentariul e raportat;
-apeși iar — raportul se retrage. Rândurile stau în `comentarii_rapoarte`
+Un steag mic, în antet, imediat după ora comentariului, cu „Raportează" scris
+lângă el. Apeși — comentariul e raportat și scrie „Raportat"; apeși iar —
+raportul se retrage. Rândurile stau în `comentarii_rapoarte`
 (`sql/020`), cu perechea (comentariu, om) drept cheie primară, iar comutarea se
 face cu exact pattern-ul de la aprecieri: se încearcă întâi `DELETE`, iar dacă
 n-a șters nimic, se scrie acum. Serverul primește „s-a apăsat", nu „raportează"
@@ -2033,6 +2034,16 @@ Cine vede steagul:
 | autorul comentariului | nu |
 | oricine altcineva, conectat | da |
 | staff | da (n-are drepturi în plus aici) |
+
+**De ce în antet, și nu printre unelte.** „Apreciază", „Răspunde", „Editează" și
+„Șterge" sunt lucruri pe care le faci tu — îți place, răspunzi, îți corectezi
+vorba. Raportul e ceva ce faci DESPRE comentariul altuia; lângă ora la care a
+fost scris se citește ca ce e, o însemnare pe eticheta comentariului, nu încă o
+unealtă în rândul tău.
+
+**Și cu vorba scrisă, nu doar semnul.** Un steag singur nu spune nimic nimănui:
+cine nu-l mai văzuse trebuia să apese ca să afle ce face, adică exact ce nu vrei
+la un buton care nu se ia înapoi decât apăsând din nou.
 
 Pentru autor nu se scrie deloc în HTML, nu se desenează stins: un buton care
 spune „nu poți" ar fi fost o invitație în plus la o faptă pe care n-o cere

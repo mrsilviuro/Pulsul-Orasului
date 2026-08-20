@@ -797,7 +797,8 @@ function randeazaComentariu(array $c, array $context): string
          . $autor
          . insigneleComentariului($c, (int) $context['organizator_id'])
          . '</div>'
-         . '<div class="comment__cand">' . $ora . $editat . '</div>'
+         . '<div class="comment__cand">' . $ora . $editat
+         . randeazaSteagulDeRaport($c, $context) . '</div>'
          . '</div>'
          . textulComentariului((string) $c['text'], $mentiune)
          . $unelte
@@ -841,37 +842,49 @@ function randeazaUneltele(array $c, array $context): string
                  . '<button class="comment__tool comment__tool--sterge" type="button" data-delete>Șterge</button>';
     }
 
-    /**
-     * Steagul de raportat, la capătul rândului.
-     *
-     * Nu se scrie deloc pentru cine n-are ce raporta — nici pentru autorul
-     * comentariului, nici pentru cine nu e conectat. Un buton stins, care
-     * spune „nu poți", ar fi fost o invitație în plus la o faptă pe care n-o
-     * cere nimeni.
-     *
-     * E ultimul din rând, dinadins: „Apreciază" și „Răspunde" sunt lucruri pe
-     * care le faci des, ăsta e unul pe care îl faci rar. Iar semnul lui e mic
-     * și fără număr — vezi comutaRaport().
-     */
-    if (poateRaporta($c, (int) $context['membru_id'])) {
-        $raportat = (int) ($c['raportat'] ?? 0) > 0;
+    return '<div class="comment__tools">' . $unelte . '</div>';
+}
 
-        $unelte .= '<button class="comment__tool comment__tool--raport'
-                 . ($raportat ? ' is-raportat' : '') . '" type="button" data-raport'
-                 . ' aria-pressed="' . ($raportat ? 'true' : 'false') . '"'
-                 . ' title="' . ($raportat ? 'Ai raportat comentariul. Apasă ca să retragi.'
-                                           : 'Raportează comentariul') . '"'
-                 . ' aria-label="' . ($raportat ? 'Retrage raportul' : 'Raportează comentariul') . '">'
-                 . '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">'
-                 . '<path d="M5 21V4"/>'
-                 . '<path d="M5 4.8h9.6l-.9 3.4h5.1l-1.2 5.2H5"/>'
-                 . '</svg>'
-                 . '<span class="sr-only" data-raport-text>'
-                 . ($raportat ? 'Raportat' : 'Raportează') . '</span>'
-                 . '</button>';
+/**
+ * Steagul de raportat, în antet, imediat după ora comentariului.
+ *
+ * A stat o vreme la capătul rândului de unelte, printre „Apreciază",
+ * „Răspunde", „Editează" și „Șterge" — și era locul greșit. Alea sunt lucruri
+ * pe care le faci ție (îți place, răspunzi, îți corectezi vorba); raportul e
+ * ceva ce faci DESPRE comentariul altuia. Lângă ora la care a fost scris, în
+ * antet, se citește ca ce e: o însemnare pe eticheta comentariului, nu încă o
+ * unealtă în rândul tău de unelte.
+ *
+ * ȘI CU VORBA SCRISĂ, nu doar semnul. Un steag singur nu spune nimic nimănui —
+ * omul care nu l-a mai văzut nicăieri trebuia să apese ca să afle ce face,
+ * adică exact ce nu vrei la un buton care nu se ia înapoi decât apăsând din
+ * nou. Acum scrie „Raportează", iar după apăsare „Raportat".
+ *
+ * Nu se scrie deloc pentru cine n-are ce raporta — nici pentru autorul
+ * comentariului, nici pentru cine nu e conectat. Un buton stins, care spune
+ * „nu poți", ar fi fost o invitație în plus la o faptă pe care n-o cere
+ * nimeni. Fără număr, ca întotdeauna: vezi comutaRaport().
+ */
+function randeazaSteagulDeRaport(array $c, array $context): string
+{
+    if (!poateRaporta($c, (int) $context['membru_id'])) {
+        return '';
     }
 
-    return '<div class="comment__tools">' . $unelte . '</div>';
+    $raportat = (int) ($c['raportat'] ?? 0) > 0;
+
+    return '<button class="comment__raport' . ($raportat ? ' is-raportat' : '') . '"'
+         . ' type="button" data-raport'
+         . ' aria-pressed="' . ($raportat ? 'true' : 'false') . '"'
+         . ' title="' . ($raportat ? 'Ai raportat comentariul. Apasă ca să retragi.'
+                                   : 'Raportează comentariul') . '"'
+         . ' aria-label="' . ($raportat ? 'Retrage raportul' : 'Raportează comentariul') . '">'
+         . '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">'
+         . '<path d="M5 21V4"/>'
+         . '<path d="M5 4.8h9.6l-.9 3.4h5.1l-1.2 5.2H5"/>'
+         . '</svg>'
+         . '<span data-raport-text>' . ($raportat ? 'Raportat' : 'Raportează') . '</span>'
+         . '</button>';
 }
 
 /**

@@ -200,7 +200,9 @@ inc/
                       raportarea: poateRaporta() (oricine e conectat, în afară
                       de autorul comentariului — lui nu i se scrie steagul
                       deloc) și comutaRaport() (apasă = raportează, apasă iar =
-                      retrage). NUMĂRUL rapoartelor nu ajunge niciodată în
+                      retrage). Steagul se desenează în ANTET, după ora
+                      comentariului (randeazaSteagulDeRaport), cu vorba scrisă
+                      lângă el — nu în rândul de unelte de jos. NUMĂRUL rapoartelor nu ajunge niciodată în
                       pagină: omul vede doar dacă EL a raportat.
                       numaraRapoarte() există pentru lista de mai târziu a
                       staff-ului. TOT AICI: omDeInstiintatLaComentariu() — cine

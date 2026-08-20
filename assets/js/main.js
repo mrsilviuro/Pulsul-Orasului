@@ -1982,7 +1982,8 @@
      * nu mai e nimic de cernut — dar serverul întreabă oricum din nou.
      *
      * Nu se arată niciun număr: câți au raportat e treaba staff-ului. Omul vede
-     * doar dacă el însuși a raportat, din culoarea steagului.
+     * doar dacă el însuși a raportat — din culoarea steagului și din vorba de
+     * lângă el, care trece din „Raportează" în „Raportat".
      */
     function raporteaza(buton) {
       var li = buton.closest('.comment');
