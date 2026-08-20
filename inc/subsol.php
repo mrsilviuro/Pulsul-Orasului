@@ -68,16 +68,16 @@ if (session_status() === PHP_SESSION_ACTIVE && !empty($_SESSION['mesaj_bun'])) {
         </ul>
       </nav>
 
-      <div class="footer__col footer__news">
-        <h3>Newsletter</h3>
-        <p>Un e-mail pe săptămână, cu ce merită văzut în oraș.</p>
-        <form class="news-form" action="#" method="post">
-          <label class="sr-only" for="news-email">Adresa ta de e-mail</label>
-          <input id="news-email" type="email" name="email" placeholder="adresa@email.ro" required>
-          <button class="btn btn--primary btn--sm" type="submit">Mă abonez</button>
-        </form>
-      </div>
+      <!--
+        Aici a stat o casetă de înscriere la newsletter. A plecat: vestea
+        despre ce se întâmplă în oraș pleacă doar către cine are cont, și se
+        cere din setări (bifa „Vreau să primesc e-mail cu evenimente noi"), nu
+        dintr-o căsuță de subsol în care putea scrie oricine orice adresă.
 
+        Caseta de pe pagina de așteptare (constructie.php) rămâne unde e: acolo
+        e singurul lucru pe care îl poate face cineva cât ține lucrarea, iar
+        adresele acelea sunt ale unor oameni care n-au cum să-și facă un cont.
+      -->
     </div>
 
     <div class="footer__bottom">
