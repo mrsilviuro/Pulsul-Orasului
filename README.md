@@ -9,34 +9,52 @@ fără build, fără dependențe. Deschizi `index.html` direct în browser.
 index.html
 assets/
   css/style.css      → tokens de culoare, layout, componente, responsive
-  js/main.js         → temă, meniu mobil, slideshow
-  img/slides/        → imaginile din slideshow (16:9)
+  js/main.js         → temă, meniu mobil, paginile cu formulare
+  img/hero-zi.svg    → fundalul primei ferestre, tema deschisă (3200×1400)
+  img/hero-noapte.svg→ același, tema închisă
   img/posts/         → thumbnail-urile articolelor (16:9)
   img/favicon.svg
 ```
 
-Imaginile incluse sunt SVG-uri generate, doar ca placeholder — le înlocuiești cu
-poze reale (JPG/WebP), păstrând raportul 16:9.
+Thumbnail-urile din `img/posts/` sunt SVG-uri generate, doar ca placeholder — le
+înlocuiești cu poze reale (JPG/WebP), păstrând raportul 16:9. Cele două
+`hero-*.svg` nu sunt placeholder: sunt desenul primei ferestre (vezi mai jos).
 
-## Cum adaugi un slide
+## Prima fereastră (index.php)
 
-Copiezi un bloc din `#slideshow-track` și schimbi `href` + `src`. Punctele de
-navigare se generează automat din JS, deci nu trebuie să modifici nimic altundeva.
+Prima pagină se deschide cu un panou cât toată fereastra browserului, imediat
+sub bara de meniu: singura bucată de site care nu se oprește la `--wrap`.
+Înăuntru: „Bun venit pe / PulsulOrasului.Ro", îndemnul, butonul „Propune o
+ieșire" și o săgeată spre restul paginii.
 
-```html
-<a class="slide" href="pagina-ta.html">
-  <img src="assets/img/slides/slide-4.jpg" alt="Descriere scurtă" width="1600" height="900" decoding="async">
-</a>
-```
+Nu are nicio linie de JavaScript. Trei straturi suprapuse, toate din CSS
+(secțiunea „5. PRIMA FEREASTRĂ" din `style.css`):
 
-Intervalul de rulare se schimbă din atributul `data-interval` (milisecunde):
+| strat | ce face |
+|---|---|
+| `.hero__fundal` | desenul orașului, blurat ușor și plimbat încet stânga↔dreapta |
+| `.hero__voal`   | îl stinge cât să se poată citi textul, și se topește în culoarea paginii la marginea de jos |
+| `.hero__continut` | textul și butonul |
 
-```html
-<div class="slideshow" id="slideshow" data-interval="5000">
-```
+Ce e bine de știut dacă umbli la el:
 
-Notă: pe imaginile din slideshow nu se pune `loading="lazy"` — slide-urile care nu
-sunt pe ecran nu s-ar încărca la timp și ar apărea gol la trecerea la ele.
+- **Fundalul e un `<div>` gol cu `background-image`, nu un `<img>`.** Se schimbă
+  după `[data-theme]`, iar tema de pe site se pune de mână, din butonul cu
+  luna. Un `<picture>` cu `prefers-color-scheme` ar fi ascultat de sistem și ar
+  fi lăsat poza de zi pe cine apasă butonul.
+- **Desenele sunt panoramice (3200×1400) dinadins:** lățimea în plus e tocmai
+  ce se plimbă. Elementul e lat 132% și merge până la `-24.242%` din el, adică
+  exact 32% din fereastră — nici un pixel mai încolo, ca să nu se vadă capătul.
+  Dacă schimbi una din cifre, schimbă-le pe amândouă.
+- **Le desenează un script**, nu mâna: vezi comentariul din capul fișierelor
+  SVG. Sunt forme mari și puține, fiindcă peste ele stă text și oricum le
+  blurăm — o fotografie cu amănunte ar fi ieșit tot o pată, doar una de 400KB.
+- **Săgeata de jos e o legătură adevărată** (`<a href="#main">`), nu un buton de
+  JS: merge și cu JavaScript-ul stins. Unde se oprește pagina scrie în
+  `#main { scroll-margin-top }`, nu în JS.
+- Pe telefon cadrul e înalt și îngust, iar „cover" ar fi intrat tot desenul —
+  adică jumătate de cer gol. Sub 560px fundalul e făcut cu 18% mai înalt decât
+  cadrul și împins în jos, ca orașul să urce în ecran.
 
 ## Cum adaugi un articol
 
@@ -2006,8 +2024,9 @@ Vizitatorul neconectat vede butonul și numărul — e o veste bună pentru disc
 
 ### Raportarea
 
-Un steag mic, la capătul rândului de unelte. Apeși — comentariul e raportat;
-apeși iar — raportul se retrage. Rândurile stau în `comentarii_rapoarte`
+Un steag mic, în antet, imediat după ora comentariului, cu „Raportează" scris
+lângă el. Apeși — comentariul e raportat și scrie „Raportat"; apeși iar —
+raportul se retrage. Rândurile stau în `comentarii_rapoarte`
 (`sql/020`), cu perechea (comentariu, om) drept cheie primară, iar comutarea se
 face cu exact pattern-ul de la aprecieri: se încearcă întâi `DELETE`, iar dacă
 n-a șters nimic, se scrie acum. Serverul primește „s-a apăsat", nu „raportează"
@@ -2033,6 +2052,16 @@ Cine vede steagul:
 | autorul comentariului | nu |
 | oricine altcineva, conectat | da |
 | staff | da (n-are drepturi în plus aici) |
+
+**De ce în antet, și nu printre unelte.** „Apreciază", „Răspunde", „Editează" și
+„Șterge" sunt lucruri pe care le faci tu — îți place, răspunzi, îți corectezi
+vorba. Raportul e ceva ce faci DESPRE comentariul altuia; lângă ora la care a
+fost scris se citește ca ce e, o însemnare pe eticheta comentariului, nu încă o
+unealtă în rândul tău.
+
+**Și cu vorba scrisă, nu doar semnul.** Un steag singur nu spune nimic nimănui:
+cine nu-l mai văzuse trebuia să apese ca să afle ce face, adică exact ce nu vrei
+la un buton care nu se ia înapoi decât apăsând din nou.
 
 Pentru autor nu se scrie deloc în HTML, nu se desenează stins: un buton care
 spune „nu poți" ar fi fost o invitație în plus la o faptă pe care n-o cere

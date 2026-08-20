@@ -544,6 +544,41 @@ $htmlStrainRap = randeazaComentarii(
 
 verifica('străinul vede steagul', true, str_contains($htmlStrainRap, 'data-raport'));
 
+/**
+ * Steagul stă în ANTET, după oră — nu în rândul de unelte de jos.
+ *
+ * Se măsoară pe pozițiile din HTML: ora vine înaintea lui, iar rândul de
+ * unelte după. Dacă butonul s-ar întoarce printre unelte, a doua socoteală ar
+ * cădea pe dos.
+ */
+/* Rândul comentariului de raportat, singur — pe pagină sunt și altele. */
+$randulLuiRap = '';
+foreach (explode('data-comentariu="', $htmlStrainRap) as $bucata) {
+    if (str_starts_with($bucata, (string) $deRaportat . '"')) {
+        $randulLuiRap = explode('</article>', $bucata)[0];
+        break;
+    }
+}
+
+verifica('am găsit rândul de raportat', true, $randulLuiRap !== '');
+
+$undeOra    = strpos($randulLuiRap, 'comment__cand');
+$undeSteag  = strpos($randulLuiRap, 'data-raport');
+$undeUnelte = strpos($randulLuiRap, 'comment__tools');
+
+verifica('după ora comentariului', true,
+    $undeOra !== false && $undeSteag !== false && $undeSteag > $undeOra);
+verifica('și ÎNAINTEA rândului de unelte', true,
+    $undeUnelte !== false && $undeSteag < $undeUnelte);
+verifica('nu mai e o unealtă printre celelalte', false,
+    str_contains($htmlStrainRap, 'comment__tool comment__tool--raport'));
+
+/* Cu vorba scrisă, nu doar semnul: un steag singur nu spune nimic nimănui. */
+verifica('cu „Raportează" scris lângă el', true,
+    str_contains($htmlStrainRap, '>Raportează</span>'));
+verifica('și nu ascunsă doar pentru cititoarele de ecran', false,
+    str_contains($htmlStrainRap, 'sr-only" data-raport-text'));
+
 $htmlAutor = randeazaComentarii(
     grupeazaComentarii(comentariileEvenimentului($evenimentId, $participant)),
     context($eveniment, $participant));
@@ -570,6 +605,8 @@ $htmlDupaRaport = randeazaComentarii(
 
 verifica('cine a raportat vede steagul aprins', true,
     str_contains($htmlDupaRaport, 'is-raportat'));
+verifica('iar vorba de lângă el se schimbă', true,
+    str_contains($htmlDupaRaport, '>Raportat</span>'));
 verifica('și butonul o spune și cu vorba', true,
     str_contains($htmlDupaRaport, 'aria-pressed="true"'));
 

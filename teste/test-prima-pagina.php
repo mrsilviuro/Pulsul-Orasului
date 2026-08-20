@@ -437,6 +437,53 @@ if ($baza === '') {
     verifica('nu se poate cere cât vrea browserul', $cateAvem, $r['corp']['cate'] ?? 0);
 }
 
+/* ====================== 9. PRIMA FEREASTRĂ ========================== */
+
+if ($baza !== '') {
+    echo "\n=== PRIMA FEREASTRĂ ===\n";
+
+    $ctx  = stream_context_create(['http' => ['ignore_errors' => true, 'timeout' => 10]]);
+    $html = (string) @file_get_contents($baza . '/index.php', false, $ctx);
+
+    verifica('pagina se deschide', true, $html !== '');
+    verifica('panoul e acolo',     true, str_contains($html, '<section class="hero"'));
+    verifica('are fundal',         true, str_contains($html, 'hero__fundal'));
+    verifica('are voal',           true, str_contains($html, 'hero__voal'));
+
+    verifica('scrie „Bun venit pe"', true, str_contains($html, '>Bun venit pe<'));
+    verifica('și numele site-ului',  true, str_contains($html, '>PulsulOrasului.Ro</h1>'));
+    verifica('și îndemnul',          true,
+        str_contains($html, 'Fiecare ieșire contează. Tu vii cu ideea, noi venim cu energia. Implică-te!'));
+
+    // Butonul s-a mutat din capul listei în panou.
+    verifica('„Propune o ieșire" e în panou', 1,
+        substr_count($html, 'class="btn btn--primary hero__cta"'));
+    // În capul listei a rămas doar titlul. (Butonul din lista goală — „n-am
+    // găsit nimic, propune tu ceva" — e altceva și rămâne unde e.)
+    $capulListei = '';
+    if (preg_match('~<div class="section-head">(.*?)</div>\s*</div>~s', $html, $m)) {
+        $capulListei = $m[1];
+    }
+    verifica('capul listei s-a găsit', true, $capulListei !== '');
+    verifica('și n-are niciun buton în el', false, str_contains($capulListei, 'class="btn'));
+
+    // Săgeata e o legătură adevărată, ca să meargă și fără JavaScript.
+    verifica('săgeata duce la conținut', true,
+        str_contains($html, '<a class="hero__jos" href="#main">'));
+
+    // Un singur titlu de rang întâi pe pagină: numele site-ului.
+    verifica('un singur h1', 1, substr_count($html, '<h1'));
+    verifica('titlul listei a coborât la h2', true,
+        str_contains($html, '<h2 class="section-title">Ce facem zilele astea?</h2>'));
+
+    // Sliderul s-a dus cu totul — și din pagină, și de pe disc.
+    verifica('nu mai e slider în pagină', false, str_contains($html, 'slideshow'));
+    verifica('nici pozele lui pe disc',   false, is_dir(__DIR__ . '/../assets/img/slides'));
+
+    verifica('desenul de zi există',     true, is_file(__DIR__ . '/../assets/img/hero-zi.svg'));
+    verifica('desenul de noapte există', true, is_file(__DIR__ . '/../assets/img/hero-noapte.svg'));
+}
+
 /* =========================== curățenie ============================= */
 
 // Evenimentele celorlalte teste se întorc de unde au plecat prin
