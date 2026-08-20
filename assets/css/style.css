@@ -1262,7 +1262,22 @@ main { padding-block: 46px 64px; }
 
 /* comentarii */
 .comments { display: grid; gap: 24px; }
-.comment__body { display: flex; gap: 12px; }
+/* `scroll-margin-top` spune unde se oprește pagina când se sare la un
+   comentariu din adresă („…#c123", linkul din e-mailul de înștiințare).
+
+   Fără el, browserul lipește comentariul de marginea de sus a ecranului, iar
+   antetul lipit acolo îi acoperă primele rânduri: omul primea un mesaj care
+   spunea „ți-a răspuns cineva", apăsa, și ateriza pe o vorbă tăiată la
+   jumătate. Cei 20px de deasupra sunt aer, ca rândul să nu pară lipit de
+   antet.
+
+   Regula stă în CSS, nu în JS — la fel ca la `.panel`: browserul încearcă și
+   el să sară singur la elementul din adresă, iar încercarea lui vine după a
+   noastră. Așa se opresc amândoi în același loc. */
+.comment__body {
+  display: flex; gap: 12px;
+  scroll-margin-top: calc(var(--header-h) + 20px);
+}
 .comment__avatar { width: 38px; height: 38px; border-radius: 50%; flex: none; }
 .comment__main { flex: 1; min-width: 0; }
 

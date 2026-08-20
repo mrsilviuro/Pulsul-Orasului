@@ -2077,6 +2077,54 @@
 
     // Prima așezare: tot ce trece de primul teanc se dă la o parte.
     potrivesteAscunsul();
+
+    /* ------------- comentariul cerut din adresă („#c123") -------------
+       Linkul din e-mailul de înștiințare duce fix la comentariul despre care
+       e vorba. De obicei browserul se descurcă singur — ținta e acolo, iar
+       `scroll-margin-top` de pe `.comment__body` îl oprește sub antet.
+
+       Nu și când comentariul a rămas dincolo de primul teanc: atunci e
+       `hidden`, iar browserul n-are la ce sări. Omul primea un mesaj care
+       spunea „ți-a răspuns cineva", apăsa, și ajungea în capul paginii, cu
+       răspunsul închis sub un buton pe care nu știa că trebuie să-l apese.
+
+       Se dau la o parte destule teancuri cât să iasă la iveală, apoi se sare
+       la el. Nu se arată toate deodată: la o discuție de o sută de rânduri,
+       cel căutat ar fi rămas tot îngropat, doar că într-o pagină mai lungă. */
+    function aratăComentariulDinAdresa() {
+      var potrivire = (window.location.hash || '').match(/^#c(\d+)$/);
+      if (!potrivire) return;
+
+      var articol = document.getElementById('c' + potrivire[1]);
+      if (!articol) return;
+
+      var li = articol.closest('.comment');
+      if (!li) return;
+
+      /* Câte teancuri trebuie desfăcute ca să ajungem la el. `indexOf` pe
+         lista în ordinea de pe ecran — aceeași ordine după care se ascunde. */
+      var loc = toateComentariile().indexOf(li);
+
+      if (loc >= 0 && loc >= vizibile) {
+        vizibile = Math.ceil((loc + 1) / deodata) * deodata;
+        potrivesteAscunsul();
+      }
+
+      /* Sărit din nou, chiar dacă era vizibil de la început: browserul a
+         încercat o dată, înainte ca CSS-ul și pozele să așeze pagina, și de
+         multe ori s-a oprit în alt loc. `block: 'start'` lasă
+         `scroll-margin-top` să hotărască unde. */
+      if (articol.scrollIntoView) {
+        articol.scrollIntoView({ block: 'start' });
+      }
+    }
+
+    aratăComentariulDinAdresa();
+
+    /* Și când diezul se schimbă fără reîncărcare — omul e deja pe pagină și
+       apasă un al doilea link din același e-mail, sau se întoarce cu săgeata
+       browserului. Fără rândul ăsta, a doua oară n-ar mai desface nimic. */
+    window.addEventListener('hashchange', aratăComentariulDinAdresa);
   }
 
   /* -------------------------- PANOURILE CU OAMENI ------------------------

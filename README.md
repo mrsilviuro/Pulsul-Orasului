@@ -2082,6 +2082,22 @@ pus pe `<article class="comment__body">` în `randeazaComentariu()`. Acolo, și 
 pe `<li>`-ul din jur, fiindcă `<li>`-ul se scrie în trei locuri (lista întreagă,
 răspunsurile, și răspunsul întors de API), iar articolul într-unul singur.
 
+**Unde se oprește pagina** o spune `scroll-margin-top` de pe `.comment__body`,
+în CSS — nu în JS, la fel ca la `.panel`: browserul încearcă și el să sară singur
+la elementul din adresă, iar încercarea lui vine după a noastră, deci amândoi
+trebuie să se oprească în același loc. Fără regula asta, comentariul se lipea de
+marginea de sus a ecranului și antetul îi acoperea primele rânduri: omul primea
+un mesaj care spunea „ți-a răspuns cineva", apăsa, și ateriza pe o vorbă tăiată
+la jumătate.
+
+**Și dacă a rămas dincolo de primul teanc?** Din cele cincisprezece care se văd
+la început, comentariul căutat poate fi al douăzecilea — deci `hidden`, iar
+browserul n-are la ce sări. `main.js` citește diezul la încărcare (și la
+`hashchange`), socotește al câtelea e în listă, desface exact atâtea teancuri cât
+să iasă la iveală, și abia apoi sare la el. Nu le arată pe toate deodată: la o
+discuție de o sută de rânduri, cel căutat ar fi rămas tot îngropat, doar că
+într-o pagină mai lungă.
+
 Vestea pleacă **după** ce comentariul e scris în bază, niciodată înainte — și un
 mesaj care nu pleacă nu oprește publicarea. Cel care a scris n-are nicio vină și
 n-are ce face cu o eroare despre serverul de e-mail; ce n-a mers ajunge în log.
