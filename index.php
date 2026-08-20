@@ -31,6 +31,71 @@ $categorieAleasa = categoriaCeruta($_GET['categorie'] ?? null);
  */
 $primaTura = evenimenteDePePrima($orasAles, $categorieAleasa);
 
+/* ========================= TABLA CU DORINȚE ==========================
+   Formularul dorinței se trimite cu JavaScript (api/dorinta.php), dar merge
+   și fără: atunci e un `<form method="post">` obișnuit, care se întoarce aici.
+   Aceeași înțelegere ca la pagina de așteptare — verificarea și scrierea stau
+   într-un singur loc (puneODorinta din inc/dorinte.php), chemat din amândouă
+   părțile. Scrise de două ori, s-ar fi despărțit la prima schimbare.
+
+   Trebuie făcut ÎNAINTE de antet.php: acolo încep să plece anteturile HTTP,
+   iar dincolo de ele nu se mai poate nici redirecționa, nici pus un cookie.
+   ==================================================================== */
+require_once __DIR__ . '/inc/dorinte.php';
+
+$membruAcum   = membruCurent();
+$dorintaRau   = '';
+$dorintaErori = [];                        // pe câmpuri: 'oras', 'dorinta'
+$dorintaScrisa = ['oras' => '', 'dorinta' => ''];
+
+if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['dorinta'])) {
+    $dorintaScrisa = [
+        'oras'    => is_string($_POST['oras'] ?? null) ? $_POST['oras'] : '',
+        'dorinta' => is_string($_POST['dorinta'] ?? null) ? $_POST['dorinta'] : '',
+    ];
+
+    if (!tokenCsrfValid(is_string($_POST['csrf'] ?? null) ? $_POST['csrf'] : '')) {
+        $dorintaRau = 'Reîncarcă pagina și încearcă din nou.';
+    } elseif ($membruAcum === null) {
+        $dorintaRau = 'Trebuie să fii conectat ca să-ți pui o dorință.';
+    } else {
+        $rezultat = puneODorinta((int) $membruAcum['id'], $_POST);
+
+        /**
+         * Reușita se întoarce printr-o REDIRECȚIONARE, nu direct în pagină.
+         *
+         * Altfel, adresa ar fi rămas la un POST: o apăsare pe „reîncarcă" ar
+         * fi trimis dorința a doua oară, iar omul ar fi văzut, în locul
+         * mulțumirii, un „ai deja o dorință care așteaptă". Cu JavaScript
+         * lucrul ăsta nu se întâmplă niciodată (cererea pleacă prin fetch),
+         * dar fără el se întâmpla la prima tastă F5.
+         *
+         * Greșelile NU se redirecționează: acolo trebuie păstrat ce a scris
+         * omul, ca să nu-l punem să scrie din nou.
+         */
+        if ($rezultat['ok']) {
+            header('Location: index.php?dorinta=trimisa#dorinta-formular');
+            exit;
+        }
+
+        $dorintaRau   = $rezultat['mesaj'];
+        $dorintaErori = $rezultat['erori'];
+    }
+}
+
+/**
+ * Ce se vede pe tablă și ce scrie pe buton.
+ *
+ * Amândouă se citesc DUPĂ trimitere, nu înainte: cine tocmai și-a pus o
+ * dorință trebuie să vadă pe loc „așteaptă să fie citită", nu butonul care
+ * l-ar pune s-o scrie a doua oară.
+ */
+$dorinteleDePeTabla = dorinteDePeTabla();
+
+$voieLaDorinta = $membruAcum === null
+    ? ['stare' => '', 'dorinta' => null]
+    : poatePuneODorinta((int) $membruAcum['id']);
+
 require __DIR__ . '/inc/antet.php';
 ?>
 
@@ -90,15 +155,160 @@ require __DIR__ . '/inc/antet.php';
 <main id="main">
   <div class="wrap">
 
+    <!-- ========================= TABLA CU DORINȚE =======================
+      Treapta de dinaintea unui eveniment: cine n-ar vrea să organizeze poate
+      măcar să spună ce i-ar plăcea să se facă, iar cine caută o idee o
+      găsește aici.
+
+      TREI STĂRI, ȘI TOATE TREC PRIN ACELAȘI COLȚ DE PAGINĂ:
+        - sunt dorințe → tabla se desenează, cu butonul sub ea
+        - nu sunt      → tabla nu se desenează DELOC (o tablă goală cu „încă
+                         nimeni n-a scris nimic" ar fi un anunț de pustiu chiar
+                         în capul paginii), iar butonul se mută în capul
+                         listei, unde stătea „Propune o ieșire"
+        - formularul deschis → ia locul tablei
+
+      ORDINEA DIN DOM NU E CEA DE PE ECRAN, ȘI E DINADINS. Formularul stă
+      ÎNAINTEA tablei tocmai ca, deschis, s-o poată ascunde cu un selector de
+      frați (`~`) — fără JavaScript, doar din `:target`. Vezi „TABLA CU
+      DORINȚE" din style.css. Așa butonul merge și cu JS-ul stins: e o
+      legătură adevărată către `#dorinta-formular`.
+    ================================================================== -->
+    <?php
+    $tablaHtml = randeazaTablaDorinte($dorinteleDePeTabla);
+    $areTabla  = $tablaHtml !== '';
+
+    /**
+     * Mulțumirea se arată după redirecționarea de mai sus (`?dorinta=trimisa`),
+     * dar NUMAI dacă omul chiar are o dorință în așteptare. Fără verificarea
+     * asta, adresa scrisă de mână ar fi arătat oricui un „am primit-o" pentru
+     * ceva ce n-a trimis nimeni.
+     */
+    $dorintaGata = ($_GET['dorinta'] ?? '') === 'trimisa'
+                && $voieLaDorinta['stare'] === 'asteapta';
+
+    /* Formularul se desenează pentru cine mai poate pune o dorință — sau
+       pentru cine tocmai a trimis una, ca să vadă mulțumirea. */
+    $poateDori = $dorintaGata || ($logat && $voieLaDorinta['stare'] === 'poate');
+    ?>
+
+    <?php if ($areTabla || $poateDori): ?>
+    <section class="tabla<?= $areTabla ? '' : ' tabla--fara' ?>" aria-label="Tabla cu dorințe">
+
+      <?php if ($poateDori): ?>
+      <!-- Deschis de `:target` (fără JS) sau de clasa de mai jos (cu JS, și
+           după o trimitere care s-a întors cu ceva de spus).
+
+           Se desenează DOAR pentru cine chiar mai poate pune una. Cine are
+           deja o dorință în lucru ar fi găsit altfel, scriind `#` în adresă,
+           un formular pe care serverul n-avea cum să-l primească. -->
+      <div class="tabla__cutie<?= ($dorintaRau !== '' || $dorintaGata) ? ' e-deschis' : '' ?>"
+           id="dorinta-formular">
+
+        <form class="dorinta-form" method="post" action="index.php#dorinta-formular"
+              data-dorinta-form <?= $dorintaGata ? 'hidden' : '' ?>>
+          <input type="hidden" name="csrf" value="<?= h(tokenCsrf()) ?>">
+
+          <p class="dorinta-form__titlu">Ce ți-ar plăcea să se întâmple în oraș?</p>
+
+          <!-- Ce s-a întors de la server și nu ține de un anume câmp:
+               „ai deja o dorință", „sesiunea a expirat". -->
+          <p class="dorinta-form__rau" id="err-dorinta" role="alert"
+             <?= $dorintaRau === '' ? 'hidden' : '' ?>><?= h($dorintaRau) ?></p>
+
+          <div class="field-row">
+            <!-- ORAȘUL. Aceeași listă ca la filtrele de mai jos și ca în
+                 formularul de eveniment: `orase` din inc/config.php, prin
+                 oraseDisponibile(). Un oraș nou e un rând acolo, atât. -->
+            <div class="field">
+              <label for="dorinta-oras">Unde? <span class="req" aria-hidden="true">*</span></label>
+              <select id="dorinta-oras" name="oras" required
+                      aria-describedby="err-dorinta-oras">
+                <option value="" <?= $dorintaScrisa['oras'] === '' ? 'selected' : '' ?> disabled>Alege…</option>
+                <?php foreach (oraseDisponibile() as $oras): ?>
+                <option value="<?= h($oras) ?>" <?= $dorintaScrisa['oras'] === $oras ? 'selected' : '' ?>>
+                  <?= h($oras) ?>
+                </option>
+                <?php endforeach; ?>
+              </select>
+              <p class="field__error" id="err-dorinta-oras"
+                 <?= isset($dorintaErori['oras']) ? '' : 'hidden' ?>><?= h($dorintaErori['oras'] ?? '') ?></p>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="dorinta-text">Ce anume? <span class="req" aria-hidden="true">*</span></label>
+            <textarea id="dorinta-text" name="dorinta" rows="2"
+                      maxlength="<?= DORINTA_MAX ?>" data-min="<?= DORINTA_MIN ?>" required
+                      aria-describedby="err-dorinta-text"
+                      placeholder="Ex: un turneu de șah în parc, într-o seară de vineri"><?= h($dorintaScrisa['dorinta']) ?></textarea>
+            <p class="field__hint contor-caractere" id="dorinta-numar" role="status">
+              0 din <?= DORINTA_MAX ?> de caractere
+            </p>
+            <p class="field__error" id="err-dorinta-text"
+               <?= isset($dorintaErori['dorinta']) ? '' : 'hidden' ?>><?= h($dorintaErori['dorinta'] ?? '') ?></p>
+          </div>
+
+          <!-- Ce trebuie să știe omul ÎNAINTE să apese, nu după. Toate trei
+               sunt lucruri pe care nu le mai poate lua înapoi. -->
+          <ul class="dorinta-form__reguli">
+            <li>O citim înainte de a o pune pe tablă — nu apare pe loc.</li>
+            <li>Stă pe tablă <?= ZILE_PE_TABLA ?> zile. Poți avea o singură dorință
+                o dată; după ce iese a ta, poți pune alta.</li>
+            <li>Odată publicată, nu se mai poate schimba și nu se mai poate șterge.</li>
+          </ul>
+
+          <div class="dorinta-form__butoane">
+            <button class="btn btn--primary btn--sm" type="submit">
+              <span>Trimite dorința</span>
+            </button>
+            <!-- „Renunț" e tot o legătură: `#main` stinge `:target`, deci
+                 închide formularul și fără JavaScript. -->
+            <a class="btn btn--text" href="#main">Renunț</a>
+          </div>
+
+          <p class="dorinta-form__lege">
+            Trimițând-o, ești de acord cu <a href="#">termenii și condițiile</a> site-ului.
+          </p>
+        </form>
+
+        <!-- Panoul de mulțumire. Stă în pagină de la început, ascuns: și PHP
+             (fără JS), și JS (după fetch) doar îl dau la iveală. Textul vine
+             din MESAJ_DORINTA_TRIMISA, scris o singură dată. -->
+        <div class="dorinta-gata" data-dorinta-gata <?= $dorintaGata ? '' : 'hidden' ?>>
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M20 6 9 17l-5-5"/>
+          </svg>
+          <p><?= h(MESAJ_DORINTA_TRIMISA) ?></p>
+        </div>
+      </div>
+      <?php endif; ?>
+
+      <?= $tablaHtml ?>
+
+      <?php if ($areTabla): ?>
+      <div class="tabla__unelte">
+        <?= randeazaZonaDorinte($logat, $voieLaDorinta['stare'], $voieLaDorinta['dorinta']) ?>
+      </div>
+      <?php endif; ?>
+    </section>
+    <?php endif; ?>
+
     <!--
       Titlu secțiune. `h2`, nu `h1`: numele site-ului din prima fereastră e
       titlul paginii, iar pe o pagină nu stau două titluri de rang întâi.
       Butonul „Propune o ieșire" s-a mutat și el sus, lângă nume.
+
+      Aici ajunge „Pune-ți o dorință" NUMAI când nu e nicio dorință de arătat:
+      atunci tabla nu se desenează, iar butonul ei ar fi rămas fără casă.
     -->
     <div class="section-head">
       <div>
         <h2 class="section-title">Ce facem zilele astea?</h2>
       </div>
+      <?php if (!$areTabla): ?>
+      <?= randeazaZonaDorinte($logat, $voieLaDorinta['stare'], $voieLaDorinta['dorinta']) ?>
+      <?php endif; ?>
     </div>
 
     <!-- ============================ FILTRELE ============================

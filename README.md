@@ -56,6 +56,66 @@ Ce e bine de știut dacă umbli la el:
   adică jumătate de cer gol. Sub 560px fundalul e făcut cu 18% mai înalt decât
   cadrul și împins în jos, ca orașul să urce în ecran.
 
+## Tabla cu dorințe
+
+Imediat sub prima fereastră, deasupra listei de evenimente. E treapta de
+dinaintea unui eveniment: ca să organizezi ceva trebuie să-ți iei o răspundere
+— ziua, locul, ora, oamenii care vin — și nu toți vor asta. Dar mulți ar veni
+la ceva, dacă s-ar face. Tabla e locul unde spui doar atât: „mi-ar plăcea să
+se facă asta".
+
+Un rând arată așa: **P. Ana** și-ar dori: *un turneu de șah în parc*, cu orașul
+dedesubt. Cel mult zece deodată, alese **la întâmplare** la fiecare încărcare a
+primei pagini — cu „ultimele zece" a unsprezecea n-ar fi fost citită niciodată.
+
+Tot codul stă în `inc/dorinte.php`; tabelul, în `sql/023-dorinte.sql`.
+
+### Regulile
+
+| | |
+|---|---|
+| lungime | cel mult **100 de caractere** (`DORINTA_MAX`), numărate cu `mb_strlen` |
+| câte deodată | **una** de om. O dorință respinsă nu-l oprește să încerce din nou; una în așteptare sau una încă pe tablă, da |
+| cât stă | **7 zile** (`ZILE_PE_TABLA`), numărate **de la aprobare**, nu de la trimitere |
+| după aceea | iese de pe tablă și omul poate pune alta. Rândul NU se șterge |
+| se poate schimba? | nu. Nici șterge. Omul e înștiințat în formular, înainte să apese |
+
+Regula „o singură dorință" se ține **la scriere** (`puneODorinta`), nu în
+butonul de pe ecran: două file deschise deodată ar fi trimis amândouă.
+
+### Cum se aprobă o dorință
+
+Nu există (încă) pagină de moderare. Din phpMyAdmin:
+
+```sql
+SELECT d.id, m.prenume, d.oras, d.dorinta, d.creat_la
+  FROM dorinte d JOIN membri m ON m.id = d.membru_id
+ WHERE d.stare_moderare = 'in_asteptare' ORDER BY d.creat_la;
+
+UPDATE dorinte SET stare_moderare = 'aprobat' WHERE id = 7;   -- sau 'respins'
+```
+
+Atât. `publicat_la` **nu se pune de mână**: îl scrie codul, cu ceasul PHP, la
+prima încărcare a primei pagini (`stampileazaCeleAprobate`). Altfel ar fi
+intrat `NOW()`-ul lui MySQL, din alt fus, într-un lucru care se numără în zile.
+
+### Ce e bine de știut dacă umbli la ea
+
+- **Merge fără JavaScript, tot.** Butonul „Pune-ți o dorință" e o legătură
+  către `#dorinta-formular`, iar `:target` deschide formularul; „Renunț" duce
+  la `#main` și-l închide. Formularul e un `<form method="post">` adevărat, pe
+  care îl primește `index.php` — aceeași funcție pe care o cheamă și
+  `api/dorinta.php`. Fără JS se vede o dorință din cele zece, nu zece.
+- **În HTML formularul stă ÎNAINTEA tablei**, deși pe ecran apare în același
+  loc. Așa, deschis, o poate ascunde cu un selector de frați (`~`), fără nicio
+  linie de JS.
+- **Când nu e nicio dorință, tabla nu se desenează deloc** — o tablă goală cu
+  „încă nimeni n-a scris nimic" ar fi un anunț de pustiu chiar în capul
+  paginii. Butonul se mută atunci lângă „Ce facem zilele astea?".
+- **Dorința cuiva care și-a șters contul dispare de pe tablă**, fiindcă tabla
+  cere `membri.stare = 'activ'`, iar contul anonimizat nu mai e. Rândul rămâne
+  în bază.
+
 ## Cum adaugi un articol
 
 Copiezi un `<article class="card">` din `.grid`. Pentru articolul mare, lat cât

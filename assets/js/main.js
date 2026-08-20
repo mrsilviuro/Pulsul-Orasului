@@ -242,6 +242,29 @@
       .replace(/^[ \t\n\r\0\x0B]+|[ \t\n\r\0\x0B]+$/g, '');
   }
 
+  /**
+   * Oglinda felului în care verificaDorinta() curăță textul, pas cu pas.
+   *
+   * ORDINEA CONTEAZĂ, și e aceeași ca pe server: întâi Enterul se preface în
+   * SPAȚIU, abia pe urmă se scot caracterele de control. Invers, „\n" — care
+   * e și el un caracter de control — ar fi dispărut cu totul, iar „un
+   * turneu\nde șah" ar fi ieșit „un turneude șah". Contorul de sub căsuță ar
+   * fi arătat atunci cu două caractere mai puțin decât numără serverul.
+   *
+   * Diacriticele nu se unifică aici — ş cu sedilă și ș cu virgulă sunt tot
+   * un caracter fiecare, deci numărul nu se schimbă, iar contorul despre
+   * număr vorbește.
+   */
+  function pregatesteUnRand(text) {
+    return String(text)
+      .replace(/[\r\n\t\v\f]+/g, ' ')
+      .replace(/[\x00-\x1F\x7F]/g, '')
+      // `\s` din JS cuprinde și spațiul insecabil, și pe cele din zona
+      // U+2000 — adică exact ce strânge `[\p{Z}\s]+` pe server.
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
   /** Câte caractere are textul — la fel ca mb_strlen($text, 'UTF-8'). */
   function numaraCaractere(text) {
     return [...String(text)].length;
@@ -629,6 +652,192 @@
     dupaAdresa();
     window.addEventListener('hashchange', dupaAdresa);
   });
+
+  /* --------------------------- TABLA CU DORINȚE -------------------------
+     Slide-ul de sub prima fereastră și formularul care-i ia locul.
+
+     CE FACE JS-UL AICI E NUMAI ÎN PLUS. Fără el:
+       - se vede prima dorință din cele zece (server-ul îi pune `is-activa`)
+       - butonul „Pune-ți o dorință" deschide formularul prin `:target`, iar
+         „Renunț" îl închide, fiindcă amândouă sunt legături adevărate
+       - formularul se trimite ca orice `<form method="post">`, iar index.php
+         îl primește și răspunde în pagină
+     Cu el: dorințele se schimbă între ele, iar trimiterea nu mai clatină
+     pagina. Nici aici nu se construiește niciun cartonaș — tot ce se vede a
+     venit desenat de pe server (randeazaTablaDorinte din inc/dorinte.php).
+  ------------------------------------------------------------------------ */
+
+  var tabla = document.querySelector('[data-tabla]');
+
+  if (tabla) {
+    var dorinte = Array.prototype.slice.call(tabla.querySelectorAll('[data-dorinta]'));
+    var puncte  = Array.prototype.slice.call(tabla.querySelectorAll('[data-dorinta-punct]'));
+    var laRand  = 0;
+    var ceasT   = null;
+
+    /**
+     * Cu „mișcare redusă" pornită, dorințele NU se schimbă singure.
+     *
+     * Punctele rămân: cine vrea să le vadă pe toate le poate cere. Un panou
+     * care se schimbă singur la fiecare șase secunde e exact lucrul de care
+     * fuge setarea asta.
+     */
+    var faraMiscare = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    if (dorinte.length > 1) {
+      var arataDorinta = function (n) {
+        laRand = (n + dorinte.length) % dorinte.length;
+
+        dorinte.forEach(function (d, i) {
+          var e = i === laRand;
+          d.classList.toggle('is-activa', e);
+          d.setAttribute('aria-hidden', e ? 'false' : 'true');
+        });
+
+        puncte.forEach(function (p, i) {
+          var e = i === laRand;
+          p.classList.toggle('is-activ', e);
+          p.setAttribute('aria-current', e ? 'true' : 'false');
+        });
+      };
+
+      var porneste = function () {
+        if (faraMiscare) return;
+        opreste();
+        ceasT = setInterval(function () { arataDorinta(laRand + 1); }, 6500);
+      };
+      var opreste = function () { if (ceasT) { clearInterval(ceasT); ceasT = null; } };
+
+      puncte.forEach(function (p, i) {
+        p.addEventListener('click', function () {
+          arataDorinta(i);
+          porneste();          // de la capăt, ca omul să apuce să citească
+        });
+      });
+
+      // Pauză când cineva se uită, și când fila trece în fundal.
+      tabla.addEventListener('mouseenter', opreste);
+      tabla.addEventListener('mouseleave', porneste);
+      tabla.addEventListener('focusin', opreste);
+      tabla.addEventListener('focusout', porneste);
+      document.addEventListener('visibilitychange', function () {
+        document.hidden ? opreste() : porneste();
+      });
+
+      porneste();
+    }
+  }
+
+  /* --- formularul dorinței --- */
+
+  var cutiaDorintei = document.getElementById('dorinta-formular');
+  var formDorinta   = document.querySelector('[data-dorinta-form]');
+
+  if (cutiaDorintei && formDorinta) {
+    var gataDorinta = cutiaDorintei.querySelector('[data-dorinta-gata]');
+    var rauDorinta  = document.getElementById('err-dorinta');
+    var textDorinta = document.getElementById('dorinta-text');
+    var numarDorinta = document.getElementById('dorinta-numar');
+
+    /**
+     * `:target` deschide cutia singur, dar numai cât timp adresa se termină
+     * în `#dorinta-formular`. Clasa o ține deschisă și după aceea — de pildă
+     * după o trimitere reușită, când tot ce trebuie să vadă omul e mulțumirea.
+     */
+    document.querySelectorAll('a[href="#dorinta-formular"]').forEach(function (a) {
+      a.addEventListener('click', function () {
+        cutiaDorintei.classList.add('e-deschis');
+        // Focusul intră în formular abia după ce browserul a sărit acolo.
+        setTimeout(function () {
+          var oras = document.getElementById('dorinta-oras');
+          if (oras) oras.focus();
+        }, 60);
+      });
+    });
+
+    formDorinta.querySelectorAll('a[href="#main"]').forEach(function (a) {
+      a.addEventListener('click', function () {
+        cutiaDorintei.classList.remove('e-deschis');
+      });
+    });
+
+    /* contorul de caractere, la fel ca la descrierea unui eveniment */
+    if (textDorinta && numarDorinta) {
+      var maxDorinta = parseInt(textDorinta.getAttribute('maxlength'), 10) || 100;
+      var minDorinta = parseInt(textDorinta.getAttribute('data-min'), 10) || 10;
+
+      var numaraDorinta = function () {
+        var cate = numaraCaractere(pregatesteUnRand(textDorinta.value));
+        numarDorinta.textContent = cate + ' din ' + maxDorinta + ' de caractere';
+        numarDorinta.classList.toggle('e-gata', cate >= minDorinta);
+      };
+
+      textDorinta.addEventListener('input', numaraDorinta);
+      numaraDorinta();
+    }
+
+    formDorinta.addEventListener('submit', function (e) {
+      e.preventDefault();
+
+      var buton = formDorinta.querySelector('button[type="submit"]');
+      if (buton && buton.disabled) return;
+      if (buton) buton.disabled = true;
+
+      if (rauDorinta) { rauDorinta.textContent = ''; rauDorinta.hidden = true; }
+      setError('dorinta-oras', 'err-dorinta-oras', '');
+      setError('dorinta-text', 'err-dorinta-text', '');
+
+      fetch('api/dorinta.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          csrf:    (formDorinta.querySelector('[name="csrf"]') || {}).value || '',
+          oras:    (document.getElementById('dorinta-oras') || {}).value || '',
+          dorinta: textDorinta ? textDorinta.value : ''
+        })
+      })
+        .then(citesteRaspuns)
+        .then(function (rez) {
+          if (buton) buton.disabled = false;
+
+          if (!rez.corp) {
+            if (rauDorinta) {
+              rauDorinta.textContent = mesajRaspunsNeasteptat(rez);
+              rauDorinta.hidden = false;
+            }
+            return;
+          }
+
+          if (rez.corp.ok) {
+            formDorinta.hidden = true;
+            if (gataDorinta) gataDorinta.hidden = false;
+            cutiaDorintei.classList.add('e-deschis');
+            return;
+          }
+
+          var erori = rez.corp.erori || {};
+          setError('dorinta-oras', 'err-dorinta-oras', erori.oras || '');
+          setError('dorinta-text', 'err-dorinta-text', erori.dorinta || '');
+
+          // Mesajul general se arată doar când nu e legat de un câmp anume:
+          // altfel omul l-ar fi citit de două ori, o dată sus și o dată jos.
+          var areCamp = !!(erori.oras || erori.dorinta);
+
+          if (rauDorinta && !areCamp) {
+            rauDorinta.textContent = rez.corp.mesaj || 'Nu a mers. Încearcă din nou.';
+            rauDorinta.hidden = false;
+          }
+        })
+        .catch(function () {
+          if (buton) buton.disabled = false;
+          if (rauDorinta) {
+            rauDorinta.textContent = 'Nu am putut trimite. Verifică legătura la internet.';
+            rauDorinta.hidden = false;
+          }
+        });
+    });
+  }
+
 
   /* ---------------------------- PRIMA PAGINĂ ----------------------------
      Filtrele de sus și „Vezi mai mult" de la coada listei.
