@@ -185,6 +185,35 @@ if (is_array($fisier) && (int) ($fisier['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLO
     $coperta = $poza['nume'];
 }
 
+/**
+ * La refacerea unui eveniment („Remake"), fără fișier nou se copiază coperta
+ * celui vechi.
+ *
+ * Restul câmpurilor au venit completate în pagină și pleacă de acolo, ca la
+ * orice eveniment nou — numai poza stă pe disc, iar formularul n-are cum s-o
+ * trimită înapoi fără s-o ceară omului din nou.
+ *
+ * Se copiază FIȘIERUL, nu doar numele lui: două anunțuri care ar arăta spre
+ * aceeași poză ar fi însemnat că ștergerea unuia îl lasă pe celălalt fără ea.
+ *
+ * Slugul din formular nu e o dovadă: evenimentDeRefacut() întreabă din nou al
+ * cui e anunțul și dacă s-a încheiat ori s-a anulat cu adevărat. Iar dacă
+ * n-are voie, nu răspundem cu o eroare — anunțul nou se face oricum, doar fără
+ * poză. Ce ar fi de spus („evenimentul din care copiezi nu mai e al tău") nu
+ * ajută pe nimeni la mijlocul unei publicări.
+ */
+if ($deEditat === null && $coperta === null) {
+    $slugDeRefacut = trim((string) ($_POST['remake'] ?? ''));
+
+    if ($slugDeRefacut !== '') {
+        $refacut = evenimentDeRefacut($slugDeRefacut, $membruId);
+
+        if ($refacut !== null) {
+            $coperta = copiazaCoperta($refacut['coperta'] ?? null);
+        }
+    }
+}
+
 /* =========================== 5. Salvarea ============================= */
 
 try {

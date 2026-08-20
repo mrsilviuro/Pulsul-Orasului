@@ -1054,6 +1054,19 @@ function urlEditareEveniment(string $slug): string
 }
 
 /**
+ * Adresa formularului care face încă unul la fel din evenimentul ăsta.
+ *
+ * Alt parametru decât la editare, dinadins: `slug=` înseamnă „schimbă rândul
+ * ăsta", `remake=` înseamnă „scrie unul nou, pornind de la el". Cu același
+ * nume, o greșeală de o literă ar fi rescris anunțul vechi în loc să facă unul
+ * nou — și nimeni n-ar fi văzut până a doua zi.
+ */
+function urlRefacereEveniment(string $slug): string
+{
+    return 'adauga_eveniment.php?remake=' . urlencode($slug);
+}
+
+/**
  * Evenimentul pe care omul ăsta are voie să-l editeze, sau null.
  *
  * Regula stă aici, într-un singur loc, fiindcă o cer două fișiere: pagina cu
@@ -1347,6 +1360,62 @@ function poateFiEditat(array $eveniment): bool
     }
 
     return !evenimentAInceput($eveniment);
+}
+
+/**
+ * Se poate face încă unul la fel din ăsta?
+ *
+ * Da, după ce s-a terminat sau s-a anulat: alergarea de duminică se face și
+ * duminica viitoare, iar cea care a picat din cauza ploii se mută pe altă zi.
+ * Tot ce a scris omul o dată — titlu, categorie, oraș, loc, poză, cine poate
+ * veni, cât costă, descrierea — se copiază într-un formular nou. Data rămâne
+ * goală: ea e singurul lucru care chiar se schimbă.
+ *
+ * ÎNAINTE de sfârșit nu: acolo e „Editează". Un buton de refăcut lângă unul
+ * de editat, la un eveniment care încă urmează, ar fi două feluri de a face
+ * același lucru, iar cel greșit ar lăsa în urmă un al doilea anunț.
+ *
+ * NUMAI pentru un anunț care chiar a fost pe site. Unul respins sau încă în
+ * așteptare n-a avut loc niciodată, deci n-are ce reface — se îndreaptă din
+ * „Editează" și se trimite din nou.
+ *
+ * Proprietatea NU se verifică aici, ca la poateFiAnulat(): o pune
+ * evenimentDeRefacut() când se cere formularul, și o întrebare despre
+ * organizator pe pagina evenimentului.
+ */
+function poateFiRefacut(array $eveniment): bool
+{
+    $stare = (string) ($eveniment['stare_moderare'] ?? '');
+
+    if ($stare === 'anulat') {
+        return true;
+    }
+
+    return in_array($stare, ['aprobat', 'incheiat'], true) && evenimentIncheiat($eveniment);
+}
+
+/**
+ * Evenimentul din care se face unul nou — sau null, dacă nu se poate.
+ *
+ * Fratele lui evenimentDeEditat(): aceeași grijă, altă întrebare. Un slug care
+ * nu duce nicăieri, unul al altcuiva și unul care încă n-a trecut sfârșesc la
+ * fel — cu null, iar pagina trimite omul pe prima pagină. Ca la event.php,
+ * același răspuns pentru toate: altfel, ghicind sluguri, s-ar putea afla ce
+ * evenimente există.
+ */
+function evenimentDeRefacut(string $slug, int $membruId): ?array
+{
+    if ($membruId <= 0) {
+        return null;
+    }
+
+    $eveniment = evenimentDupaSlug($slug);
+
+    if ($eveniment === null || (int) $eveniment['membru_id'] !== $membruId) {
+        return null;
+    }
+
+    return poateFiRefacut($eveniment) ? $eveniment : null;
 }
 
 /**

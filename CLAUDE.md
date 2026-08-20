@@ -122,7 +122,12 @@ inc/
   subsol.php        → footer + scripturi
   bootstrap.php     → config, conexiune DB, sesiune, CSRF
   validare.php      → toate verificările server-side (fără atingere DB)
-  imagini.php       → procesare/validare poze de profil ȘI coperți de eveniment
+  imagini.php       → procesare/validare poze de profil ȘI coperți de eveniment.
+                      TOT AICI copiazaCoperta(): singurul loc de pe site unde
+                      un fișier de imagine ajunge pe disc fără să treacă prin
+                      GD — și nu e o portiță, fiindcă fișierul de plecare e
+                      unul scris chiar de noi, pixel cu pixel, la prima
+                      încărcare. O cere „Remake"-ul
   evenimente.php    → categorii, regula „un eveniment activ", lista de pe
                       profil, LISTA DE PE PRIMA PAGINĂ (evenimenteDePePrima —
                       singura care se aduce din bază în teancuri, nu toată
@@ -149,7 +154,18 @@ inc/
                       api/anuleaza-eveniment.php răspunde 409; ce rămâne e
                       „Încheie evenimentul". Zona cu butonul se desenează
                       dintr-un singur loc: randeazaZonaAnulare() din
-                      inc/afisare-eveniment.php. TOT AICI:
+                      inc/afisare-eveniment.php. LA CELĂLALT CAPĂT AL VIEȚII
+                      UNUI ANUNȚ: poateFiRefacut() și evenimentDeRefacut() —
+                      butonul „Remake" de pe pagina evenimentului, care apare
+                      DOAR după ce s-a încheiat sau s-a anulat, doar
+                      organizatorului. Duce la adauga_eveniment.php?remake=…
+                      (alt parametru decât `slug=`, dinadins) și aduce tot ce
+                      scrisese omul o dată, ca un anunț NOU: „Când o să aibă
+                      loc?" rămâne gol, cel vechi nu se atinge. Coperta se
+                      COPIAZĂ pe disc (copiazaCoperta din inc/imagini.php), nu
+                      se împarte — două rânduri care ar arăta spre același
+                      fișier ar fi rămas amândouă fără poză la prima ștergere.
+                      TOT AICI:
                       randeazaCartonasEveniment() primește starea
                       ('' | 'incheiat' | 'anulat' | 'live') și
                       cifreleCartonasului() scrie în colțul de jos câți vin
