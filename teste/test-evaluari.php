@@ -85,6 +85,7 @@ foreach ([$trecut, $viitor] as $ev) {
 }
 
 $trecutId = (int) $trecut['id'];
+$viitorId = (int) $viitor['id'];
 
 /* ====================== 1. CINE POATE SĂ NOTEZE ===================== */
 
@@ -374,6 +375,54 @@ verifica('la organizatoare, celălalt însemn', 2,
     substr_count(randeazaIstoric($istoricOrg), 'card__rol--organizator'));
 
 verifica('fără nimic, fără HTML', '', randeazaIstoric([]));
+
+/**
+ * Cartonașele din istoric se poartă ca cele de la coada primei pagini: poza
+ * stinsă (`card--incheiat`) și cuvântul în colț. Până acum arătau ca cele care
+ * abia urmează, iar ochiul nu deosebea o listă cu ce a fost de una cu ce vine.
+ */
+verifica('cartonașele din istoric vin stinse', 2,
+    substr_count($htmlIstoric, 'card--incheiat'));
+verifica('cu „Încheiat" scris pe ele', 2,
+    substr_count($htmlIstoric, '>Încheiat</span>'));
+
+/* Cifrele de pe poză vin din aceeași cerere ca lista. */
+verifica('și cu cifrele pe poză', 2, substr_count($htmlIstoric, 'card__cifre'));
+
+/* ------------------- un eveniment ANULAT în istoric ---------------- */
+
+/**
+ * Omul se înscrisese, își ținuse seara aceea liberă, iar apoi n-a mai fost
+ * nimic. Asta face parte din ce i s-a întâmplat, la fel ca o seară care chiar
+ * a avut loc — deci rămâne în listă, cu „Anulat" scris în colț.
+ *
+ * NU se numără însă la „a participat la": n-a participat la nimic.
+ */
+/**
+ * Se anulează cel la care Ana CHIAR a fost socotită prezentă (tsteva-viitor,
+ * încheiat cu mâna mai sus), nu celălalt: la acela era însemnată absentă, deci
+ * nu se număra oricum, iar proba n-ar fi dovedit nimic.
+ */
+verifica('înainte, se număra una', 1, laCateEvenimenteAFost($ana));
+
+db()->prepare('UPDATE evenimente SET stare_moderare = \'anulat\',
+                      motiv_anulare = \'S-a stricat vremea.\' WHERE id = ?')
+    ->execute([$viitorId]);
+
+$istoricDupa = istoricEvenimente($ana);
+
+verifica('cel anulat rămâne în istoric', 2, count($istoricDupa));
+verifica('cu starea lui scrisă în rând', true,
+    in_array('anulat', array_column($istoricDupa, 'stare_moderare'), true));
+verifica('dar nu se mai numără la prezențe', 0, laCateEvenimenteAFost($ana));
+
+$htmlDupa = randeazaIstoric($istoricDupa);
+verifica('pe cartonaș scrie „Anulat"', 1, substr_count($htmlDupa, '>Anulat</span>'));
+verifica('și e tot stins', 2, substr_count($htmlDupa, 'card--incheiat'));
+
+// Înapoi cum era, ca restul probei să găsească ce se aștepta.
+db()->prepare('UPDATE evenimente SET stare_moderare = \'incheiat\',
+                      motiv_anulare = NULL WHERE id = ?')->execute([$viitorId]);
 
 /* =========================== 7. NUMERELE ========================== */
 

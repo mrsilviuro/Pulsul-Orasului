@@ -357,8 +357,14 @@ const ISTORIC_DEODATA = 6;
  * participanți ca oricare altul (vezi faOrganizatorulParticipant). Ca să se
  * poată scrie „Organizator" pe ele, se întoarce și `e_organizator`.
  *
- * Cele anulate și cele care n-au ajuns niciodată publice lipsesc: la primele
- * nimeni n-a fost nicăieri, la celelalte n-avea cum să se înscrie cineva.
+ * Cele care n-au ajuns niciodată publice lipsesc: n-avea cum să se înscrie
+ * cineva la ele.
+ *
+ * CELE ANULATE, în schimb, rămân. Omul se înscrisese, își ținuse seara aceea
+ * liberă, iar apoi n-a mai fost nimic — asta face parte din ce i s-a întâmplat,
+ * la fel ca o seară care chiar a avut loc. Se vede pe cartonaș, stins, cu
+ * „Anulat" scris în colț; nu se numără însă în „a participat la", fiindcă
+ * n-a participat la nimic (vezi laCateEvenimenteAFost).
  *
  * Anunțurile însemnate `ascuns_pe_profil` (vezi sql/022) lipsesc și ele — DAR
  * numai de pe profilul celui care le-a pus. Pentru oricine altcineva rămân la
@@ -375,8 +381,9 @@ function istoricEvenimente(int $membruId): array
 
     $q = db()->prepare(
         'SELECT e.id, e.titlu, e.slug, e.coperta, e.data_eveniment, e.ora_inceput,
-                e.locatie, e.descriere, e.stare_moderare,
+                e.locatie, e.descriere, e.stare_moderare, e.participanti_max,
                 c.nume AS categorie, c.slug AS categorie_slug, c.imagine_default,
+                ' . CIFRE_CARTONAS . ',
                 (e.membru_id = i.membru_id) AS e_organizator,
                 EXISTS (
                   SELECT 1 FROM evaluari ev
@@ -392,8 +399,10 @@ function istoricEvenimente(int $membruId): array
             -- Ținut deoparte de profil, dar numai de al ORGANIZATORULUI: vezi
             -- explicația de deasupra funcției.
             AND NOT (e.ascuns_pe_profil = 1 AND e.membru_id = i.membru_id)
-            AND e.stare_moderare IN (\'aprobat\', \'incheiat\')
-            AND (e.stare_moderare = \'incheiat\' OR e.data_eveniment < ?)
+            AND e.stare_moderare IN (\'aprobat\', \'incheiat\', \'anulat\')
+            -- Un eveniment anulat intră în istoric oricare i-ar fi ziua: nu mai
+            -- urmează, oricât ar arăta calendarul.
+            AND (e.stare_moderare IN (\'incheiat\', \'anulat\') OR e.data_eveniment < ?)
           ORDER BY e.data_eveniment DESC, e.ora_inceput DESC, e.id DESC'
     );
     $q->execute([$membruId, date('Y-m-d')]);
@@ -432,7 +441,19 @@ function randeazaIstoric(array $evenimente): string
             $insigne .= '<span class="card__rol card__rol--absent">Absent</span>';
         }
 
-        $html .= randeazaCartonasEveniment($ev, $insigne);
+        /**
+         * Cartonașele de aici se poartă ca cele de la coada primei pagini:
+         * poza stinsă, cuvântul în colț. Până acum arătau ca cele care abia
+         * urmează — aceeași culoare, aceeași greutate — și ochiul nu deosebea
+         * o listă cu ce a fost de una cu ce vine.
+         *
+         * Toate cele de aici sunt trecute (funcția de mai sus nu aduce altele),
+         * deci singura întrebare rămasă e dacă seara a avut loc sau a fost
+         * anulată.
+         */
+        $stare = ($ev['stare_moderare'] ?? '') === 'anulat' ? 'anulat' : 'incheiat';
+
+        $html .= randeazaCartonasEveniment($ev, $insigne, false, $stare);
     }
 
     return $html;

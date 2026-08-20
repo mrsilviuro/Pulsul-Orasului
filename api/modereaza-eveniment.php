@@ -208,8 +208,13 @@ if ($stareNoua === 'respins') {
  * golit listele) și apoi aprobat la a doua citire ar fi rămas fără organizator
  * pe lista lui, iar de rândul acela atârnă mulțumirile de după eveniment și
  * notele dintre participanți.
+ *
+ * NU la anunțurile ținute deoparte de profil: acolo organizatorul n-a fost pus
+ * pe listă nici la publicare, iar aprobarea n-are de ce să-l pună acum. Aceeași
+ * întrebare, aceeași funcție ca la salvare — vezi organizatorulVineSingur().
  */
-if ($stareNoua === 'aprobat') {
+if ($stareNoua === 'aprobat'
+    && organizatorulVineSingur((int) ($eveniment['ascuns_pe_profil'] ?? 0) === 1)) {
     faOrganizatorulParticipant($evenimentId, (int) $eveniment['membru_id']);
 }
 

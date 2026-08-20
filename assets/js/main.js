@@ -2077,6 +2077,54 @@
 
     // Prima așezare: tot ce trece de primul teanc se dă la o parte.
     potrivesteAscunsul();
+
+    /* ------------- comentariul cerut din adresă („#c123") -------------
+       Linkul din e-mailul de înștiințare duce fix la comentariul despre care
+       e vorba. De obicei browserul se descurcă singur — ținta e acolo, iar
+       `scroll-margin-top` de pe `.comment__body` îl oprește sub antet.
+
+       Nu și când comentariul a rămas dincolo de primul teanc: atunci e
+       `hidden`, iar browserul n-are la ce sări. Omul primea un mesaj care
+       spunea „ți-a răspuns cineva", apăsa, și ajungea în capul paginii, cu
+       răspunsul închis sub un buton pe care nu știa că trebuie să-l apese.
+
+       Se dau la o parte destule teancuri cât să iasă la iveală, apoi se sare
+       la el. Nu se arată toate deodată: la o discuție de o sută de rânduri,
+       cel căutat ar fi rămas tot îngropat, doar că într-o pagină mai lungă. */
+    function aratăComentariulDinAdresa() {
+      var potrivire = (window.location.hash || '').match(/^#c(\d+)$/);
+      if (!potrivire) return;
+
+      var articol = document.getElementById('c' + potrivire[1]);
+      if (!articol) return;
+
+      var li = articol.closest('.comment');
+      if (!li) return;
+
+      /* Câte teancuri trebuie desfăcute ca să ajungem la el. `indexOf` pe
+         lista în ordinea de pe ecran — aceeași ordine după care se ascunde. */
+      var loc = toateComentariile().indexOf(li);
+
+      if (loc >= 0 && loc >= vizibile) {
+        vizibile = Math.ceil((loc + 1) / deodata) * deodata;
+        potrivesteAscunsul();
+      }
+
+      /* Sărit din nou, chiar dacă era vizibil de la început: browserul a
+         încercat o dată, înainte ca CSS-ul și pozele să așeze pagina, și de
+         multe ori s-a oprit în alt loc. `block: 'start'` lasă
+         `scroll-margin-top` să hotărască unde. */
+      if (articol.scrollIntoView) {
+        articol.scrollIntoView({ block: 'start' });
+      }
+    }
+
+    aratăComentariulDinAdresa();
+
+    /* Și când diezul se schimbă fără reîncărcare — omul e deja pe pagină și
+       apasă un al doilea link din același e-mail, sau se întoarce cu săgeata
+       browserului. Fără rândul ăsta, a doua oară n-ar mai desface nimic. */
+    window.addEventListener('hashchange', aratăComentariulDinAdresa);
   }
 
   /* -------------------------- PANOURILE CU OAMENI ------------------------
@@ -4625,6 +4673,130 @@
     });
   }
 
+  /* ======================= ANULAREA UNUI EVENIMENT ===================
+     Aceeași zonă, pe două pagini: formularul de editare și pagina
+     evenimentului (sub caseta de interes). HTML-ul îl scrie
+     randeazaZonaAnulare() din inc/afisare-eveniment.php, într-un singur loc;
+     aici e purtarea lui, tot într-unul singur.
+
+     Se caută după `data-anulare`, nu după formularul de eveniment: pe pagina
+     evenimentului nu există niciun formular în jur, iar slugul și tokenul stau
+     pe zona însăși.
+
+     În două trepte, ca ștergerea contului din setări: butonul își schimbă
+     locul cu întrebarea. Confirmarea e desenată de noi, nu de browser —
+     window.confirm() arată altfel pe fiecare sistem.
+  ==================================================================== */
+  var zonaAnulare = document.querySelector('[data-anulare]');
+
+  if (zonaAnulare) {
+    var evAnuleaza  = document.getElementById('ev-anuleaza');
+    var evSigur     = document.getElementById('ev-anulare-sigur');
+    var evAnulareDa = document.getElementById('ev-anulare-da');
+    var evAnulareNu = document.getElementById('ev-anulare-nu');
+
+    if (evAnuleaza && evSigur) {
+      evAnuleaza.addEventListener('click', function () {
+        evAnuleaza.hidden = true;
+        evSigur.hidden = false;
+        if (evAnulareNu) evAnulareNu.focus();   // atenția pe ieșire, nu pe faptă
+      });
+
+      if (evAnulareNu) {
+        evAnulareNu.addEventListener('click', function () {
+          evSigur.hidden = true;
+          evAnuleaza.hidden = false;
+          evAnuleaza.focus();
+        });
+      }
+    }
+
+    /* --- motivul anulării: obligatoriu, numărat ca pe server --- */
+    /*
+      Aceeași numărătoare ca la descriere — vezi numaraCaractere() și oglinda
+      lui curataTextPeRanduri(). Motivul ăsta pleacă prin e-mail spre oamenii
+      care voiau să vină și rămâne apoi scris pe pagina evenimentului, deci
+      contorul n-are voie să spună altceva decât acceptă serverul.
+    */
+    var evMotiv      = document.getElementById('ev-motiv');
+    var evMotivNumar = document.getElementById('ev-motiv-numar');
+
+    if (evMotiv && evMotivNumar) {
+      var motivMin = parseInt(evMotiv.getAttribute('data-min'), 10) || 15;
+      var motivMax = parseInt(evMotiv.getAttribute('data-max'), 10) || 1000;
+
+      var numaraMotivul = function () {
+        // Cât scrie omul, eroarea de dinainte nu mai are ce spune.
+        setError('ev-motiv', 'err-ev-motiv', '');
+
+        if (numaraCaractere(evMotiv.value) > motivMax) {
+          evMotiv.value = taieLaCaractere(evMotiv.value, motivMax);
+        }
+
+        var cate = numaraCaractere(curataTextPeRanduri(evMotiv.value));
+        evMotivNumar.textContent = cate + ' din minim ' + motivMin + ' caractere';
+        evMotivNumar.classList.toggle('e-gata', cate >= motivMin);
+      };
+
+      evMotiv.addEventListener('input', numaraMotivul);
+      numaraMotivul();
+    }
+
+    if (evAnulareDa) {
+      evAnulareDa.addEventListener('click', function () {
+        var slug = zonaAnulare.getAttribute('data-slug') || '';
+        if (!slug) return;
+
+        var textInitial = evAnulareDa.textContent;
+        evAnulareDa.disabled = true;
+        evAnulareDa.textContent = 'Se anulează…';
+
+        function gata() {
+          evAnulareDa.disabled = false;
+          evAnulareDa.textContent = textInitial;
+        }
+
+        fetch('api/anuleaza-eveniment.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({
+            csrf: zonaAnulare.getAttribute('data-csrf') || '',
+            slug: slug,
+            motiv: evMotiv ? evMotiv.value : ''
+          })
+        })
+        .then(citesteRaspuns)
+        .then(function (rez) {
+          if (!rez.corp) { gata(); toast(mesajRaspunsNeasteptat(rez)); return; }
+          var c = rez.corp;
+
+          // Motivul lipsă sau prea scurt: eroarea stă sub casetă, ca la orice
+          // alt câmp, nu într-un toast care se stinge singur.
+          if (c.erori) {
+            gata();
+            setError('ev-motiv', 'err-ev-motiv', c.erori.motiv || 'Scrie de ce anulezi.');
+            if (evMotiv) evMotiv.focus();
+            return;
+          }
+
+          if (!c.ok) { gata(); toast(c.mesaj || 'Nu am putut anula evenimentul.'); return; }
+
+          // Butonul rămâne stins: hotărârea e luată, n-are rost să se poată
+          // apăsa încă o dată cât se face mutarea.
+          toast(c.mesaj || 'Evenimentul a fost anulat.');
+          setTimeout(function () {
+            window.location.href = c.redirect || 'profil.php';
+          }, 700);
+        })
+        .catch(function () {
+          gata();
+          toast(mesajFaraLegatura());
+        });
+      });
+    }
+  }
+
   var evForm = document.getElementById('eveniment-form');
 
   if (evForm) {
@@ -4995,118 +5167,6 @@
       o desenăm pe o pânză exact cum ar tăia-o serverul — cu numerele din
       decupator — și o lăsăm în localStorage pentru fila care se deschide.
     */
-    /* ------------------------ anularea ------------------------------- */
-    /*
-      În două trepte, ca ștergerea contului din setări: butonul își schimbă
-      locul cu întrebarea. Confirmarea e desenată de noi, nu de browser —
-      window.confirm() arată altfel pe fiecare sistem.
-    */
-    var evAnuleaza  = document.getElementById('ev-anuleaza');
-    var evSigur     = document.getElementById('ev-anulare-sigur');
-    var evAnulareDa = document.getElementById('ev-anulare-da');
-    var evAnulareNu = document.getElementById('ev-anulare-nu');
-
-    if (evAnuleaza && evSigur) {
-      evAnuleaza.addEventListener('click', function () {
-        evAnuleaza.hidden = true;
-        evSigur.hidden = false;
-        if (evAnulareNu) evAnulareNu.focus();   // atenția pe ieșire, nu pe faptă
-      });
-
-      if (evAnulareNu) {
-        evAnulareNu.addEventListener('click', function () {
-          evSigur.hidden = true;
-          evAnuleaza.hidden = false;
-          evAnuleaza.focus();
-        });
-      }
-    }
-
-    /* --- motivul anulării: obligatoriu, numărat ca pe server --- */
-    /*
-      Aceeași numărătoare ca la descriere — vezi numaraCaractere() și oglinda
-      lui curataTextPeRanduri(). Motivul ăsta pleacă prin e-mail spre oamenii
-      care voiau să vină, deci contorul n-are voie să spună altceva decât
-      acceptă serverul.
-    */
-    var evMotiv      = document.getElementById('ev-motiv');
-    var evMotivNumar = document.getElementById('ev-motiv-numar');
-
-    if (evMotiv && evMotivNumar) {
-      var motivMin = parseInt(evMotiv.getAttribute('data-min'), 10) || 15;
-      var motivMax = parseInt(evMotiv.getAttribute('data-max'), 10) || 1000;
-
-      var numaraMotivul = function () {
-        // Cât scrie omul, eroarea de dinainte nu mai are ce spune.
-        setError('ev-motiv', 'err-ev-motiv', '');
-
-        if (numaraCaractere(evMotiv.value) > motivMax) {
-          evMotiv.value = taieLaCaractere(evMotiv.value, motivMax);
-        }
-
-        var cate = numaraCaractere(curataTextPeRanduri(evMotiv.value));
-        evMotivNumar.textContent = cate + ' din minim ' + motivMin + ' caractere';
-        evMotivNumar.classList.toggle('e-gata', cate >= motivMin);
-      };
-
-      evMotiv.addEventListener('input', numaraMotivul);
-      numaraMotivul();
-    }
-
-    if (evAnulareDa) {
-      evAnulareDa.addEventListener('click', function () {
-        var slugAscuns = evForm.querySelector('[name="slug"]');
-        if (!slugAscuns) return;
-
-        var textInitial = evAnulareDa.textContent;
-        evAnulareDa.disabled = true;
-        evAnulareDa.textContent = 'Se anulează…';
-
-        function gata() {
-          evAnulareDa.disabled = false;
-          evAnulareDa.textContent = textInitial;
-        }
-
-        fetch('api/anuleaza-eveniment.php', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'same-origin',
-          body: JSON.stringify({
-            csrf: (evForm.querySelector('[name="csrf"]') || {}).value || '',
-            slug: slugAscuns.value,
-            motiv: evMotiv ? evMotiv.value : ''
-          })
-        })
-        .then(citesteRaspuns)
-        .then(function (rez) {
-          if (!rez.corp) { gata(); toast(mesajRaspunsNeasteptat(rez)); return; }
-          var c = rez.corp;
-
-          // Motivul lipsă sau prea scurt: eroarea stă sub casetă, ca la orice
-          // alt câmp, nu într-un toast care se stinge singur.
-          if (c.erori) {
-            gata();
-            setError('ev-motiv', 'err-ev-motiv', c.erori.motiv || 'Scrie de ce anulezi.');
-            if (evMotiv) evMotiv.focus();
-            return;
-          }
-
-          if (!c.ok) { gata(); toast(c.mesaj || 'Nu am putut anula evenimentul.'); return; }
-
-          // Butonul rămâne stins: evenimentul nu mai e, n-are rost să se poată
-          // apăsa încă o dată cât se face mutarea.
-          toast(c.mesaj || 'Evenimentul a fost anulat.');
-          setTimeout(function () {
-            window.location.href = c.redirect || 'profil.php';
-          }, 700);
-        })
-        .catch(function () {
-          gata();
-          toast(mesajFaraLegatura());
-        });
-      });
-    }
-
     var evPreviz = document.getElementById('ev-previzualizeaza');
 
     function copertaCaImagine() {

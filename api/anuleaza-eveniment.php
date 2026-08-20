@@ -159,9 +159,18 @@ if ($picate > 0) {
 pornesteSesiunea();
 $_SESSION['mesaj_bun'] = 'Evenimentul a fost anulat.';
 
+/**
+ * Înapoi pe pagina evenimentului, nu pe profil.
+ *
+ * Cât timp anulatele se ascundeau de tot, pagina nu se mai deschidea nici
+ * pentru organizator, deci singurul loc unde putea fi trimis era profilul lui.
+ * Acum anunțul rămâne la vedere, cu banda de „anulat" și cu motivul scris
+ * dedesubt — adică exact dovada că apăsarea a mers, și exact ce vor citi
+ * oamenii care intră după el.
+ */
 raspunsJson([
     'ok'       => true,
-    'redirect' => 'profil.php',
+    'redirect' => urlEveniment((string) $eveniment['slug']),
     'mesaj'    => 'Evenimentul a fost anulat.',
 
     // Câți au aflat — pagina nu-l arată deocamdată, dar proba îl citește, iar

@@ -153,18 +153,30 @@ echo "=== ORDINEA ===\n";
 
 $toate = aleNoastre(evenimenteDePePrima());
 
-verifica('se văd doar cele publice', 6, count($toate));
+verifica('se văd toate cele publice', 7, count($toate));
 
+/**
+ * ANULATUL stă printre cele trecute, nu printre cele care urmează — chiar dacă
+ * ziua lui e în viitor. Seara aceea nu mai vine pentru nimeni.
+ *
+ * Locul lui între cele trecute îl dă data, ca la toate celelalte: ziua lui e
+ * mai proaspătă decât a celor două din urmă, deci vine înaintea lor.
+ */
 verifica('întâi ce urmează, de la cel mai apropiat, apoi ce a fost, de la cel mai proaspăt',
     ['viitor-aproape', 'viitor-mijloc', 'viitor-departe',
-     'incheiat-manual', 'trecut-recent', 'trecut-demult'],
+     'incheiat-manual', 'anulat', 'trecut-recent', 'trecut-demult'],
     $toate);
 
 /* ============================ 2. CE LIPSEȘTE ======================== */
 
 echo "\n=== CE NU AJUNGE PE PRIMA PAGINĂ ===\n";
 
-verifica('cel anulat',           false, in_array('anulat', $toate, true));
+/**
+ * CEL ANULAT AJUNGE, de acum. A stat ascuns o vreme și era greșit: de el atârnă
+ * oameni care își făcuseră planuri, iar un anunț care dispare din listă îi lasă
+ * să creadă că l-au visat. Stă la locul lui, stins, cu „Anulat" în colț.
+ */
+verifica('cel anulat E în listă', true, in_array('anulat', $toate, true));
 verifica('cel în așteptare',    false, in_array('asteptare', $toate, true));
 verifica('cel respins',          false, in_array('respins', $toate, true));
 
@@ -192,9 +204,14 @@ verifica('și cel închis cu mâna',                1, $dupaSlug['incheiat-manua
 
 $html = randeazaListaEvenimente($rezultat['evenimente']);
 
-verifica('trei cartonașe poartă semnul', 3, substr_count($html, 'card--incheiat'));
-verifica('și scrie „Încheiat" pe ele', 3, substr_count($html, '>Încheiat</span>'));
-verifica('celelalte, curate', 6, substr_count($html, '<article class="card'));
+// Trei încheiate plus cel anulat: aceeași clasă, poza la fel de stinsă.
+verifica('patru cartonașe poartă semnul', 4, substr_count($html, 'card--incheiat'));
+verifica('și scrie „Încheiat" pe trei', 3, substr_count($html, '>Încheiat</span>'));
+verifica('iar pe al patrulea, „Anulat"', 1, substr_count($html, '>Anulat</span>'));
+verifica('șapte cartonașe cu totul', 7, substr_count($html, '<article class="card'));
+
+/* Cifrele de pe poză: câți vin și câte comentarii. */
+verifica('fiecare cartonaș poartă cifrele', 7, substr_count($html, 'card__cifre'));
 
 /* ============================ 4. FILTRELE =========================== */
 
@@ -213,7 +230,7 @@ if ($orasDoi !== null) {
 } else {
     // Cu un singur oraș în config, filtrul nu poate despărți nimic — dar tot
     // trebuie să lase să treacă ce e în el.
-    verifica('cu un singur oraș, filtrul lasă tot să treacă', 6,
+    verifica('cu un singur oraș, filtrul lasă tot să treacă', 7,
         count(aleNoastre(evenimenteDePePrima($orasUnu))));
     echo "(sar peste comparațiile pe două orașe: în config.php e doar unul)\n";
 }
@@ -237,7 +254,7 @@ verifica('și spune că mai sunt', true, $primul['mai_sunt']);
 
 $aldoilea = evenimenteDePePrima('', '', 4, 4);
 
-verifica('al doilea aduce restul', 2, count($aldoilea['evenimente']));
+verifica('al doilea aduce restul', 3, count($aldoilea['evenimente']));
 verifica('și spune că s-a terminat', false, $aldoilea['mai_sunt']);
 
 verifica('fără suprapuneri', [],
@@ -247,7 +264,7 @@ verifica('dincolo de capăt, nimic', 0,
     count(evenimenteDePePrima('', '', 500, 4)['evenimente']));
 
 // Nimeni nu poate cere o mie deodată: numărul se strânge la capătul de sus.
-verifica('cererea de o mie se strânge la zece', 6,
+verifica('cererea de o mie se strânge la zece', 7,
     count(evenimenteDePePrima('', '', 0, 1000)['evenimente']));
 
 /* ==================== 6. LIVE, ȘI CATEGORIILE GOALE ================= */

@@ -374,6 +374,63 @@ verifica('al unui om obișnuit, în așteptare',   'in_asteptare', $alOmului['st
 verifica('și e însemnat ca ținut deoparte',      1, (int) $alSefului['ascuns_pe_profil']);
 verifica('celălalt, nu',                         0, (int) $alOmului['ascuns_pe_profil']);
 
+/* --- organizatorul, pe lista de participanți --- */
+
+verifica('la un anunț obișnuit, organizatorul se trece singur', true,
+    organizatorulVineSingur(false));
+verifica('la unul ținut deoparte, NU',           false, organizatorulVineSingur(true));
+
+/**
+ * Nu e o vorbă frumoasă, se vede în bază: la anunțul orașului nu s-a scris
+ * niciun rând în `interese_evenimente`, deci omul de casă nu apare printre
+ * chipurile de sub „Cine vine" și nu umflă numărul cu unu.
+ */
+verifica('și chiar nu e pe listă', null,
+    interesulMeu((int) $alSefului['id'], $sef));
+verifica('dar la anunțul obișnuit e', 'participant',
+    interesulMeu((int) $alOmului['id'], $org));
+
+// Se poate înscrie oricând singur, ca oricine altcineva — bifa nu-i închide ușa.
+salveazaInteres((int) $alSefului['id'], $sef, 'participant');
+verifica('se poate înscrie și el, dacă chiar se duce', 'participant',
+    interesulMeu((int) $alSefului['id'], $sef));
+
+// Îl scoatem la loc, ca socotelile de mai jos să rămână cele dinainte.
+db()->prepare('DELETE FROM interese_evenimente WHERE eveniment_id = ? AND membru_id = ?')
+    ->execute([(int) $alSefului['id'], $sef]);
+
+/* --- limita de evenimente active --- */
+
+/**
+ * Amândoi au deja anunțuri active din rândurile de mai sus, iar limita se pune
+ * pe 1 ca să fie limpede că e atinsă. Omul obișnuit se oprește în ea; omul de
+ * casă trece — el publică tocmai zece anunțuri ale orașului, iar o limită
+ * gândită împotriva celui care ar umple prima pagină n-are ce căuta în calea
+ * lui.
+ */
+db()->prepare('UPDATE membri SET limita_evenimente_active = 1 WHERE permalink LIKE ?')
+    ->execute(['tstmod-%']);
+
+$voieOm  = poatePublicaEveniment($org, false);
+$voieSef = poatePublicaEveniment($sef, true);
+
+verifica('omul obișnuit se lovește de limită', false, $voieOm['poate']);
+verifica('cu un mesaj care o spune',            true,
+    str_contains($voieOm['mesaj'], 'eveniment activ'));
+verifica('omul de casă trece peste ea',         true,  $voieSef['poate']);
+verifica('și fără niciun mesaj de oprire',      '',    $voieSef['mesaj']);
+
+/**
+ * Lista celor active se citește și pentru el: e ce arată pagina sub formular
+ * („ai deja pe astea"), și n-are de ce să dispară doar fiindcă nu-l mai oprește.
+ */
+verifica('dar tot își vede anunțurile active', true, $voieSef['active'] !== []);
+
+// Fără steagul de staff, aceeași limită îl oprește și pe el — trece OMUL, nu
+// contul: regula se citește la fiecare cerere, din baza de date.
+verifica('același cont, fără steag, e oprit', false,
+    poatePublicaEveniment($sef, false)['poate']);
+
 /* --- ce se vede pe profil --- */
 
 $slugurile = static function (array $lista): array {
@@ -808,14 +865,29 @@ if ($BAZA === '') {
         };
 
         /**
-         * Limita de evenimente active se ridică ÎNAINTE de a cere pagina.
-         * Amândoi au deja anunțuri din secțiunile de mai sus, iar cine a atins
-         * limita nu primește formularul deloc — primește panoul care-i spune
-         * să aștepte, fără buton și fără token. Aici se verifică ce scrie pe
-         * buton, nu numărătoarea; aceea își are testul ei în test-evenimente.
+         * Limitele, înainte de a cere paginile.
+         *
+         * Omului obișnuit i se ridică: are deja anunțuri din secțiunile de mai
+         * sus, iar cine a atins limita nu primește formularul deloc — primește
+         * panoul care-i spune să aștepte, fără buton și fără token. Aici se
+         * verifică ce scrie pe buton, nu numărătoarea.
+         *
+         * Omului de casă i se LASĂ 1, tocmai ca să se vadă că trece peste ea:
+         * are deja mai multe active, deci fără portița pentru staff n-ar mai
+         * primi nici pagina, nici dreptul de a publica.
          */
-        db()->prepare('UPDATE membri SET limita_evenimente_active = 20 WHERE permalink LIKE ?')
-            ->execute(['tstmod-%']);
+        db()->prepare('UPDATE membri SET limita_evenimente_active = 20 WHERE permalink = ?')
+            ->execute(['tstmod-org']);
+        db()->prepare('UPDATE membri SET limita_evenimente_active = 1 WHERE permalink = ?')
+            ->execute(['tstmod-sef']);
+
+        // Un anunț activ al lui, ca limita de 1 să fie chiar atinsă: cele din
+        // secțiunile de mai sus au fost mutate în trecut și încheiate, pentru
+        // proba cu istoricul, deci nu se mai numără printre cele active.
+        faEveniment('tst-mod-activ', $sef, 'aprobat');
+
+        verifica('omul de casă și-a atins limita', true,
+            count(evenimenteActive($sef)) >= limitaEvenimente($sef));
 
         /* --- ce scrie pe buton, și dacă se vede bifa --- */
 
@@ -872,7 +944,7 @@ if ($BAZA === '') {
             'ascuns_pe_profil' => '1',
         ]), $formSef['cookie']);
 
-        verifica('staff-ul publică', 200, $r['cod']);
+        verifica('staff-ul publică, deși e peste limită', 200, $r['cod']);
         verifica('iar mesajul nu mai vorbește de aprobare', 'Evenimentul a fost publicat.',
             (string) ($r['corp']['mesaj'] ?? ''));
 
@@ -881,6 +953,15 @@ if ($BAZA === '') {
         verifica('anunțul lui e aprobat pe loc', 'aprobat',
             (string) ($pus['stare_moderare'] ?? ''));
         verifica('și ținut deoparte de profil', 1, (int) ($pus['ascuns_pe_profil'] ?? 0));
+
+        /**
+         * Și nu s-a trecut singur pe lista de participanți: la anunțul orașului
+         * el nu e cel care iese, e cel care a scris anunțul.
+         */
+        verifica('fără să se treacă pe lista de participanți', null,
+            interesulMeu((int) $pus['id'], $sef));
+        verifica('deci nimeni pe listă', 0,
+            numaraInterese((int) $pus['id'])['participant']);
 
         /* --- același lucru cerut de cine nu e staff --- */
 
@@ -898,6 +979,11 @@ if ($BAZA === '') {
 
         verifica('anunțul lui rămâne în așteptare', 'in_asteptare',
             (string) ($pus['stare_moderare'] ?? ''));
+
+        // Pe el, în schimb, îl trece pe listă ca până acum: bifa n-a avut niciun
+        // cuvânt, deci anunțul e o ieșire de-a lui ca oricare alta.
+        verifica('iar el e trecut pe lista lui de participanți', 'participant',
+            interesulMeu((int) $pus['id'], $org));
 
         /**
          * Bifa trimisă de mână, de cine n-o vede în pagină, nu schimbă nimic.

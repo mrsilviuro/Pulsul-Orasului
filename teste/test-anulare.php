@@ -177,9 +177,12 @@ if (empty($config['dezvoltare'])) {
     verifica('și motivul întreg',       true, str_contains($nou, 'S-a stricat vremea'));
 
     /**
-     * Butonul NU duce spre eveniment: din clipa anulării pagina lui se deschide
-     * doar pentru staff, deci ar fi fost o ușă închisă la capătul unui mesaj
-     * care deja strica planul omului.
+     * Butonul duce în oraș, nu la evenimentul anulat.
+     *
+     * Pagina lui se deschide de oricine acum, cu banda și motivul la vedere —
+     * dar motivul e deja în mesajul ăsta, iar omul care tocmai a aflat că i s-a
+     * stricat seara are nevoie de altceva de făcut, nu de încă o citire a
+     * aceleiași vești.
      */
     verifica('butonul duce în oraș, nu la eveniment', true,
         str_contains($nou, 'exemplu.test/index.php'));
@@ -243,12 +246,14 @@ verifica('în textul simplu rămâne cum a fost scris', true,
 sectiune('ceasul închide anularea');
 
 /**
- * Anularea e o veste: „nu mai are loc, nu veni". Odată ce evenimentul a
- * început, vestea aia nu mai ajută pe nimeni și îi pune pe drumuri exact pe
- * cei care au venit — deci butonul dispare, iar API-ul răspunde 409.
+ * Anularea se poate până la O ORĂ DUPĂ ora de început
+ * (MINUTE_ANULARE_DUPA_INCEPUT). În primul sfert de oră de la ora scrisă în
+ * anunț se vede, de fapt, dacă ieșirea are loc: plouă, au venit doi din
+ * doisprezece, s-a închis terasa. După ceasul acela, o veste de „nu mai are
+ * loc" nu mai ajută pe nimeni — butonul dispare, iar API-ul răspunde 409.
  *
- * Regula o ține poateFiAnulat(), aceeași funcție pentru pagină și pentru
- * server. Aici se verifică funcția; partea de API e mai jos.
+ * Regula o ține poateFiAnulat(), aceeași funcție pentru amândouă paginile cu
+ * buton și pentru server. Aici se verifică funcția; partea de API e mai jos.
  */
 $candva = static function (string $data, string $ora): array {
     return [
@@ -265,15 +270,30 @@ verifica('unul de peste o săptămână se poate anula', true,
 verifica('și unul de azi, dar de peste un ceas', true,
     poateFiAnulat($candva(date('Y-m-d'), date('H:i:s', time() + 3600))));
 
-verifica('cel care tocmai a început, NU', false,
+/* --- fereastra de o oră, de o parte și de alta a ei --- */
+
+verifica('cel care tocmai a început SE POATE ÎNCĂ', true,
     poateFiAnulat($candva(date('Y-m-d'), date('H:i:s', time() - 60))));
+
+verifica('și la 59 de minute după, tot se poate', true,
+    poateFiAnulat($candva(date('Y-m-d'), date('H:i:s', time() - 59 * 60))));
+
+verifica('la 61 de minute, nu mai merge', false,
+    poateFiAnulat($candva(date('Y-m-d'), date('H:i:s', time() - 61 * 60))));
 
 verifica('nici cel de ieri', false,
     poateFiAnulat($candva(date('Y-m-d', strtotime('-1 day')), '18:00:00')));
 
-// Fără oră scrisă, ziua începe la miezul nopții — ca în evenimentAInceput().
-verifica('fără oră, ziua de azi e deja începută', false,
-    poateFiAnulat($candva(date('Y-m-d'), '')));
+verifica('fereastra e de o oră', 60, MINUTE_ANULARE_DUPA_INCEPUT);
+
+/**
+ * Fără oră scrisă, ziua începe la miezul nopții — ca în evenimentAInceput().
+ * Se cere IERI, nu azi: la ora la care rulează proba în primele șaizeci de
+ * minute ale zilei, „azi la 00:00" ar fi încă în fereastră, iar verificarea ar
+ * pica o dată pe zi, la miezul nopții.
+ */
+verifica('fără oră, ziua de ieri e demult începută', false,
+    poateFiAnulat($candva(date('Y-m-d', strtotime('-1 day')), '')));
 
 $anulatDeja = $candva(date('Y-m-d', strtotime('+7 days')), '18:00:00');
 $anulatDeja['stare_moderare'] = 'anulat';
@@ -357,6 +377,70 @@ if ($BAZA === '') {
 
         verifica('am găsit tokenul de pe pagina de editare', true, $token !== '');
 
+        /* ---------- butonul, pe amândouă paginile ---------- */
+
+        /**
+         * Aceeași zonă de anulare, scrisă dintr-un singur loc
+         * (randeazaZonaAnulare), stă pe formularul de editare ȘI pe pagina
+         * evenimentului, sub caseta de interes. `data-anulare` e cum o găsește
+         * main.js — și cum o găsim și noi aici.
+         */
+        verifica('zona de anulare e pe formularul de editare', true,
+            str_contains($pagEditare['corp'], 'data-anulare'));
+
+        $pagEveniment = cere('/event.php?slug=tst-anul-ev', null, $cookie);
+        verifica('și pe pagina evenimentului', true,
+            str_contains($pagEveniment['corp'], 'data-anulare'));
+        verifica('cu slugul lui pe ea', true,
+            str_contains($pagEveniment['corp'], 'data-slug="tst-anul-ev"'));
+
+        /**
+         * DOAR ORGANIZATORULUI. Pentru oricine altcineva blocul nici nu se
+         * scrie în pagină — nu se desenează stins, nu se ascunde cu CSS.
+         */
+        $altCookie = '';
+        $p = cere('/login.php');
+        preg_match('/name="csrf" value="([^"]+)"/', $p['corp'], $m);
+        $rAlt = cere('/api/autentificare.php', [
+            'csrf' => $m[1] ?? '', 'email' => SEMN . 'vine@invalid.local', 'parola' => PAROLA,
+        ], $p['cookie']);
+        $altCookie = $rAlt['cookie'];
+
+        verifica('un alt membru nu vede zona de anulare', false,
+            str_contains(cere('/event.php?slug=tst-anul-ev', null, $altCookie)['corp'],
+                'data-anulare'));
+        verifica('nici vizitatorul fără cont', false,
+            str_contains(cere('/event.php?slug=tst-anul-ev')['corp'], 'data-anulare'));
+
+        /**
+         * Cât ține ceasul. La două ore după ora de început, butonul dispare de
+         * pe amândouă paginile — aceeași funcție hotărăște în amândouă locurile.
+         */
+        db()->prepare('UPDATE evenimente SET data_eveniment = ?, ora_inceput = ? WHERE id = ?')
+            ->execute([date('Y-m-d'), date('H:i:s', time() - 2 * 3600), $evenimentId]);
+
+        verifica('trecut ceasul, butonul dispare de pe eveniment', false,
+            str_contains(cere('/event.php?slug=tst-anul-ev', null, $cookie)['corp'],
+                'data-anulare'));
+
+        $dupaCeas = cere('/adauga_eveniment.php?slug=tst-anul-ev', null, $cookie)['corp'];
+        verifica('și de pe formularul de editare', false,
+            str_contains($dupaCeas, 'data-anulare'));
+        verifica('în locul lui, un rând care spune de ce', true,
+            str_contains($dupaCeas, 'zona-anulare--trecut'));
+
+        /* În fereastră, la douăzeci de minute după început, e la locul lui. */
+        db()->prepare('UPDATE evenimente SET ora_inceput = ? WHERE id = ?')
+            ->execute([date('H:i:s', time() - 20 * 60), $evenimentId]);
+
+        verifica('la douăzeci de minute după început, butonul e acolo', true,
+            str_contains(cere('/event.php?slug=tst-anul-ev', null, $cookie)['corp'],
+                'data-anulare'));
+
+        /* Înapoi în viitor, pentru restul probei. */
+        db()->prepare('UPDATE evenimente SET data_eveniment = ?, ora_inceput = ? WHERE id = ?')
+            ->execute([date('Y-m-d', strtotime('+6 days')), '18:00:00', $evenimentId]);
+
         $inainte = is_file($logEmail) ? (int) filesize($logEmail) : 0;
 
         $r = cere('/api/anuleaza-eveniment.php', [
@@ -411,13 +495,18 @@ if ($BAZA === '') {
         }
 
         /**
-         * Ceasul, prin server. Evenimentul se mută cu ziua în urmă — deci a
-         * început — iar cererea trebuie respinsă chiar dacă tot ce ține de om
-         * e în regulă: e al lui, e conectat, token-ul e bun, motivul e lung.
+         * Ceasul, prin server. Evenimentul se mută cu DOUĂ ore în urmă — deci
+         * dincolo de fereastra de o oră — iar cererea trebuie respinsă chiar
+         * dacă tot ce ține de om e în regulă: e al lui, e conectat, token-ul e
+         * bun, motivul e lung.
+         *
+         * Două ore, nu exact una: la fix o oră suntem pe muchia regulii, iar o
+         * probă care stă pe muchie pică o dată la câteva rulări, când secunda
+         * se schimbă între scriere și cerere.
          */
         db()->prepare('UPDATE evenimente SET stare_moderare = ?, data_eveniment = ?,
                               ora_inceput = ? WHERE id = ?')
-            ->execute(['aprobat', date('Y-m-d'), date('H:i:s', time() - 3600), $evenimentId]);
+            ->execute(['aprobat', date('Y-m-d'), date('H:i:s', time() - 2 * 3600), $evenimentId]);
 
         $inainte = is_file($logEmail) ? (int) filesize($logEmail) : 0;
 

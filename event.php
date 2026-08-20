@@ -102,6 +102,20 @@ $aInceput = evenimentAInceput($eveniment);
  */
 $poateIncheia = $eOrganizatorul && !$eIncheiat && evenimentAInceput($eveniment);
 
+/**
+ * Poate să-l anuleze chiar de pe pagina asta?
+ *
+ * Doar organizatorul, și doar cât ține ceasul — o oră după ora de început
+ * (poateFiAnulat din inc/evenimente.php, aceeași funcție care hotărăște și
+ * butonul din formularul de editare, și fapta din API).
+ *
+ * Butonul stă sub caseta de interes fiindcă acolo se ia hotărârea: omul se uită
+ * la câți au spus că vin și, dacă sunt doi din doisprezece, anulează. Ținut
+ * numai în formularul de editare, era la două pagini distanță de cifra care îl
+ * face să-l apese.
+ */
+$poateAnula = $eOrganizatorul && poateFiAnulat($eveniment);
+
 /* ------------------------ „Mergi la acest eveniment?" ------------------ */
 
 /**
@@ -324,14 +338,18 @@ require __DIR__ . '/inc/antet.php';
 
         if ($eAnulat) {
             /**
-             * Anulat: pagina se deschide doar pentru staff, deci banda e
-             * pentru ei. Motivul merge alături — e textul organizatorului, cel
-             * care va pleca și spre oamenii înscriși, deci trebuie citit
-             * întocmai, nu rezumat de noi.
+             * Anulat, dar la vedere: pagina se deschide de oricine, ca una
+             * încheiată. Cine intră de pe un mesaj primit acum trei zile
+             * trebuie să afle pe loc ce s-a întâmplat — nu să dea de un „nu
+             * există" și să se întrebe dacă a greșit el ziua.
+             *
+             * Motivul merge alături, întocmai cum l-a scris organizatorul: e
+             * același text care a plecat prin e-mail spre oamenii înscriși, iar
+             * un rezumat făcut de noi ar fi spus altceva decât mesajul primit.
              */
             $banda = [
                 'fel'   => 'anulat',
-                'text'  => 'Anulat de organizator. Anunțul nu mai este vizibil pe site.',
+                'text'  => 'Acest eveniment a fost anulat de organizator.',
                 'motiv' => (string) ($eveniment['motiv_anulare'] ?? ''),
             ];
         } elseif (!$ePublicat) {
@@ -627,6 +645,29 @@ require __DIR__ . '/inc/antet.php';
       </section>
       <?php endif; /* !$aInceput */ ?>
       <?php endif; /* $ePublicat */ ?>
+
+      <?php if ($poateAnula): ?>
+      <!-- ======================= ANULAREA ==============================
+        Imediat sub caseta de interes, fiindcă asta e clipa în care se apasă:
+        organizatorul se uită la câți au spus că vin, vede doi din
+        doisprezece, și hotărăște. Până acum butonul era doar în formularul de
+        editare, la două pagini distanță de cifra care îl face să-l apese.
+
+        AFARĂ din blocul lui $ePublicat, dinadins: se anulează și un anunț care
+        încă așteaptă aprobarea, iar acela n-are casetă de interes sub care să
+        stea. Pe formularul de editare butonul îi era oricum dat; aici trebuie
+        să fie același lucru, nu unul pe jumătate.
+
+        DOAR PENTRU ORGANIZATOR, și doar cât ține ceasul — o oră după ora de
+        început (poateFiAnulat). Nu e ascunsă cu CSS: pentru oricine altcineva
+        blocul nici nu se scrie în pagină. Iar api/anuleaza-eveniment.php pune
+        amândouă întrebările din nou, fiindcă o cerere poate veni de oriunde.
+
+        Același HTML ca în formularul de editare, din același loc — vezi
+        randeazaZonaAnulare() din inc/afisare-eveniment.php.
+      ============================================================== -->
+      <?= randeazaZonaAnulare($eveniment, tokenCsrf()) ?>
+      <?php endif; ?>
 
       <?php if ($eStaff && poateFiModerat($eveniment)): ?>
       <!-- ========================= MODERAREA ==============================

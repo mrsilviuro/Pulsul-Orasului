@@ -16,6 +16,8 @@ declare(strict_types=1);
  */
 
 require_once __DIR__ . '/inc/evenimente.php';
+// Pentru randeazaZonaAnulare(): aceeași zonă se desenează și pe event.php.
+require_once __DIR__ . '/inc/afisare-eveniment.php';
 
 $slug   = trim((string) ($_GET['slug'] ?? ''));
 $membru = membruCurent();
@@ -80,7 +82,7 @@ $ascunsPeProfil = $eEditare && (int) ($ev['ascuns_pe_profil'] ?? 0) === 1;
  */
 $voie = $eEditare
     ? ['poate' => true, 'mesaj' => '', 'active' => []]
-    : poatePublicaEveniment($membruId);
+    : poatePublicaEveniment($membruId, $eStaff);
 
 /* ------------------- valorile cu care pleacă formularul ---------------- */
 
@@ -584,66 +586,26 @@ require __DIR__ . '/inc/antet.php';
           roșu stins, ca zona de ștergere a contului din setări: e singura
           apăsare de pe pagina asta care nu se poate lua înapoi.
 
-          DISPARE DE TOT din clipa în care evenimentul a început — vezi
-          poateFiAnulat() din inc/evenimente.php. Nu se desenează stinsă: un
-          buton pe care scrie „anulează" și care nu anulează e mai rău decât
-          niciun buton. În locul ei rămâne rândul de mai jos, care spune de ce.
+          HTML-ul vine din randeazaZonaAnulare() (inc/afisare-eveniment.php),
+          fiindcă aceeași zonă stă și pe pagina evenimentului, sub caseta de
+          interes. Un singur loc care o desenează, două pagini care o cer.
 
-          Confirmarea e desenată de noi, în pagină, nu cu window.confirm(): o
-          fereastră a browserului arată altfel pe Windows, pe Android și pe
-          iPhone, iar noi vrem aceeași interfață peste tot. Același tipar ca la
-          ștergerea contului — butonul își schimbă locul cu întrebarea.
+          DISPARE la o oră după ora de început — vezi poateFiAnulat(). Nu se
+          desenează stinsă: un buton pe care scrie „anulează" și care nu
+          anulează e mai rău decât niciun buton. În locul ei rămâne rândul de
+          mai jos, care spune de ce.
         -->
-        <div class="zona-anulare" id="ev-anulare">
-          <button class="btn btn--rau btn--block" type="button" id="ev-anuleaza">
-            Anulează evenimentul
-          </button>
-
-          <div class="stergere-confirm" id="ev-anulare-sigur" hidden>
-            <p class="card-set__lead">
-              <strong>Sigur anulezi „<?= h(inceputDeText((string) $ev['titlu'], 60)) ?>"?</strong>
-            </p>
-            <p class="card-set__lead">
-              Anunțul iese de pe site și nu mai poate fi adus înapoi de tine.
-              Oamenii care și-au arătat interesul sau au spus că vin vor fi
-              înștiințați prin e-mail că nu mai are loc — și vor citi exact ce
-              scrii mai jos.
-            </p>
-
-            <!--
-              Motivul e obligatoriu, și nu de formă: e chiar textul care pleacă
-              spre oamenii care își făcuseră planuri. Se verifică pe server, ca
-              tot restul; contorul de dedesubt numără la fel ca el.
-            -->
-            <div class="field">
-              <label for="ev-motiv">De ce anulezi? <span class="req" aria-hidden="true">*</span></label>
-              <!-- Fără „name" și fără „required": caseta stă înăuntrul
-                   formularului de eveniment, iar cu ele ar pleca odată cu
-                   trimiterea spre aprobare și ar bloca-o cât e goală. JS o
-                   citește după id și o trimite singur, la anulare. -->
-              <textarea id="ev-motiv" rows="3"
-                        data-min="<?= MOTIV_ANULARE_MIN ?>" data-max="<?= MOTIV_ANULARE_MAX ?>"
-                        placeholder="S-a stricat vremea și nu avem unde ne adăposti."
-                        aria-describedby="err-ev-motiv ev-motiv-numar"></textarea>
-              <p class="field__hint contor-caractere" id="ev-motiv-numar" role="status">0 din minim <?= MOTIV_ANULARE_MIN ?> caractere</p>
-              <p class="field__error" id="err-ev-motiv" hidden></p>
-            </div>
-
-            <div class="stergere-confirm__actiuni">
-              <button class="btn btn--rau" type="button" id="ev-anulare-da">Da, anulează</button>
-              <button class="btn btn--ghost" type="button" id="ev-anulare-nu">Renunță</button>
-            </div>
-          </div>
-        </div>
+        <?= randeazaZonaAnulare($ev, $csrf) ?>
         <?php elseif ($eEditare): ?>
         <!--
-          A început. În locul butonului, un rând care spune de ce nu mai e —
-          altfel organizatorul care l-a văzut ieri l-ar căuta azi degeaba și ar
-          crede că s-a stricat pagina.
+          A trecut ceasul. În locul butonului, un rând care spune de ce nu mai
+          e — altfel organizatorul care l-a văzut ieri l-ar căuta azi degeaba
+          și ar crede că s-a stricat pagina.
         -->
         <p class="zona-anulare zona-anulare--trecut">
-          Evenimentul a început deja, așa că nu mai poate fi anulat. Dacă s-a
-          terminat mai devreme, îl poți încheia de pe pagina lui.
+          A trecut mai bine de o oră de la ora de început, așa că evenimentul nu
+          mai poate fi anulat. Dacă s-a terminat mai devreme, îl poți încheia de
+          pe pagina lui.
         </p>
         <?php endif; ?>
       </form>
