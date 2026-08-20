@@ -5,6 +5,7 @@
    3. Layout (wrap max 1000px)
    4. Header / meniu flotant
    5. Prima fereastră (hero)
+   5b. Tabla cu dorințe
    6. Conținut (carduri, chips, CTA)
    7. Footer
    8. Responsive
@@ -433,6 +434,212 @@ button { cursor: pointer; border: 0; background: none; }
    iese cu totul din cadru, cum trebuie. Aer sub bară nu mai e nevoie să
    adăugăm aici: `main` are oricum 46px de umplutură deasupra. */
 #main { scroll-margin-top: var(--header-h); }
+
+/* ------------------------ 5b. TABLA CU DORINȚE --------------------------
+   Treapta de dinaintea unui eveniment: cine n-ar vrea să organizeze poate
+   măcar să spună ce i-ar plăcea să se facă.
+
+   ÎNCHIS ȘI DESCHIS, FĂRĂ JAVASCRIPT. Butonul „Pune-ți o dorință" e o
+   legătură către `#dorinta-formular`, iar `:target` deschide cutia. Fiindcă în
+   HTML cutia stă ÎNAINTEA tablei, deschisă îi poate lua locul cu un simplu
+   selector de frați (`~`) — vezi mai jos. JS-ul face același lucru punând
+   `.e-deschis`, ca după o trimitere cutia să rămână deschisă chiar dacă
+   adresa nu mai are `#`.
+
+   Slide-ul propriu-zis: dorințele stau una PESTE alta (grid, aceeași
+   celulă), toate ascunse în afară de `.is-activa`. Cutia își ia înălțimea de
+   la cea mai lungă, deci nu tresare la schimbare. Fără JS se vede prima și
+   atât — o dorință în loc de zece, dar niciun ecran gol.
+   ---------------------------------------------------------------------- */
+.tabla {
+  position: relative;
+  margin-bottom: 34px;
+}
+
+/* Când nu e nicio dorință de arătat, în pagină rămâne doar cutia închisă a
+   formularului. N-are ce ocupa loc până nu se deschide. */
+.tabla--fara { margin-bottom: 0; }
+.tabla--fara .tabla__cutie.e-deschis,
+.tabla--fara .tabla__cutie:target { margin-bottom: 34px; }
+
+/* ---- slide-ul ---- */
+.tabla__slide {
+  position: relative;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background:
+    radial-gradient(120% 140% at 12% 0%, var(--brand-soft), transparent 62%),
+    var(--surface);
+  padding: 24px 26px 18px;
+  overflow: hidden;
+}
+
+/* Fâșia de brand din marginea de sus: cât să se vadă că e altceva decât un
+   cartonaș de eveniment, nu atât cât să strige. */
+.tabla__slide::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--gradient);
+}
+
+.tabla__eticheta { margin-bottom: 10px; }
+.tabla__eticheta .ico { width: 14px; height: 14px; }
+
+.tabla__lista {
+  display: grid;          /* toate în aceeași celulă, una peste alta */
+  list-style: none;
+  margin: 0; padding: 0;
+}
+
+.dorinta {
+  grid-area: 1 / 1;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(6px);
+  transition: opacity .45s var(--ease), transform .45s var(--ease), visibility .45s;
+}
+.dorinta.is-activa {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.dorinta__vorba {
+  margin: 0;
+  font-size: clamp(16px, 2.1vw, 19px);
+  line-height: 1.55;
+  color: var(--text);
+}
+.dorinta__cine { font-weight: 800; }
+.dorinta__text { font-style: italic; color: var(--text-soft); }
+
+.dorinta__unde {
+  display: inline-flex; align-items: center; gap: 5px;
+  margin: 10px 0 0;
+  font-size: 12.5px; font-weight: 700;
+  letter-spacing: .04em; text-transform: uppercase;
+  color: var(--text-faint);
+}
+.dorinta__unde .ico { width: 15px; height: 15px; }
+
+/* ---- punctele ---- */
+.tabla__puncte {
+  display: flex; flex-wrap: wrap; gap: 7px;
+  margin-top: 16px;
+}
+.tabla__punct {
+  position: relative;
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--border);
+  transition: background-color .2s var(--ease), transform .2s var(--ease);
+}
+/* Punctul desenat e de 7px, dar se apasă pe 22: pe telefon, un semn de 7px
+   nu se nimerește cu degetul. Zona în plus e nevăzută. */
+.tabla__punct::after {
+  content: '';
+  position: absolute;
+  inset: -8px;
+}
+.tabla__punct:hover { background: var(--text-faint); }
+.tabla__punct.is-activ { background: var(--brand); transform: scale(1.35); }
+
+/* ---- rândul de sub tablă ---- */
+.tabla__unelte {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 10px 16px;
+  margin-top: 14px;
+}
+.tabla__stare {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--text-soft);
+}
+.tabla__cere .ico { width: 16px; height: 16px; }
+
+/* ---- cutia cu formularul ---- */
+.tabla__cutie {
+  display: none;
+  scroll-margin-top: calc(var(--header-h) + 16px);
+}
+.tabla__cutie:target,
+.tabla__cutie.e-deschis { display: block; }
+
+/* Deschisă, ia locul tablei. `~` merge fiindcă în HTML cutia stă înaintea
+   slide-ului — de aceea e scrisă acolo, deși pe ecran apare în același loc. */
+.tabla__cutie:target ~ .tabla__slide,
+.tabla__cutie.e-deschis ~ .tabla__slide,
+.tabla__cutie:target ~ .tabla__unelte,
+.tabla__cutie.e-deschis ~ .tabla__unelte { display: none; }
+
+.dorinta-form,
+.dorinta-gata {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  padding: 24px 26px;
+}
+
+.dorinta-form__titlu {
+  margin: 0 0 16px;
+  font-size: 17px; font-weight: 800;
+  letter-spacing: -.01em;
+}
+
+.dorinta-form__rau {
+  margin: 0 0 14px;
+  font-size: 13.5px; font-weight: 600;
+  color: #d4392b;
+}
+[data-theme="dark"] .dorinta-form__rau { color: #ff9b97; }
+
+/* Orașul singur pe rând ar fi fost o casetă cât toată lățimea pentru un
+   cuvânt. `field-row` îl ține la jumătate, iar sub 560px trece oricum jos. */
+.dorinta-form .field-row { margin-bottom: 18px; }
+
+/* O sută de caractere înseamnă două rânduri. Cei 120px ai casetelor de text
+   de pe site (`.field textarea`) sunt buni pentru descrierea unui eveniment,
+   nu pentru o frază — sub ea ar fi rămas mai mult gol decât scris. Selectorul
+   are un pas în plus tocmai ca să treacă înaintea aceluia, care e scris mai
+   jos în fișier. */
+.dorinta-form .field textarea { min-height: 78px; }
+
+.dorinta-form__reguli {
+  margin: 18px 0 0;
+  padding-left: 18px;
+  list-style: disc;       /* `ul` e golit de puncte în resetul de sus */
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--text-faint);
+}
+.dorinta-form__reguli li { margin-bottom: 3px; }
+
+.dorinta-form__butoane {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 8px 14px;
+  margin-top: 18px;
+}
+
+.dorinta-form__lege {
+  margin: 12px 0 0;
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+/* ---- panoul de după trimitere ---- */
+.dorinta-gata {
+  display: flex; align-items: flex-start; gap: 12px;
+  border-color: rgba(22, 163, 74, .35);
+}
+.dorinta-gata .ico {
+  width: 22px; height: 22px;
+  flex: none;
+  margin-top: 1px;
+  color: #16a34a;
+}
+[data-theme="dark"] .dorinta-gata .ico { color: #6ee7a0; }
+.dorinta-gata p { margin: 0; font-size: 14.5px; line-height: 1.6; }
 
 /* --------------------------- 6. CONȚINUT -------------------------------- */
 main { padding-block: 46px 64px; }
@@ -871,6 +1078,12 @@ main { padding-block: 46px 64px; }
   }
   .hero__vorba { margin-top: 14px; }
   .hero__cta { margin-top: 26px; }
+
+  /* Pe telefon, 26px de margine laterală înseamnă un rând de text cu vreo
+     patru cuvinte mai scurt. Dorința e oricum scurtă; aerul, nu. */
+  .tabla__slide { padding: 20px 18px 16px; }
+  .dorinta-form,
+  .dorinta-gata { padding: 20px 18px; }
 
   .footer__top { grid-template-columns: 1fr; }
   .footer__bottom { justify-content: center; text-align: center; }

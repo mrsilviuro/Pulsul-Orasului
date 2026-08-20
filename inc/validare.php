@@ -41,6 +41,20 @@ const COMENTARIU_MIN = 2;    // caractere — vezi verificaComentariu()
 const COMENTARIU_MAX = 2000;
 
 /**
+ * Tabla cu dorințe
+ *
+ * 100 de caractere, cât scrie și în coloana din bază (vezi sql/023). Scurt
+ * dinadins: pe tablă stau zece dorințe una după alta, iar una cât un paragraf
+ * le-ar fi înghițit pe celelalte. Cine are de scris mai mult are unde —
+ * anunțul unui eveniment primește opt mii.
+ *
+ * Minimul e mic fiindcă o dorință CHIAR poate fi scurtă: „un turneu de șah"
+ * are 17 caractere și spune tot.
+ */
+const DORINTA_MIN = 10;
+const DORINTA_MAX = 100;
+
+/**
  * Motivul respingerii unui anunț, scris de staff
  *
  * Fără minim, spre deosebire de motivul anulării: uneori anunțul e limpede
@@ -953,6 +967,64 @@ function verificaComentariu($cerut): array
     }
 
     return ['eroare' => '', 'text' => $text];
+}
+
+/**
+ * O dorință de pe tablă: orașul și rândul scris de om.
+ *
+ * `$oraseValide` vine din inc/config.php, prin oraseDisponibile() — nu se
+ * cheamă de aici, ca fișierul ăsta să rămână ce e: verificări curate, fără
+ * nimic din afară. Aceeași înțelegere ca la verificaEveniment().
+ *
+ * Întoarce erorile pe câmpuri, ca formularul să le poată pune fiecare sub
+ * căsuța ei — la fel ca verificaEveniment(), nu ca verificaComentariu(), care
+ * n-are decât un câmp.
+ */
+function verificaDorinta(array $date, array $oraseValide): array
+{
+    $erori = [];
+    $curat = [];
+
+    $oras = trim(is_string($date['oras'] ?? null) ? $date['oras'] : '');
+
+    if ($oras === '') {
+        $erori['oras'] = 'Alege orașul.';
+    } elseif (!in_array($oras, $oraseValide, true)) {
+        $erori['oras'] = 'Alege un oraș din listă.';
+    } else {
+        $curat['oras'] = $oras;
+    }
+
+    /**
+     * Un singur rând, nu paragrafe: pe tablă dorința stă într-o frază, iar
+     * cine ar fi apăsat Enter de zece ori ar fi făcut un cartonaș cât ecranul.
+     *
+     * Enterul se preface în SPAȚIU înainte de pregatesteText(), nu după: acela
+     * scoate caracterele de control, iar „\n" e unul dintre ele. Lăsat pe mâna
+     * lui, „un turneu\nde șah" ieșea „un turneude șah" — două cuvinte lipite,
+     * fără ca omul să înțeleagă de ce.
+     */
+    $brut = is_string($date['dorinta'] ?? null) ? $date['dorinta'] : '';
+    $brut = preg_replace('/[\r\n\t\x0B\f]+/u', ' ', $brut) ?? '';
+
+    $text = pregatesteText($brut);
+    $cate = mb_strlen($text, 'UTF-8');
+
+    if ($text === '') {
+        $erori['dorinta'] = 'Scrie ce ți-ai dori.';
+    } elseif ($cate < DORINTA_MIN) {
+        $erori['dorinta'] = 'Mai scrie puțin: ai ' . $cate . ' caractere din '
+                          . DORINTA_MIN . ' cerute.';
+    } elseif ($cate > DORINTA_MAX) {
+        // Se numără cu mb_strlen, nu cu strlen: în UTF-8 „ă" ocupă doi octeți,
+        // iar o limită pe octeți i-ar fi dat mai puțin loc celui cu diacritice.
+        $erori['dorinta'] = 'E prea lungă: ai ' . $cate . ' caractere din '
+                          . DORINTA_MAX . ' câte încap.';
+    } else {
+        $curat['dorinta'] = $text;
+    }
+
+    return ['erori' => $erori, 'curat' => $curat];
 }
 
 /**

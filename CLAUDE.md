@@ -220,6 +220,32 @@ inc/
   buton-google.php  → butonul de login Google
   stergere.php      → ștergerea contului cu răgaz + anonimizarea
   camp-parola.php   → un câmp de parolă cu ochi (folosit de toate paginile)
+  dorinte.php       → TABLA CU DORINȚE de pe prima pagină: treapta de
+                      dinaintea unui eveniment, pentru cine n-ar vrea să
+                      organizeze, dar ar veni la ceva. Cel mult zece dorințe
+                      LA ÎNTÂMPLARE (DORINTE_PE_TABLA), doar aprobate și doar
+                      din ultimele șapte zile (ZILE_PE_TABLA), doar de la
+                      conturi active. Cele șapte zile se numără de la
+                      `publicat_la`, NU de la trimitere — cine a așteptat
+                      moderarea n-are de ce să fie pedepsit. Ștampila o pune
+                      codul, într-un singur loc (stampileazaCeleAprobate,
+                      chemată de dorinteDePeTabla), tot cu ceasul PHP: ca să
+                      publici o dorință din phpMyAdmin e de ajuns să-i schimbi
+                      `stare_moderare` în „aprobat". O SINGURĂ DORINȚĂ o dată
+                      de om — regula se ține la SCRIERE (puneODorinta), nu în
+                      butonul de pe ecran, fiindcă două file deschise deodată
+                      ar fi trimis amândouă. O dorință RESPINSĂ nu-l oprește
+                      să încerce din nou; una în așteptare sau una încă pe
+                      tablă, da (poatePuneODorinta → 'poate' | 'asteapta' |
+                      'e_pe_tabla'). Rândurile NU se șterg niciodată, nici
+                      după ce ies de pe tablă: mai târziu vrem să putem spune
+                      câte dorințe și-au pus oamenii de-a lungul timpului.
+                      TOT AICI cum arată: randeazaTablaDorinte() și
+                      randeazaZonaDorinte() — a doua se desenează în DOUĂ
+                      locuri (sub tablă și, când nu e nicio dorință, în capul
+                      listei de evenimente), de aceea e o funcție, nu HTML
+                      scris de două ori. puneODorinta() e chemată și de
+                      api/dorinta.php (cu JS), și de index.php (fără)
   constructie.php   → LACĂTUL de pe site (`in_constructie` din config.php):
                       cine trece (doar staff), ce uși rămân deschise
                       (usileDeschiseInConstructie) și oprirea propriu-zisă
@@ -245,11 +271,15 @@ sql/                → schema.sql + migrări numerotate (002, 003, 004, 005-goo
                       018-multumiri-eveniment, 019-newsletter,
                       020-rapoarte-comentarii,
                       021-instiintari-comentarii,
-                      022-evenimente-staff)
-teste/              → test-validare.php (verificările din inc/validare.php)
+                      022-evenimente-staff, 023-dorinte)
+teste/              → test-validare.php (verificările din inc/validare.php;
+                      verificaDorinta e probată în test-dorinte.php, lângă
+                      restul tablei)
                       test-comentarii.php, test-participanti.php,
                       test-evaluari.php, test-multumiri.php
                       (toate patru cer baza de date, nu și serverul)
+                      test-dorinte.php (tabla cu dorințe; cere baza, iar
+                      partea de HTTP cere și serverul — se sare singură)
                       test-tine-minte.php, test-setari.php, test-contact.php,
                       test-evenimente.php, test-prima-pagina.php,
                       test-constructie.php, test-anulare.php, test-moderare.php
@@ -357,6 +387,28 @@ assets/css/style.css, assets/js/main.js, assets/img/
   (api/comentarii.php → instiinteazaDeComentariu, cu bifa `email_comentarii`
   din setări). NU pleacă nimic când cineva se înscrie la un eveniment, când
   se apreciază un comentariu sau când se raportează ceva
+- Tabla cu dorințe n-are pagină de moderare. Fiecare dorință intră cu
+  `stare_moderare = 'in_asteptare'` și nu se vede nicăieri până nu e aprobată,
+  iar aprobarea se face DE MÂNĂ, din phpMyAdmin:
+  ```sql
+  SELECT d.id, m.prenume, d.oras, d.dorinta, d.creat_la
+    FROM dorinte d JOIN membri m ON m.id = d.membru_id
+   WHERE d.stare_moderare = 'in_asteptare' ORDER BY d.creat_la;
+
+  UPDATE dorinte SET stare_moderare = 'aprobat' WHERE id = 7;   -- sau 'respins'
+  ```
+  Atât: `publicat_la` NU se pune de mână. Îl scrie codul, cu ceasul PHP, la
+  prima încărcare a primei pagini (stampileazaCeleAprobate) — tocmai ca să nu
+  intre `NOW()`-ul lui MySQL, din alt fus, în ceva ce se numără în zile.
+  Omul nu află pe e-mail nici că i-a fost aprobată, nici că i-a fost respinsă:
+  vede singur, când îi apare pe tablă
+- Nimeni nu poate șterge o dorință publicată — nici autorul (i se spune asta în
+  formular, înainte să apese), nici staff-ul din interfață. Rândul se schimbă
+  de mână, din phpMyAdmin
+- Dorințele nu se numără nicăieri. Rândurile rămân în `dorinte` pentru
+  totdeauna, și după ce ies de pe tablă, tocmai ca mai târziu să se poată
+  arăta câte dorințe și-au pus oamenii de-a lungul timpului — dar pagina care
+  s-o spună nu există încă
 - Comentariile se pot raporta (steagul de la capătul rândului de unelte), dar
   rapoartele nu se văd nicăieri: nu există pagină care să le adune, deci
   singurul fel de a afla ce s-a raportat e `SELECT` pe `comentarii_rapoarte`

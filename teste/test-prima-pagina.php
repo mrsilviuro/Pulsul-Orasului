@@ -458,14 +458,21 @@ if ($baza !== '') {
     // Butonul s-a mutat din capul listei în panou.
     verifica('„Propune o ieșire" e în panou', 1,
         substr_count($html, 'class="btn btn--primary hero__cta"'));
-    // În capul listei a rămas doar titlul. (Butonul din lista goală — „n-am
-    // găsit nimic, propune tu ceva" — e altceva și rămâne unde e.)
+    /**
+     * În capul listei nu mai stă „Propune o ieșire": s-a mutat în panou.
+     *
+     * Un buton tot poate ajunge acolo — „Pune-ți o dorință", când tabla cu
+     * dorințe e goală și nu se desenează (vezi test-dorinte.php). De aceea se
+     * caută butonul ANUME, nu orice buton: altfel proba asta ar fi picat după
+     * fiecare zi în care nimeni nu și-a pus nicio dorință.
+     */
     $capulListei = '';
     if (preg_match('~<div class="section-head">(.*?)</div>\s*</div>~s', $html, $m)) {
         $capulListei = $m[1];
     }
     verifica('capul listei s-a găsit', true, $capulListei !== '');
-    verifica('și n-are niciun buton în el', false, str_contains($capulListei, 'class="btn'));
+    verifica('și n-are „Propune o ieșire" în el',
+        false, str_contains($capulListei, 'Propune o ieșire'));
 
     // Săgeata e o legătură adevărată, ca să meargă și fără JavaScript.
     verifica('săgeata duce la conținut', true,
