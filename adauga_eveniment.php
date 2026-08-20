@@ -52,6 +52,19 @@ if ($slug !== '') {
         header('Location: index.php');
         exit;
     }
+
+    /**
+     * Început înseamnă închis pentru corecturi.
+     *
+     * Nu pe prima pagină, ci pe pagina lui: acolo mai are ce apăsa —
+     * „Anulează evenimentul", încă o oră, și „Încheie evenimentul". Butonul
+     * „Editează" nici nu se mai desenează acolo, deci aici se ajunge doar cu
+     * o adresă veche în mână sau cu o filă lăsată deschisă.
+     */
+    if (!poateFiEditat($ev)) {
+        header('Location: ' . urlEveniment((string) $ev['slug']));
+        exit;
+    }
 }
 
 $eEditare = $ev !== null;
@@ -590,23 +603,17 @@ require __DIR__ . '/inc/antet.php';
           fiindcă aceeași zonă stă și pe pagina evenimentului, sub caseta de
           interes. Un singur loc care o desenează, două pagini care o cer.
 
-          DISPARE la o oră după ora de început — vezi poateFiAnulat(). Nu se
-          desenează stinsă: un buton pe care scrie „anulează" și care nu
-          anulează e mai rău decât niciun buton. În locul ei rămâne rândul de
-          mai jos, care spune de ce.
+          `poateFiAnulat($ev)` e, de fapt, mereu adevărat pe pagina asta: ca să
+          se deschidă, evenimentul trebuie să nu fi început (poateFiEditat),
+          iar ce n-a început se poate anula. Întrebarea rămâne scrisă fiindcă
+          zona ASTA despre anulare e, și nu vrem să atârne de un lucru
+          adevărat din altă parte — cele două reguli se pot despărți mâine.
+
+          Cât ține ceasul de anulare după început se vede acum doar pe pagina
+          evenimentului: acolo se apasă butonul, tot acolo se citește și
+          numărul celor care au spus că vin.
         -->
         <?= randeazaZonaAnulare($ev, $csrf) ?>
-        <?php elseif ($eEditare): ?>
-        <!--
-          A trecut ceasul. În locul butonului, un rând care spune de ce nu mai
-          e — altfel organizatorul care l-a văzut ieri l-ar căuta azi degeaba
-          și ar crede că s-a stricat pagina.
-        -->
-        <p class="zona-anulare zona-anulare--trecut">
-          A trecut mai bine de o oră de la ora de început, așa că evenimentul nu
-          mai poate fi anulat. Dacă s-a terminat mai devreme, îl poți încheia de
-          pe pagina lui.
-        </p>
         <?php endif; ?>
       </form>
     </div>

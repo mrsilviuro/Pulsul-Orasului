@@ -368,10 +368,19 @@ require __DIR__ . '/inc/antet.php';
             ];
         }
 
-        // Butonul „Editează" dispare la anulare și la încheiere: nu mai e
-        // nimic de corectat, iar evenimentDeEditat() oricum nu l-ar mai
-        // deschide.
-        $poateEdita = $eOrganizatorul && !$eAnulat && !$eIncheiat;
+        /**
+         * Butonul „Editează" dispare de îndată ce evenimentul a început — și,
+         * firește, la anulare și la încheiere.
+         *
+         * Ce era de îndreptat se îndrepta înainte: după ora de start oamenii
+         * sunt deja pe drum, iar o schimbare de loc sau de oră le-ar ajunge
+         * sub ochi prea târziu. Ce rămâne de făcut e chiar aici, pe pagină:
+         * „Anulează evenimentul" încă o oră și „Încheie evenimentul".
+         *
+         * Aceeași întrebare o pun și adauga_eveniment.php, și
+         * api/eveniment.php — vezi poateFiEditat() din inc/evenimente.php.
+         */
+        $poateEdita = $eOrganizatorul && poateFiEditat($eveniment);
 
         /**
          * Butoanele organizatorului, sus, lângă numele lui.

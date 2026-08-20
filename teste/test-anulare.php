@@ -304,6 +304,38 @@ $incheiatDeja['stare_moderare'] = 'incheiat';
 verifica('nici ce e încheiat de mână, deși ziua e în viitor', false,
     poateFiAnulat($incheiatDeja));
 
+/* ================= 3b. CEASUL ÎNCHIDE ȘI EDITAREA =================== */
+
+sectiune('ceasul închide editarea');
+
+/**
+ * Editarea se închide MAI DEVREME decât anularea: în clipa începerii, nu la o
+ * oră după. Ce era de îndreptat se îndrepta înainte — după ora de start
+ * oamenii sunt deja pe drum, iar o schimbare de loc le-ar ajunge sub ochi prea
+ * târziu. Butonul de anulare rămâne, tocmai fiindcă atunci se vede dacă
+ * ieșirea are loc.
+ *
+ * Cele două funcții TREBUIE să se despartă aici: poateFiEditat() se stinge la
+ * minutul zero, poateFiAnulat() abia peste o oră.
+ */
+verifica('unul de peste o săptămână se editează', true,
+    poateFiEditat($candva(date('Y-m-d', strtotime('+7 days')), '18:00:00')));
+
+verifica('și unul de azi, dar de peste un ceas', true,
+    poateFiEditat($candva(date('Y-m-d'), date('H:i:s', time() + 3600))));
+
+$tocmaiAInceput = $candva(date('Y-m-d'), date('H:i:s', time() - 60));
+
+verifica('cel care tocmai a început NU se mai editează', false,
+    poateFiEditat($tocmaiAInceput));
+verifica('dar se poate încă anula', true, poateFiAnulat($tocmaiAInceput));
+
+verifica('nici cel de ieri nu se editează', false,
+    poateFiEditat($candva(date('Y-m-d', strtotime('-1 day')), '18:00:00')));
+
+verifica('ce e anulat nu se editează', false, poateFiEditat($anulatDeja));
+verifica('nici ce e încheiat',         false, poateFiEditat($incheiatDeja));
+
 /* ===================== 4. PRIN SERVER =============================== */
 
 if ($BAZA === '') {
@@ -334,7 +366,11 @@ if ($BAZA === '') {
             if (preg_match('/^Set-Cookie:\s*([^;]+)/i', $rand, $m) === 1) { $cookieNou = $m[1]; }
         }
 
-        return ['cod' => $cod, 'corp' => (string) $raspuns, 'cookie' => $cookieNou];
+        // Anteturile brute rămân la îndemână: `file_get_contents` urmează
+        // singur redirecționările, deci `cod` e al paginii de la capăt, iar
+        // „unde m-a trimis" se citește doar de aici.
+        return ['cod' => $cod, 'corp' => (string) $raspuns, 'cookie' => $cookieNou,
+                'anteturi' => $http_response_header ?? []];
     }
 
     /* Intrăm în cont ca organizator. */
@@ -423,11 +459,21 @@ if ($BAZA === '') {
             str_contains(cere('/event.php?slug=tst-anul-ev', null, $cookie)['corp'],
                 'data-anulare'));
 
-        $dupaCeas = cere('/adauga_eveniment.php?slug=tst-anul-ev', null, $cookie)['corp'];
-        verifica('și de pe formularul de editare', false,
-            str_contains($dupaCeas, 'data-anulare'));
-        verifica('în locul lui, un rând care spune de ce', true,
-            str_contains($dupaCeas, 'zona-anulare--trecut'));
+        /**
+         * Formularul de editare nici nu se mai deschide.
+         *
+         * De când un eveniment început nu se mai poate schimba (poateFiEditat),
+         * pagina de editare trimite înapoi la pagina evenimentului — acolo e
+         * tot ce mai are de făcut organizatorul: „Anulează" cât ține ceasul, și
+         * „Încheie evenimentul". Nu pe prima pagină: n-a greșit adresa, doar a
+         * trecut ora.
+         */
+        $dupaCeas = cere('/adauga_eveniment.php?slug=tst-anul-ev', null, $cookie);
+        verifica('formularul de editare nu se mai deschide', false,
+            str_contains($dupaCeas['corp'], 'id="eveniment-form"'));
+        verifica('și trimite la pagina evenimentului', true,
+            str_contains(strtolower(implode("\n", $dupaCeas['anteturi'])),
+                'location: event.php?slug=tst-anul-ev'));
 
         /* În fereastră, la douăzeci de minute după început, e la locul lui. */
         db()->prepare('UPDATE evenimente SET ora_inceput = ? WHERE id = ?')

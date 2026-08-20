@@ -327,23 +327,56 @@ $unaSingura = randeazaTablaDorinte([
 verifica('la o singură dorință nu se pun puncte',
     false, str_contains($unaSingura, 'tabla__puncte'));
 
-/* Butonul, în cele patru stări ale lui. */
-$z = randeazaZonaDorinte(false, '');
-verifica('nelogat, butonul duce la intrare', true, str_contains($z, 'login.php?redirect='));
+/**
+ * BUTONUL, care stă în fereastra de bun venit.
+ *
+ * Se vede doar cât timp omul chiar mai poate pune o dorință: cu una în lucru,
+ * ar fi dus la un formular pe care serverul îl refuză oricum.
+ */
+$b = butonulDorintei(false, '');
+verifica('nelogat, butonul duce la intrare', true, str_contains($b, 'login.php?redirect='));
 verifica('și cu drumul de întoarcere în adresă',
-    true, str_contains($z, urlencode('/index.php#dorinta-formular')));
+    true, str_contains($b, urlencode('/index.php#dorinta-formular')));
 
-$z = randeazaZonaDorinte(true, 'poate');
+$b = butonulDorintei(true, 'poate');
 verifica('logat, butonul deschide formularul',
-    true, str_contains($z, 'href="#dorinta-formular"'));
+    true, str_contains($b, 'href="#dorinta-formular"'));
+verifica('și stă lângă „Propune o ieșire"', true, str_contains($b, 'hero__cta'));
+
+verifica('cu una necitită, nu e niciun buton', '', butonulDorintei(true, 'asteapta'));
+verifica('nici cu una pe tablă',               '', butonulDorintei(true, 'e_pe_tabla'));
+
+/**
+ * VORBA DE SUB TABLĂ, care a rămas acolo. Nu mai are buton în ea niciodată:
+ * ori spune ceva despre dorința omului, ori nu spune nimic.
+ */
+verifica('nelogat, sub tablă nu scrie nimic', '', randeazaZonaDorinte(false, ''));
+verifica('nici cui poate pune una',           '', randeazaZonaDorinte(true, 'poate'));
 
 $z = randeazaZonaDorinte(true, 'asteapta');
-verifica('cu una necitită, nu e buton', false, str_contains($z, '<a class="btn'));
-verifica('ci o vorbă despre ea', true, str_contains($z, 'așteaptă să fie citită'));
+verifica('cu una necitită, o vorbă despre ea',
+    true, str_contains($z, 'așteaptă să fie citită'));
+verifica('și niciun buton', false, str_contains($z, '<a class="btn'));
 
 $z = randeazaZonaDorinte(true, 'e_pe_tabla', dorintaMembrului($ana));
-verifica('cu una pe tablă, nici atât', false, str_contains($z, '<a class="btn'));
-verifica('și scrie până când stă', true, str_contains($z, 'până pe'));
+verifica('cu una pe tablă, scrie până când stă', true, str_contains($z, 'până'));
+verifica('și niciun buton', false, str_contains($z, '<a class="btn'));
+
+/**
+ * Data are ziua săptămânii și n-are anul: „Joi, 27 august".
+ *
+ * Ziua săptămânii e ce caută omul întâi („mai am până joi"), iar anul, la
+ * șapte zile depărtare, nu spune nimic — e limpede că e cel de-acum.
+ */
+$ieseLa = dorintaIeseDePeTabla(dorintaMembrului($ana) ?? []);
+$ziua   = ['duminică','luni','marți','miercuri','joi','vineri','sâmbătă'][(int) date('w', (int) $ieseLa)];
+
+verifica('scrie ziua săptămânii', true,
+    str_contains(mb_strtolower($z, 'UTF-8'), $ziua));
+verifica('și ziua din lună cu luna', true,
+    str_contains($z, date('j', (int) $ieseLa) . ' '
+                   . numeleLunilor()[(int) date('n', (int) $ieseLa)]));
+verifica('dar nu și anul', false, str_contains($z, date('Y', (int) $ieseLa)));
 
 /* ==================================================================== */
 if ($BAZA === '') {
@@ -395,14 +428,20 @@ if ($BAZA === '') {
     $goala = $ia('/index.php');
     verifica('fără dorințe, tabla nu se desenează',
         false, str_contains($goala, 'data-tabla'));
-    verifica('dar butonul rămâne', true, str_contains($goala, 'Pune-ți o dorință'));
+
+    /**
+     * Butonul rămâne oricum la locul lui, în fereastra de bun venit: el nu
+     * atârnă de tablă, ci de ce mai poate face omul.
+     */
+    verifica('dar butonul din fereastră rămâne',
+        true, str_contains($goala, 'hero__cta--dorinta'));
 
     $capulListei = '';
     if (preg_match('~<div class="section-head">(.*?)</div>\s*</div>~s', $goala, $m)) {
         $capulListei = $m[1];
     }
-    verifica('și s-a mutat în capul listei',
-        true, str_contains($capulListei, 'Pune-ți o dorință'));
+    verifica('și în capul listei nu s-a mutat niciun buton',
+        false, str_contains($capulListei, 'class="btn'));
 
     /* La loc, ca restul probei să vadă tabla plină. */
     $u = db()->prepare('UPDATE dorinte SET publicat_la = ? WHERE id = ?');

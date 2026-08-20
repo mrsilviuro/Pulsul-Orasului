@@ -69,6 +69,11 @@ Site live: https://pulsulorasului.ro
 
 4. **Verificările din browser sunt doar confort. Validarea reală e mereu server-side**,
    în `inc/validare.php`. Niciodată nu te bazezi doar pe `required` din HTML sau pe JS.
+   O REGULĂ CARE ȚINE DE CEAS SE UITĂ LA CLIPĂ, NU LA ZI: un eveniment nu poate
+   începe mai devreme de două ceasuri de-acum (`ORE_MINIM_INAINTE`), iar
+   verificarea lipește data de oră — cu data singură, la ora 15:00 se putea
+   publica „azi, de la 14:00". La editare se cere doar dacă se schimbă chiar
+   clipa de început (al cincilea argument al lui `verificaEveniment()`).
 
 5. **Un singur ceas: PHP (`time()`), niciodată `NOW()` din MySQL.** Fusul orar e
    `Europe/Bucharest`, setat în `inc/config.php`. Diferențele de fus PHP↔MySQL au
@@ -130,7 +135,12 @@ inc/
                       poate face pe pagina unui eveniment: evenimentIncheiat()
                       și evenimentAInceput() — iar „încheiat" înseamnă
                       ÎNTOTDEAUNA și „a început", oricât ar arăta ceasul. De
-                      al doilea atârnă poateFiAnulat(): anularea se mai poate
+                      al doilea atârnă DOUĂ întrebări care NU se confundă:
+                      poateFiEditat() se stinge la MINUTUL ZERO al orei de
+                      început (butonul „Editează" dispare, adauga_eveniment.php
+                      redirecționează, api/eveniment.php dă 409 — după start,
+                      oamenii sunt deja pe drum), iar poateFiAnulat() ține mai
+                      departe: anularea se mai poate
                       O ORĂ după ora de început
                       (MINUTE_ANULARE_DUPA_INCEPUT) — în răstimpul acela se
                       vede, de fapt, dacă ieșirea are loc. După el DISPARE de
@@ -151,7 +161,11 @@ inc/
                       încheiat dar cu „Anulat" în colț, iar pe pagina lui stă
                       motivul scris de organizator. TOT
                       AICI: categoriiCuEvenimente() (doar cele cu cel puțin un
-                      eveniment public — filtrele de pe prima pagină; formularul
+                      eveniment public — ACELEAȘI TREI STĂRI ca în
+                      evenimenteDePePrima, „anulat" inclus: altfel o categorie
+                      cu un singur eveniment, anulat, dispărea din filtre, iar
+                      evenimentul rămânea în listă sub o categorie pe care n-o
+                      mai putea alege nimeni; filtrele de pe prima pagină; formularul
                       de publicare folosește mai departe categoriiEvenimente(),
                       cu toate, ca o categorie goală să se poată umple) și
                       evenimenteSugerate() („Ar putea să te intereseze" de pe
@@ -240,11 +254,16 @@ inc/
                       'e_pe_tabla'). Rândurile NU se șterg niciodată, nici
                       după ce ies de pe tablă: mai târziu vrem să putem spune
                       câte dorințe și-au pus oamenii de-a lungul timpului.
-                      TOT AICI cum arată: randeazaTablaDorinte() și
-                      randeazaZonaDorinte() — a doua se desenează în DOUĂ
+                      TOT AICI cum arată: randeazaTablaDorinte(),
+                      butonulDorintei() — butonul „Pune-ți o dorință", care stă
+                      în FEREASTRA DE BUN VENIT, lângă „Propune o ieșire", și
+                      DISPARE pentru cine are deja una în lucru — și
+                      randeazaZonaDorinte(), vorba despre dorința lui („e pe
+                      tablă până joi, 27 august"), care se desenează în DOUĂ
                       locuri (sub tablă și, când nu e nicio dorință, în capul
                       listei de evenimente), de aceea e o funcție, nu HTML
-                      scris de două ori. puneODorinta() e chemată și de
+                      scris de două ori. Data se scrie cu dataLunga($d, false):
+                      cu ziua săptămânii, fără an. puneODorinta() e chemată și de
                       api/dorinta.php (cu JS), și de index.php (fără)
   constructie.php   → LACĂTUL de pe site (`in_constructie` din config.php):
                       cine trece (doar staff), ce uși rămân deschise

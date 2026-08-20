@@ -342,6 +342,47 @@ foreach ($toateCat as $slug) {
 verifica('și rămân pe dinafară cele goale', true, $cateGoale > 0);
 verifica('dar formularul le are pe toate', true, count($toateCat) > count($inFiltre));
 
+/**
+ * O CATEGORIE ÎN CARE TOT CE EXISTĂ E ANULAT RĂMÂNE ÎN FILTRE.
+ *
+ * Un anunț anulat nu se mai ascunde de nimeni: se vede pe prima pagină, stins,
+ * cu motivul pe pagina lui. Cât timp lista de categorii cerea doar „aprobat"
+ * sau „incheiat", o categorie cu un singur eveniment, anulat, dispărea din
+ * filtre — iar evenimentul rămânea în listă, sub o categorie pe care n-o mai
+ * putea alege nimeni.
+ *
+ * Se ia ULTIMA categorie, cea despre care tocmai s-a spus că e goală.
+ */
+$goala = null;
+
+foreach (array_reverse($toateCat) as $slug) {
+    if (!in_array($slug, $inFiltre, true)) { $goala = $slug; break; }
+}
+
+if ($goala === null) {
+    echo "  (n-am găsit o categorie goală — proba cu anulatul s-a sărit)\n";
+} else {
+    $idGoala = 0;
+    foreach ($toateCat2 = categoriiEvenimente() as $c) {
+        if ((string) $c['slug'] === $goala) { $idGoala = (int) $c['id']; }
+    }
+
+    faEveniment($org, 'doar-anulat', 5, $orase[0], $idGoala, 'anulat');
+
+    $acum = array_map(static fn(array $c): string => (string) $c['slug'], categoriiCuEvenimente());
+    verifica('cu un singur eveniment, anulat, categoria e tot în filtre',
+        true, in_array($goala, $acum, true));
+
+    /* Iar evenimentul chiar se vede pe prima pagină, ca să nu rămână filtrul
+       fără ce filtra. */
+    // aleNoastre() întoarce slugurile fără semnul de probă din față.
+    verifica('și evenimentul anulat e pe prima pagină', true,
+        in_array('doar-anulat',
+            aleNoastre(evenimenteDePePrima('', $goala, 0, 50)), true));
+
+    db()->prepare('DELETE FROM evenimente WHERE slug = ?')->execute([SEMN . 'doar-anulat']);
+}
+
 /* ==================== 7. AR PUTEA SĂ TE INTERESEZE ================== */
 
 echo "\n=== SUGESTIILE DE PE PAGINA UNUI EVENIMENT ===\n";

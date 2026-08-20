@@ -55,6 +55,13 @@ function idCategoriiValide(): array
  *
  * Formularul de publicat un eveniment folosește mai departe categoriiEvenimente()
  * — acolo trebuie să apară TOATE, tocmai ca ele să se poată umple.
+ *
+ * „Public" înseamnă ACELEAȘI TREI STĂRI ca în evenimenteDePePrima(), inclusiv
+ * „anulat". Un anunț anulat nu se mai ascunde de nimeni: se vede pe prima
+ * pagină, stins, cu motivul pe pagina lui. Cât timp lista de aici cerea doar
+ * „aprobat" sau „incheiat", o categorie cu un singur eveniment, anulat,
+ * dispărea din filtre — iar evenimentul rămânea pe pagină, sub o categorie pe
+ * care n-o mai putea alege nimeni.
  */
 function categoriiCuEvenimente(): array
 {
@@ -64,7 +71,7 @@ function categoriiCuEvenimente(): array
           WHERE EXISTS (
                   SELECT 1 FROM evenimente e
                    WHERE e.categorie_id = c.id
-                     AND e.stare_moderare IN (\'aprobat\', \'incheiat\')
+                     AND e.stare_moderare IN (\'aprobat\', \'incheiat\', \'anulat\')
                 )
           ORDER BY c.ordine, c.nume'
     );
@@ -1313,6 +1320,33 @@ function poateFiAnulat(array $eveniment): bool
     }
 
     return time() <= $inceput + MINUTE_ANULARE_DUPA_INCEPUT * 60;
+}
+
+/**
+ * Se mai poate SCHIMBA evenimentul ăsta?
+ *
+ * Nu, din clipa în care a început. Ce era de îndreptat se îndrepta înainte;
+ * după ora de start, oamenii sunt deja pe drum, iar o schimbare de loc sau de
+ * oră le-ar ajunge sub ochi prea târziu ca să mai folosească cuiva. Ce rămâne
+ * de făcut atunci se face de pe pagina evenimentului: „Anulează evenimentul"
+ * încă o oră (poateFiAnulat) și „Încheie evenimentul" oricând.
+ *
+ * DE CE NU E PUSĂ ÎN evenimentDeEditat(). Fiindcă de acela atârnă și
+ * anularea: api/anuleaza-eveniment.php îl cheamă ca să afle al cui e anunțul.
+ * Închisă acolo, regula asta ar fi luat înapoi tocmai ora de răgaz de după
+ * început, care e rostul întreg al butonului de anulare de pe pagină.
+ *
+ * O întrebare, un singur loc — o pun trei: adauga_eveniment.php (nu deschide
+ * formularul), api/eveniment.php (nu primește schimbarea) și event.php (nu
+ * desenează butonul „Editează").
+ */
+function poateFiEditat(array $eveniment): bool
+{
+    if (in_array($eveniment['stare_moderare'] ?? '', ['anulat', 'incheiat'], true)) {
+        return false;
+    }
+
+    return !evenimentAInceput($eveniment);
 }
 
 /**
