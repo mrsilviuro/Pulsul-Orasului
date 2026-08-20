@@ -341,13 +341,23 @@ function limitaEvenimente(int $membruId): int
  * Poate publica acum?
  *
  * Întoarce ['poate' => bool, 'mesaj' => string, 'active' => array].
+ *
+ * STAFF-UL TRECE PESTE LIMITĂ. Ea e făcută să oprească pe cine ar umple prima
+ * pagină cu zece anunțuri deodată — iar omul de casă publică tocmai zece:
+ * târgul, concertul din parc, ziua orașului. Cu limita pe el, ar fi trebuit
+ * să-și ridice singur numărul din phpMyAdmin înainte de fiecare al doilea
+ * anunț, ceea ce e o piedică pusă exact în calea celui în care avem încredere.
+ *
+ * Lista celor active se citește oricum, și pentru el: e ce arată pagina sub
+ * formular („ai deja pe astea"), și n-are de ce să dispară doar fiindcă nu-l
+ * mai oprește nimic.
  */
-function poatePublicaEveniment(int $membruId): array
+function poatePublicaEveniment(int $membruId, bool $eStaff = false): array
 {
     $active = evenimenteActive($membruId);
     $limita = limitaEvenimente($membruId);
 
-    if (count($active) < $limita) {
+    if ($eStaff || count($active) < $limita) {
         return ['poate' => true, 'mesaj' => '', 'active' => $active];
     }
 
@@ -983,6 +993,31 @@ function ascundePeProfil(array $date, bool $eStaff): bool
 }
 
 /**
+ * Se trece organizatorul singur pe lista de participanți?
+ *
+ * De obicei, da: cine pune o ieșire la cale vine la ea, iar rândul se scrie
+ * fără să apese nimeni nimic.
+ *
+ * La un anunț ținut deoparte de profil, NU. Acolo omul de casă nu e cel care
+ * iese în oraș, e cel care a scris anunțul orașului — la târgul de Crăciun nu
+ * „participă" el, îl anunță. Trecut pe listă, ar fi apărut printre chipurile de
+ * sub „Cine vine", ar fi umflat numărul cu unu și ar fi putut fi notat de
+ * participanți la sfârșit, ca și cum ar fi fost acolo cu ei.
+ *
+ * Poate să se înscrie oricând singur, de pe pagina evenimentului, ca oricine
+ * altcineva — dacă chiar se duce.
+ *
+ * O funcție, nu un `if` copiat, fiindcă întrebarea se pune în două locuri
+ * depărtate: la salvare (salveazaEveniment) și la aprobarea unui anunț care
+ * așteptase (api/modereaza-eveniment.php). Scrisă de două ori, ar fi ajuns să
+ * spună două lucruri.
+ */
+function organizatorulVineSingur(bool $ascunsPeProfil): bool
+{
+    return !$ascunsPeProfil;
+}
+
+/**
  * Scrie evenimentul în bază. $curat vine gata verificat din verificaEveniment().
  *
  * Slugul se încearcă de câteva ori: coada lui e întâmplătoare, deci o
@@ -1060,6 +1095,10 @@ function salveazaEveniment(
          * fără ca organizatorul să apese ceva — se poate retrage mai târziu,
          * ca oricine altcineva.
          *
+         * În afară de anunțurile ținute deoparte de profil, unde omul de casă
+         * n-a scris o ieșire de-a lui, ci una a orașului — vezi
+         * organizatorulVineSingur().
+         *
          * AFARĂ din `try`, dinadins. Înăuntru, o eroare de aici cu codul
          * 23000 (o cheie străină, de pildă) ar fi fost luată drept „slugul s-a
          * lovit de altul" și ar fi pornit încă o rundă — adică un al doilea
@@ -1069,8 +1108,10 @@ function salveazaEveniment(
          * cere aici, la folosire, și nu sus, printre celelalte: două fișiere
          * care se cer unul pe altul de la început ar fi o buclă.
          */
-        require_once __DIR__ . '/interese.php';
-        faOrganizatorulParticipant($idNou, $membruId);
+        if (organizatorulVineSingur($ascunsPeProfil)) {
+            require_once __DIR__ . '/interese.php';
+            faOrganizatorulParticipant($idNou, $membruId);
+        }
 
         return $slug;
     }

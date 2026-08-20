@@ -381,10 +381,11 @@ function motivBlocajParticipare(array $eveniment, ?array $membru): string
     /**
      * Organizatorul nu e oprit de regula de gen la evenimentul lui.
      *
-     * El e trecut oricum pe listă la salvare (vezi faOrganizatorulParticipant),
-     * fiindcă e omul de care se leagă evenimentul — cineva trebuie să răspundă
-     * de o seară pentru mame, chiar dacă n-ar putea veni la ea ca participant.
-     * Dacă s-a retras și vrea înapoi, nu-l oprim din ceva ce i s-a dat deja.
+     * El e omul de care se leagă evenimentul — cineva trebuie să răspundă de o
+     * seară pentru mame, chiar dacă n-ar putea veni la ea ca participant. De
+     * obicei e trecut pe listă din start (vezi faOrganizatorulParticipant); dacă
+     * s-a retras, sau dacă anunțul e unul ținut deoparte de profil, la care nu
+     * s-a trecut deloc, tot nu-l oprim din ceva ce i se cuvine.
      */
     if ((int) $eveniment['membru_id'] === $membruId) {
         return '';

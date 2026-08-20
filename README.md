@@ -3706,8 +3706,8 @@ spună de ce — cine caută motivul trebuie să se uite în e-mail. O coloană 
 Respingerea unui anunț **deja aprobat**, la care s-au înscris oameni, nu-i
 înștiințează pe aceia — spre deosebire de anulare, care o face.
 
-Verificările: `php teste/test-moderare.php http://127.0.0.1:8128` (141 de
-cazuri; fără adresă merge și fără server, 69).
+Verificările: `php teste/test-moderare.php http://127.0.0.1:8128` (156 de
+cazuri; fără adresă merge și fără server, 80).
 
 
 ## Staff-ul publică direct
@@ -3769,10 +3769,41 @@ desenează în formularul lui, deci un „1" venit de acolo e scris de mână. C
 peste tot, ce se vede în pagină e purtare frumoasă; regula e în
 `api/eveniment.php`, care întreabă baza la fiecare cerere.
 
-### Ce nu se schimbă
+### Organizatorul nu se mai trece singur pe listă
 
-**Limita de evenimente active se aplică și staff-ului.** Cine publică multe
-anunțuri ale orașului se lovește de ea la al doilea; se ridică din
-`membri.limita_evenimente_active`, de mână, din phpMyAdmin. N-am legat-o de
-`este_staff` fiindcă limita e o socoteală despre câte anunțuri poate ține un om
-deodată, nu o măsură de încredere.
+La un anunț obișnuit, cine îl pune la cale apare din start printre participanți:
+rândul se scrie singur, fără să apese nimeni nimic
+(`faOrganizatorulParticipant`). La unul ținut deoparte, **nu**.
+
+Omul de casă nu e cel care iese în oraș, e cel care a scris anunțul orașului: la
+târgul de Crăciun nu „participă" el, îl anunță. Trecut pe listă, ar fi apărut
+printre chipurile de sub „Cine vine", ar fi umflat numărul cu unu și ar fi putut
+fi notat de participanți la sfârșit, ca și cum ar fi fost acolo cu ei.
+
+Poate să se înscrie oricând singur, de pe pagina evenimentului, ca oricine
+altcineva — dacă chiar se duce. Regula de gen nu-l oprește nici atunci: e
+evenimentul lui.
+
+Întrebarea se pune prin `organizatorulVineSingur()`, în două locuri depărtate —
+la salvare și la aprobarea unui anunț care așteptase
+(`api/modereaza-eveniment.php`, unde organizatorul se pune la loc pe listă după
+o respingere care i-a golit-o). Scrisă de două ori, ar fi ajuns să spună două
+lucruri.
+
+**Ce nu face:** dacă bifezi caseta la un anunț unde erai deja pe listă, rândul
+tău rămâne — regula lucrează la scriere, nu curăță în urmă. Te scoți de pe listă
+de pe pagina evenimentului, ca oricine altcineva.
+
+### Limita de evenimente active nu i se aplică
+
+`poatePublicaEveniment()` îl lasă pe staff să treacă peste ea. Limita e făcută
+împotriva celui care ar umple prima pagină cu zece anunțuri deodată — iar omul
+de casă publică tocmai zece: târgul, concertul din parc, ziua orașului. Cu
+limita pe el, ar fi trebuit să-și ridice singur numărul din phpMyAdmin înainte
+de fiecare al doilea anunț, adică o piedică pusă exact în calea celui în care
+avem încredere.
+
+Lista celor active se citește oricum, și pentru el: e ce arată pagina sub
+formular („ai deja pe astea"), și n-are de ce să dispară doar fiindcă nu-l mai
+oprește nimic. Iar steagul se citește din bază la fiecare cerere, deci un drept
+luat înapoi îl pune la loc sub limită imediat, nu la următoarea conectare.

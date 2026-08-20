@@ -95,7 +95,7 @@ if ($slugCerut !== '') {
  * mai scumpă — pentru un eveniment pe care oricum nu-l primim.
  */
 if ($deEditat === null) {
-    $voie = poatePublicaEveniment($membruId);
+    $voie = poatePublicaEveniment($membruId, $eStaff);
 
     if (!$voie['poate']) {
         raspunsJson(['ok' => false, 'mesaj' => $voie['mesaj']], 409);

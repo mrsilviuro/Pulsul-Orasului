@@ -148,7 +148,13 @@ inc/
                       editare, altfel o virgulă îndreptată de staff i-ar scoate
                       anunțul de pe site) și ascundePeProfil() (bifa „nu-l
                       arăta pe profilul meu", ascultată NUMAI de la staff,
-                      oricât ar scrie în cerere — vezi sql/022)
+                      oricât ar scrie în cerere — vezi sql/022). TOT AICI:
+                      organizatorulVineSingur() — de obicei cine pune ceva la
+                      cale vine la el, DAR nu la un anunț ținut deoparte de
+                      profil: acolo omul de casă n-a scris o ieșire de-a lui, ci
+                      una a orașului, deci nu se trece pe lista de participanți.
+                      Întrebarea se pune în două locuri: salveazaEveniment() și
+                      api/modereaza-eveniment.php (la aprobare)
   interese.php      → „Mergi la acest eveniment?" — cine e interesat, cine
                       vine, numărătoarea, locurile, rândul cu chipuri, listele
                       din taburi (aceeași funcție pentru amândouă), scoaterea
@@ -305,9 +311,9 @@ assets/css/style.css, assets/js/main.js, assets/img/
   (anunțul lui intră „aprobat", iar butonul din formular scrie „Publică
   evenimentul") și poate bifa „nu-l arăta pe profilul meu", poate scoate oameni
   de pe liste și trece de lacătul de șantier. Nu există pagină de administrare.
-  ATENȚIE: limita de evenimente active se aplică și lui — cine publică multe
-  anunțuri ale orașului are nevoie de `membri.limita_evenimente_active` ridicată
-  de mână, din phpMyAdmin
+  Limita de evenimente active NU i se aplică: poatePublicaEveniment() îl lasă
+  să treacă peste ea, fiindcă e făcută împotriva celui care ar umple prima
+  pagină, iar el publică tocmai zece anunțuri ale orașului
 - Curățenia evenimentelor anulate: rândul cu `stare_moderare = 'anulat'` rămâne
   în bază pentru totdeauna. Ștergerea lui (cu tot cu coperta de pe disc,
   înscrieri și comentarii) e o acțiune viitoare de staff — vezi `TODO`-ul din

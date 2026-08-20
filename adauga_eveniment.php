@@ -80,7 +80,7 @@ $ascunsPeProfil = $eEditare && (int) ($ev['ascuns_pe_profil'] ?? 0) === 1;
  */
 $voie = $eEditare
     ? ['poate' => true, 'mesaj' => '', 'active' => []]
-    : poatePublicaEveniment($membruId);
+    : poatePublicaEveniment($membruId, $eStaff);
 
 /* ------------------- valorile cu care pleacă formularul ---------------- */
 
