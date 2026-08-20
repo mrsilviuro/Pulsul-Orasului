@@ -3481,30 +3481,116 @@ intrând pe o pagină care nu se mai deschidea. Acum primesc un e-mail în clipa
 
 ### Până când se poate anula
 
-**Până la ora de început, nu mai târziu.** Din clipa în care evenimentul a
-început, butonul dispare din `adauga_eveniment.php` și `api/anuleaza-eveniment.php`
-răspunde **409**.
+**Până la o oră DUPĂ ora de început** (`MINUTE_ANULARE_DUPA_INCEPUT`). După
+ceasul acela butonul dispare de pe amândouă paginile care îl au, iar
+`api/anuleaza-eveniment.php` răspunde **409**.
 
-Nu e o regulă de formă. Anularea e o veste: „nu mai are loc, nu veni". Trimisă la
-ora la care lumea e deja în parc, vestea aia nu mai ajută pe nimeni și îi pune pe
-drumuri exact pe cei care au venit. Ce rămâne în loc e **„Încheie evenimentul"**,
-de pe pagina anunțului: spune adevărul de după — a avut loc, s-a terminat — și nu
+Ora aceea nu e o cifră rotundă aleasă la întâmplare: e răstimpul în care se
+hotărăște, de fapt, dacă o ieșire are loc. Plouă cu găleata, au venit doi din
+doisprezece, s-a închis terasa — toate se văd **de la** ora scrisă în anunț, nu
+înainte de ea. O anulare oprită fix la minutul de început îl lăsa pe organizator
+cu un anunț care spune că e ceva, exact în seara în care nu mai era.
+
+După fereastră nu se mai poate: cine avea de venit a venit sau nu, iar o veste de
+„nu mai are loc" trimisă la 20:30 pentru ceva de la 19:00 nu mai ajută pe nimeni.
+Ce rămâne atunci e **„Încheie evenimentul"**, care spune adevărul de după și nu
 trimite niciun e-mail.
 
-Întrebarea o pune `poateFiAnulat()` din `inc/evenimente.php`, aceeași funcție
-pentru pagină și pentru server. Ceasul e cel al PHP-ului, prin
-`evenimentAInceput()`: un eveniment care ține până seara e „început" de la ora lui
-de start, nu de la sfârșit — de la primul om intrat pe ușă, anunțul nu mai poate fi
-luat înapoi.
+Atenție la ce înseamnă „început": ora de **start**, nu cea de sfârșit. Un
+eveniment care ține de la 18:00 până seara târziu se poate anula până la 19:00, nu
+până la 23:00.
+
+Întrebarea o pune `poateFiAnulat()` din `inc/evenimente.php` — aceeași funcție
+pentru amândouă paginile cu buton și pentru server. Ceasul e al PHP-ului, socotit
+din data și ora evenimentului prin `momentulInceperii()`, nu prin
+`evenimentAInceput()`: acela răspunde „da" pentru orice eveniment încheiat, oricât
+ar arăta ceasul, iar aici avem nevoie de clipa adevărată ca să putem adăuga ora de
+răgaz peste ea.
 
 În pagină zona nu se desenează stinsă, ci **dispare de tot**; în locul ei rămâne un
 rând care spune de ce. Un buton pe care scrie „anulează" și care nu anulează e mai
-rău decât niciun buton, iar organizatorul care l-a văzut ieri l-ar căuta azi
-degeaba. Verificarea de pe server nu e o repetare de prisos: pagina poate fi
-deschisă cu cinci minute înainte de ora evenimentului și apăsată după.
+rău decât niciun buton. Verificarea de pe server nu e o repetare de prisos: pagina
+poate fi deschisă cu cinci minute înainte de fereastră și apăsată după.
 
 **409, nu 403.** N-are legătură cu drepturile omului — evenimentul e al lui — ci
 cu starea lucrurilor, care s-a schimbat între timp.
+
+### Butonul, pe două pagini
+
+Zona de anulare stă și în formularul de editare, și pe **pagina evenimentului**,
+imediat sub caseta de interes. Acolo se ia hotărârea: omul se uită la câți au spus
+că vin și, dacă sunt doi din doisprezece, anulează. Ținut numai în formularul de
+editare, butonul era la două pagini distanță de cifra care îl face să-l apese.
+
+Același HTML în amândouă locurile, dintr-un singur loc: `randeazaZonaAnulare()`
+din `inc/afisare-eveniment.php`. Scris de două ori, s-ar fi despărțit la prima
+corectură — și tocmai aici, unde textul de avertizare e singurul lucru pe care
+omul îl citește înainte de o apăsare care nu se ia înapoi.
+
+`main.js` o găsește după `data-anulare`, nu după formularul de eveniment: pe
+pagina anunțului nu există niciun formular în jur, iar slugul și tokenul stau pe
+zona însăși.
+
+Se vede **doar organizatorului**, și nu prin CSS: pentru oricine altcineva blocul
+nici nu se scrie în pagină.
+
+### Ce se vede după anulare
+
+**Pagina rămâne publică**, ca la un eveniment încheiat. A fost ascunsă o vreme, și
+era greșit: de un eveniment anulat atârnă oameni care își făcuseră planuri, iar o
+pagină care dispare îi lasă cu un link mort și cu întrebarea dacă n-au greșit ei
+ziua. Cine intră de pe un mesaj primit acum trei zile află pe loc ce s-a
+întâmplat.
+
+Sus e banda de „anulat", iar sub ea **motivul scris de organizator**, întocmai cum
+l-a scris — e același text care a plecat prin e-mail, iar un rezumat făcut de noi
+ar fi spus altceva decât mesajul primit.
+
+Ce nu se mai poate acolo rămâne oprit de `evenimentPublicat()`, care întoarce „nu"
+pentru anulat: nimeni nu se mai înscrie și nimeni nu mai scrie comentarii. **Se
+citește tot, nu se mai face nimic.**
+
+Anunțul rămâne și în liste — pe prima pagină și în tabul „Istoric" de pe profil —
+stins ca unul încheiat, dar cu **„Anulat"** scris în colț în loc de „Încheiat".
+Aceeași clasă, `card--incheiat`: amândouă sunt seri care nu mai urmează, iar
+deosebirea dintre ele e un cuvânt, nu o culoare. O etichetă roșie, de alarmă, ar
+fi strigat pe prima pagină la un anunț de acum trei săptămâni, pe care oricum nu-l
+mai așteaptă nimeni.
+
+Pe prima pagină se socotește drept trecut chiar dacă ziua lui e în viitor: seara
+aceea nu mai vine pentru nimeni, deci n-are ce căuta printre cele la care se mai
+poate ajunge. În „Istoric" rămâne la fel — omul se înscrisese și își ținuse seara
+liberă, iar asta face parte din ce i s-a întâmplat — dar **nu se numără** la „a
+participat la": n-a participat la nimic.
+
+### Cifrele de pe cartonaș
+
+În colțul de jos-dreapta al fiecărei poze stau două cifre: câți vin și câte
+comentarii sunt. Amândouă răspund la aceeași întrebare tăcută pe care și-o pune
+omul când trece cu ochii peste o listă — „se duce cineva, se vorbește ceva despre
+asta?".
+
+| Ce arată | Când |
+|---|---|
+| `7` | evenimentul n-are număr maxim de locuri |
+| `7 / 12` | are limită — cifra singură n-ar spune nimic |
+
+Șapte inși e mult la o partidă de tenis și puțin la un concert; cu numitorul
+alături, omul vede dintr-o privire dacă mai are unde să intre.
+
+Participanții se numără **exact ca pe pagina evenimentului**: numai conturile
+active. Cine și-a șters contul nu mai ține un loc, deci n-are ce căuta nici în
+cifra de pe cartonaș — altfel s-ar fi văzut „12 / 12" pe listă și un loc liber pe
+pagină. Comentariile se numără fără cele golite, care sunt pietre de mormânt, nu
+vorbe de citit.
+
+Bucata de SQL e scrisă o dată, `CIFRE_CARTONAS`, și lipită în fiecare listă care
+desenează cartonașe. Scrisă de patru ori, ar fi ajuns să numere patru lucruri ușor
+diferite, iar același eveniment ar fi arătat „7" într-un loc și „8" în altul.
+
+Cifrele se scriu numai dacă rândul le-a adus din bază — un cartonaș desenat dintr-un
+rând care n-a cerut subcererile ar fi arătat „0 / 0", un neadevăr care pare o
+socoteală.
 
 ### Cine află
 
@@ -3539,10 +3625,10 @@ trebuie să vadă că evenimentul e anulat, nu o eroare despre serverul de e-mai
 
 ### Mesajul n-are buton spre eveniment
 
-Ar fi părut lucrul firesc, și ar fi fost greșit: din clipa anulării, pagina se
-deschide doar pentru staff (`poateVedeaEvenimentul`). Un „Vezi evenimentul" ar
-fi dus fiecare om exact într-o ușă închisă, la capătul unui mesaj care deja îi
-strica planul. Butonul duce în oraș, unde mai sunt și altele.
+Pagina se deschide de oricine acum, cu banda și motivul la vedere — dar motivul e
+deja în mesajul ăsta, iar omul care tocmai a aflat că i s-a stricat seara are
+nevoie de altceva de făcut, nu de încă o citire a aceleiași vești. Butonul duce în
+oraș, unde mai sunt și altele.
 
 Ziua se spune din nou, întreagă. Mesajul poate fi citit peste o săptămână, iar
 „nu mai are loc" fără dată nu-i spune omului ce seară i s-a eliberat.

@@ -431,9 +431,21 @@ function evenimenteDePePrima(string $oras = '', string $categorie = '', int $deL
      * trei ori — în SELECT și de două ori în ORDER BY — ca cele trei să nu
      * poată ajunge vreodată să spună lucruri diferite.
      */
-    $eIncheiat = '(e.stare_moderare = \'incheiat\' OR e.data_eveniment < ?)';
+    $eIncheiat = '(e.stare_moderare IN (\'incheiat\', \'anulat\') OR e.data_eveniment < ?)';
 
-    $unde   = ['e.stare_moderare IN (\'aprobat\', \'incheiat\')'];
+    /**
+     * ANULATELE INTRĂ ÎN LISTĂ, cu cele trecute.
+     *
+     * Au stat ascunse o vreme și era greșit: de un eveniment anulat atârnă
+     * oameni care își făcuseră planuri, iar un anunț care dispare din listă îi
+     * lasă să creadă că l-au visat. Acum stă la locul lui, stins, cu „Anulat"
+     * scris în colț — o veste, nu o gaură.
+     *
+     * Se socotesc drept trecute chiar dacă ziua lor e în viitor: seara aceea
+     * nu mai urmează pentru nimeni, deci n-are ce căuta printre cele la care
+     * se mai poate ajunge.
+     */
+    $unde   = ['e.stare_moderare IN (\'aprobat\', \'incheiat\', \'anulat\')'];
     $valori = [$azi];   // primul „?" e cel din SELECT
 
     if ($oras !== '') {
@@ -452,8 +464,9 @@ function evenimenteDePePrima(string $oras = '', string $categorie = '', int $deL
 
     $q = db()->prepare(
         'SELECT e.id, e.titlu, e.slug, e.coperta, e.data_eveniment, e.ora_inceput,
-                e.locatie, e.descriere, e.stare_moderare, e.oras,
+                e.locatie, e.descriere, e.stare_moderare, e.oras, e.participanti_max,
                 c.nume AS categorie, c.slug AS categorie_slug, c.imagine_default,
+                ' . CIFRE_CARTONAS . ',
                 ' . $eIncheiat . ' AS incheiat
            FROM evenimente e
            JOIN categorii c ON c.id = e.categorie_id
@@ -504,8 +517,14 @@ function randeazaListaEvenimente(array $evenimente): string
          * deci un eveniment de la 18:00 rămâne „Live" toată seara: n-avem ora
          * de sfârșit ca regulă, iar aceea e cea mai cinstită socoteală.
          */
+        $anulat   = ($ev['stare_moderare'] ?? '') === 'anulat';
         $incheiat = !empty($ev['incheiat']);
-        $stare    = $incheiat ? 'incheiat' : (evenimentAInceput($ev) ? 'live' : '');
+
+        // „Anulat" bate „încheiat" și „live": e ce s-a întâmplat cu adevărat cu
+        // seara aceea, oricât ar arăta ceasul.
+        $stare = $anulat
+            ? 'anulat'
+            : ($incheiat ? 'incheiat' : (evenimentAInceput($ev) ? 'live' : ''));
 
         $html .= randeazaCartonasEveniment($ev, '', false, $stare);
     }
@@ -543,8 +562,9 @@ function evenimenteSugerate(int $fara = 0, int $cate = EVENIMENTE_SUGERATE): arr
 
     $q = db()->prepare(
         'SELECT e.id, e.titlu, e.slug, e.coperta, e.data_eveniment, e.ora_inceput,
-                e.locatie, e.descriere, e.stare_moderare, e.oras,
-                c.nume AS categorie, c.slug AS categorie_slug, c.imagine_default
+                e.locatie, e.descriere, e.stare_moderare, e.oras, e.participanti_max,
+                c.nume AS categorie, c.slug AS categorie_slug, c.imagine_default,
+                ' . CIFRE_CARTONAS . '
            FROM evenimente e
            JOIN categorii c ON c.id = e.categorie_id
           WHERE e.stare_moderare = \'aprobat\'
@@ -667,8 +687,9 @@ function evenimenteDePeProfil(int $membruId, bool $vedeSiCeleInAsteptare): array
 
     $q = db()->prepare(
         'SELECT e.id, e.titlu, e.slug, e.coperta, e.data_eveniment, e.ora_inceput,
-                e.locatie, e.descriere, e.stare_moderare,
-                c.nume AS categorie, c.slug AS categorie_slug, c.imagine_default
+                e.locatie, e.descriere, e.stare_moderare, e.participanti_max,
+                c.nume AS categorie, c.slug AS categorie_slug, c.imagine_default,
+                ' . CIFRE_CARTONAS . '
            FROM evenimente e
            JOIN categorii c ON c.id = e.categorie_id
           WHERE e.membru_id = ?
@@ -760,10 +781,15 @@ function evenimentDupaSlug(string $slug): ?array
  * organizatorul. Simetric dinadins: un anunț respins nu e o rușine de arătat
  * altora, e o treabă între noi și cel care l-a scris.
  *
- * Anulat — doar staff. Nici măcar organizatorul, deși el l-a anulat: a spus ce
- * avea de spus și a închis subiectul, iar o pagină care se mai deschide încă
- * pentru el ar fi o promisiune că se mai poate face ceva. Rândul rămâne în
- * bază pentru cine face curățenia și pentru e-mailurile care trebuie trimise.
+ * Anulat — oricine, ca unul încheiat. A fost ascuns o vreme, și era greșit: de
+ * el atârnă oameni care își făcuseră planuri, iar o pagină care dispare îi
+ * lasă cu un link mort și cu întrebarea dacă n-au greșit ei ziua. Acum se
+ * deschide, cu banda ei și cu motivul scris de organizator la vedere — cine
+ * intră de pe un mesaj primit acum trei zile află pe loc ce s-a întâmplat.
+ *
+ * Ce NU se mai poate acolo rămâne oprit de evenimentPublicat(), care întoarce
+ * „nu" pentru anulat: nimeni nu se mai înscrie și nimeni nu mai scrie
+ * comentarii. Se citește tot, nu se mai face nimic.
  *
  * STAFF-UL VEDE TOT. Nu e un drept dat de dragul lui, ci singurul fel în care
  * moderarea poate exista: butoanele „Aprobă" și „Respinge" stau pe pagina
@@ -781,8 +807,9 @@ function poateVedeaEvenimentul(array $eveniment, int $membruId, bool $eStaff = f
         return true;
     }
 
+    // Anulat, dar public: pagina rămâne de citit pentru cine avea bilet la ea.
     if ($eveniment['stare_moderare'] === 'anulat') {
-        return false;
+        return true;
     }
 
     if ((int) $eveniment['membru_id'] === $membruId && $membruId > 0) {
@@ -822,12 +849,23 @@ function urlEveniment(string $slug): string
  * $stare îmbracă altfel cartonașul, după unde se află evenimentul în timp:
  *
  *   'incheiat' — a trecut: poza se stinge, în colț scrie „Încheiat"
+ *   'anulat'   — n-a mai avut loc: la fel de stins, dar scrie „Anulat"
  *   'live'     — se petrece chiar acum: în colț clipește „Live"
  *   ''         — nimic, ca la un anunț care abia urmează
  *
+ * „Anulat" arată ca „Încheiat", dinadins: amândouă sunt seri care nu mai
+ * urmează, iar deosebirea dintre ele e un cuvânt, nu o culoare. O etichetă
+ * roșie, de alarmă, ar fi strigat pe prima pagină la un anunț de acum trei
+ * săptămâni — pe care oricum nu-l mai așteaptă nimeni.
+ *
  * Nu se ghicește din rând, ci se spune. Pe prima pagină e ceva de deosebit
- * între ce urmează, ce e în toi și ce a fost; în tabul „Istoric" de pe profil
- * totul e încheiat, iar un semn pe fiecare cartonaș ar fi doar zgomot.
+ * între ce urmează, ce e în toi și ce a fost; într-o listă unde totul e la fel
+ * (o previzualizare, de pildă) un semn pe fiecare cartonaș ar fi doar zgomot.
+ *
+ * CIFRELE DIN COLȚUL DE JOS — câți vin și câte comentarii sunt — se scriu
+ * numai dacă rândul le aduce cu el (`cati_participanti`, `cate_comentarii`).
+ * Așa, o listă care nu le-a cerut din bază nu ajunge să arate zerouri
+ * inventate; vezi cifreleCartonasului().
  */
 function randeazaCartonasEveniment(
     array $ev,
@@ -837,13 +875,16 @@ function randeazaCartonasEveniment(
 ): string {
     $inAsteptare = ($ev['stare_moderare'] ?? '') === 'in_asteptare';
     $incheiat    = $stare === 'incheiat';
+    $anulat      = $stare === 'anulat';
     $live        = $stare === 'live';
 
     $clase = 'card';
-    if ($inAsteptare) { $clase .= ' card--in-asteptare'; }
-    if ($incheiat)    { $clase .= ' card--incheiat'; }
-    if ($live)        { $clase .= ' card--live'; }
-    if ($ascuns)      { $clase .= ' ascuns'; }
+    if ($inAsteptare)          { $clase .= ' card--in-asteptare'; }
+    // Aceeași clasă pentru amândouă: stingerea pozei e la fel, se schimbă doar
+    // cuvântul din colț.
+    if ($incheiat || $anulat)  { $clase .= ' card--incheiat'; }
+    if ($live)                 { $clase .= ' card--live'; }
+    if ($ascuns)               { $clase .= ' ascuns'; }
 
     $coperta = urlCoperta($ev['coperta'] ?? null);
 
@@ -872,6 +913,8 @@ function randeazaCartonasEveniment(
 
     if ($inAsteptare) {
         $semn = '<span class="card__stare">În așteptare de aprobare</span>';
+    } elseif ($anulat) {
+        $semn = '<span class="card__stare card__stare--incheiat">Anulat</span>';
     } elseif ($incheiat) {
         $semn = '<span class="card__stare card__stare--incheiat">Încheiat</span>';
     } elseif ($live) {
@@ -886,6 +929,7 @@ function randeazaCartonasEveniment(
          . '<span class="card__tag">' . h((string) ($ev['categorie'] ?? '')) . '</span>'
          . $semn
          . $insigne
+         . cifreleCartonasului($ev)
          . '</a>'
          . '<div class="card__body">'
          . '<h3 class="card__title"><a href="' . $adresa . '">' . h((string) $ev['titlu']) . '</a></h3>'
@@ -896,6 +940,104 @@ function randeazaCartonasEveniment(
          . '<span class="dot" aria-hidden="true"></span>'
          . '<span>' . h(inceputDeText((string) $ev['locatie'], 48)) . '</span>'
          . '</div></div></article>';
+}
+
+/**
+ * Cele două subcereri care aduc cifrele de pe cartonaș.
+ *
+ * O bucată de SQL scrisă o dată și lipită în fiecare listă care desenează
+ * cartonașe — prima pagină, profilul, istoricul. Scrisă de patru ori, ar fi
+ * ajuns să numere patru lucruri ușor diferite, iar același eveniment ar fi
+ * arătat „7" într-un loc și „8" în altul.
+ *
+ * PARTICIPANȚII se numără exact ca pe pagina evenimentului: numai conturile
+ * ACTIVE (vezi INTERESE_DOAR_ACTIVI din inc/interese.php). Cine și-a șters
+ * contul nu mai ține un loc, deci n-are ce căuta nici în cifra de pe cartonaș
+ * — altfel omul ar fi văzut „12 / 12" pe listă și un loc liber pe pagină.
+ *
+ * COMENTARIILE se numără ca în numaraComentarii(): fără cele golite, care sunt
+ * pietre de mormânt, nu vorbe de citit.
+ *
+ * Cere ca tabelul `evenimente` să fie aliasul `e` în cererea care o folosește —
+ * așa e în toate cele de aici.
+ */
+const CIFRE_CARTONAS = '
+                (SELECT COUNT(*)
+                   FROM interese_evenimente i
+                   JOIN membri mi ON mi.id = i.membru_id AND mi.stare = \'activ\'
+                  WHERE i.eveniment_id = e.id AND i.stare = \'participant\') AS cati_participanti,
+                (SELECT COUNT(*)
+                   FROM comentarii cm
+                  WHERE cm.eveniment_id = e.id AND cm.sters = 0) AS cate_comentarii';
+
+/**
+ * Cele două cifre din colțul de jos al pozei: câți vin și câte comentarii sunt.
+ *
+ * DE CE PE POZĂ, și nu sub titlu, lângă dată și loc: acolo jos e singurul loc
+ * gol al cartonașului, iar amândouă răspund la aceeași întrebare tăcută pe care
+ * și-o pune omul când trece cu ochii peste o listă — „se duce cineva, se
+ * vorbește ceva despre asta?". Sub titlu ar fi împins data și locul pe al
+ * doilea rând, la fiecare cartonaș.
+ *
+ * PARTICIPANȚII, în două feluri:
+ *
+ *   „7"      — când nu s-a pus nicio limită. Numărul e o veste bună, atât;
+ *   „7 / 12" — când există un număr maxim. Atunci cifra singură n-ar spune
+ *              nimic: șapte inși e mult la o partidă de tenis și puțin la un
+ *              concert. Cu numitorul alături, omul vede dintr-o privire dacă
+ *              mai are unde să intre.
+ *
+ * Nu se scrie nimic dacă rândul n-a adus cifrele din bază. Un cartonaș
+ * desenat dintr-un rând care n-a cerut subcererile ar fi arătat „0 / 0" — un
+ * neadevăr care pare o socoteală. De aceea se cere prezența CHEII, nu o
+ * valoare adevărată: zero participanți e un răspuns cinstit și trebuie arătat.
+ *
+ * `aria-label` pe fiecare cifră, fiindcă iconița singură nu spune nimic unui
+ * cititor de ecran, iar „7 / 12" citit ca atare n-ar avea niciun înțeles.
+ */
+function cifreleCartonasului(array $ev): string
+{
+    $areParticipanti = array_key_exists('cati_participanti', $ev);
+    $areComentarii   = array_key_exists('cate_comentarii', $ev);
+
+    if (!$areParticipanti && !$areComentarii) {
+        return '';
+    }
+
+    $bucati = '';
+
+    if ($areParticipanti) {
+        $cati  = (int) $ev['cati_participanti'];
+        $maxim = isset($ev['participanti_max']) && $ev['participanti_max'] !== null
+            ? (int) $ev['participanti_max']
+            : 0;
+
+        $text  = $maxim > 0 ? $cati . ' / ' . $maxim : (string) $cati;
+        $vorba = $maxim > 0
+            ? $cati . ' din ' . $maxim . ' locuri ocupate'
+            : ($cati === 1 ? 'o persoană participă' : $cati . ' persoane participă');
+
+        $bucati .= '<span class="card__cifra" aria-label="' . h($vorba) . '">'
+                 . '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">'
+                 . '<circle cx="9" cy="8" r="3.4"/>'
+                 . '<path d="M2.8 19.5c.5-3.2 3.1-5.2 6.2-5.2s5.7 2 6.2 5.2"/>'
+                 . '<path d="M16.4 5.2a3.4 3.4 0 0 1 0 6.5"/>'
+                 . '<path d="M18.2 14.6c1.7.7 2.8 2.4 3 4.4"/>'
+                 . '</svg>' . h($text) . '</span>';
+    }
+
+    if ($areComentarii) {
+        $cate  = (int) $ev['cate_comentarii'];
+        $vorba = $cate === 1 ? 'un comentariu' : $cate . ' comentarii';
+
+        $bucati .= '<span class="card__cifra" aria-label="' . h($vorba) . '">'
+                 . '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">'
+                 . '<path d="M20.5 12.5c0 4-3.8 7-8.5 7-1 0-2-.1-2.9-.4L4 21l1.3-3.4'
+                 . 'A7.4 7.4 0 0 1 3.5 12.5c0-4 3.8-7 8.5-7s8.5 3 8.5 7Z"/>'
+                 . '</svg>' . $cate . '</span>';
+    }
+
+    return '<span class="card__cifre">' . $bucati . '</span>';
 }
 
 /** Adresa formularului, în modul în care editează un eveniment anume. */
@@ -1120,24 +1262,42 @@ function salveazaEveniment(
 }
 
 /**
+ * Cât timp după ora de început se mai poate anula un eveniment.
+ *
+ * O oră. Nu e o cifră rotundă aleasă la întâmplare: e răstimpul în care se
+ * hotărăște, de fapt, dacă o ieșire are loc sau nu. Plouă cu găleata, au venit
+ * doi oameni din doisprezece, s-a închis terasa — toate se văd în primul sfert
+ * de oră DE LA ora scrisă în anunț, nu înainte de ea. O anulare oprită fix la
+ * minutul de început îl lăsa pe organizator cu un anunț care spune că e ceva,
+ * exact în seara în care nu mai era.
+ *
+ * După ora asta nu se mai poate: cine avea de venit a venit sau nu, iar o
+ * veste de „nu mai are loc" trimisă la 20:30 pentru ceva de la 19:00 nu mai
+ * ajută pe nimeni. Ce rămâne atunci e „Încheie evenimentul", care spune
+ * adevărul de după — a avut loc, s-a terminat — și nu trimite niciun e-mail.
+ */
+const MINUTE_ANULARE_DUPA_INCEPUT = 60;
+
+/**
  * Se mai poate anula evenimentul ăsta?
  *
- * Până la ora de început, da. Din clipa în care a început, NU — și nu fiindcă
- * ar fi o regulă frumoasă, ci fiindcă anularea e o veste: „nu mai are loc, nu
- * veni". Trimisă la ora la care lumea e deja acolo, vestea aia nu mai ajută pe
- * nimeni și îi pune pe drumuri exact pe cei care au venit.
+ * Da, până la o oră DUPĂ ora de început (vezi MINUTE_ANULARE_DUPA_INCEPUT).
+ * Nu, dacă e deja anulat sau încheiat: la primul nu mai e ce anula, la al
+ * doilea organizatorul a spus deja că a avut loc.
  *
- * Ce rămâne în loc: „Încheie evenimentul", care spune adevărul de după — a
- * avut loc, s-a terminat — și nu trimite niciun e-mail.
+ * ATENȚIE la ce înseamnă „început": ora de START din anunț, nu cea de sfârșit.
+ * Un eveniment care ține de la 18:00 până seara târziu se poate anula până la
+ * 19:00, nu până la 23:00.
  *
- * ATENȚIE, ceasul e cel al PHP-ului, prin evenimentAInceput(): un eveniment
- * care ține până seara e „început" de la ora lui de start, nu de la sfârșit.
- * De la primul om intrat pe ușă, anunțul nu mai poate fi luat înapoi.
+ * Ceasul e al PHP-ului, ca peste tot pe site. Aici se socotește din data și ora
+ * evenimentului, nu prin evenimentAInceput(): acela răspunde „da" pentru orice
+ * eveniment încheiat, oricât ar arăta ceasul, iar noi avem nevoie de clipa
+ * adevărată ca să putem adăuga ora de răgaz peste ea.
  *
- * Proprietatea NU se verifică aici: o ține evenimentDeEditat(), care oprește
- * din start și ce e „anulat" sau „incheiat". Funcția asta răspunde la o
- * singură întrebare, ca să poată fi pusă și de pagină (pentru buton), și de
- * api/anuleaza-eveniment.php (pentru faptă).
+ * Proprietatea NU se verifică aici: o ține evenimentDeEditat() la editare, și
+ * o întrebare despre organizator pe pagina evenimentului. Funcția asta
+ * răspunde la o singură întrebare, ca să poată fi pusă din trei locuri — cele
+ * două pagini cu buton și api/anuleaza-eveniment.php, care face fapta.
  */
 function poateFiAnulat(array $eveniment): bool
 {
@@ -1145,7 +1305,35 @@ function poateFiAnulat(array $eveniment): bool
         return false;
     }
 
-    return !evenimentAInceput($eveniment);
+    $inceput = momentulInceperii($eveniment);
+
+    // Fără dată în rând n-avem de unde ști dacă a început; nu-i luăm dreptul.
+    if ($inceput === null) {
+        return true;
+    }
+
+    return time() <= $inceput + MINUTE_ANULARE_DUPA_INCEPUT * 60;
+}
+
+/**
+ * Clipa în care începe evenimentul, ca număr de secunde — sau null.
+ *
+ * Ora de început e obligatorie în formular, dar dacă printr-o scăpare lipsește,
+ * ziua începe la miezul nopții — aceeași socoteală ca în evenimentAInceput(),
+ * ca cele două să nu spună niciodată lucruri diferite despre același rând.
+ */
+function momentulInceperii(array $eveniment): ?int
+{
+    $data = (string) ($eveniment['data_eveniment'] ?? '');
+
+    if ($data === '') {
+        return null;
+    }
+
+    $ora   = oraScurta($eveniment['ora_inceput'] ?? null);
+    $clipa = strtotime($data . ' ' . ($ora !== '' ? $ora : '00:00') . ':00');
+
+    return $clipa === false ? null : $clipa;
 }
 
 /**
@@ -1156,8 +1344,13 @@ function poateFiAnulat(array $eveniment): bool
  * mai au unde să se ducă. Motivul scris de organizator e chiar textul care va
  * pleca spre ei — de aceea e obligatoriu, și de aceea rămâne în bază.
  *
- * Coperta NU se șterge de pe disc. Cât timp rândul e acolo și staff-ul îl mai
- * poate deschide, poza face parte din el; se duce odată cu el, la curățenie.
+ * PAGINA RĂMÂNE PUBLICĂ, ca la unul încheiat (poateVedeaEvenimentul), cu banda
+ * de „anulat" și cu motivul scris dedesubt. A fost ascunsă o vreme, și era a
+ * doua jumătate a aceleiași greșeli: cine intra de pe un mesaj primit acum trei
+ * zile dădea de un „nu există" și se întreba dacă n-a greșit el ziua.
+ *
+ * Coperta NU se șterge de pe disc: cât timp rândul e acolo, poza face parte din
+ * el; se duce odată cu el, la curățenie.
  *
  * VESTEA NU PLEACĂ DE AICI. Funcția asta doar schimbă rândul; e-mailurile
  * către cei de pe listă le trimite api/anuleaza-eveniment.php, imediat după ce

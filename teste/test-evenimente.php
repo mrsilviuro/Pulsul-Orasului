@@ -1279,7 +1279,12 @@ verifica('motiv prea lung → refuzat', true, !empty($r['erori']['motiv']));
 
 $r = anuleaza($c, $slugDeAnulat, null, "S-a stricat vremea.\n\nNe vedem la primăvară.");
 verifica('organizatorul îl poate anula', true, $r['ok'] ?? false);
-verifica('și e trimis pe profilul lui', 'profil.php', $r['redirect'] ?? '');
+/**
+ * Înapoi pe pagina evenimentului, nu pe profil: anunțul rămâne la vedere, cu
+ * banda de „anulat" și cu motivul dedesubt — adică exact dovada că apăsarea a
+ * mers, și exact ce vor citi oamenii care intră după el.
+ */
+verifica('și e trimis înapoi la anunț', urlEveniment($slugDeAnulat), $r['redirect'] ?? '');
 verifica('cu mesajul cerut', 'Evenimentul a fost anulat.', $r['mesaj'] ?? '');
 
 /**
@@ -1300,27 +1305,43 @@ verifica('coperta rămâne pe disc, lângă rând', true, is_file($caleCoperta))
 
 /* ------------------ cine mai vede un eveniment anulat ------------------ */
 
-verifica('organizatorul nu mai deschide pagina', 302,
-    cerere($baza . '/event.php?slug=' . urlencode($slugDeAnulat), $c)['stare']);
-verifica('nici un alt membru', 302,
-    cerere($baza . '/event.php?slug=' . urlencode($slugDeAnulat), $altul)['stare']);
-verifica('nici formularul lui de editare', 302,
-    cerere($baza . '/adauga_eveniment.php?slug=' . urlencode($slugDeAnulat), $c)['stare']);
+/**
+ * TOATĂ LUMEA, ca la unul încheiat.
+ *
+ * A stat ascuns o vreme și era greșit: de el atârnă oameni care își făcuseră
+ * planuri, iar o pagină care dispare îi lasă cu un link mort și cu întrebarea
+ * dacă n-au greșit ei ziua. Acum se deschide, cu banda ei și cu motivul scris
+ * de organizator la vedere.
+ */
+$rOrg = cerere($baza . '/event.php?slug=' . urlencode($slugDeAnulat), $c);
+verifica('organizatorul deschide pagina', 200, $rOrg['stare']);
+verifica('cu banda de anulat', true, str_contains($rOrg['corp'], 'stare-anunt--anulat'));
 
-// Staff: singurii care mai au ce căuta acolo.
-db()->prepare('UPDATE membri SET este_staff = 1 WHERE email = ?')->execute([EMAIL_ALTUL]);
-$rStaff = cerere($baza . '/event.php?slug=' . urlencode($slugDeAnulat), $altul);
-verifica('staff-ul deschide pagina', 200, $rStaff['stare']);
-verifica('cu banda de anulat', true, str_contains($rStaff['corp'], 'stare-anunt--anulat'));
-verifica('și cu motivul scris pe ea', true,
-    str_contains($rStaff['corp'], 'Ne vedem la primăvară'));
+/**
+ * Mesajul pus în sesiune se arată o singură dată, pe PRIMA pagină de după
+ * apăsare — iar aceea e chiar pagina evenimentului, unde îl trimite API-ul.
+ */
+verifica('cu mesajul de o singură dată', true,
+    str_contains($rOrg['corp'], 'data-mesaj="Evenimentul a fost anulat."'));
+
+$rStrain = cerere($baza . '/event.php?slug=' . urlencode($slugDeAnulat), $altul);
+verifica('și un alt membru, la fel', 200, $rStrain['stare']);
+verifica('cu motivul scris pe ea', true,
+    str_contains($rStrain['corp'], 'Ne vedem la primăvară'));
 verifica('rândurile motivului se păstrează', true,
-    str_contains($rStaff['corp'], '<br'));
-verifica('fără butonul de editare', false, str_contains($rStaff['corp'], 'post__editeaza'));
-db()->prepare('UPDATE membri SET este_staff = 0 WHERE email = ?')->execute([EMAIL_ALTUL]);
+    str_contains($rStrain['corp'], '<br'));
 
-verifica('iar fără steagul de staff, aceeași pagină se închide', 302,
-    cerere($baza . '/event.php?slug=' . urlencode($slugDeAnulat), $altul)['stare']);
+// Chiar și cine nu e conectat deloc: e o veste publică, nu o socoteală internă.
+verifica('și vizitatorul fără cont', 200,
+    cerere($baza . '/event.php?slug=' . urlencode($slugDeAnulat), $anonim)['stare']);
+
+/* Ce NU se mai poate acolo: nici editare, nici înscriere, nici comentarii. */
+verifica('formularul lui de editare rămâne închis', 302,
+    cerere($baza . '/adauga_eveniment.php?slug=' . urlencode($slugDeAnulat), $c)['stare']);
+verifica('fără butonul de editare', false, str_contains($rOrg['corp'], 'post__editeaza'));
+verifica('fără caseta de interes', false, str_contains($rOrg['corp'], 'id="rsvp"'));
+verifica('și fără zona de anulare — s-a anulat deja', false,
+    str_contains($rOrg['corp'], 'data-anulare'));
 
 /* ------------- anulatul nu mai apare pe nicăieri ------------- */
 
@@ -1332,11 +1353,9 @@ verifica('și nu mai ține pe nimeni blocat', [], evenimenteActive($idOrg));
 $profilCorp = cerere($baza . '/profil.php', $c)['corp'];
 verifica('nu apare niciun cartonaș pe profil', 0, substr_count($profilCorp, '<article class="card'));
 
-// Mesajul e pus în sesiune și se arată o singură dată, pe pagina următoare.
-verifica('mesajul apare pe profil', true,
-    str_contains($profilCorp, 'data-mesaj="Evenimentul a fost anulat."'));
-verifica('și nu se mai repetă la a doua încărcare', false,
-    str_contains(cerere($baza . '/profil.php', $c)['corp'], 'Evenimentul a fost anulat.'));
+// ...și nu se mai repetă nicăieri după aceea.
+verifica('mesajul nu se mai repetă', false,
+    str_contains($profilCorp, 'Evenimentul a fost anulat.'));
 
 // Anularea nu e o cale de a scăpa de limită mai repede decât de drept, dar
 // nici nu te ține blocat cu un eveniment care nu mai are loc.

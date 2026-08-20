@@ -124,18 +124,32 @@ inc/
                       deodată), pagina unui eveniment, salvarea ȘI cartonașul
                       unui eveniment (randeazaCartonasEveniment) — un singur
                       loc pentru cum arată, oriunde ar fi pus; al patrulea
-                      parametru al lui e starea ('' | 'incheiat' | 'live'),
-                      iar „Live" se citește la fiecare afișare, nu se ține în
-                      bază. TOT AICI cele două întrebări de care atârnă ce se
+                      parametru al lui e starea
+                      ('' | 'incheiat' | 'anulat' | 'live'), iar „Live" se
+                      citește la fiecare afișare, nu se ține în bază. TOT AICI cele două întrebări de care atârnă ce se
                       poate face pe pagina unui eveniment: evenimentIncheiat()
                       și evenimentAInceput() — iar „încheiat" înseamnă
                       ÎNTOTDEAUNA și „a început", oricât ar arăta ceasul. De
-                      al doilea atârnă poateFiAnulat(): din clipa în care
-                      evenimentul a început, anularea DISPARE — și butonul din
-                      adauga_eveniment.php, și fapta din
-                      api/anuleaza-eveniment.php (409). O veste de „nu mai are
-                      loc" trimisă la ora la care lumea e deja acolo nu mai
-                      ajută pe nimeni; ce rămâne e „Încheie evenimentul". TOT
+                      al doilea atârnă poateFiAnulat(): anularea se mai poate
+                      O ORĂ după ora de început
+                      (MINUTE_ANULARE_DUPA_INCEPUT) — în răstimpul acela se
+                      vede, de fapt, dacă ieșirea are loc. După el DISPARE de
+                      pe amândouă paginile cu buton (adauga_eveniment.php și
+                      event.php, sub caseta de interes), iar
+                      api/anuleaza-eveniment.php răspunde 409; ce rămâne e
+                      „Încheie evenimentul". Zona cu butonul se desenează
+                      dintr-un singur loc: randeazaZonaAnulare() din
+                      inc/afisare-eveniment.php. TOT AICI:
+                      randeazaCartonasEveniment() primește starea
+                      ('' | 'incheiat' | 'anulat' | 'live') și
+                      cifreleCartonasului() scrie în colțul de jos câți vin
+                      („7" sau „7 / 12", dacă e limită) și câte comentarii sunt
+                      — cifrele vin din CIFRE_CARTONAS, o bucată de SQL lipită
+                      în toate listele care desenează cartonașe. UN ANUNȚ
+                      ANULAT nu se mai ascunde: se vede de oricine, pe prima
+                      pagină și în istoricul de pe profil, stins ca unul
+                      încheiat dar cu „Anulat" în colț, iar pe pagina lui stă
+                      motivul scris de organizator. TOT
                       AICI: categoriiCuEvenimente() (doar cele cu cel puțin un
                       eveniment public — filtrele de pe prima pagină; formularul
                       de publicare folosește mai departe categoriiEvenimente(),
@@ -315,8 +329,9 @@ assets/css/style.css, assets/js/main.js, assets/img/
   să treacă peste ea, fiindcă e făcută împotriva celui care ar umple prima
   pagină, iar el publică tocmai zece anunțuri ale orașului
 - Curățenia evenimentelor anulate: rândul cu `stare_moderare = 'anulat'` rămâne
-  în bază pentru totdeauna. Ștergerea lui (cu tot cu coperta de pe disc,
-  înscrieri și comentarii) e o acțiune viitoare de staff — vezi `TODO`-ul din
+  în bază pentru totdeauna, iar pagina lui se vede de oricine (cu banda și
+  motivul). Ștergerea lui (cu tot cu coperta de pe disc, înscrieri și
+  comentarii) e o acțiune viitoare de staff — vezi `TODO`-ul din
   `anuleazaEveniment()`
 - Adresele frumoase: acum sunt `profil.php?m=<permalink>` și `event.php?slug=…`
 - Înștiințările pe e-mail care pleacă azi: mulțumirea de după eveniment

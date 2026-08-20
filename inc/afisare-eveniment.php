@@ -269,3 +269,70 @@ function evenimentDinBaza(array $rand): array
         'creat_la'         => $rand['creat_la'] ?? null,
     ];
 }
+
+/**
+ * Zona de anulare a unui eveniment: butonul roșu și întrebarea de sub el.
+ *
+ * DOUĂ PAGINI, un singur HTML. O cer formularul de editare
+ * (adauga_eveniment.php, unde a stat dintotdeauna) și pagina evenimentului
+ * (event.php, sub caseta de interes) — iar organizatorul e același om, cu
+ * aceeași faptă de făcut. Scrisă de două ori, s-ar fi despărțit la prima
+ * corectură, și tocmai aici: textul de avertizare e singurul lucru pe care
+ * omul îl citește înainte de o apăsare care nu se ia înapoi.
+ *
+ * Nu întreabă NIMIC despre cine e omul și dacă are voie. Cele două întrebări —
+ * „e al lui?" și poateFiAnulat() — se pun în pagină, înainte de a chema
+ * funcția asta, fiindcă tot acolo se știe cine se uită. Iar regula adevărată e
+ * oricum în api/anuleaza-eveniment.php, care o pune din nou la fiecare cerere.
+ *
+ * `data-anulare` pe zonă e cum o găsește main.js: acolo stau și slugul, și
+ * tokenul, deci JS-ul nu mai are nevoie de un formular în jur. (Înainte le
+ * citea din câmpurile ascunse ale formularului de eveniment — ceea ce mergea
+ * pe o singură pagină, exact cea de pe care plecăm acum.)
+ */
+function randeazaZonaAnulare(array $ev, string $csrf): string
+{
+    $titlu = h(inceputDeText((string) ($ev['titlu'] ?? ''), 60));
+
+    return '<div class="zona-anulare" id="ev-anulare" data-anulare'
+         . ' data-slug="' . h((string) ($ev['slug'] ?? '')) . '"'
+         . ' data-csrf="' . h($csrf) . '">'
+
+         . '<button class="btn btn--rau btn--block" type="button" id="ev-anuleaza">'
+         . 'Anulează evenimentul</button>'
+
+         . '<div class="stergere-confirm" id="ev-anulare-sigur" hidden>'
+         . '<p class="card-set__lead"><strong>Sigur anulezi „' . $titlu . '"?</strong></p>'
+         . '<p class="card-set__lead">'
+         . 'Anunțul rămâne pe site, dar însemnat ca anulat, și nu mai poate fi '
+         . 'adus înapoi de tine. Oamenii care și-au arătat interesul sau au spus '
+         . 'că vin vor fi înștiințați prin e-mail că nu mai are loc — și vor citi '
+         . 'exact ce scrii mai jos.</p>'
+
+         /**
+          * Motivul e obligatoriu, și nu de formă: e chiar textul care pleacă
+          * spre oamenii care își făcuseră planuri, și care rămâne apoi scris
+          * pe pagina evenimentului, sub bandă.
+          *
+          * Fără `name` și fără `required`: pe pagina de editare caseta stă
+          * înăuntrul formularului de eveniment, iar cu ele ar pleca odată cu
+          * trimiterea spre aprobare și ar bloca-o cât e goală. JS o citește
+          * după id și o trimite singur.
+          */
+         . '<div class="field">'
+         . '<label for="ev-motiv">De ce anulezi? <span class="req" aria-hidden="true">*</span></label>'
+         . '<textarea id="ev-motiv" rows="3"'
+         . ' data-min="' . MOTIV_ANULARE_MIN . '" data-max="' . MOTIV_ANULARE_MAX . '"'
+         . ' placeholder="S-a stricat vremea și nu avem unde ne adăposti."'
+         . ' aria-describedby="err-ev-motiv ev-motiv-numar"></textarea>'
+         . '<p class="field__hint contor-caractere" id="ev-motiv-numar" role="status">'
+         . '0 din minim ' . MOTIV_ANULARE_MIN . ' caractere</p>'
+         . '<p class="field__error" id="err-ev-motiv" hidden></p>'
+         . '</div>'
+
+         . '<div class="stergere-confirm__actiuni">'
+         . '<button class="btn btn--rau" type="button" id="ev-anulare-da">Da, anulează</button>'
+         . '<button class="btn btn--ghost" type="button" id="ev-anulare-nu">Renunță</button>'
+         . '</div>'
+         . '</div></div>';
+}

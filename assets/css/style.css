@@ -458,6 +458,42 @@ main { padding-block: 46px 64px; }
   backdrop-filter: blur(8px);
 }
 
+/* Cifrele din colțul de jos-dreapta al pozei: câți vin, câte comentarii.
+   Aceeași pastilă ca eticheta de categorie din colțul opus, doar întunecată —
+   colțul de jos al unei fotografii e mai des deschis la culoare decât cel de
+   sus, iar alb pe alb n-ar fi citit nimeni.
+
+   `pointer-events: none` fiindcă stau înăuntrul legăturii care acoperă poza:
+   sunt o veste, nu ceva de apăsat, iar fără rândul ăsta ar fi înghițit
+   apăsarea exact în colțul în care degetul ajunge des pe telefon. */
+.card__cifre {
+  position: absolute;
+  right: 10px; bottom: 10px;
+  display: flex; align-items: center; gap: 6px;
+  pointer-events: none;
+}
+.card__cifra {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 9px;
+  border-radius: var(--radius-pill);
+  background: rgba(14, 17, 22, .72);
+  color: #fff;
+  font-size: 11.5px; font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  backdrop-filter: blur(8px);
+}
+.card__cifra .ico {
+  width: 13px; height: 13px;
+  stroke-width: 2.1;
+  /* Iconițele sunt desenate cu contur, ca peste tot pe site. */
+  fill: none; stroke: currentColor;
+}
+
+/* Pe cartonașele stinse (încheiat, anulat) cifrele se sting și ele: sunt
+   socoteala unei seri care a trecut, nu o veste de urmărit. */
+.card--incheiat .card__cifra { opacity: .72; }
+
 .card__body { padding-top: 13px; }
 
 .card__title {
