@@ -261,6 +261,20 @@ teste/              → test-validare.php (verificările din inc/validare.php)
                       și îl pune la loc cum l-a găsit)
 private/            → loguri (emailuri-trimise.log), protejat prin .htaccess
 assets/css/style.css, assets/js/main.js, assets/img/
+  assets/img/hero-zi.svg, hero-noapte.svg
+                    → fundalul primei ferestre de pe index.php, unul pentru
+                      fiecare temă. Panoul e cât toată fereastra browserului,
+                      lat cât ea (singurul loc care nu se oprește la --wrap),
+                      și e NUMAI CSS — vezi „5. PRIMA FEREASTRĂ" din
+                      style.css. Fundalul e un <div> gol cu background-image,
+                      nu un <img>: se schimbă după [data-theme], iar tema se
+                      pune de mână, nu din sistem. Desenele sunt panoramice
+                      (3200×1400) fiindcă imaginea se plimbă: elementul e lat
+                      132% și merge până la -24.242% din el, adică fix 32% din
+                      fereastră — cele două cifre se schimbă împreună sau
+                      deloc. Săgeata de jos e un <a href="#main">, nu un buton
+                      de JS: unde se oprește pagina scrie în
+                      `#main { scroll-margin-top }`
 ```
 
 ## Config

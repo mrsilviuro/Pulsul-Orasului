@@ -35,64 +35,70 @@ require __DIR__ . '/inc/antet.php';
 ?>
 
 
-<!-- ============================= SLIDESHOW ============================== -->
-<section class="hero" aria-label="Recomandările redacției">
-  <div class="wrap">
+<!-- =========================== PRIMA FEREASTRĂ ==========================
+  Cât toată fereastra browserului, imediat sub bara de meniu, și lată cât ea:
+  singurul loc de pe site care NU stă în `.wrap`. De aceea nici nu are un
+  `<div class="wrap">` înăuntru — doar textul din mijloc e strunit la o lățime
+  citibilă (`.hero__continut`), fundalul merge dintr-o margine în alta.
+
+  Fundalul e un `<div>` gol, nu un `<img>`: se schimbă cu tema, iar tema de pe
+  site se pune de mână (data-theme), nu se citește din sistem. Un `<picture>`
+  cu `prefers-color-scheme` ar fi ascultat de sistem și ar fi rămas cu poza de
+  zi pe cine apasă luna. Vezi „PRIMA FEREASTRĂ" din style.css.
+
+  Săgeata de jos e o legătură adevărată spre `#main`, nu un buton de JS: merge
+  și cu JavaScript-ul stins, iar derularea lină vine din `scroll-behavior`.
+-->
+<section class="hero" aria-labelledby="hero-titlu">
+  <div class="hero__fundal" aria-hidden="true"></div>
+  <div class="hero__voal" aria-hidden="true"></div>
+
+  <div class="hero__continut">
+    <p class="hero__salut">Bun venit pe</p>
+    <h1 class="hero__nume" id="hero-titlu">PulsulOrasului.Ro</h1>
+    <p class="hero__vorba">
+      Fiecare ieșire contează. Tu vii cu ideea, noi venim cu energia. Implică-te!
+    </p>
+
     <!--
-      Ca să adaugi un slide nou: copiază un bloc <a class="slide"> și schimbă
-      href + src.
+      Butonul se vede și fără cont: cine nu e înscris trebuie să afle că poate
+      publica, nu să descopere după ce se înregistrează.
 
-      Fără săgeți și fără puncte de navigare, dinadins. Pe telefon stăteau
-      peste poză și mâncau din ea tocmai acolo unde e mai îngustă, iar
-      slide-urile se schimbă oricum singure; cine vrea altul îl aduce cu
-      degetul. Pe calculator rămân săgețile de pe tastatură, iar mouse-ul
-      oprește derularea la trecerea peste — vezi „SLIDESHOW" din main.js.
+      Cine nu e conectat ajunge la pagina de intrare, dar cu drumul de
+      întoarcere în adresă — după autentificare pică direct pe formular, nu pe
+      prima pagină, de unde ar trebui să caute butonul din nou.
     -->
-    <div class="slideshow" id="slideshow" data-interval="5000" aria-roledescription="carusel">
-      <div class="slideshow__track" id="slideshow-track">
-
-        <a class="slide" href="event.php">
-          <img src="assets/img/slides/slide-1.svg" alt="Evenimentele săptămânii în oraș" width="1600" height="900" fetchpriority="high" decoding="async">
-        </a>
-
-        <a class="slide" href="event.php">
-          <img src="assets/img/slides/slide-2.svg" alt="Competiții sportive locale" width="1600" height="900" decoding="async">
-        </a>
-
-        <a class="slide" href="event.php">
-          <img src="assets/img/slides/slide-3.svg" alt="Comunitatea în acțiune" width="1600" height="900" decoding="async">
-        </a>
-
-      </div>
-    </div>
+    <a class="btn btn--primary hero__cta" href="<?= $logat
+          ? 'adauga_eveniment.php'
+          : 'login.php?redirect=' . h(urlencode('/adauga_eveniment.php')) ?>">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 5v14"/><path d="M5 12h14"/>
+      </svg>
+      <span>Propune o ieșire</span>
+    </a>
   </div>
+
+  <a class="hero__jos" href="#main">
+    <span>Vezi ieșirile</span>
+    <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 5v14"/><path d="m19 12-7 7-7-7"/>
+    </svg>
+  </a>
 </section>
 
 <!-- =============================== CONȚINUT ============================= -->
 <main id="main">
   <div class="wrap">
 
-    <!-- Titlu secțiune -->
+    <!--
+      Titlu secțiune. `h2`, nu `h1`: numele site-ului din prima fereastră e
+      titlul paginii, iar pe o pagină nu stau două titluri de rang întâi.
+      Butonul „Propune o ieșire" s-a mutat și el sus, lângă nume.
+    -->
     <div class="section-head">
       <div>
-        <h1 class="section-title">Ce facem zilele astea?</h1>
+        <h2 class="section-title">Ce facem zilele astea?</h2>
       </div>
-      <!--
-        Butonul se vede și fără cont: cine nu e înscris trebuie să afle că
-        poate publica, nu să descopere după ce se înregistrează.
-
-        Cine nu e conectat ajunge la pagina de intrare, dar cu drumul de
-        întoarcere în adresă — după autentificare pică direct pe formular, nu
-        pe prima pagină, de unde ar trebui să caute butonul din nou.
-      -->
-      <a class="btn btn--primary btn--sm" href="<?= $logat
-            ? 'adauga_eveniment.php'
-            : 'login.php?redirect=' . h(urlencode('/adauga_eveniment.php')) ?>">
-        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M12 5v14"/><path d="M5 12h14"/>
-        </svg>
-        <span>Propune o ieșire</span>
-      </a>
     </div>
 
     <!-- ============================ FILTRELE ============================

@@ -2,7 +2,10 @@
    PulsulOrasului.Ro — main.js
    1. Temă light / dark
    2. Meniu mobil
-   3. Slideshow
+   3. — (a fost sliderul; prima fereastră e acum numai CSS, vezi „PRIMA
+         FEREASTRĂ" din style.css. Numărul rămâne gol dinadins: comentarii
+         din alte fișiere trimit la „secțiunea 11 din main.js" și altele ca
+         ea, iar o renumerotare le-ar fi lăsat să arate spre altceva.)
    4. Diverse
    5. Pagina de articol (taburi, participare, comentarii)
    6. Formularul de contact
@@ -90,83 +93,6 @@
     window.addEventListener('resize', function () {
       if (window.innerWidth > 800) closeMenu();
     });
-  }
-
-
-  /* -------------------------- 3. SLIDESHOW ------------------------------ */
-  var box = document.getElementById('slideshow');
-
-  if (box) {
-    var track    = document.getElementById('slideshow-track');
-    var slides   = Array.prototype.slice.call(track.querySelectorAll('.slide'));
-    var interval = parseInt(box.getAttribute('data-interval'), 10) || 5000;
-    var index    = 0;
-    var timer    = null;
-    var reduced  = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-    if (slides.length) {
-      function goTo(i) {
-        index = (i + slides.length) % slides.length;
-        track.style.transform = 'translate3d(' + (-100 * index) + '%,0,0)';
-
-        slides.forEach(function (slide, n) {
-          var hidden = n !== index;
-          slide.setAttribute('aria-hidden', String(hidden));
-          // slide-urile ascunse ies din ordinea de tabulare
-          slide.setAttribute('tabindex', hidden ? '-1' : '0');
-        });
-      }
-
-      function next(step) { goTo(index + (step || 1)); }
-
-      function play() {
-        if (reduced || slides.length < 2) return;
-        stop();
-        timer = setInterval(function () { next(1); }, interval);
-      }
-      function stop()    { if (timer) { clearInterval(timer); timer = null; } }
-      function restart() { stop(); play(); }
-
-      // Pauză la hover / focus / tab inactiv
-      box.addEventListener('mouseenter', stop);
-      box.addEventListener('mouseleave', play);
-      box.addEventListener('focusin', stop);
-      box.addEventListener('focusout', play);
-      document.addEventListener('visibilitychange', function () {
-        document.hidden ? stop() : play();
-      });
-
-      // Tastatură
-      box.addEventListener('keydown', function (e) {
-        if (e.key === 'ArrowLeft')  { next(-1); restart(); }
-        if (e.key === 'ArrowRight') { next(1);  restart(); }
-      });
-
-      // Swipe pe mobil
-      var startX = 0, startY = 0, swiping = false;
-      box.addEventListener('touchstart', function (e) {
-        startX = e.touches[0].clientX;
-        startY = e.touches[0].clientY;
-        swiping = true;
-        stop();
-      }, { passive: true });
-
-      box.addEventListener('touchend', function (e) {
-        if (!swiping) return;
-        swiping = false;
-        var dx = e.changedTouches[0].clientX - startX;
-        var dy = e.changedTouches[0].clientY - startY;
-        if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy)) {
-          // împiedicăm click-ul pe link după swipe
-          e.preventDefault();
-          next(dx < 0 ? 1 : -1);
-        }
-        play();
-      });
-
-      goTo(0);
-      play();
-    }
   }
 
 
