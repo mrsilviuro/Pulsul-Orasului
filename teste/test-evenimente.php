@@ -723,6 +723,171 @@ verifica('dar mutat și mai aproape, nu', true, !empty($r['erori']['ora_inceput'
 db()->prepare('DELETE FROM evenimente WHERE id = ?')->execute([(int) $evAlNostru['id']]);
 verifica('am făcut curat', 0, cateEvenimente());
 
+/* ================== ÎNCĂ UNUL LA FEL („Remake") ===================== */
+
+echo "\n=== REMAKE: CINE ȘI CÂND ===\n";
+
+/**
+ * Pe dos față de „Editează": butonul apare abia după ce evenimentul s-a
+ * terminat sau s-a anulat. Alergarea de duminică se face și duminica
+ * viitoare; cea căzută din cauza ploii se mută pe altă zi.
+ */
+$candva = static function (string $stare, int $pesteZile): array {
+    return [
+        'stare_moderare' => $stare,
+        'data_eveniment' => date('Y-m-d', strtotime(($pesteZile >= 0 ? '+' : '-')
+                                . abs($pesteZile) . ' days')),
+        'ora_inceput'    => '19:00:00',
+    ];
+};
+
+verifica('unul anulat se poate reface',   true,  poateFiRefacut($candva('anulat', 6)));
+verifica('unul încheiat de mână, la fel', true,  poateFiRefacut($candva('incheiat', 6)));
+verifica('unul cu ziua trecută, la fel',  true,  poateFiRefacut($candva('aprobat', -2)));
+
+verifica('unul care încă urmează, NU',    false, poateFiRefacut($candva('aprobat', 6)));
+verifica('nici unul în așteptare',        false, poateFiRefacut($candva('in_asteptare', -2)));
+verifica('nici unul respins',             false, poateFiRefacut($candva('respins', -2)));
+
+/**
+ * „Editează" și „Remake" nu se suprapun niciodată: unul ține până la ora de
+ * început, celălalt pornește după sfârșit. La un eveniment care încă urmează
+ * merge doar primul; la unul trecut, doar al doilea.
+ */
+$viitor = $candva('aprobat', 6);
+$trecut = $candva('aprobat', -2);
+
+verifica('la unul viitor: se editează, nu se reface',
+    [true, false], [poateFiEditat($viitor), poateFiRefacut($viitor)]);
+verifica('la unul trecut: se reface, nu se editează',
+    [false, true], [poateFiEditat($trecut), poateFiRefacut($trecut)]);
+
+echo "\n=== REMAKE: AL CUI E ===\n";
+
+/* Un al doilea om, ca să avem cui refuza. */
+$idStrain = faMembru('strain-remake-test@exemplu-test.ro', 'organizat09');
+
+$idRefacut = pune($idOrg, 'De refăcut mai târziu', 'incheiat', -3);
+$slugRefacut = (string) db()->query('SELECT slug FROM evenimente WHERE id = ' . $idRefacut)
+    ->fetchColumn();
+
+verifica('organizatorul îl primește', $idRefacut,
+    (int) (evenimentDeRefacut($slugRefacut, $idOrg)['id'] ?? 0));
+verifica('altcineva nu', null, evenimentDeRefacut($slugRefacut, $idStrain));
+verifica('nici cine nu e conectat', null, evenimentDeRefacut($slugRefacut, 0));
+verifica('un slug care nu duce nicăieri', null,
+    evenimentDeRefacut('nu-exista-slugul-asta', $idOrg));
+
+$idViitor = pune($idOrg, 'Care încă urmează', 'aprobat', 8);
+$slugViitor = (string) db()->query('SELECT slug FROM evenimente WHERE id = ' . $idViitor)
+    ->fetchColumn();
+
+verifica('unul care încă urmează nu se dă', null,
+    evenimentDeRefacut($slugViitor, $idOrg));
+
+echo "\n=== REMAKE: COPERTA SE COPIAZĂ ===\n";
+
+/**
+ * Se copiază FIȘIERUL, nu doar numele lui. Două anunțuri care ar arăta spre
+ * aceeași poză ar fi însemnat că ștergerea unuia îl lasă pe celălalt fără ea.
+ */
+$dosarCop = dirname(__DIR__) . '/' . COPERTA_DOSAR;
+@mkdir($dosarCop, 0755, true);
+
+$numeVechi = bin2hex(random_bytes(16));
+$panza = imagecreatetruecolor(160, 90);
+imagejpeg($panza, $dosarCop . '/' . $numeVechi . '.jpg', 80);
+imagedestroy($panza);
+
+$numeNou = copiazaCoperta($numeVechi);
+
+verifica('numele nou e altul', true, is_string($numeNou) && $numeNou !== $numeVechi);
+verifica('și arată a copertă', true, esteCopertaValida($numeNou));
+verifica('fișierul nou există', true, is_file($dosarCop . '/' . $numeNou . '.jpg'));
+verifica('cel vechi a rămas la locul lui', true, is_file($dosarCop . '/' . $numeVechi . '.jpg'));
+verifica('și au același cuprins',
+    md5_file($dosarCop . '/' . $numeVechi . '.jpg'),
+    md5_file($dosarCop . '/' . $numeNou . '.jpg'));
+
+verifica('fără copertă, nimic de copiat', null, copiazaCoperta(null));
+verifica('un nume inventat nu trece', null, copiazaCoperta('../../inc/config'));
+verifica('nici unul care nu e pe disc', null, copiazaCoperta(bin2hex(random_bytes(16))));
+
+@unlink($dosarCop . '/' . $numeVechi . '.jpg');
+@unlink($dosarCop . '/' . $numeNou . '.jpg');
+
+db()->exec('DELETE FROM evenimente');
+verifica('curat înainte de mai departe', 0, cateEvenimente());
+
+echo "\n=== REMAKE: PRIN SERVER ===\n";
+
+/**
+ * Drumul întreg: un eveniment încheiat, cu poză, din care se face unul nou.
+ * Ce trimite formularul e ce era completat în pagină, plus slugul de refăcut
+ * într-un câmp ascuns — singurul lucru pentru care e nevoie de el la salvare
+ * fiind coperta, care stă pe disc și n-are cum să plece prin formular.
+ */
+$numeSursa = bin2hex(random_bytes(16));
+$panza = imagecreatetruecolor(1600, 900);
+imagejpeg($panza, $dosarCop . '/' . $numeSursa . '.jpg', 80);
+imagedestroy($panza);
+
+$idSursa = pune($idOrg, 'Alergarea de duminică', 'incheiat', -5);
+db()->prepare('UPDATE evenimente SET coperta = ? WHERE id = ?')->execute([$numeSursa, $idSursa]);
+
+$slugSursa = (string) db()->query('SELECT slug FROM evenimente WHERE id = ' . $idSursa)
+    ->fetchColumn();
+
+$peste9 = strtotime('+9 days');
+$r = trimite($c, [
+    'remake'         => $slugSursa,
+    'titlu'          => 'Alergarea de duminică',
+    'data_eveniment' => date('d-m-Y', $peste9),
+    'ora_inceput'    => '09:00',
+]);
+
+verifica('remake-ul se publică', true, !empty($r['ok']));
+
+$nou = ultimulEveniment();
+
+verifica('e un eveniment NOU, nu cel vechi', true, (int) $nou['id'] !== $idSursa);
+verifica('cel vechi a rămas neatins', 'incheiat',
+    (string) db()->query('SELECT stare_moderare FROM evenimente WHERE id = ' . $idSursa)
+        ->fetchColumn());
+verifica('cel nou intră la verificare', 'in_asteptare', (string) $nou['stare_moderare']);
+verifica('cu data cea nouă', date('Y-m-d', $peste9), (string) $nou['data_eveniment']);
+
+verifica('coperta s-a copiat, cu alt nume', true,
+    esteCopertaValida($nou['coperta'] ?? null) && $nou['coperta'] !== $numeSursa);
+verifica('și e un al doilea fișier pe disc', true,
+    is_file($dosarCop . '/' . $nou['coperta'] . '.jpg'));
+verifica('cel vechi tot acolo e', true, is_file($dosarCop . '/' . $numeSursa . '.jpg'));
+
+/**
+ * Slugul din formular NU e o dovadă. Cu al altcuiva, anunțul se face oricum —
+ * dar fără poză. O eroare la mijlocul unei publicări n-ar ajuta pe nimeni:
+ * „evenimentul din care copiezi nu mai e al tău" nu e ceva ce omul poate
+ * îndrepta din formular.
+ */
+db()->prepare('DELETE FROM evenimente WHERE id = ?')->execute([(int) $nou['id']]);
+stergeCopertaDeFisier($nou['coperta'] ?? null);
+
+$r = trimite($c, [
+    'remake'         => 'nu-e-al-meu-slugul-asta',
+    'titlu'          => 'Fără poză, dar publicat',
+    'data_eveniment' => date('d-m-Y', $peste9),
+    'ora_inceput'    => '09:00',
+]);
+
+verifica('cu un slug străin, anunțul se face tot', true, !empty($r['ok']));
+// `??` ar fi înghițit tocmai NULL-ul căutat: null ?? 'ceva' dă 'ceva'.
+$faraPoza = ultimulEveniment();
+verifica('dar fără copertă', true,
+    array_key_exists('coperta', $faraPoza) && $faraPoza['coperta'] === null);
+
+@unlink($dosarCop . '/' . $numeSursa . '.jpg');
+db()->exec('DELETE FROM evenimente');
+
 echo "\n=== APĂRAREA PUNCTULUI DE INTRARE ===\n";
 
 $r = cerere($baza . '/api/eveniment.php', $c, ['csrf' => 'gresit', 'titlu' => 'x']);

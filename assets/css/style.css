@@ -3969,7 +3969,8 @@ body { overscroll-behavior-y: none; }
   flex: none;
 }
 
-.post__editeaza { flex: none; }
+.post__editeaza,
+.post__remake { flex: none; }
 
 .post__actiuni .incheiere-confirm {
   position: absolute;

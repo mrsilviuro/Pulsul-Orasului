@@ -10,9 +10,14 @@ declare(strict_types=1);
  * Cu „?slug=…": același formular, dar precompletat cu evenimentul acela, de
  * schimbat. Se ajunge din butonul „Editează" de pe event.php.
  *
- * Un singur formular pentru amândouă, dinadins: două formulare aproape la fel
- * s-ar despărți la prima corectură, iar regulile de verificare ar începe să
- * difere între „nou" și „schimbat" — exact acolo unde n-au voie.
+ * Cu „?remake=…": tot precompletat din evenimentul acela, dar ca unul NOU.
+ * Se ajunge din butonul „Remake", care apare pe pagina unui eveniment
+ * încheiat sau anulat. Se copiază tot ce a scris omul o dată; „Când o să aibă
+ * loc?" rămâne gol, fiindcă data e singurul lucru care chiar se schimbă.
+ *
+ * Un singur formular pentru toate trei, dinadins: două formulare aproape la
+ * fel s-ar despărți la prima corectură, iar regulile de verificare ar începe
+ * să difere între „nou" și „schimbat" — exact acolo unde n-au voie.
  */
 
 require_once __DIR__ . '/inc/evenimente.php';
@@ -20,6 +25,7 @@ require_once __DIR__ . '/inc/evenimente.php';
 require_once __DIR__ . '/inc/afisare-eveniment.php';
 
 $slug   = trim((string) ($_GET['slug'] ?? ''));
+$deRefacut = trim((string) ($_GET['remake'] ?? ''));
 $membru = membruCurent();
 
 /**
@@ -30,7 +36,15 @@ $membru = membruCurent();
  * apăsarea butonului, cu tot ce scrisese pierdut.
  */
 if ($membru === null) {
-    cereIntrare('/adauga_eveniment.php' . ($slug !== '' ? '?slug=' . urlencode($slug) : ''));
+    $coada = '';
+
+    if ($slug !== '') {
+        $coada = '?slug=' . urlencode($slug);
+    } elseif ($deRefacut !== '') {
+        $coada = '?remake=' . urlencode($deRefacut);
+    }
+
+    cereIntrare('/adauga_eveniment.php' . $coada);
 }
 
 $membruId  = (int) $membru['id'];
@@ -70,6 +84,47 @@ if ($slug !== '') {
 $eEditare = $ev !== null;
 
 /**
+ * Din ce eveniment se face unul nou, dacă se face.
+ *
+ * Se cere numai când NU se editează: cele două n-au ce căuta împreună, iar o
+ * adresă cu amândouă („?slug=…&remake=…") ar fi însemnat, în cel mai bun caz,
+ * că omul a lipit greșit. Câștigă editarea, fiindcă acolo se schimbă un rând
+ * care există deja.
+ *
+ * Verificarea („e al meu? s-a încheiat sau s-a anulat?") stă într-un singur
+ * loc, evenimentDeRefacut(), fiindcă o cer trei fișiere: pagina asta,
+ * api/eveniment.php (care copiază coperta) și api/previzualizare.php.
+ */
+$refacut = ($eEditare || $deRefacut === '')
+    ? null
+    : evenimentDeRefacut($deRefacut, $membruId);
+
+if (!$eEditare && $deRefacut !== '' && $refacut === null) {
+    header('Location: index.php');
+    exit;
+}
+
+$eRemake = $refacut !== null;
+
+/**
+ * Rândul din care se completează formularul.
+ *
+ * La editare e chiar evenimentul care se schimbă; la refacere, cel din care se
+ * copiază. „Când o să aibă loc?" se golește pe loc, aici, nu în fiecare câmp
+ * în parte: data e singurul lucru care chiar se schimbă la un remake, iar o
+ * dată veche lăsată în căsuță ar fi trecut de verificarea celor două ceasuri
+ * doar dacă omul o observa.
+ */
+$sursa = $ev;
+
+if ($eRemake) {
+    $sursa = $refacut;
+    $sursa['data_eveniment'] = null;
+    $sursa['ora_inceput']    = null;
+    $sursa['ora_sfarsit']    = null;
+}
+
+/**
  * Omul de casă publică direct: anunțul lui nu mai are pe cine să aștepte.
  *
  * De steagul ăsta atârnă trei lucruri pe pagina asta — ce scrie pe buton, ce
@@ -84,7 +139,7 @@ $eStaff = esteStaff($membru);
  * pornește STINSĂ. Alegerea obișnuită e ca anunțul să se vadă pe profilul
  * celui care l-a pus — cealaltă e pentru ce se publică în numele orașului.
  */
-$ascunsPeProfil = $eEditare && (int) ($ev['ascuns_pe_profil'] ?? 0) === 1;
+$ascunsPeProfil = $sursa !== null && (int) ($sursa['ascuns_pe_profil'] ?? 0) === 1;
 
 /**
  * Limita de evenimente active se cere doar la unul nou.
@@ -99,12 +154,17 @@ $voie = $eEditare
 
 /* ------------------- valorile cu care pleacă formularul ---------------- */
 
-/** Ce scrie într-un câmp: ce era în bază la editare, nimic la unul nou. */
-$val = static function (string $camp, string $implicit = '') use ($ev): string {
-    return $ev !== null && $ev[$camp] !== null ? (string) $ev[$camp] : $implicit;
+/**
+ * Ce scrie într-un câmp: ce era în bază la editare sau la refacere, nimic la
+ * un formular gol. Vine din $sursa, nu din $ev — vezi mai sus de ce.
+ */
+$val = static function (string $camp, string $implicit = '') use ($sursa): string {
+    return $sursa !== null && ($sursa[$camp] ?? null) !== null
+        ? (string) $sursa[$camp]
+        : $implicit;
 };
 
-$copertaAcum = $eEditare ? urlCoperta($ev['coperta'] ?? null) : '';
+$copertaAcum = $sursa !== null ? urlCoperta($sursa['coperta'] ?? null) : '';
 
 /**
  * Bifele: la editare urmează ce e în bază, la un formular gol pornesc bifate.
@@ -114,7 +174,7 @@ $copertaAcum = $eEditare ? urlCoperta($ev['coperta'] ?? null) : '';
  * niciodată. Cine o știe scoate bifa și scrie ora — o mișcare, în loc de una
  * pe care ar fi trebuit s-o facă toți ceilalți.
  */
-$faraOraSfarsit = !$eEditare || ($ev['ora_sfarsit'] ?? null) === null;
+$faraOraSfarsit = $sursa === null || ($sursa['ora_sfarsit'] ?? null) === null;
 
 /**
  * „Gratuit" înseamnă aici același lucru ca la afișare (costScris): și NULL, și
@@ -123,13 +183,17 @@ $faraOraSfarsit = !$eEditare || ($ev['ora_sfarsit'] ?? null) === null;
  * formularul n-are voie să spună altceva. Altfel omul ar deschide editarea unui
  * eveniment gratuit și ar găsi bifa scoasă și un preț de 0 lei.
  */
-$eGratuit  = !$eEditare || ($ev['cost'] ?? null) === null || (float) $ev['cost'] <= 0;
-$faraMinim = !$eEditare || ($ev['participanti_min'] ?? null) === null;
-$faraMaxim = !$eEditare || ($ev['participanti_max'] ?? null) === null;
+$eGratuit  = $sursa === null || ($sursa['cost'] ?? null) === null || (float) $sursa['cost'] <= 0;
+$faraMinim = $sursa === null || ($sursa['participanti_min'] ?? null) === null;
+$faraMaxim = $sursa === null || ($sursa['participanti_max'] ?? null) === null;
 
-$titlu     = $eEditare
-    ? 'Schimbă evenimentul — PulsulOrasului.Ro'
-    : 'Publică un eveniment — PulsulOrasului.Ro';
+$titlu = 'Publică un eveniment — PulsulOrasului.Ro';
+
+if ($eEditare) {
+    $titlu = 'Schimbă evenimentul — PulsulOrasului.Ro';
+} elseif ($eRemake) {
+    $titlu = 'Încă unul la fel — PulsulOrasului.Ro';
+}
 $descriere = 'Spune orașului ce pui la cale.';
 $noindex   = true;
 $pagina    = '';
@@ -152,6 +216,10 @@ require __DIR__ . '/inc/antet.php';
       <a href="<?= h(urlEveniment((string) $ev['slug'])) ?>"><?= h(inceputDeText((string) $ev['titlu'], 40)) ?></a>
       <span aria-hidden="true">/</span>
       <span class="crumbs__current">Editează</span>
+      <?php elseif ($eRemake): ?>
+      <a href="<?= h(urlEveniment((string) $refacut['slug'])) ?>"><?= h(inceputDeText((string) $refacut['titlu'], 40)) ?></a>
+      <span aria-hidden="true">/</span>
+      <span class="crumbs__current">Încă unul la fel</span>
       <?php else: ?>
       <span class="crumbs__current">Eveniment nou</span>
       <?php endif; ?>
@@ -161,6 +229,13 @@ require __DIR__ . '/inc/antet.php';
     <h1 class="setari__titlu">Editează activitatea</h1>
     <p class="setari__lead">
       Orice modificare trebuie verificată și aprobată de un moderator. Până atunci, activitatea este invizibilă publicului larg.
+    </p>
+    <?php elseif ($eRemake): ?>
+    <h1 class="setari__titlu">Încă unul la fel</h1>
+    <p class="setari__lead">
+      Am adus tot ce scrisese „<?= h(inceputDeText((string) $refacut['titlu'], 60)) ?>".
+      Spune doar când are loc de data asta — și schimbă ce vrei, dacă s-a
+      schimbat ceva. Anunțul cel vechi rămâne la locul lui, neatins.
     </p>
     <?php else: ?>
     <h1 class="setari__titlu">Publică un eveniment</h1>
@@ -215,6 +290,14 @@ require __DIR__ . '/inc/antet.php';
         <!-- Slugul spune punctului de intrare care eveniment se schimbă. Nu e
              o dovadă: acolo se verifică din nou al cui e. -->
         <input type="hidden" name="slug" value="<?= h((string) $ev['slug']) ?>">
+        <?php elseif ($eRemake): ?>
+        <!-- Din care se face unul nou. E nevoie de el la salvare pentru UN
+             SINGUR lucru: coperta. Restul câmpurilor au venit deja completate
+             în pagină și pleacă de acolo, ca la orice eveniment nou; poza însă
+             stă pe disc, iar formularul n-are cum s-o trimită înapoi fără s-o
+             ceară omului din nou. Nici ăsta nu e o dovadă: api/eveniment.php
+             verifică iar al cui e și dacă chiar s-a încheiat. -->
+        <input type="hidden" name="remake" value="<?= h((string) $refacut['slug']) ?>">
         <?php endif; ?>
 
         <!-- --------------------- Ce și unde --------------------- -->
@@ -294,7 +377,9 @@ require __DIR__ . '/inc/antet.php';
             <img src="<?= h($copertaAcum) ?>" alt="Coperta de acum a evenimentului"
                  width="1600" height="900" decoding="async">
             <p class="coperta-acum__text">
-              Aceasta este imaginea de copertă actuală. O poți păstra sau poți alege alta.
+              <?= $eRemake
+                    ? 'Poza de la anunțul dinainte. O păstrăm, dacă nu alegi alta.'
+                    : 'Aceasta este imaginea de copertă actuală. O poți păstra sau poți alege alta.' ?>
             </p>
           </div>
           <?php endif; ?>
@@ -449,8 +534,13 @@ require __DIR__ . '/inc/antet.php';
           <div class="field-row">
             <div class="field">
               <label for="ev-varsta">Vârstă minimă</label>
-              <?php $varstaAcum = $eEditare && $ev['varsta_minima'] !== null
-                    ? (string) (int) $ev['varsta_minima'] : 'nespecificat'; ?>
+              <?php /* Din $sursa, ca toate celelalte câmpuri: la editare e
+                        evenimentul care se schimbă, la refacere cel din care
+                        se copiază. Un număr care nu e printre cele trei de mai
+                        jos (pus de mână, din phpMyAdmin) cade pe
+                        „Nespecificată" — lista rămâne cea a formularului. */
+                    $varstaAcum = $sursa !== null && ($sursa['varsta_minima'] ?? null) !== null
+                    ? (string) (int) $sursa['varsta_minima'] : 'nespecificat'; ?>
               <select id="ev-varsta" name="varsta_minima" aria-describedby="err-ev-varsta">
                 <?php foreach ([
                     'nespecificat' => 'Nespecificată',

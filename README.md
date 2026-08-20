@@ -1872,6 +1872,53 @@ altfel, cine îndreaptă o virgulă cu o oră înainte de start ar fi fost trimi
 să-și amâne ieșirea cu două ore. `verificaEveniment()` primește pentru asta un
 al cincilea argument: ce scrie acum în bază, sau `null` la un eveniment nou.
 
+## „Remake": încă unul la fel
+
+Pe dos față de „Editează": butonul apare abia **după ce evenimentul s-a
+încheiat sau s-a anulat**, și numai organizatorului. Alergarea de duminică se
+face și duminica viitoare; cea căzută din cauza ploii se mută pe altă zi.
+
+Duce la `adauga_eveniment.php?remake=<slug>` — **alt parametru decât `slug=`**,
+dinadins: acela înseamnă „schimbă rândul ăsta", ăsta înseamnă „scrie unul nou,
+pornind de la el". Cu același nume, o greșeală de o literă ar fi rescris
+anunțul vechi în loc să facă unul nou, și nimeni n-ar fi văzut până a doua zi.
+
+Ce se aduce, și ce nu:
+
+| | |
+|---|---|
+| titlu, categorie, oraș, unde are loc | **da** |
+| poza de copertă | **da**, dacă există |
+| „Cine poate veni și cât costă?" (cost, vârstă, gen, minim/maxim) | **da**, cu bifele lor |
+| descrierea | **da** |
+| „Când o să aibă loc?" (dată, oră de început, oră de sfârșit) | **nu** — ăsta e singurul lucru care chiar se schimbă |
+
+Anunțul vechi **nu se atinge**: se naște unul nou, care intră la moderare ca
+oricare altul și căruia i se aplică limita de evenimente active.
+
+### Cum ajunge poza dincolo
+
+Toate celelalte câmpuri vin completate în pagină și pleacă de acolo, ca la
+orice eveniment nou. Poza însă stă pe disc, iar formularul n-are cum s-o
+trimită înapoi fără s-o ceară omului din nou — de aceea slugul de refăcut
+călătorește într-un câmp ascuns, și de aceea e singurul lucru pentru care e
+nevoie de el la salvare.
+
+Fișierul se **copiază** (`copiazaCoperta()`), nu se împarte. Două anunțuri care
+ar arăta spre aceeași poză ar fi rămas amândouă fără ea la prima ștergere — iar
+curățenia evenimentelor anulate, care încă nu există, tocmai asta va face
+într-o zi.
+
+E singurul loc de pe site unde un fișier de imagine ajunge pe disc fără să
+treacă prin GD. Nu e o portiță: fișierul de plecare nu vine de la nimeni, e
+unul pe care l-am scris chiar noi, pixel cu pixel, la prima încărcare — ce ar
+fi putut fi ascuns în el a rămas afară atunci, o dată pentru totdeauna.
+
+Slugul din formular nu e o dovadă: `evenimentDeRefacut()` întreabă din nou al
+cui e anunțul și dacă chiar s-a încheiat. Dacă nu, anunțul nou se face oricum,
+doar fără poză — „evenimentul din care copiezi nu mai e al tău" nu e ceva ce
+omul poate îndrepta la mijlocul unei publicări.
+
 ### Ce se schimbă la salvare, și ce nu
 
 **Starea se întoarce mereu la „în așteptare"**, oricare ar fi fost — aprobat,

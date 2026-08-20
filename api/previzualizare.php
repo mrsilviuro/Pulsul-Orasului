@@ -115,6 +115,24 @@ if (($_POST['coperta_noua'] ?? '') !== '') {
         $coperta = urlCoperta($deEditat['coperta'] ?? null);
     }
 
+    /**
+     * La refacerea unui eveniment, poza care se va copia la salvare. Aici se
+     * arată doar — fișierul se copiază abia în api/eveniment.php, când chiar
+     * se scrie anunțul nou. O previzualizare care lasă fișiere pe disc ar
+     * umple dosarul cu poze ale unor evenimente care n-au fost publicate.
+     */
+    if ($coperta === '') {
+        $slugDeRefacut = trim((string) ($_POST['remake'] ?? ''));
+
+        if ($slugDeRefacut !== '') {
+            $refacut = evenimentDeRefacut($slugDeRefacut, $membruId);
+
+            if ($refacut !== null) {
+                $coperta = urlCoperta($refacut['coperta'] ?? null);
+            }
+        }
+    }
+
     if ($coperta !== '') {
         $copertaFel = 'bd';
     }

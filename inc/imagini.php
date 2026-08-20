@@ -451,6 +451,40 @@ function stergeCopertaDeFisier(?string $coperta): void
 }
 
 /**
+ * Face o a doua copertă, la fel cu una care există. Întoarce numele nou sau null.
+ *
+ * O cere refacerea unui eveniment („Remake"): anunțul nou pornește cu poza
+ * celui vechi, dar cu FIȘIERUL LUI. Puse să arate amândouă spre același
+ * fișier, ștergerea unuia ar fi lăsat pe celălalt fără poză — iar curățenia
+ * evenimentelor anulate, care încă nu există, tocmai asta va face într-o zi.
+ *
+ * Aici se copiază, nu se redesenează, și e singurul loc de pe site unde un
+ * fișier de imagine ajunge pe disc fără să treacă prin GD. Nu e o portiță:
+ * fișierul de plecare NU vine de la nimeni: e unul pe care l-am scris chiar
+ * noi, pixel cu pixel, la prima încărcare (vezi procesezaCoperta). Ce ar fi
+ * putut fi ascuns în el a rămas afară atunci, o dată pentru totdeauna. Numele
+ * de plecare trece oricum prin esteCopertaValida(), deci nu poate ieși din
+ * dosarul copertelor.
+ */
+function copiazaCoperta(?string $coperta): ?string
+{
+    if (!esteCopertaValida($coperta)) {
+        return null;
+    }
+
+    $dosar  = dirname(__DIR__) . '/' . COPERTA_DOSAR;
+    $veche  = $dosar . '/' . $coperta . '.jpg';
+
+    if (!is_file($veche)) {
+        return null;
+    }
+
+    $nume = bin2hex(random_bytes(16));
+
+    return @copy($veche, $dosar . '/' . $nume . '.jpg') ? $nume : null;
+}
+
+/**
  * Coperta unui eveniment: aceleași apărări ca la poza de profil, dar 16:9.
  *
  * Poza se redesenează pixel cu pixel, deci ce era ascuns în fișierul primit —

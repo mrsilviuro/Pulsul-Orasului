@@ -383,6 +383,18 @@ require __DIR__ . '/inc/antet.php';
         $poateEdita = $eOrganizatorul && poateFiEditat($eveniment);
 
         /**
+         * „Remake" — pe dos față de „Editează": el apare abia după ce s-a
+         * terminat sau s-a anulat.
+         *
+         * Alergarea de duminică se face și duminica viitoare, iar cea căzută
+         * din cauza ploii se mută pe altă zi. Butonul duce la formularul de
+         * publicare cu tot ce scrisese omul o dată, gata completat — numai
+         * „Când o să aibă loc?" rămâne gol. Anunțul vechi nu se atinge: se
+         * naște unul nou, care trece pe la moderare ca oricare altul.
+         */
+        $poateReface = $eOrganizatorul && poateFiRefacut($eveniment);
+
+        /**
          * Butoanele organizatorului, sus, lângă numele lui.
          *
          * „Editează" și „Încheie evenimentul" sunt amândouă ale lui și se
@@ -392,8 +404,8 @@ require __DIR__ . '/inc/antet.php';
          * pentru oricine.
          */
         afiseazaEveniment(evenimentDinBaza($eveniment), $banda,
-          ($poateEdita || $poateIncheia)
-            ? function () use ($eveniment, $poateEdita, $poateIncheia) {
+          ($poateEdita || $poateIncheia || $poateReface)
+            ? function () use ($eveniment, $poateEdita, $poateIncheia, $poateReface) {
             ?>
             <div class="post__actiuni">
               <?php if ($poateEdita): ?>
@@ -406,6 +418,22 @@ require __DIR__ . '/inc/antet.php';
                   <path d="m14.2 7.4 2.4 2.4"/>
                 </svg>
                 <span>Editează</span>
+              </a>
+              <?php endif; ?>
+
+              <?php if ($poateReface): ?>
+              <!--
+                Tot pentru cel care l-a scris, dar la celălalt capăt al vieții
+                unui anunț: după ce s-a încheiat sau s-a anulat. Slugul spune
+                formularului din ce să copieze; acolo se verifică din nou al
+                cui e și dacă chiar s-a terminat.
+              -->
+              <a class="btn btn--ghost btn--sm post__remake"
+                 href="<?= h(urlRefacereEveniment((string) $eveniment['slug'])) ?>">
+                <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M20 11a8 8 0 1 0-.9 4.6"/><path d="M20 5v6h-6"/>
+                </svg>
+                <span>Remake</span>
               </a>
               <?php endif; ?>
 
