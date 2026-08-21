@@ -1909,25 +1909,35 @@ astfel de categorie e **„FindMe"**: jocul cu coduri QR ascunse prin oraș, pe
 care oamenii le caută și le scanează. Evenimentele lui nu le propune nimeni —
 le pune casa.
 
+`doar_staff` spune **cine poate publica** acolo, și atât. Nu cine o vede, nu
+cine caută prin ea:
+
 | | `doar_staff = 0` | `doar_staff = 1` |
 |---|---|---|
-| în formularul de publicare | toată lumea | doar staff |
-| se poate publica în ea | toată lumea | doar staff |
-| în filtrele de pe prima pagină | da | **nu, pentru nimeni** |
-| evenimentele din ea | se văd | **se văd la fel** |
+| se poate publica în ea | toată lumea | **doar staff** |
+| în formularul de publicare | toată lumea | **doar staff** |
+| în filtrele de pe prima pagină | da | **da, la fel** |
+| evenimentele din ea | se văd | se văd la fel |
 
-Ultimul rând e important: ascunsă e **categoria, ca alegere** — nu ce e în ea.
-Evenimentele „FindMe" apar pe prima pagină, au pagina lor și se pot da mai
-departe; altfel n-ar avea cine să caute codurile.
+Formularul de publicare e **singurul** loc din care lipsește, și lipsește
+tocmai fiindcă e locul unde se alege unde publici. Peste tot altundeva e o
+categorie ca oricare: are cip pe prima pagină, se filtrează după ea,
+evenimentele ei au pagina lor și se pot da mai departe. Altfel n-ar avea cine
+să caute codurile.
 
-Din filtre lipsește și pentru staff: filtrele sunt pentru cine caută o ieșire,
-nu o unealtă de administrare.
+Două funcții, două liste:
 
-`categoriiEvenimente()` întoarce **implicit** doar categoriile obișnuite — așa,
-o funcție nouă care uită să ceară lista întreagă arată prea puțin, nu prea mult.
-De `idCategoriiValide()` atârnă și cine **poate publica** acolo: nu e de ajuns
-că lista din formular n-o arată, fiindcă numărul se poate scrie de mână în
-cerere.
+- `categoriiEvenimente()` — lista **din care se alege la publicare**. Întoarce
+  implicit doar categoriile obișnuite: așa, o funcție nouă care uită să ceară
+  lista întreagă arată prea puțin, nu prea mult. De `idCategoriiValide()`, care
+  iese din ea, atârnă și cine **poate** publica acolo — nu e de ajuns că lista
+  din formular n-o arată, fiindcă numărul se poate scrie de mână în cerere.
+- `categoriiCuEvenimente()` — cipurile de pe prima pagină. **Fără nicio
+  deosebire după `doar_staff`**, doar după „are măcar un eveniment public".
+
+`categoriaCeruta()` cere anume lista întreagă (`categoriiEvenimente(true)`): el
+verifică slugul venit din adresă, iar cu lista strâmtă `?categorie=findme` ar fi
+însemnat „toate" — omul apăsa cipul și primea tot.
 
 Rândul se adaugă de mână, din phpMyAdmin:
 

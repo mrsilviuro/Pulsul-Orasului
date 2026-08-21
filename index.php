@@ -365,8 +365,11 @@ require __DIR__ . '/inc/antet.php';
            gol: ocupă loc, se apasă o dată și pe urmă nu mai are cine să se
            încreadă în rândul ăsta. Ordinea vine din tabel (`ordine`).
 
-           În formularul de publicat un eveniment apar TOATE, tocmai ca ele să
-           se poată umple — acolo se cheamă categoriiEvenimente(). -->
+           În formularul de publicat un eveniment apar și cele goale, tocmai
+           ca ele să se poată umple — acolo se cheamă categoriiEvenimente(),
+           iar aceea e singura listă din care lipsesc, pentru cine nu e staff,
+           categoriile ținute pentru casă (`doar_staff`, ca „FindMe"). Aici
+           se filtrează după ele ca după oricare alta. -->
       <div class="chips" aria-label="Filtrează după categorie">
         <a class="chip<?= $categorieAleasa === '' ? ' is-active' : '' ?>"
            href="<?= h(adresaFiltrata($orasAles, '')) ?>"

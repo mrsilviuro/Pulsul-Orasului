@@ -85,10 +85,12 @@ function idCategoriiValide(bool $cuAleStaffului = false): array
  * — acolo trebuie să apară TOATE cele obișnuite, tocmai ca ele să se poată
  * umple.
  *
- * Categoriile ținute pentru casă (`doar_staff = 1`, ca „FindMe") lipsesc de
- * aici pentru TOȚI, inclusiv pentru staff: filtrele sunt pentru cine caută o
- * ieșire, nu o unealtă de administrare. Evenimentele lor se văd oricum în
- * listă, sub „Toate" — ascunsă e categoria ca alegere, nu ce e în ea.
+ * Categoriile ținute pentru casă (`doar_staff = 1`, ca „FindMe") apar AICI ca
+ * oricare alta, pentru toată lumea. `doar_staff` spune cine poate PUBLICA în
+ * ea, nu cine o poate căuta: dacă „FindMe" e o ieșire adevărată, pe prima
+ * pagină, atunci trebuie să se poată și filtra după ea — altfel evenimentele
+ * ei ar fi rămas de găsit doar derulând, sub o categorie pe care n-o putea
+ * alege nimeni. Singurul loc unde lipsește e formularul de publicare.
  *
  * „Public" înseamnă ACELEAȘI TREI STĂRI ca în evenimenteDePePrima(), inclusiv
  * „anulat". Un anunț anulat nu se mai ascunde de nimeni: se vede pe prima
@@ -102,8 +104,7 @@ function categoriiCuEvenimente(): array
     $q = db()->query(
         'SELECT c.id, c.nume, c.slug
            FROM categorii c
-          WHERE c.doar_staff = 0
-            AND EXISTS (
+          WHERE EXISTS (
                   SELECT 1 FROM evenimente e
                    WHERE e.categorie_id = c.id
                      AND e.stare_moderare IN (\'aprobat\', \'incheiat\', \'anulat\')
@@ -675,6 +676,11 @@ function orasulCerut(?string $cerut): string
  * Categoria cerută, dacă slugul ei există în bază — altfel, toate.
  *
  * Aceeași grijă ca la orașe, doar că lista vine din tabelul `categorii`.
+ *
+ * CU TOT CU CELE ȚINUTE PENTRU CASĂ. Aici nu se întreabă cine are voie să
+ * publice, ci după ce se filtrează — iar „FindMe" se filtrează ca oricare
+ * alta. Cu lista strâmtă, butonul din prima pagină ar fi dus la o adresă pe
+ * care funcția asta o citea ca „toate": omul apăsa „FindMe" și primea tot.
  */
 function categoriaCeruta(?string $cerut): string
 {
@@ -684,7 +690,7 @@ function categoriaCeruta(?string $cerut): string
         return '';
     }
 
-    foreach (categoriiEvenimente() as $categorie) {
+    foreach (categoriiEvenimente(true) as $categorie) {
         if ((string) $categorie['slug'] === $cerut) {
             return $cerut;
         }

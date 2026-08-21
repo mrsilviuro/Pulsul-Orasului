@@ -128,11 +128,17 @@ inc/
                       GD — și nu e o portiță, fiindcă fișierul de plecare e
                       unul scris chiar de noi, pixel cu pixel, la prima
                       încărcare. O cere „Remake"-ul
-  evenimente.php    → categorii (categoriiEvenimente($cuAleStaffului) — implicit
-                      FĂRĂ cele cu `doar_staff = 1`, ca „FindMe": așa o funcție
-                      nouă care uită să ceară lista întreagă arată prea puțin,
-                      nu prea mult; de idCategoriiValide() atârnă și cine poate
-                      PUBLICA acolo, nu doar ce se vede în formular), regula
+  evenimente.php    → categorii (categoriiEvenimente($cuAleStaffului) = LISTA DIN
+                      CARE SE ALEGE LA PUBLICARE — implicit FĂRĂ cele cu
+                      `doar_staff = 1`, ca „FindMe": așa o funcție nouă care
+                      uită să ceară lista întreagă arată prea puțin, nu prea
+                      mult; de idCategoriiValide() atârnă și cine poate PUBLICA
+                      acolo, nu doar ce se vede în formular. `doar_staff` spune
+                      ATÂT: formularul de publicare e SINGURUL loc din care
+                      lipsește categoria. Cipurile de pe prima pagină
+                      (categoriiCuEvenimente) o arată ca pe oricare alta, iar
+                      categoriaCeruta() cere anume lista întreagă, altfel
+                      `?categorie=findme` ar fi însemnat „toate"), regula
                       „un eveniment activ", lista de pe
                       profil, LISTA DE PE PRIMA PAGINĂ (evenimenteDePePrima —
                       singura care se aduce din bază în teancuri, nu toată

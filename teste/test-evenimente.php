@@ -943,17 +943,23 @@ verifica('cu lista staff-ului, trece', [],
     verificaEveniment($campuriCasa(), idCategoriiValide(true), ['Roman'])['erori']);
 
 /**
- * Din filtrele de pe prima pagină lipsește pentru TOȚI, inclusiv pentru staff:
- * filtrele sunt pentru cine caută o ieșire, nu o unealtă de administrare.
+ * În filtrele de pe prima pagină intră ca oricare alta, pentru toată lumea.
+ * `doar_staff` spune cine poate PUBLICA acolo, nu cine poate căuta: dacă
+ * evenimentele ei se văd în listă, trebuie să se poată și filtra după ea.
  */
+verifica('goală, nu intră în filtre (ca oricare alta)', false,
+    in_array('tst-cat-casa', $slugurile(categoriiCuEvenimente()), true));
+
 $idCasaEv = pune($idOrg, 'Un eveniment de casă', 'aprobat', 7);
 db()->prepare('UPDATE evenimente SET categorie_id = ? WHERE id = ?')->execute([$idCasa, $idCasaEv]);
 
-verifica('nici cu un eveniment în ea nu intră în filtre', false,
+verifica('cu un eveniment în ea, intră în filtre', true,
     in_array('tst-cat-casa', $slugurile(categoriiCuEvenimente()), true));
 
-// Iar slugul ei, scris de mână în adresă, înseamnă „toate", nu o eroare.
-verifica('slugul ei din adresă înseamnă „toate"', '', categoriaCeruta('tst-cat-casa'));
+// Iar slugul ei din adresă chiar filtrează — altfel butonul n-ar face nimic.
+verifica('slugul ei din adresă e primit', 'tst-cat-casa', categoriaCeruta('tst-cat-casa'));
+verifica('și filtrarea îl scoate', 1,
+    count(evenimenteDePePrima('', 'tst-cat-casa', 0, 10)['evenimente']));
 
 db()->exec('DELETE FROM evenimente');
 db()->prepare('DELETE FROM categorii WHERE id = ?')->execute([$idCasa]);

@@ -20,20 +20,25 @@
 SET NAMES utf8mb4;
 
 -- -------------------------------------------------------------------------
---  doar_staff — cine o vede în listă
+--  doar_staff — cine poate PUBLICA în ea
 --
---  0 (implicit) = categorie obișnuită: apare în formularul de publicare
---                 pentru toată lumea și în filtrele de pe prima pagină.
+--  0 (implicit) = categorie obișnuită: oricine poate publica în ea.
 --
---  1            = numai staff-ul o vede în formular și numai el poate publica
---                 în ea. Din filtrele de pe prima pagină lipsește pentru toți,
---                 inclusiv pentru staff: filtrele sunt pentru cine caută o
---                 ieșire, nu o unealtă de administrare.
+--  1            = numai staff-ul. Ea nu apare în formularul de publicare
+--                 pentru ceilalți, iar cine scrie numărul ei de mână în cerere
+--                 e respins (idCategoriiValide).
 --
---  ATENȚIE la ce NU face steagul ăsta: evenimentele dintr-o astfel de
---  categorie NU se ascund. Ele apar pe prima pagină, au pagina lor, se pot da
---  mai departe — altfel n-ar avea cine să caute codurile. Ascunsă e doar
---  CATEGORIA, ca alegere.
+--  ATENȚIE la ce NU face steagul ăsta — și e aproape tot:
+--
+--    * categoria SE VEDE. Are cip în filtrele de pe prima pagină, ca oricare
+--      alta (de îndată ce are măcar un eveniment public), și se poate filtra
+--      după ea.
+--    * evenimentele din ea se văd la fel ca oricare: pe prima pagină, cu
+--      pagina lor, și se pot da mai departe. Altfel n-ar avea cine să caute
+--      codurile.
+--
+--  Singurul loc din care lipsește e formularul de publicare — adică tocmai
+--  locul unde se alege unde publici.
 --
 --  Rândul propriu-zis („FindMe") se adaugă de mână, din phpMyAdmin:
 --
