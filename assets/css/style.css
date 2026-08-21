@@ -4933,8 +4933,21 @@ a.admin-nav__link:hover { background: var(--bg-soft); color: var(--text); }
 [data-theme="dark"] .admin-stare--aprobat { color: #6ee7a0; }
 .admin-stare--respins { background: var(--bg-soft); color: var(--text-faint); }
 
+/* „I s-a cerut o îndreptare": anunțul a fost citit și întors, iar omul încă
+   n-a umblat la el. Stins, nu aprins — nu e o treabă de făcut ACUM, e o
+   așteptare. Semnul care cere ceva de la tine e cel de alături, „necitit". */
+.admin-stare--corectura {
+  background: var(--bg-soft); color: var(--text-faint);
+  border: 1px dashed var(--border);
+}
+
 /* Ce a fost respins se stinge, ca un eveniment încheiat pe prima pagină. */
 .admin-rand--respins { opacity: .6; }
+
+/* La fel și rândul care așteaptă o îndreptare: nu e nimic nou de citit acolo,
+   deci nu trebuie să-ți sară în ochi când treci peste listă. */
+.admin-rand--corectura { opacity: .68; }
+.admin-rand--corectura:hover { opacity: 1; }
 
 /* ------------------------- căutarea de oameni --------------------------- */
 
@@ -5002,6 +5015,25 @@ a.admin-nav__link:hover { background: var(--bg-soft); color: var(--text); }
 }
 .admin-mesaj__bifa:hover { border-color: var(--text-faint); color: var(--text); }
 .admin-mesaj--nou .admin-mesaj__bifa { border-color: var(--brand); color: var(--brand); }
+
+/* „×"-ul de ștergere, lângă bifă. Stins cât stă, roșu la trecerea cu mouse-ul:
+   e o ștergere, deci n-are ce căuta în ochi până nu te apropii de el. Același
+   tipar ca „×"-ul de pe pagina codurilor. */
+.admin-mesaj__x {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; padding: 0;
+  border: 1px solid transparent; border-radius: var(--radius);
+  background: none; color: var(--text-faint); cursor: pointer;
+  transition: color .15s var(--ease), background .15s var(--ease),
+              border-color .15s var(--ease);
+}
+.admin-mesaj__x .ico { width: 14px; height: 14px; }
+.admin-mesaj__x:hover:not(:disabled) {
+  color: var(--brand-link);
+  border-color: color-mix(in srgb, var(--brand) 35%, transparent);
+  background: color-mix(in srgb, var(--brand) 9%, transparent);
+}
+.admin-mesaj__x:disabled { opacity: .45; cursor: default; }
 
 .admin-mesaj__text {
   font-size: 14.5px; line-height: 1.7; color: var(--text-soft);

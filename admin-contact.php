@@ -36,7 +36,8 @@ require __DIR__ . '/inc/antet.php';
       <h1>Mesaje de la contact</h1>
       <p class="page-head__sub">
         Cele mai noi întâi. Răspunsul pleacă din căsuța ta de e-mail;
-        „citit" e doar semnul tău, ca să știi unde ai rămas.
+        „citit" e doar semnul tău, ca să știi unde ai rămas. „×" șterge
+        mesajul de tot — omul care l-a trimis nu află nimic.
       </p>
     </header>
 
@@ -89,6 +90,25 @@ require __DIR__ . '/inc/antet.php';
                       data-id="<?= (int) $m['id'] ?>"
                       data-citit="<?= $necitit ? '1' : '0' ?>">
                 <?= $necitit ? 'Însemnează citit' : 'Citit' ?>
+              </button>
+
+              <!--
+                Ștergerea e adevărată, fără piatră de mormânt: un mesaj de
+                contact e o scrisoare primită, nu o urmă din viața site-ului.
+                Când s-a răspuns la el — sau când e limpede că nu cere niciun
+                răspuns — n-are de ce să rămână.
+
+                Omul care l-a trimis nu află nimic: a scris cuiva, n-a pus ceva
+                pe site.
+              -->
+              <button class="admin-mesaj__x" type="button"
+                      data-fapta="sterge-mesaj"
+                      data-id="<?= (int) $m['id'] ?>"
+                      data-intreb="Ștergi mesajul de la <?= h($nume) ?>?"
+                      title="Șterge mesajul" aria-label="Șterge mesajul">
+                <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="m6.5 6.5 11 11M17.5 6.5l-11 11"/>
+                </svg>
               </button>
             </div>
           </div>

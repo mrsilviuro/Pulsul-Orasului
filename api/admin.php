@@ -13,17 +13,30 @@ declare(strict_types=1);
  * Ce se poate face:
  *   sterge-eveniment  — un anunț RESPINS, cu tot ce atârnă de el
  *   sterge-comentariu — un comentariu (golit, dacă are răspunsuri sub el)
+ *   curata-rapoarte   — „e în regulă": raportările se șterg, comentariul rămâne
  *   marcheaza-mesaj   — un mesaj de contact, citit sau necitit
+ *   sterge-mesaj      — un mesaj de contact, de tot
  *   sterge-dorinta    — o dorință, oricare i-ar fi starea
  *   modereaza-dorinta — aprobă sau respinge o dorință care așteaptă
  *   sterge-poza       — poza de profil a cuiva
  *   schimba-membru    — starea contului sau limita de evenimente active
+ *
+ * PATRU DINTRE ELE TRIMIT UN E-MAIL: ștergerea unui comentariu, ștergerea unei
+ * poze, suspendarea unui cont și hotărârea asupra unei dorințe. Toate primesc
+ * un MOTIV, care poate să lipsească — atunci mesajul spune limpede că nu s-a
+ * dat niciunul, în loc să tacă (vezi paragrafeleMotivului din inc/email.php).
+ *
+ * Vestea pleacă mereu DUPĂ ce fapta s-a scris cu bine, și niciodată invers: un
+ * e-mail care spune „ți-am șters poza" pentru o ștergere care n-a mers e mai
+ * rău decât nimic. Iar dacă e-mailul nu pleacă, fapta rămâne făcută — poșta nu
+ * are voie să întoarcă din drum o hotărâre a casei.
  */
 
 require_once __DIR__ . '/../inc/admin.php';
 require_once __DIR__ . '/../inc/comentarii.php';
 require_once __DIR__ . '/../inc/dorinte.php';
 require_once __DIR__ . '/../inc/imagini.php';
+require_once __DIR__ . '/../inc/email.php';
 
 if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
     raspunsJson(['ok' => false, 'mesaj' => 'Metodă nepermisă.'], 405);
@@ -64,6 +77,30 @@ if (!esteStaff($membru)) {
 
 $membruId = (int) $membru['id'];
 $idCerut  = static fn(string $cheie) => (int) ($date[$cheie] ?? 0);
+
+/**
+ * Motivul scris de omul casei. Poate lipsi cu totul — atunci e-mailul spune că
+ * nu s-a dat niciunul.
+ *
+ * Se taie la o mie de caractere: e o vorbă către un om, nu un dosar, iar un
+ * text de zece mii lipit din greșeală ar fi umflat mesajul fără să spună mai
+ * mult.
+ */
+$motivCerut = static fn(): string =>
+    mb_substr(trim((string) ($date['motiv'] ?? '')), 0, 1000, 'UTF-8');
+
+/**
+ * Cui i se trimite vestea. Întoarce null pentru un cont care nu mai e activ —
+ * un suspendat sau un anonimizat n-are unde primi nimic, iar noi n-avem ce-i
+ * spune.
+ *
+ * Aceeași funcție ca la anularea unui eveniment: un singur loc care hotărăște
+ * cine mai poate fi înștiințat.
+ */
+$destinatarul = static function (int $id): ?array {
+    require_once __DIR__ . '/../inc/interese.php';
+    return omulDeInstiintat($id);
+};
 
 switch ((string) ($date['fapta'] ?? '')) {
 
@@ -116,6 +153,18 @@ case 'sterge-comentariu':
     }
 
     /**
+     * Cui îi scriem, și despre ce anunț — se citesc ÎNAINTE de ștergere.
+     * După ea, rândul comentariului poate fi golit sau plecat cu totul, iar
+     * atunci n-am mai fi avut nici numele evenimentului, nici pe cine să
+     * întrebăm.
+     */
+    $autorul = $destinatarul((int) $com['membru_id']);
+
+    $q = db()->prepare('SELECT titlu FROM evenimente WHERE id = ?');
+    $q->execute([(int) $com['eveniment_id']]);
+    $titluEv = (string) ($q->fetchColumn() ?: 'un anunț de pe site');
+
+    /**
      * Aceeași funcție ca pe pagina evenimentului, nu una „de administrare".
      * Ea știe regula care contează: un comentariu principal cu răspunsuri sub
      * el se GOLEȘTE, nu se șterge — altfel răspunsurile ar rămâne suspendate în
@@ -124,12 +173,62 @@ case 'sterge-comentariu':
      */
     $ce = stergeComentariu($com);
 
+    /**
+     * Vestea pleacă și când comentariul a fost doar GOLIT: pentru omul care
+     * l-a scris, cele două înseamnă același lucru — ce a scris nu se mai
+     * citește.
+     *
+     * Nu-și scrie sieși: un om de casă care își șterge propriul comentariu
+     * n-are de ce să primească o veste despre asta.
+     */
+    $aPlecatVestea = $autorul !== null && (int) $com['membru_id'] !== $membruId;
+
+    if ($aPlecatVestea) {
+        emailComentariuSters($autorul['email'], (string) $autorul['prenume'],
+                             $titluEv, $motivCerut());
+    }
+
     raspunsJson([
         'ok'    => true,
         'fel'   => $ce['fel'],
-        'mesaj' => $ce['fel'] === 'golit'
+        // Vorba de pe ecran spune ce s-a întâmplat CU ADEVĂRAT: „i-am dat de
+        // veste" numai dacă a plecat ceva. Altfel omul de casă ar fi rămas cu
+        // gândul că autorul a aflat, când de fapt n-a aflat nimeni.
+        'mesaj' => ($ce['fel'] === 'golit'
             ? 'Comentariul a fost golit — avea răspunsuri sub el.'
-            : 'Comentariul a fost șters.',
+            : 'Comentariul a fost șters.')
+            . ($aPlecatVestea ? ' I-am dat de veste autorului.' : ''),
+    ]);
+    break;
+
+/* ==================== „e în regulă", la un raport =================== */
+
+case 'curata-rapoarte':
+    $com = comentariuDupaId($idCerut('id'));
+
+    if ($com === null) {
+        raspunsJson(['ok' => false, 'mesaj' => 'Comentariul nu mai există.'], 404);
+    }
+
+    /**
+     * Raportările se șterg, comentariul rămâne pe loc.
+     *
+     * Se raportează și din greșeală, și din supărare, și fiindcă cineva n-a
+     * fost de acord cu ce scrie acolo. Fără butonul ăsta, singurul fel de a
+     * scoate un rând din lista de raportate era să-l ștergi — adică să
+     * pedepsești pe cineva ca să faci curat pe o listă.
+     *
+     * NU se ține minte că a fost cercetat: dacă cineva îl raportează din nou
+     * mâine, se întoarce în listă. E chiar ce trebuie — o a doua mână care
+     * arată spre același rând poate arăta spre altceva decât prima.
+     */
+    $q = db()->prepare('DELETE FROM comentarii_rapoarte WHERE comentariu_id = ?');
+    $q->execute([(int) $com['id']]);
+
+    raspunsJson([
+        'ok'    => true,
+        'cate'  => $q->rowCount(),
+        'mesaj' => 'Gata, l-am lăsat în pace. Raportările s-au șters.',
     ]);
     break;
 
@@ -146,6 +245,26 @@ case 'marcheaza-mesaj':
         'citit' => $citit,
         'mesaj' => $citit ? 'Însemnat ca citit.' : 'Însemnat ca necitit.',
     ]);
+    break;
+
+case 'sterge-mesaj':
+    /**
+     * Ștergere adevărată, fără piatră de mormânt: un mesaj de contact e o
+     * scrisoare primită, nu o urmă din viața site-ului. Când s-a răspuns la
+     * el — sau când e limpede că nu cere niciun răspuns — n-are de ce să
+     * rămână.
+     *
+     * Omul care l-a trimis nu află nimic. Ar fi fost ciudat: a scris cuiva, nu
+     * a pus ceva pe site.
+     */
+    $q = db()->prepare('DELETE FROM mesaje_contact WHERE id = ?');
+    $q->execute([$idCerut('id')]);
+
+    if ($q->rowCount() !== 1) {
+        raspunsJson(['ok' => false, 'mesaj' => 'Mesajul nu mai există.'], 404);
+    }
+
+    raspunsJson(['ok' => true, 'mesaj' => 'Mesajul a fost șters.']);
     break;
 
 /* =========================== o dorință =============================== */
@@ -177,6 +296,15 @@ case 'modereaza-dorinta':
      * `stare_moderare = 'in_asteptare'` stă în WHERE: o dorință deja hotărâtă nu
      * se răzgândește dintr-o filă lăsată deschisă.
      */
+    /* Cui îi scriem, și ce scria în dorință — citite înaintea scrierii. */
+    $q = db()->prepare('SELECT membru_id, dorinta FROM dorinte WHERE id = ?');
+    $q->execute([$idCerut('id')]);
+    $dorintaRand = $q->fetch();
+
+    if ($dorintaRand === false) {
+        raspunsJson(['ok' => false, 'mesaj' => 'Dorința nu mai există.'], 404);
+    }
+
     $q = db()->prepare(
         'UPDATE dorinte SET stare_moderare = ?
           WHERE id = ? AND stare_moderare = \'in_asteptare\''
@@ -190,12 +318,36 @@ case 'modereaza-dorinta':
         ], 409);
     }
 
+    /**
+     * Omul află pe e-mail, în sfârșit — și la aprobare, și la respingere.
+     *
+     * Până acum nu afla nimic: vedea singur, DACĂ trecea pe prima pagină în
+     * cele șapte zile cât stă pe tablă. La respingere nu afla niciodată —
+     * dorința lui pur și simplu nu apărea, iar el nu știa dacă e citită sau
+     * uitată.
+     *
+     * Motivul se ia în seamă numai la respingere: la aprobare n-are ce spune.
+     */
+    $omulDorintei = $destinatarul((int) $dorintaRand['membru_id']);
+
+    if ($omulDorintei !== null) {
+        emailDorintaHotarata(
+            $omulDorintei['email'],
+            (string) $omulDorintei['prenume'],
+            (string) $dorintaRand['dorinta'],
+            $hotarare === 'aprobat',
+            $hotarare === 'aprobat' ? '' : $motivCerut(),
+            ZILE_PE_TABLA
+        );
+    }
+
     raspunsJson([
         'ok'    => true,
         'stare' => $hotarare,
-        'mesaj' => $hotarare === 'aprobat'
+        'mesaj' => ($hotarare === 'aprobat'
             ? 'Dorința a fost aprobată. Apare pe tablă de la prima încărcare a primei pagini.'
-            : 'Dorința a fost respinsă. Omul poate pune alta.',
+            : 'Dorința a fost respinsă. Omul poate pune alta.')
+            . ($omulDorintei !== null ? ' I-am dat de veste.' : ''),
     ]);
     break;
 
@@ -224,7 +376,23 @@ case 'sterge-poza':
 
     stergePozaDeFisier($om['poza']);
 
-    raspunsJson(['ok' => true, 'mesaj' => 'Poza a fost ștearsă.']);
+    /**
+     * Omul află de ce i-a dispărut poza. Fără vestea asta, ar fi intrat într-o
+     * zi pe profil și ar fi găsit inițiala în locul chipului lui, fără nicio
+     * lămurire — iar cel mai firesc gând ar fi fost că s-a stricat ceva la
+     * site, nu că i s-a cerut, tăcut, să pună alta.
+     */
+    $omulPozei = $destinatarul((int) $om['id']);
+
+    if ($omulPozei !== null) {
+        emailPozaStearsa($omulPozei['email'], (string) $omulPozei['prenume'], $motivCerut());
+    }
+
+    raspunsJson([
+        'ok'    => true,
+        'mesaj' => 'Poza a fost ștearsă.'
+                 . ($omulPozei !== null ? ' I-am dat de veste.' : ''),
+    ]);
     break;
 
 /* ==================== starea și limita unui cont ===================== */
@@ -279,6 +447,19 @@ case 'schimba-membru':
 
         $campuri[] = 'stare = ?';
         $valori[]  = $stare;
+
+        /**
+         * SE SUSPENDĂ CHIAR ACUM? Se ține minte aici, cât timp mai știm și
+         * starea de dinainte: după UPDATE, cele două ar arăta la fel, iar
+         * vestea ar fi plecat și la a doua apăsare pe același om.
+         *
+         * Numai la suspendare pleacă un e-mail. La ridicarea ei nu: acolo omul
+         * intră pur și simplu în cont și merge mai departe, iar un mesaj care
+         * spune „acum poți din nou" ar fi amintit, fără rost, de o pedeapsă
+         * încheiată.
+         */
+        $tocmaiSuspendat = $stare === 'suspendat'
+                        && (string) $om['stare'] !== 'suspendat';
     }
 
     /* --------------------- limita de evenimente ---------------------- */
@@ -328,7 +509,30 @@ case 'schimba-membru':
     db()->prepare('UPDATE membri SET ' . implode(', ', $campuri) . ' WHERE id = ?')
         ->execute($valori);
 
-    raspunsJson(['ok' => true, 'mesaj' => 'Gata, am schimbat.']);
+    /**
+     * Vestea pleacă DUPĂ scriere, și se cere DUPĂ ea — omulDeInstiintat()
+     * întoarce null pentru un cont care nu mai e activ, iar contul tocmai a
+     * devenit „suspendat".
+     *
+     * De aceea aici se citește de-a dreptul: la suspendare vestea trebuie să
+     * plece tocmai către cel care nu mai e activ. E singurul loc de pe site
+     * unde asta are rost.
+     */
+    $vesteSuspendare = '';
+
+    if (!empty($tocmaiSuspendat)) {
+        $q = db()->prepare('SELECT prenume, email FROM membri WHERE id = ?');
+        $q->execute([$id]);
+        $celSuspendat = $q->fetch();
+
+        if ($celSuspendat !== false && (string) $celSuspendat['email'] !== '') {
+            emailContSuspendat((string) $celSuspendat['email'],
+                               (string) $celSuspendat['prenume'], $motivCerut());
+            $vesteSuspendare = ' I-am dat de veste pe e-mail.';
+        }
+    }
+
+    raspunsJson(['ok' => true, 'mesaj' => 'Gata, am schimbat.' . $vesteSuspendare]);
     break;
 
 default:

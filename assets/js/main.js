@@ -5855,6 +5855,17 @@
      `data-intreb` cere o încuviințare înainte. Se pune doar pe ce nu se ia
      înapoi: ștergerile. O bifă de „citit" sau o limită schimbată nu întreabă —
      se apasă din nou și gata.
+
+     `data-motiv` cere pe urmă o VORBĂ, care pleacă în e-mailul primit de om.
+     Poate fi lăsată goală: atunci mesajul spune limpede că nu s-a dat niciun
+     motiv, în loc să tacă. Se pune numai pe faptele care chiar trimit ceva —
+     ștergerea unui comentariu sau a unei poze, suspendarea unui cont,
+     respingerea unei dorințe. O întrebare pusă degeaba e o întrebare pe care
+     omul învață s-o închidă fără să citească.
+
+     „Renunță" în caseta de motiv oprește fapta cu totul (prompt întoarce null),
+     iar o casetă lăsată goală o duce mai departe. Cele două arată la fel pe
+     ecran, dar înseamnă lucruri opuse — de-aia se deosebesc aici, nu mai jos.
      ====================================================================== */
 
   var zoneAdmin = document.querySelectorAll('[data-admin]');
@@ -5878,6 +5889,20 @@
     /** Rândul din care s-a apăsat — un `<tr>` sau un `<li>`, după pagină. */
     var randulLui = function (el) { return el.closest('[data-rand]'); };
 
+    /**
+     * Motivul, dacă elementul îl cere. Întoarce:
+     *   string — ce a scris omul (poate fi gol: „fără motiv")
+     *   null   — a apăsat „Renunță", deci fapta se oprește
+     *   ''     — elementul nu cere niciun motiv
+     */
+    var cereMotivul = function (el) {
+      if (!el.hasAttribute('data-motiv')) { return ''; }
+
+      var raspuns = window.prompt(el.getAttribute('data-motiv'), '');
+
+      return raspuns === null ? null : raspuns.trim();
+    };
+
     Array.prototype.forEach.call(zoneAdmin, function (zona) {
 
       /* ------------------------- butoanele -------------------------- */
@@ -5890,7 +5915,12 @@
 
         if (intreb && !window.confirm(intreb)) { return; }
 
+        var motiv = cereMotivul(buton);
+        if (motiv === null) { return; }
+
         var date = { fapta: fapta, id: parseInt(buton.getAttribute('data-id'), 10) };
+
+        if (motiv !== '') { date.motiv = motiv; }
 
         if (buton.hasAttribute('data-hotarare')) {
           date.hotarare = buton.getAttribute('data-hotarare');
@@ -5956,12 +5986,31 @@
         var camp = e.target.closest('[data-fapta][data-camp]');
         if (!camp) { return; }
 
+        /**
+         * `data-motiv-pentru` îngustează întrebarea la o singură valoare: la
+         * lista de stări, motivul are rost numai pentru „suspendat", fiindcă
+         * numai acolo pleacă un e-mail. Lipsa lui înseamnă „mereu".
+         */
+        var doarPentru = camp.getAttribute('data-motiv-pentru');
+        var motivCamp  = (!doarPentru || camp.value === doarPentru)
+          ? cereMotivul(camp)
+          : '';
+
+        if (motivCamp === null) {
+          // A renunțat: câmpul se întoarce la ce era, iar pagina se cere din
+          // nou, ca ce se vede să fie ce e scris în bază.
+          window.location.reload();
+          return;
+        }
+
         var date = {
           fapta: camp.getAttribute('data-fapta'),
           id:    parseInt(camp.getAttribute('data-id'), 10)
         };
 
         date[camp.getAttribute('data-camp')] = camp.value;
+
+        if (motivCamp !== '') { date.motiv = motivCamp; }
 
         camp.disabled = true;
 

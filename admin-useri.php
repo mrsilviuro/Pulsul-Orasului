@@ -12,6 +12,17 @@ declare(strict_types=1);
  *   – limita de evenimente active
  *   – ștergerea pozei de profil, când cineva a încărcat ce n-ar fi trebuit
  *
+ * LA SUSPENDARE ȘI LA ȘTERGEREA POZEI PLEACĂ UN E-MAIL, cu un motiv care poate
+ * să lipsească — atunci mesajul spune limpede că nu s-a dat niciunul. Fără el,
+ * omul ar fi intrat într-o zi pe profil și ar fi găsit inițiala în locul
+ * chipului lui, fără nicio lămurire.
+ *
+ * ADRESA DE E-MAIL NU SE ARATĂ ÎN TABEL. Nu e nevoie de ea aici: căutarea o
+ * primește oricum, iar dacă tot trebuie scris cuiva, se scrie de pe pagina lui.
+ * Un tabel de cincizeci de rânduri cu adrese e, în plus, tocmai ce n-ar trebui
+ * lăsat deschis pe un ecran. Rămâne telefonul, care se cere rar și e de folos
+ * când chiar se cere.
+ *
  * Ce NU se poate, și de ce:
  *   – „șters" nu e o stare care se pune de aici. Ștergerea unui cont înseamnă
  *     ANONIMIZARE (inc/stergere.php): se golește omul din rând, rămân
@@ -22,6 +33,10 @@ declare(strict_types=1);
  *     care se suspendă unul pe altul dintr-o listă de două sute de rânduri ar
  *     rămâne amândoi pe dinafară.
  *   – steagul de staff se dă și se ia tot din phpMyAdmin, dinadins.
+ *
+ * Așezați DUPĂ ULTIMA LOGARE, cel mult ADMIN_USERI (50): un cont făcut acum doi
+ * ani, dar folosit ieri, e mai interesant decât unul deschis alaltăieri și lăsat
+ * baltă. Cine caută pe cineva anume are căutarea de deasupra.
  *
  * Formularul de căutare e unul ADEVĂRAT, cu GET: fără JS merge la fel, iar
  * căutarea rămâne în adresă, deci se poate da mai departe și se poate reîncărca.
@@ -55,7 +70,8 @@ require __DIR__ . '/inc/antet.php';
       <h1>Useri</h1>
       <p class="page-head__sub">
         Caută după nume, prenume, e-mail sau telefon — toate deodată. Numărul se
-        găsește și scris cu „+40" sau cu spații.
+        găsește și scris cu „+40" sau cu spații. Lista arată ultimii
+        <?= ADMIN_USERI ?> care au trecut pe site, cei mai proaspeți întâi.
       </p>
     </header>
 
@@ -80,10 +96,10 @@ require __DIR__ . '/inc/antet.php';
         <?= $cauta === '' ? 'Niciun cont.' : 'Nimeni nu se potrivește cu „' . h($cauta) . '".' ?>
       </p>
       <?php else: ?>
-      <?php if (count($oameni) >= ADMIN_RANDURI): ?>
+      <?php if (count($oameni) >= ADMIN_USERI): ?>
       <p class="admin-sect__vorba">
-        Se arată primii <?= ADMIN_RANDURI ?>. Caută ceva anume ca să ajungi la
-        cine te interesează.
+        Se arată <?= ADMIN_USERI ?>, cei care au trecut cel mai de curând pe
+        site. Caută ceva anume ca să ajungi la cine te interesează.
       </p>
       <?php endif; ?>
 
@@ -92,7 +108,7 @@ require __DIR__ . '/inc/antet.php';
           <thead>
             <tr>
               <th scope="col">Omul</th>
-              <th scope="col">Contact</th>
+              <th scope="col">Telefon</th>
               <th scope="col">Înscris</th>
               <th scope="col">Ultima logare</th>
               <th scope="col">Stare</th>
@@ -131,9 +147,13 @@ require __DIR__ . '/inc/antet.php';
               </td>
 
               <td>
-                <a href="mailto:<?= h((string) $o['email']) ?>"><?= h((string) $o['email']) ?></a>
+                <!-- Doar telefonul, și numai dacă îl are — e opțional în
+                     setări. Fără el, o liniuță: acolo, gol înseamnă „nu ni l-a
+                     dat", și trebuie să se vadă. -->
                 <?php if (($o['telefon'] ?? '') !== ''): ?>
-                <span class="admin-tabel__mic"><?= h((string) $o['telefon']) ?></span>
+                <a href="tel:<?= h((string) $o['telefon']) ?>"><?= h((string) $o['telefon']) ?></a>
+                <?php else: ?>
+                <span class="admin-tabel__gol">—</span>
                 <?php endif; ?>
               </td>
 
@@ -149,8 +169,17 @@ require __DIR__ . '/inc/antet.php';
                   <?= h($stari[$o['stare']] ?? (string) $o['stare']) ?>
                 </span>
                 <?php else: ?>
+                <!--
+                  `data-motiv` cere o vorbă NUMAI pentru starea care doare —
+                  suspendarea. La „activ" sau „neconfirmat" nu pleacă niciun
+                  e-mail, deci n-are cui să-i folosească un motiv, iar o
+                  întrebare pusă degeaba e o întrebare pe care omul învață s-o
+                  închidă fără să citească.
+                -->
                 <select class="admin-select" data-fapta="schimba-membru"
                         data-camp="stare" data-id="<?= (int) $o['id'] ?>"
+                        data-motiv-pentru="suspendat"
+                        data-motiv="De ce se suspendă contul? Motivul îi pleacă pe e-mail."
                         aria-label="Starea contului">
                   <?php foreach ($stari as $val => $vorba): ?>
                   <option value="<?= h($val) ?>" <?= $o['stare'] === $val ? 'selected' : '' ?>>
@@ -201,7 +230,8 @@ require __DIR__ . '/inc/antet.php';
                 <?php if ($arePoza): ?>
                 <button class="btn btn--rau btn--xs" type="button"
                         data-fapta="sterge-poza" data-id="<?= (int) $o['id'] ?>"
-                        data-intreb="Ștergi poza de profil? Omul o poate încărca la loc.">
+                        data-motiv="De ce se șterge poza? Motivul îi pleacă pe e-mail."
+                        data-intreb="Ștergi poza de profil? Omul primește un e-mail și o poate încărca la loc.">
                   Șterge poza
                 </button>
                 <?php else: ?>

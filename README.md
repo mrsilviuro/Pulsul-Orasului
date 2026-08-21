@@ -108,13 +108,10 @@ lângă „Ce facem zilele astea?".
 
 ### Cum se aprobă o dorință
 
-Nu există (încă) pagină de moderare. Din phpMyAdmin:
+Din `admin-dorinte.php`, cu două butoane. Merge mai departe și din phpMyAdmin —
+e de ajuns `stare_moderare`:
 
 ```sql
-SELECT d.id, m.prenume, d.oras, d.dorinta, d.creat_la
-  FROM dorinte d JOIN membri m ON m.id = d.membru_id
- WHERE d.stare_moderare = 'in_asteptare' ORDER BY d.creat_la;
-
 UPDATE dorinte SET stare_moderare = 'aprobat' WHERE id = 7;   -- sau 'respins'
 ```
 
@@ -965,11 +962,12 @@ de multe ori pe pagina de contact n-are de ce să rămână pe dinafara contului
 Fără reCAPTCHA sau alt serviciu străin — capcana și limitele sunt de ajuns
 deocamdată, și nu intră cod din afară în pagină.
 
-### Ce nu e făcut
+### Unde se citesc
 
-Nu există încă niciun loc unde să citești mesajele din site. Se citesc din
-`mesaje_contact` sau din e-mail, până facem panoul de administrare. Coloana
-`citit_la` e pregătită pentru atunci.
+În `admin-contact.php`, cu „citit / necitit" (coloana `citit_la`, pregătită de la
+bun început pentru asta) și cu un „×" care șterge mesajul. Ștergerea e adevărată:
+un mesaj de la formular n-are de cine să atârne, iar spamul care trece de capcană
+n-are de ce să rămână în bază pentru totdeauna.
 
 
 ## Evenimentele
@@ -1913,7 +1911,7 @@ Despre / Contact", adică tocmai meniul pentru care intră lumea pe site.
 | Abțibilduri | `coduri.php`, cea de dinainte: coduri noi și starea fiecăruia |
 | Evenimente | ce așteaptă o hotărâre, și ce a fost respins |
 | Comentarii | ce s-a raportat, și ultimele 50 scrise pe site |
-| Contact | mesajele de la formular, cu „citit / necitit" |
+| Contact | mesajele de la formular, cu „citit / necitit" și „×" |
 | Useri | caută pe cineva, schimbă-i starea, limita sau șterge-i poza |
 | Dorințe | aprobă, respinge sau șterge o dorință |
 
@@ -1939,6 +1937,32 @@ de trei luni. Când nu e nimic de făcut, scrie „nimic de făcut" și rămâne
 
 Cifrele se cer o dată (`cifreleAdmin()`) și se folosesc în amândouă locurile: pe
 cartonașe și în rândul de legături de sus.
+
+### Semnul că i s-a cerut deja o îndreptare
+
+„Respinge, dar cu editare necesară" lasă anunțul **în așteptare** — altfel omul
+n-ar mai fi avut ce corecta. Numai că, în lista de administrare, un anunț citit
+și trimis înapoi arăta exact ca unul pe care nu-l deschisese nimeni: aceeași
+stare, același rând, aceeași zi. Al doilea om de casă îl citea a doua oară,
+degeaba.
+
+Acum poartă un semn — *„i s-a cerut o îndreptare"* — iar rândul e stins, fiindcă
+mingea e la celălalt: nu e nimic de făcut până nu se atinge omul de el.
+
+**Se stinge la prima editare, oricare ar fi ea.** Nu la una anume: din clipa în
+care omul a apăsat „Trimite", partea lui e făcută, iar noi n-avem de unde ști
+dacă a îndreptat exact ce i s-a cerut. Asta se vede citind — și de-aia anunțul
+trebuie să se întoarcă în listă arătând ca unul necitit.
+
+În bază e `evenimente.corectura_ceruta_la`, un DATETIME și nu un 0/1, ca să se
+vadă și **de cât timp** așteaptă. O hotărâre adevărată — aprobat sau respins —
+îl șterge la loc: acolo nu mai e nicio corectură de așteptat.
+
+Tot aici, două lucruri mărunte care se simt: „Vezi" deschide anunțul într-o filă
+nouă (lista rămâne unde era, cu locul păstrat), iar odată ce anunțul e
+**aprobat**, blocul de „Moderare" de pe pagina lui dispare cu totul. După ce
+s-a hotărât, un rând de butoane rămas acolo nu mai e o unealtă, ci o apăsare
+greșită care așteaptă.
 
 ### Ce se poate șterge, și ce nu
 
@@ -1981,6 +2005,16 @@ Până acum se făcea de mână, din phpMyAdmin: o dorință scrisă de om nu se
 nicăieri până nu intra cineva în bază să-i schimbe starea, ceea ce însemna că
 tabla se umplea numai cât își aducea cineva aminte.
 
+Se arată **toate**, oricâte ar fi — singura listă de administrare fără tăietură.
+Ce așteaptă o hotărâre stă în cap, apoi restul de la cele mai noi la cele mai
+vechi. Rândurile din `dorinte` nu se șterg niciodată, tocmai ca mai târziu să se
+poată spune câte dorințe și-au pus oamenii; tabelul ăsta e singurul loc unde se
+vede tot ce s-a scris vreodată, iar o limită ar fi tăiat chiar istoria pentru
+care se păstrează rândurile.
+
+Omul află pe e-mail în amândouă cazurile, iar la respingere se poate scrie un
+motiv. La aprobare nu se cere niciunul: n-are ce spune.
+
 `publicat_la` **nu** se pune la aprobare: îl scrie `stampileazaCeleAprobate()` la
 prima încărcare a primei pagini, tot cu ceasul PHP. Așa, o dorință aprobată de
 aici și una aprobată din phpMyAdmin se poartă la fel, iar cele șapte zile de pe
@@ -1999,6 +2033,49 @@ capul paginii, cel mai raportat primul.
 
 Numărul de raportări apare **numai aici**: pe pagina evenimentului omul află
 doar dacă el însuși a raportat.
+
+**Două butoane, nu unul.** Lângă „Șterge" stă „E în regulă", care șterge
+*rapoartele*, nu comentariul. Se raportează și din greșeală, și din răutate — iar
+cu un singur buton, singurul fel de a închide un raport nedrept ar fi fost să
+ștergi tocmai ce n-avea nimic. Rândul iese din listă, comentariul rămâne pe site
+neatins, iar cine a raportat nu află nimic: nici la „șterge", nici la „e în
+regulă". Un răspuns la un raport ar fi făcut din steag un fel de a începe o
+ceartă.
+
+### Când se șterge ceva al cuiva, omul află
+
+Patru fapte din zona asta ajung la un om anume, și toate patru pleacă pe e-mail:
+comentariul șters, poza de profil ștearsă, contul suspendat și hotărârea unei
+dorințe. Fără mesaj, omul intra într-o zi pe profil și găsea inițiala în locul
+chipului lui, fără nicio lămurire.
+
+Fiecare cere un **motiv, care poate lipsi**. Lăsat gol, mesajul spune limpede că
+nu s-a dat niciunul (`paragrafeleMotivului()`, un singur loc pentru amândouă
+cazurile) — un mesaj cu un gol în el, în locul explicației, ar fi fost mai rău
+decât niciun mesaj.
+
+Întrebarea se pune numai unde are ce spune: `data-motiv` pe butonul care o cere,
+iar la lista de stări `data-motiv-pentru="suspendat"` o îngustează la singura
+valoare care trimite ceva. La „activ" sau „neconfirmat" nu pleacă niciun e-mail,
+deci n-ar avea cui să-i folosească — iar o întrebare pusă degeaba e o întrebare
+pe care omul învață s-o închidă fără să citească.
+
+Textul comentariului șters **nu** se pune în mesaj. Dacă a fost șters fiindcă era
+urât, retrimiterea lui ar fi fost a doua trecere a aceluiași lucru — de data asta
+în cutia poștală a omului, unde rămâne pentru totdeauna.
+
+### În tabelul de useri nu scrie nicio adresă
+
+Nu e nevoie de ea acolo: căutarea o primește oricum, iar dacă tot trebuie scris
+cuiva, se scrie de pe pagina lui. Un tabel de cincizeci de rânduri cu adrese e,
+în plus, tocmai ce n-ar trebui lăsat deschis pe un ecran. Rămâne telefonul — care
+se cere rar și e de folos când chiar se cere — sau o liniuță, fiindcă acolo gol
+înseamnă „nu ni l-a dat", și trebuie să se vadă.
+
+Lista e așezată **după ultima logare**, nu după data înscrierii: un cont deschis
+acum doi ani, dar folosit ieri, e mai interesant decât unul făcut alaltăieri și
+lăsat baltă. Cine n-a intrat niciodată cade la coadă, nu dispare. Se arată cel
+mult `ADMIN_USERI` (50) — cine caută pe cineva anume are căutarea de deasupra.
 
 ### Ce rămâne în phpMyAdmin
 

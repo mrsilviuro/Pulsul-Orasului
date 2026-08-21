@@ -131,7 +131,16 @@ admin-contact.php, admin-useri.php, admin-dorinte.php, coduri.php
                 Lista secțiunilor stă tot acolo (sectiuniAdmin) — o secțiune
                 nouă e un rând în tabloul acela și apare singură și pe panou, și
                 în rândul de legături. Faptele trec toate prin api/admin.php,
-                cu `fapta`, ca paza să fie scrisă o dată
+                cu `fapta`, ca paza să fie scrisă o dată. CE DOARE PLEACĂ PE
+                E-MAIL: comentariul șters, poza ștearsă, contul suspendat și
+                hotărârea unei dorințe. Toate patru primesc un MOTIV care poate
+                lipsi — `data-motiv` pe buton îl cere din JS, iar
+                paragrafeleMotivului() din inc/email.php scrie, când e gol, că
+                nu s-a dat niciunul. Un mesaj cu un loc gol în el ar fi fost mai
+                rău decât niciun mesaj. La lista de stări, `data-motiv-pentru`
+                îngustează întrebarea la singura valoare care trimite ceva
+                („suspendat"): o întrebare pusă degeaba e una pe care omul
+                învață s-o închidă fără să citească
   coduri.php  → pagina omului de casă: face coduri noi și le arată starea.
                 Prima pagină de administrare de pe site; azi e „Abțibilduri" în
                 zona de admin. Se aduc cel mult CODURI_QR_PASTRATE (50) și se
@@ -147,7 +156,13 @@ inc/
                       sunt) și interogările fiecărei liste. ADMIN_RANDURI (200)
                       taie fiecare tabel: e o listă de lucru, iar ce n-a fost
                       făcut în două sute de rânduri nu se face nici în al
-                      treilea sutar
+                      treilea sutar. DOUĂ EXCEPȚII, amândouă anume:
+                      cautaMembri() taie la ADMIN_USERI (50) și așază DUPĂ
+                      ULTIMA LOGARE, nu după înscriere — un cont vechi, dar
+                      folosit ieri, e mai interesant decât unul nou și lăsat
+                      baltă; iar toateDorintele() NU taie deloc, fiindcă
+                      rândurile din `dorinte` nu se șterg niciodată și tabelul
+                      ăsta e singurul loc unde se vede tot ce s-a scris vreodată
   antet.php        → head + meniu + antete siguranță (folosit de toate paginile)
   subsol.php        → footer + scripturi
   bootstrap.php     → config, conexiune DB, sesiune, CSRF
@@ -392,9 +407,14 @@ sql/                → schema.sql + migrări numerotate (002, 003, 004, 005-goo
                       020-rapoarte-comentarii,
                       021-instiintari-comentarii,
                       022-evenimente-staff, 023-dorinte,
-                      024-categorii-doar-staff, 025-coduri-qr)
-                      NIMIC NOU pentru zona de administrare: ea doar citește și
-                      schimbă ce era deja acolo
+                      024-categorii-doar-staff, 025-coduri-qr,
+                      026-corectura-eveniment)
+                      Zona de administrare citește și schimbă, în cea mai mare
+                      parte, ce era deja acolo. SINGURA coloană nouă a ei e
+                      `evenimente.corectura_ceruta_la` (026): ștampila pusă la
+                      „respinge, dar cu editare necesară" și ștearsă la prima
+                      editare a omului. E DATETIME, nu 0/1, tocmai ca să se vadă
+                      și de cât timp așteaptă
 teste/              → test-validare.php (verificările din inc/validare.php;
                       verificaDorinta e probată în test-dorinte.php, lângă
                       restul tablei)
@@ -489,17 +509,22 @@ assets/css/style.css, assets/js/main.js, assets/img/
 - Moderarea: fiecare eveniment intră cu `stare_moderare = 'in_asteptare'` și se
   vede organizatorului și staff-ului. Aprobarea, respingerea și „editare
   necesară" se fac de pe pagina evenimentului, din blocul dintre anunț și
-  comentarii (`api/modereaza-eveniment.php`). ATENȚIE: respingerea cu bifa
-  scoasă GOLEȘTE comentariile, notele, excluderile și înscrierile anunțului
-  (`golesteDateleEvenimentului`) — rândul evenimentului rămâne. Nu există încă
-  o LISTĂ a celor care așteaptă: staff-ul ajunge la ele doar cu adresa în mână
+  comentarii (`api/modereaza-eveniment.php`) — bloc care DISPARE odată ce
+  anunțul e aprobat: după aceea nu mai e nimic de hotărât, iar un rând de
+  butoane rămas acolo e doar o apăsare greșită care așteaptă. Lista celor care
+  așteaptă e în `admin-evenimente.php`, iar cele cărora li s-a cerut o îndreptare
+  poartă un semn (`evenimente.corectura_ceruta_la`), stins de prima editare a
+  omului. ATENȚIE: respingerea cu bifa scoasă GOLEȘTE comentariile, notele,
+  excluderile și înscrierile anunțului (`golesteDateleEvenimentului`) — rândul
+  evenimentului rămâne
 - Staff: există doar steagul `membri.este_staff` (se pune de mână, din
   phpMyAdmin) și funcția `esteStaff()` — staff înseamnă orice valoare în afară
   de 0. Ce deschide: vede ORICE eveniment, oricare i-ar fi starea
   (poateVedeaEvenimentul), poate aproba și respinge anunțuri, PUBLICĂ DIRECT
   (anunțul lui intră „aprobat", iar butonul din formular scrie „Publică
   evenimentul") și poate bifa „nu-l arăta pe profilul meu", poate scoate oameni
-  de pe liste și trece de lacătul de șantier. Nu există pagină de administrare.
+  de pe liste, trece de lacătul de șantier și intră în zona de administrare
+  (`admin*.php`). Steagul însuși NU se dă din interfață, dinadins.
   Limita de evenimente active NU i se aplică: poatePublicaEveniment() îl lasă
   să treacă peste ea, fiindcă e făcută împotriva celui care ar umple prima
   pagină, iar el publică tocmai zece anunțuri ale orașului
@@ -514,35 +539,37 @@ assets/css/style.css, assets/js/main.js, assets/img/
   listă, vestea că un eveniment s-a anulat (api/anuleaza-eveniment.php),
   hotărârea moderării (api/modereaza-eveniment.php) și comentariile noi
   (api/comentarii.php → instiinteazaDeComentariu, cu bifa `email_comentarii`
-  din setări). NU pleacă nimic când cineva se înscrie la un eveniment, când
-  se apreciază un comentariu sau când se raportează ceva
-- Tabla cu dorințe n-are pagină de moderare. Fiecare dorință intră cu
-  `stare_moderare = 'in_asteptare'` și nu se vede nicăieri până nu e aprobată,
-  iar aprobarea se face DE MÂNĂ, din phpMyAdmin:
+  din setări). PLUS CELE PATRU ALE ZONEI DE ADMINISTRARE, toate cu motiv care
+  poate lipsi (api/admin.php): comentariul șters, poza ștearsă, contul
+  suspendat și hotărârea unei dorințe. NU pleacă nimic când cineva se înscrie
+  la un eveniment, când se apreciază un comentariu sau când se raportează ceva
+- Tabla cu dorințe se moderează din `admin-dorinte.php`. Fiecare dorință intră
+  cu `stare_moderare = 'in_asteptare'` și nu se vede nicăieri până nu e
+  aprobată; omul află pe e-mail în amândouă cazurile, iar la respingere se poate
+  scrie un motiv (gol = „nu s-a dat niciunul"). Se poate și din phpMyAdmin, mai
+  departe — e de ajuns `stare_moderare`:
   ```sql
-  SELECT d.id, m.prenume, d.oras, d.dorinta, d.creat_la
-    FROM dorinte d JOIN membri m ON m.id = d.membru_id
-   WHERE d.stare_moderare = 'in_asteptare' ORDER BY d.creat_la;
-
   UPDATE dorinte SET stare_moderare = 'aprobat' WHERE id = 7;   -- sau 'respins'
   ```
-  Atât: `publicat_la` NU se pune de mână. Îl scrie codul, cu ceasul PHP, la
-  prima încărcare a primei pagini (stampileazaCeleAprobate) — tocmai ca să nu
-  intre `NOW()`-ul lui MySQL, din alt fus, în ceva ce se numără în zile.
-  Omul nu află pe e-mail nici că i-a fost aprobată, nici că i-a fost respinsă:
-  vede singur, când îi apare pe tablă
-- Nimeni nu poate șterge o dorință publicată — nici autorul (i se spune asta în
-  formular, înainte să apese), nici staff-ul din interfață. Rândul se schimbă
-  de mână, din phpMyAdmin
+  Atât: `publicat_la` NU se pune de mână, nici de aici, nici de acolo. Îl scrie
+  codul, cu ceasul PHP, la prima încărcare a primei pagini
+  (stampileazaCeleAprobate) — tocmai ca să nu intre `NOW()`-ul lui MySQL, din
+  alt fus, în ceva ce se numără în zile
+- Autorul nu poate șterge o dorință publicată (i se spune asta în formular,
+  înainte să apese). Staff-ul poate, din `admin-dorinte.php` — și e SINGURA
+  ștergere adevărată de pe site, tocmai fiindcă rândurile astea nu se șterg
+  niciodată altfel: butonul e pentru ce n-are ce căuta în numărătoare, o
+  înjurătură sau un test
 - Dorințele nu se numără nicăieri. Rândurile rămân în `dorinte` pentru
   totdeauna, și după ce ies de pe tablă, tocmai ca mai târziu să se poată
   arăta câte dorințe și-au pus oamenii de-a lungul timpului — dar pagina care
   s-o spună nu există încă
-- Comentariile se pot raporta (steagul de la capătul rândului de unelte), dar
-  rapoartele nu se văd nicăieri: nu există pagină care să le adune, deci
-  singurul fel de a afla ce s-a raportat e `SELECT` pe `comentarii_rapoarte`
-  din phpMyAdmin. Nici pagină de moderare a comentariilor nu există — staff-ul
-  umblă la ele de pe pagina evenimentului, ca oricare autor
+- Comentariile raportate se adună în `admin-comentarii.php`, cel mai raportat
+  în cap. Două butoane, nu unul: „Șterge" (cu motiv, care îi pleacă autorului pe
+  e-mail) și „E în regulă", care ȘTERGE RAPOARTELE, nu comentariul — se
+  raportează și din greșeală, și din răutate, iar fără al doilea buton singurul
+  fel de a închide un raport nedrept ar fi fost să ștergi ce n-avea nimic. Cine
+  a raportat NU află nimic, în niciunul din cazuri
 - Notele nu se pot retrage și nici raporta. Cine a primit o stea pe nedrept nu
   are cui să spună — nu există pagină de moderare a evaluărilor. Nici
   „Nu s-a prezentat" nu se ia înapoi: e definitivă, dinadins, ca organizatorul
