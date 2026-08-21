@@ -120,7 +120,19 @@ require __DIR__ . '/inc/antet.php';
     </form>
 
     <!-- ============================ LISTA ============================= -->
-    <section class="coduri" aria-labelledby="coduri-title">
+    <!--
+      `data-coduri` și `data-deodata` sunt ce caută main.js: arată primele zece
+      rânduri, ascunde restul și aprinde „Vezi mai mult". Numărul vine din
+      CODURI_QR_DEODATA, ca să fie scris într-un singur loc.
+
+      TOATE cele cincizeci intră în pagină, ascunse — nu se aduc pe rând de la
+      server. Sunt cincizeci de rânduri de text, cât o pagină de carte: o
+      cerere în plus pentru ele ar fi mai scumpă decât ele însele. Fără JS se
+      văd toate, ceea ce e chiar purtarea de dinainte.
+    -->
+    <section class="coduri" aria-labelledby="coduri-title"
+             data-coduri data-deodata="<?= CODURI_QR_DEODATA ?>"
+             data-csrf="<?= h(tokenCsrf()) ?>">
       <h2 id="coduri-title">Toate abțibildele</h2>
 
       <?php if ($coduri === []): ?>
@@ -136,9 +148,10 @@ require __DIR__ . '/inc/antet.php';
               <th scope="col">Stare</th>
               <th scope="col">Eveniment</th>
               <th scope="col">Adresa pentru QR</th>
+              <th scope="col"><span class="sr-only">Șterge</span></th>
             </tr>
           </thead>
-          <tbody>
+          <tbody data-lista-coduri>
             <?php foreach ($coduri as $c):
               $stare = stareaCoduluiQr($c);
 
@@ -150,7 +163,7 @@ require __DIR__ . '/inc/antet.php';
                   'gasit'     => 'Găsit',
               ][$stare];
             ?>
-            <tr class="cod-rand cod-rand--<?= h($stare) ?>">
+            <tr class="cod-rand cod-rand--<?= h($stare) ?>" data-cod="<?= h((string) $c['cod']) ?>">
               <td><code class="cod-rand__cod"><?= h((string) $c['cod']) ?></code></td>
 
               <td>
@@ -174,11 +187,43 @@ require __DIR__ . '/inc/antet.php';
               </td>
 
               <td><code class="cod-rand__adresa"><?= h($adresaCodului((string) $c['cod'])) ?></code></td>
+
+              <!--
+                „×"-ul. Numai la codurile care n-au fost găsite — unul găsit e
+                istoria cuiva, iar de el atârnă cifra de pe profilul
+                câștigătorului (poateFiStersCodul).
+
+                Pentru celelalte nu se desenează un buton stins, ci nu se
+                desenează nimic: un buton care nu face nimic e o întrebare fără
+                răspuns. `title` pe rând spune de ce, pentru cine se oprește cu
+                mouse-ul acolo.
+              -->
+              <td class="cod-rand__unelte">
+                <?php if (poateFiStersCodul($c)): ?>
+                <button class="cod-sterge" type="button" data-sterge-cod
+                        title="Șterge codul <?= h((string) $c['cod']) ?>"
+                        aria-label="Șterge codul <?= h((string) $c['cod']) ?>">
+                  <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="m6.5 6.5 11 11M17.5 6.5l-11 11"/>
+                  </svg>
+                </button>
+                <?php else: ?>
+                <span class="cod-rand__mic" title="Un abțibild găsit rămâne în listă: de el atârnă cifra de pe profilul câștigătorului.">—</span>
+                <?php endif; ?>
+              </td>
             </tr>
             <?php endforeach; ?>
           </tbody>
         </table>
       </div>
+
+      <!-- Se aprinde din JS, cu numărul celor rămase ascunse. Fără JS stă
+           ascuns: toate rândurile sunt deja în pagină. -->
+      <div class="load-more" data-mai-multe-coduri hidden>
+        <button class="btn btn--ghost" type="button" data-mai-multe-coduri-buton>Vezi mai mult</button>
+      </div>
+
+      <p class="coduri__rau" data-coduri-rau role="alert" hidden></p>
       <?php endif; ?>
     </section>
   </div>

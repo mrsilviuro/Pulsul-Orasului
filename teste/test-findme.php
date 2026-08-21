@@ -430,6 +430,56 @@ verifica('toate patru sunt în listă', 4, count($aleNoastre));
 verifica('cel mai nou e primul', true,
     (int) $lista[0]['id'] >= (int) $lista[count($lista) - 1]['id']);
 
+/**
+ * Lista se taie la CODURI_QR_PASTRATE. Dincolo de ele sunt abțibilde de acum
+ * trei luni, demult dezlipite — un șir care curge o jumătate de metru în jos
+ * nu e o listă, e un morman.
+ */
+$cateErau = count(toateCodurileQr(1000));
+
+for ($i = 0; $i < CODURI_QR_PASTRATE + 5 - $cateErau; $i++) {
+    faCodQrNou($gazda);
+}
+
+verifica('lista se taie la cincizeci', CODURI_QR_PASTRATE, count(toateCodurileQr()));
+verifica('și se poate cere mai puțin',            3, count(toateCodurileQr(3)));
+
+/* ==================================================================== */
+sectiune('ștergerea unui cod');
+
+$deSters = faCodQrNou($gazda);
+$randul  = codQrDupaCod($deSters);
+
+verifica('un cod liber se poate șterge', true, poateFiStersCodul($randul));
+verifica('și chiar pleacă',              true, stergeCodulQr((int) $randul['id']));
+verifica('după care nu mai există',      null, codQrDupaCod($deSters));
+verifica('a doua oară nu mai are ce șterge', false, stergeCodulQr((int) $randul['id']));
+
+/* Unul aflat în joc se poate șterge: vânătoarea rămâne fără abțibild, ceea ce
+   e supărător, dar e treaba organizatorului — poate lega altul din „Editează". */
+$inJocDeSters = faCodQrNou($gazda);
+$evDeSters    = faEveniment($gazda, $idCat, 'tstfm-de-sters', '+6 days');
+legaCodulDeEveniment($inJocDeSters, $evDeSters);
+
+$randul = codQrDupaCod($inJocDeSters);
+verifica('unul în joc, la fel', 'in_joc', stareaCoduluiQr($randul));
+verifica('se poate șterge',        true, poateFiStersCodul($randul));
+verifica('și pleacă',              true, stergeCodulQr((int) $randul['id']));
+verifica('evenimentul rămâne',     true, evenimentDupaSlug('tstfm-de-sters') !== null);
+verifica('doar fără abțibild',     null, codQrAlEvenimentului($evDeSters));
+
+/**
+ * UNUL GĂSIT, NU. Rândul acela nu mai e o unealtă, e istoria cuiva: de el
+ * atârnă cifra „Coduri QR găsite" de pe profilul câștigătorului. Un om de casă
+ * care face curat prin listă n-are de unde să știe că apăsând un „×" scade cu
+ * unu ceva de pe pagina altcuiva.
+ */
+$gasitul = codQrDupaCod($cod1);
+verifica('unul găsit nu se poate șterge', false, poateFiStersCodul($gasitul));
+verifica('și nici prin funcția de scriere', false, stergeCodulQr((int) $gasitul['id']));
+verifica('rândul e tot acolo', $cod1, (string) codQrDupaCod($cod1)['cod']);
+verifica('și cifra de pe profil e neatinsă', 1, cateCoduriQrGasiteDe($omul));
+
 /* ==================================================================== */
 if ($BAZA === '') {
     echo "\n(sar peste HTTP: dă adresa serverului ca argument, "
@@ -491,6 +541,41 @@ if ($BAZA === '') {
         ],
     ]));
     verifica('POST fără CSRF nu face niciun cod', $inainte, count(toateCodurileQr(500)));
+
+    sectiune('ștergerea prin API');
+
+    /** POST cu JSON către api/sterge-cod.php, fără cont. */
+    $sterge = static function (array $date) use ($BAZA): array {
+        $raw = @file_get_contents($BAZA . '/api/sterge-cod.php', false, stream_context_create([
+            'http' => [
+                'method'  => 'POST',
+                'header'  => "Content-Type: application/json\r\n",
+                'content' => json_encode($date),
+                'ignore_errors' => true, 'timeout' => 10,
+            ],
+        ]));
+
+        $cod = 0;
+
+        foreach ($http_response_header ?? [] as $rand) {
+            if (preg_match('~^HTTP/\S+\s+(\d+)~', $rand, $m)) { $cod = (int) $m[1]; }
+        }
+
+        return ['cod' => $cod, 'corp' => json_decode((string) $raw, true)];
+    };
+
+    $codDeProba = faCodQrNou($gazda);
+
+    $r = $sterge(['cod' => $codDeProba]);
+    verifica('fără token CSRF, 419', 419, $r['cod']);
+    verifica('și codul e tot acolo', $codDeProba, (string) codQrDupaCod($codDeProba)['cod']);
+
+    // Nelogat, cu un token oarecare: se oprește tot înainte de faptă.
+    $r = $sterge(['csrf' => 'oarecare', 'cod' => $codDeProba]);
+    verifica('nelogat, nu șterge nimic', true, in_array($r['cod'], [401, 419], true));
+    verifica('codul, iar, e tot acolo', $codDeProba, (string) codQrDupaCod($codDeProba)['cod']);
+
+    stergeCodulQr((int) codQrDupaCod($codDeProba)['id']);
 
     sectiune('pagina evenimentului');
 

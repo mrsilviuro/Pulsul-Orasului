@@ -1902,6 +1902,56 @@ fost la un pas de a ajunge în pagină: o funcție nouă care tipărește rându
 sunt o promisiune. Iar la un eveniment încheiat rămâne oricum numai primul,
 deci tot el trebuie să fie cel pe care cade ochiul.
 
+## Al doilea anunț cu același nume
+
+„Fotbal în seara asta", pus a doua oară de același om, intră în bază drept
+**„Fotbal în seara asta #2"**. Al treilea, „#3".
+
+Numărul îl pune site-ul, la scriere (`titluCuNumar()`, chemat din
+`salveazaEveniment()`) — nu formularul. Omul scrie titlul pe care îl are în cap;
+dacă l-ar fi numărat el, ar fi trebuit să țină minte la ce a rămas.
+
+**În dreptul fiecărui om.** Doi vecini care pun amândoi „Fotbal în seara asta"
+scriu despre două seri deosebite; un „#2" pus celui de-al doilea l-ar fi făcut
+să pară continuarea unui anunț pe care nu l-a scris.
+
+**Se numără din toate ale lui**, oricare le-ar fi starea — și cele încheiate, și
+cele anulate. Tocmai acelea sunt „din trecut": scoase din socoteală, anunțul de
+azi ar fi purtat același nume cu unul de pe profilul lui, iar cele două rânduri
+n-ar mai fi putut fi deosebite.
+
+Trei amănunte care par mărunte până se lovește cineva de ele:
+
+- **Coada se taie întâi.** Cine scrie el însuși „Fotbal #2" nu cere un al doilea
+  anunț numit așa: cere un „Fotbal", iar numărul îl punem noi. Altfel ieșea
+  „Fotbal #2 #2".
+- **Doar coada.** „Sala #3 la ora 8" rămâne întreg — acolo diezul e parte din ce
+  a vrut omul să spună.
+- **Numărul următor vine din cel mai mare, nu din câte rânduri sunt.** Dacă „#2"
+  se șterge vreodată de mână din phpMyAdmin, următorul rămâne „#4", nu se
+  întoarce la „#3" peste unul care există deja.
+
+**Nu se cheamă la editare.** Titlul e deja numerotat, iar o a doua trecere l-ar
+fi urcat cu unu la fiecare virgulă îndreptată.
+
+La „Remake" merge de la sine: formularul vine completat cu „Fotbal #2", iar la
+salvare iese „Fotbal #3".
+
+## Cifra din colțul cartonașului
+
+Doar **câte comentarii** are anunțul. A stat acolo și numărul participanților, și
+nu mai stă.
+
+Motivul: pe un cartonaș, „0" scris lângă un omuleț nu se citește „încă nu s-a
+înscris nimeni", se citește „nu se duce nimeni" — și asta chiar la evenimentele
+proaspăt publicate, cărora le-ar fi trebuit ajutorul cel mai mult. Cine vrea să
+știe câți vin deschide anunțul, unde scrie cu vorbe.
+
+Odată cu cifra a ieșit și subcererea care o aducea (`CIFRE_CARTONAS`), și
+coloana `participanti_max` din listele care desenează cartonașe: nimic nu le mai
+citea, iar un `SELECT` care aduce ce nu se folosește e o socoteală făcută la
+fiecare încărcare a primei pagini, degeaba.
+
 ## „FindMe" — abțibildele cu coduri QR
 
 Un abțibild lipit pe un stâlp, cu un cod QR pe el. Cine îl găsește și îl scanează
@@ -1968,9 +2018,16 @@ așa ceva ar fi fost o listă de oameni care au apăsat un buton. Rămân coment
 — acolo lumea se întreabă unde n-a căutat încă.
 
 Caseta vânătorii are două chipuri: **numărătoarea inversă** până la termen, sau
-**câștigătorul**, cu poza și cu legătură spre profilul lui. Sub cifre stă mereu și
-clipa scrisă în litere: dacă JS-ul nu pornește, omul tot află până când are de
-căutat. Cifrele sunt doar mai vii.
+**câștigătorul**, cu poza mare și cu legătură spre profilul lui. Sub cifre stă
+mereu și clipa scrisă în litere: dacă JS-ul nu pornește, omul tot află până când
+are de căutat. Cifrele sunt doar mai vii.
+
+Numărătoarea se scrie cu vorbe — „4 zile, 5 ore, 33 min și 21 sec" — iar
+**bucățile goale de la început cad**, una câte una: „5 ore, 33 min și 21 sec",
+apoi „33 min și 21 sec", iar în ultimul minut doar „32 secunde". Un „0 zile, 0
+ore" scris în față ar fi împins secundele — singurul lucru care se mai mișcă — în
+coada rândului. Cad numai cele de la început: „2 ore, 0 min și 5 sec" rămâne
+întreg, fiindcă acolo zeroul chiar spune ceva.
 
 ### Termenul
 
@@ -2043,7 +2100,29 @@ abțibildului.
 - Un abțibild găsit nu se poate desface din interfață (nici de staff). Rândul se
   schimbă de mână, din phpMyAdmin.
 - Nu pleacă niciun e-mail când cineva câștigă: află pe loc, pe `findme.php`.
-- Codurile nu se șterg și nu se refolosesc, nici după ce vânătoarea s-a încheiat.
+- Un cod desprins de eveniment se poate lega de altul, dar nu se refolosește
+  după ce a fost găsit — atunci rândul rămâne pentru totdeauna.
+
+### Ștergerea unui cod
+
+„×"-ul din capătul rândului, pe `coduri.php`. Cere o încuviințare, fiindcă
+abțibildul e deja lipit undeva prin oraș și codul nu se mai poate face la loc: o
+apăsare din greșeală înseamnă o hârtie care nu mai duce nicăieri.
+
+**Unul găsit nu se șterge** (`poateFiStersCodul`). Rândul acela nu mai e o
+unealtă, e istoria cuiva: de el atârnă cifra „Coduri QR găsite" de pe profilul
+câștigătorului, iar omul de casă care face curat prin listă n-are de unde să
+știe că apăsând un „×" scade cu unu ceva de pe pagina altcuiva. Aceeași regulă ca
+peste tot pe site: ce a fost nu se șterge — contul se anonimizează, comentariul
+se golește, dorința rămâne în tabel.
+
+Pentru rândurile acelea nu se desenează un buton stins, ci nu se desenează
+nimic: un buton care nu face nimic e o întrebare fără răspuns. În locul lui stă
+o liniuță, cu explicația în `title`.
+
+`gasit_de IS NULL` stă în `WHERE`-ul ștergerii, nu doar în întrebarea de
+dinainte: între apăsarea „×"-ului și fapta propriu-zisă încape scanarea care
+tocmai a câștigat, iar pagina din fața omului nu știe de ea.
 
 ## Categorii ținute pentru casă
 

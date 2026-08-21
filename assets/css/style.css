@@ -4519,40 +4519,65 @@ body { overscroll-behavior-y: none; }
 }
 
 /* Numărătoarea inversă. `tabular-nums` e tot rostul: fără el, cifrele au
-   lățimi diferite, iar ceasul tresaltă la fiecare secundă. */
+   lățimi diferite, iar ceasul tresaltă la fiecare secundă.
+
+   Nu e scrisă cât un titlu, deși e lucrul cel mai viu din casetă: nu mai e un
+   „04:31:07" de patru semne, ci o frază întreagă („4 zile, 5 ore, 33 min și 21
+   sec"). La mărimea de dinainte se rupea în două rânduri pe orice telefon. */
 .findme__ceas {
   margin-top: 18px;
-  font-size: clamp(30px, 7vw, 44px);
+  font-size: clamp(19px, 4.4vw, 27px);
   font-weight: 800;
-  letter-spacing: -.02em;
+  letter-spacing: -.01em;
   font-variant-numeric: tabular-nums;
   color: var(--brand);
-  line-height: 1.1;
+  line-height: 1.25;
+  text-wrap: balance;
 }
 .findme__ceas.e-gata { color: var(--text-faint); font-size: 22px; }
 
 .findme__cand { margin-top: 8px; font-size: 13px; color: var(--text-faint); }
 
-/* Câștigătorul: poza, numele, o vorbă. Pe telefon trec unul sub altul. */
+/* Câștigătorul: poza mare în stânga, cele patru rânduri de text alături.
+   `align-items: stretch` (implicit) plus `height: 100%` pe poză o fac să
+   acopere tot, de la „Abțibildul a fost găsit" până la „L-a găsit …" — de-aia
+   textul stă strâns într-un singur frate, `.findme__spus`. */
+.findme--gasit { text-align: left; }
+
 .findme__om {
-  display: flex; align-items: center; justify-content: center;
-  gap: 14px; text-align: left;
-  margin-top: 16px;
+  display: flex; align-items: center; gap: 20px;
+  justify-content: center;
 }
+.findme__spus { min-width: 0; }
+
+/* Mărime scrisă, nu socotită din înălțimea textului.
+   `height: 100%` ar fi fost frumos — cercul creștea singur cât cele patru
+   rânduri — dar procentul are nevoie de o înălțime DEFINITĂ pe părinte, iar
+   un flex container cu înălțime dată de conținut n-are așa ceva: poza cădea
+   înapoi pe `min-height` și rămânea mai mică decât textul.
+   130 e cât măsoară cele patru rânduri („Abțibildul a fost găsit" → „L-a
+   găsit …") la mărimile de aici. */
 .findme__poza {
-  width: 56px; height: 56px; flex: none;
+  flex: none;
+  width: 130px; height: 130px;
   border-radius: 50%; object-fit: cover;
-  border: 2px solid var(--surface);
+  border: 3px solid var(--surface);
   box-shadow: 0 0 0 2px color-mix(in srgb, #16a34a 45%, transparent);
 }
-.findme__castigator {
-  display: block; font-size: 17px; font-weight: 800; color: var(--text);
-}
-a.findme__castigator:hover { color: var(--brand); }
-.findme__om .findme__vorba { margin: 2px 0 0; font-size: 14px; max-width: none; }
 
-@media (max-width: 480px) {
-  .findme__om { flex-direction: column; text-align: center; gap: 10px; }
+.findme__castigator { font-weight: 800; color: var(--text); }
+a.findme__castigator:hover { color: var(--brand); }
+.findme--gasit .findme__vorba,
+.findme--gasit .findme__cand { margin-inline: 0; max-width: 40ch; }
+
+@media (max-width: 560px) {
+  /* Sub poză, nu lângă ea: la lățimea asta cercul ar fi lăsat textului mai
+     puțin de douăzeci de caractere pe rând. */
+  .findme--gasit { text-align: center; }
+  .findme__om { flex-direction: column; align-items: center; gap: 12px; }
+  .findme__poza { width: 104px; height: 104px; }
+  .findme--gasit .findme__vorba,
+  .findme--gasit .findme__cand { margin-inline: auto; }
 }
 
 /* -------------------------- pagina de după scanare ---------------------- */
@@ -4675,6 +4700,10 @@ a.findme__castigator:hover { color: var(--brand); }
    telefon. Regula de aur a site-ului: nimic nu împinge <body> orizontal. */
 .coduri__scroll { overflow-x: auto; }
 
+/* Butonul „Vezi încă…" stă lipit de tabel, nu la patruzeci de pixeli ca pe
+   prima pagină: aici e o unealtă, iar rândul de sub listă e chiar capătul ei. */
+.coduri .load-more { margin-top: 18px; }
+
 .tabel-coduri { width: 100%; border-collapse: collapse; font-size: 14px; }
 .tabel-coduri th, .tabel-coduri td {
   padding: 10px 12px; text-align: left; vertical-align: top;
@@ -4702,6 +4731,27 @@ a.findme__castigator:hover { color: var(--brand); }
   border-radius: var(--radius-pill);
   font-size: 12px; font-weight: 700;
 }
+/* „×"-ul de la capătul rândului. Stins cât stă, roșu la trecerea cu mouse-ul:
+   e o ștergere, deci n-are ce căuta în ochi până nu te apropii de el. */
+.cod-rand__unelte { width: 1%; text-align: right; }
+
+.cod-sterge {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; padding: 0;
+  border: 1px solid transparent; border-radius: var(--radius);
+  background: none; color: var(--text-faint);
+  cursor: pointer;
+  transition: color .15s var(--ease), background .15s var(--ease),
+              border-color .15s var(--ease);
+}
+.cod-sterge .ico { width: 15px; height: 15px; }
+.cod-sterge:hover:not(:disabled) {
+  color: var(--brand-link);
+  border-color: color-mix(in srgb, var(--brand) 35%, transparent);
+  background: color-mix(in srgb, var(--brand) 9%, transparent);
+}
+.cod-sterge:disabled { opacity: .45; cursor: default; }
+
 .cod-stare--nefolosit { background: var(--bg-soft);                            color: var(--text-faint); }
 .cod-stare--in_joc    { background: color-mix(in srgb, var(--brand) 14%, transparent); color: var(--brand); }
 .cod-stare--gasit     { background: rgba(22, 163, 74, .14);                    color: #16a34a; }

@@ -5656,7 +5656,57 @@
     var pana    = parseInt(ceasQr.getAttribute('data-findme-timer'), 10) * 1000;
     var batere  = null;
 
-    var douaCifre = function (n) { return (n < 10 ? '0' : '') + n; };
+    /**
+     * Cât a mai rămas, scris pe românește: „4 zile, 5 ore, 33 min și 21 sec".
+     *
+     * BUCĂȚILE GOALE DE LA ÎNCEPUT CAD, una câte una. Când nu mai sunt zile
+     * rămâne „5 ore, 33 min și 21 sec", pe urmă „33 min și 21 sec", iar la
+     * capăt doar „32 secunde". Un „0 zile, 0 ore" scris în față ar fi împins
+     * secundele — singurul lucru care se mai mișcă — în coada rândului.
+     *
+     * Cad doar cele de la ÎNCEPUT: „2 ore, 0 min și 5 sec" rămâne întreg,
+     * fiindcă acolo zeroul chiar spune ceva.
+     *
+     * În ultimul minut se scrie „32 secunde", nu „32 sec": e singurul lucru pe
+     * ecran, deci are loc să fie scris ca lumea — și e clipa în care omul se
+     * uită cel mai atent la el.
+     */
+    var vorbaRamasa = function (secunde) {
+      var zile   = Math.floor(secunde / 86400);
+      var ore    = Math.floor((secunde % 86400) / 3600);
+      var minute = Math.floor((secunde % 3600) / 60);
+      var sec    = secunde % 60;
+
+      /**
+       * „3 zile", dar „21 de zile" — aceeași regulă ca numaratoare() de mai
+       * sus și ca numaratoare() din PHP. Zeroul merge fără „de": „0 ore", nu
+       * „0 de ore".
+       *
+       * Numai la cuvintele scrise întreg. Prescurtările („min", „sec") nu iau
+       * niciodată „de": nimeni nu scrie „21 de min".
+       */
+      var cate = function (n, unul, multe) {
+        if (n === 1) { return '1 ' + unul; }
+        return n + (n === 0 || (n % 100 >= 1 && n % 100 <= 19) ? ' ' : ' de ') + multe;
+      };
+
+      var bucati = [];
+      if (zile   > 0) { bucati.push(cate(zile, 'zi', 'zile')); }
+      if (bucati.length || ore    > 0) { bucati.push(cate(ore, 'oră', 'ore')); }
+      if (bucati.length || minute > 0) { bucati.push(minute + ' min'); }
+
+      if (!bucati.length) {
+        return cate(sec, 'secundă', 'secunde');
+      }
+
+      bucati.push(sec + ' sec');
+
+      // Ultima se leagă cu „și", restul cu virgulă: „4 zile, 5 ore, 33 min și
+      // 21 sec". Așa se citește un rând de cifre în românește.
+      var ultima = bucati.pop();
+
+      return bucati.join(', ') + ' și ' + ultima;
+    };
 
     var bateCeasul = function () {
       var ramas = pana - Date.now();
@@ -5668,27 +5718,128 @@
         return;
       }
 
-      var secunde = Math.floor(ramas / 1000);
-      var zile    = Math.floor(secunde / 86400);
-      var ore     = Math.floor((secunde % 86400) / 3600);
-      var minute  = Math.floor((secunde % 3600) / 60);
-      var sec     = secunde % 60;
-
-      // „o zi", „3 zile", dar „21 de zile" — aceeași regulă ca numaratoare()
-      // de mai sus și ca numaratoare() din PHP.
-      var vorbaZile = zile === 1
-        ? '1 zi'
-        : zile + (zile % 100 >= 1 && zile % 100 <= 19 ? ' zile' : ' de zile');
-
-      // Peste o zi, secundele n-ajută pe nimeni: „2 zile 04:31" se citește
-      // dintr-o privire, „2 zile 04:31:07" cere să te uiți de două ori.
-      cifreQr.textContent = zile > 0
-        ? vorbaZile + ' ' + douaCifre(ore) + ':' + douaCifre(minute)
-        : douaCifre(ore) + ':' + douaCifre(minute) + ':' + douaCifre(sec);
+      cifreQr.textContent = vorbaRamasa(Math.floor(ramas / 1000));
     };
 
     bateCeasul();
     batere = setInterval(bateCeasul, 1000);
+  }
+
+  /* ======================================================================
+     „FINDME" — LISTA DE ABȚIBILDE A OMULUI DE CASĂ (coduri.php)
+
+     Două treburi mărunte pe același tabel: arată zece rânduri deodată, și
+     șterge un cod cu „×".
+
+     Toate cele cincizeci sunt deja în pagină; aici doar se ascund. Fără JS se
+     văd toate, ceea ce e chiar purtarea de dinainte — supărătoare, nu
+     stricăcioasă.
+     ====================================================================== */
+
+  var zonaCoduri = document.querySelector('[data-coduri]');
+
+  if (zonaCoduri) {
+    var listaCoduri  = zonaCoduri.querySelector('[data-lista-coduri]');
+    var maiCoduri    = zonaCoduri.querySelector('[data-mai-multe-coduri]');
+    var maiCoduriBtn = zonaCoduri.querySelector('[data-mai-multe-coduri-buton]');
+    var rauCoduri    = zonaCoduri.querySelector('[data-coduri-rau]');
+    var codDeodata   = parseInt(zonaCoduri.getAttribute('data-deodata'), 10) || 10;
+    var codVizibile  = codDeodata;
+
+    var spuneRau = function (text) {
+      if (!rauCoduri) { toast(text); return; }
+      rauCoduri.textContent = text;
+      rauCoduri.hidden = false;
+    };
+
+    var randuriCoduri = function () {
+      return listaCoduri
+        ? Array.prototype.slice.call(listaCoduri.querySelectorAll('.cod-rand'))
+        : [];
+    };
+
+    var potriveste = function () {
+      var randuri = randuriCoduri();
+
+      randuri.forEach(function (r, i) { r.hidden = i >= codVizibile; });
+
+      var ascunse = Math.max(0, randuri.length - codVizibile);
+
+      if (maiCoduri) { maiCoduri.hidden = ascunse === 0; }
+
+      if (maiCoduriBtn && ascunse > 0) {
+        // Câte mai sunt, nu doar „Vezi mai mult": omul vede dintr-o privire
+        // dacă mai apasă o dată sau de patru ori.
+        maiCoduriBtn.textContent = 'Vezi încă ' + Math.min(ascunse, codDeodata)
+                                 + ' din ' + ascunse;
+      }
+    };
+
+    potriveste();
+
+    if (maiCoduriBtn) {
+      maiCoduriBtn.addEventListener('click', function () {
+        codVizibile += codDeodata;
+        potriveste();
+      });
+    }
+
+    /* ------------------------- ștergerea ---------------------------- */
+
+    listaCoduri && listaCoduri.addEventListener('click', function (e) {
+      var buton = e.target.closest('[data-sterge-cod]');
+      if (!buton) { return; }
+
+      var rand = buton.closest('.cod-rand');
+      var cod  = rand ? rand.getAttribute('data-cod') : '';
+      if (!cod) { return; }
+
+      // Abțibildul e lipit undeva prin oraș, iar codul nu se mai poate face la
+      // loc: o apăsare din greșeală înseamnă o hârtie care nu mai duce
+      // nicăieri. De aceea se întreabă, deși e o listă de unelte.
+      var eInJoc = rand.classList.contains('cod-rand--in_joc');
+      var intreb = eInJoc
+        ? 'Codul ' + cod + ' ține de un eveniment care încă se joacă. '
+          + 'Ștergi abțibildul? Vânătoarea aceea rămâne fără cod.'
+        : 'Ștergi codul ' + cod + '?';
+
+      if (!window.confirm(intreb)) { return; }
+
+      buton.disabled = true;
+      if (rauCoduri) { rauCoduri.hidden = true; }
+
+      fetch('api/sterge-cod.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          csrf: zonaCoduri.getAttribute('data-csrf') || '',
+          cod:  cod
+        })
+      })
+      .then(citesteRaspuns)
+      .then(function (rez) {
+        var c = rez.corp;
+
+        if (!c || !c.ok) {
+          buton.disabled = false;
+          spuneRau((c && c.mesaj) || 'Nu am putut șterge codul.');
+          return;
+        }
+
+        rand.remove();
+
+        // Rândul plecat lasă un loc liber în cele zece: se numără din nou, ca
+        // butonul de jos să spună adevărul.
+        potriveste();
+
+        if (randuriCoduri().length === 0) { window.location.reload(); }
+      })
+      .catch(function () {
+        buton.disabled = false;
+        spuneRau(mesajFaraLegatura());
+      });
+    });
   }
 
 })();
