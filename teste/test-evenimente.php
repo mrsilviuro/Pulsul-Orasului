@@ -888,6 +888,83 @@ verifica('dar fără copertă', true,
 @unlink($dosarCop . '/' . $numeSursa . '.jpg');
 db()->exec('DELETE FROM evenimente');
 
+/* ============ CATEGORIILE ȚINUTE PENTRU CASĂ („FindMe") ============= */
+
+echo "\n=== CATEGORIA DOAR PENTRU STAFF ===\n";
+
+/**
+ * Prima e „FindMe": jocul cu coduri QR ascunse prin oraș. Evenimentele lui nu
+ * le propune nimeni, le pune casa — deci categoria n-are ce căuta în lista din
+ * care alege omul obișnuit.
+ *
+ * Ascunsă e CATEGORIA, ca alegere. Evenimentele din ea se văd ca oricare
+ * altele: altfel n-ar avea cine să caute codurile.
+ */
+db()->prepare('DELETE FROM categorii WHERE slug = ?')->execute(['tst-cat-casa']);
+db()->prepare('INSERT INTO categorii (nume, slug, ordine, doar_staff) VALUES (?,?,?,1)')
+    ->execute(['Doar pentru casă', 'tst-cat-casa', 98]);
+$idCasa = (int) db()->lastInsertId();
+
+$slugurile = static fn(array $c): array =>
+    array_map(static fn(array $x): string => (string) $x['slug'], $c);
+
+verifica('lista obișnuită n-o are', false,
+    in_array('tst-cat-casa', $slugurile(categoriiEvenimente()), true));
+verifica('cea a staff-ului, da', true,
+    in_array('tst-cat-casa', $slugurile(categoriiEvenimente(true)), true));
+
+verifica('omul obișnuit n-are id-ul ei', false,
+    in_array($idCasa, idCategoriiValide(), true));
+verifica('staff-ul îl are', true, in_array($idCasa, idCategoriiValide(true), true));
+
+/**
+ * De id-uri atârnă cine POATE PUBLICA acolo: nu e de ajuns că lista din
+ * formular n-o arată — cine scrie numărul de mână în cerere trebuie respins.
+ */
+$campuriCasa = static fn(): array => [
+    'titlu'            => 'Ceva pus la cale de casă',
+    'categorie_id'     => (string) $idCasa,
+    'oras'             => 'Roman',
+    'locatie'          => 'Piața Sfatului, lângă fântână',
+    'data_eveniment'   => date('d-m-Y', strtotime('+10 days')),
+    'ora_inceput'      => '19:00',
+    'fara_ora_sfarsit' => '1',
+    'gratuit'          => '1',
+    'varsta_minima'    => 'nespecificat',
+    'gen_participanti' => 'nespecificat',
+    'fara_participanti_min' => '1',
+    'fara_participanti_max' => '1',
+    'descriere'        => str_repeat('Povestea evenimentului de casă. ', 12),
+];
+
+verifica('cu lista omului, categoria e respinsă', true,
+    !empty(verificaEveniment($campuriCasa(), idCategoriiValide(), ['Roman'])['erori']['categorie_id']));
+verifica('cu lista staff-ului, trece', [],
+    verificaEveniment($campuriCasa(), idCategoriiValide(true), ['Roman'])['erori']);
+
+/**
+ * În filtrele de pe prima pagină intră ca oricare alta, pentru toată lumea.
+ * `doar_staff` spune cine poate PUBLICA acolo, nu cine poate căuta: dacă
+ * evenimentele ei se văd în listă, trebuie să se poată și filtra după ea.
+ */
+verifica('goală, nu intră în filtre (ca oricare alta)', false,
+    in_array('tst-cat-casa', $slugurile(categoriiCuEvenimente()), true));
+
+$idCasaEv = pune($idOrg, 'Un eveniment de casă', 'aprobat', 7);
+db()->prepare('UPDATE evenimente SET categorie_id = ? WHERE id = ?')->execute([$idCasa, $idCasaEv]);
+
+verifica('cu un eveniment în ea, intră în filtre', true,
+    in_array('tst-cat-casa', $slugurile(categoriiCuEvenimente()), true));
+
+// Iar slugul ei din adresă chiar filtrează — altfel butonul n-ar face nimic.
+verifica('slugul ei din adresă e primit', 'tst-cat-casa', categoriaCeruta('tst-cat-casa'));
+verifica('și filtrarea îl scoate', 1,
+    count(evenimenteDePePrima('', 'tst-cat-casa', 0, 10)['evenimente']));
+
+db()->exec('DELETE FROM evenimente');
+db()->prepare('DELETE FROM categorii WHERE id = ?')->execute([$idCasa]);
+verifica('am făcut curat după categoria de casă', 0, cateEvenimente());
+
 echo "\n=== APĂRAREA PUNCTULUI DE INTRARE ===\n";
 
 $r = cerere($baza . '/api/eveniment.php', $c, ['csrf' => 'gresit', 'titlu' => 'x']);
@@ -1322,7 +1399,16 @@ verifica('participanți maxim', '40', $valoarea('ev-max', $formular));
 verifica('descrierea e în textarea', true,
     str_contains($formular, 'Povestea evenimentului.'));
 
-verifica('categoria e aleasă', true, str_contains($formular, 'value="1"' . "\n" . '                      selected'));
+/**
+ * Că `<option value="1">` e cel bifat — fără să ne agățăm de spațierea din
+ * pagină. Prima scriere cerea o potrivire literală, cu tot cu rândul nou și
+ * cele 22 de spații dinaintea lui „selected": a picat de îndată ce în
+ * `<option>` a mai intrat un atribut (`data-joc-qr`), deși pagina era
+ * neschimbată. Un test care se sperie de o îndreptare de indentare nu apără
+ * nimic, doar dă alarme false.
+ */
+verifica('categoria e aleasă', true,
+    preg_match('/<option value="1"[^>]*\bselected\b/', $formular) === 1);
 verifica('vârsta minimă e aleasă', true, preg_match('/value="16"\s*\n?\s*selected/', $formular) === 1);
 verifica('genul e ales', true, preg_match('/value="barbati"\s*\n?\s*selected/', $formular) === 1);
 

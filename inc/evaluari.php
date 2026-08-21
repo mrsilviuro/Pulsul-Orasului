@@ -536,6 +536,22 @@ function laCateEvenimenteNuAVenit(int $membruId): int
     return (int) $q->fetchColumn();
 }
 
+/**
+ * Câte abțibilde „FindMe" a găsit omul ăsta prin oraș — cifra de pe al patrulea
+ * cartonaș al profilului.
+ *
+ * O singură frază, dar scrisă în inc/coduri-qr.php, lângă tabelul ei. Aici
+ * rămâne doar ușa: profil.php cere de la fișierul ăsta toate cele patru cifre,
+ * iar dacă a cincea ar veni de altundeva, pagina ar fi trebuit să știe din care
+ * fișier vine fiecare.
+ */
+function cateCoduriQrGasite(int $membruId): int
+{
+    require_once __DIR__ . '/coduri-qr.php';
+
+    return cateCoduriQrGasiteDe($membruId);
+}
+
 /* ========================= CUM ARATĂ PE ECRAN ======================== */
 
 /**

@@ -101,6 +101,35 @@ $meniu = [
     ],
 ];
 
+/**
+ * Abțibildele „FindMe", numai pentru oamenii casei.
+ *
+ * E singura ușă spre coduri.php, și trebuie să existe: jocul cere ca ÎNTÂI să
+ * faci codul și abia pe urmă să publici anunțul, deci pagina se cere înaintea
+ * formularului — n-are cum s-o dea formularul.
+ *
+ * ÎN LISTA DE MENIU, nu printre butoanele rotunde din dreapta. Acolo încap
+ * patru lucruri (chipul, rotița, tema, burgerul) și niciunul în plus: al
+ * cincilea împingea bara cu nouă pixeli peste marginea unui telefon de 390.
+ * Aici intră singur în meniul-burger, cu icoană și cu nume scris — și tocmai
+ * pe telefon are cel mai mult rost, fiindcă abțibildele se lipesc în stradă.
+ *
+ * Nu e ascunsă din CSS: pentru cine nu e de-al casei, nu ajunge în pagină. Iar
+ * coduri.php întreabă din nou, fiindcă un buton care nu se vede rămâne o
+ * adresă care se poate scrie de mână.
+ */
+if ($logat && esteStaff($membru)) {
+    $meniu[] = [
+        'cheie' => 'coduri',
+        'href'  => 'coduri.php',
+        'text'  => 'Abțibilde',
+        'ico'   => '<rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/>'
+                 . '<rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/>'
+                 . '<rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/>'
+                 . '<path d="M13.5 13.5h3v3h-3zM20.5 13.5h-1M20.5 17.5v3h-3M16.5 20.5h-1"/>',
+    ];
+}
+
 // După „Contact" vine fie invitația de înscriere, fie ieșirea din cont.
 if ($logat) {
     $meniu[] = [
@@ -169,7 +198,7 @@ if ($logat) {
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/css/style.css?v=80">
+<link rel="stylesheet" href="assets/css/style.css?v=82">
 
 <!-- Setează tema ÎNAINTE de randare, ca să nu apară un flash alb pe dark mode -->
 <script>
