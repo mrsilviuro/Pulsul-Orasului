@@ -888,6 +888,77 @@ verifica('dar fără copertă', true,
 @unlink($dosarCop . '/' . $numeSursa . '.jpg');
 db()->exec('DELETE FROM evenimente');
 
+/* ============ CATEGORIILE ȚINUTE PENTRU CASĂ („FindMe") ============= */
+
+echo "\n=== CATEGORIA DOAR PENTRU STAFF ===\n";
+
+/**
+ * Prima e „FindMe": jocul cu coduri QR ascunse prin oraș. Evenimentele lui nu
+ * le propune nimeni, le pune casa — deci categoria n-are ce căuta în lista din
+ * care alege omul obișnuit.
+ *
+ * Ascunsă e CATEGORIA, ca alegere. Evenimentele din ea se văd ca oricare
+ * altele: altfel n-ar avea cine să caute codurile.
+ */
+db()->prepare('DELETE FROM categorii WHERE slug = ?')->execute(['tst-cat-casa']);
+db()->prepare('INSERT INTO categorii (nume, slug, ordine, doar_staff) VALUES (?,?,?,1)')
+    ->execute(['Doar pentru casă', 'tst-cat-casa', 98]);
+$idCasa = (int) db()->lastInsertId();
+
+$slugurile = static fn(array $c): array =>
+    array_map(static fn(array $x): string => (string) $x['slug'], $c);
+
+verifica('lista obișnuită n-o are', false,
+    in_array('tst-cat-casa', $slugurile(categoriiEvenimente()), true));
+verifica('cea a staff-ului, da', true,
+    in_array('tst-cat-casa', $slugurile(categoriiEvenimente(true)), true));
+
+verifica('omul obișnuit n-are id-ul ei', false,
+    in_array($idCasa, idCategoriiValide(), true));
+verifica('staff-ul îl are', true, in_array($idCasa, idCategoriiValide(true), true));
+
+/**
+ * De id-uri atârnă cine POATE PUBLICA acolo: nu e de ajuns că lista din
+ * formular n-o arată — cine scrie numărul de mână în cerere trebuie respins.
+ */
+$campuriCasa = static fn(): array => [
+    'titlu'            => 'Ceva pus la cale de casă',
+    'categorie_id'     => (string) $idCasa,
+    'oras'             => 'Roman',
+    'locatie'          => 'Piața Sfatului, lângă fântână',
+    'data_eveniment'   => date('d-m-Y', strtotime('+10 days')),
+    'ora_inceput'      => '19:00',
+    'fara_ora_sfarsit' => '1',
+    'gratuit'          => '1',
+    'varsta_minima'    => 'nespecificat',
+    'gen_participanti' => 'nespecificat',
+    'fara_participanti_min' => '1',
+    'fara_participanti_max' => '1',
+    'descriere'        => str_repeat('Povestea evenimentului de casă. ', 12),
+];
+
+verifica('cu lista omului, categoria e respinsă', true,
+    !empty(verificaEveniment($campuriCasa(), idCategoriiValide(), ['Roman'])['erori']['categorie_id']));
+verifica('cu lista staff-ului, trece', [],
+    verificaEveniment($campuriCasa(), idCategoriiValide(true), ['Roman'])['erori']);
+
+/**
+ * Din filtrele de pe prima pagină lipsește pentru TOȚI, inclusiv pentru staff:
+ * filtrele sunt pentru cine caută o ieșire, nu o unealtă de administrare.
+ */
+$idCasaEv = pune($idOrg, 'Un eveniment de casă', 'aprobat', 7);
+db()->prepare('UPDATE evenimente SET categorie_id = ? WHERE id = ?')->execute([$idCasa, $idCasaEv]);
+
+verifica('nici cu un eveniment în ea nu intră în filtre', false,
+    in_array('tst-cat-casa', $slugurile(categoriiCuEvenimente()), true));
+
+// Iar slugul ei, scris de mână în adresă, înseamnă „toate", nu o eroare.
+verifica('slugul ei din adresă înseamnă „toate"', '', categoriaCeruta('tst-cat-casa'));
+
+db()->exec('DELETE FROM evenimente');
+db()->prepare('DELETE FROM categorii WHERE id = ?')->execute([$idCasa]);
+verifica('am făcut curat după categoria de casă', 0, cateEvenimente());
+
 echo "\n=== APĂRAREA PUNCTULUI DE INTRARE ===\n";
 
 $r = cerere($baza . '/api/eveniment.php', $c, ['csrf' => 'gresit', 'titlu' => 'x']);

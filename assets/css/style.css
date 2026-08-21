@@ -1885,6 +1885,22 @@ main { padding-block: 46px 64px; }
 }
 .person__name:hover { color: var(--brand); }
 .person__meta { font-size: 12.5px; color: var(--text-faint); }
+
+/* Numărul de telefon, sub nume — îl văd doar organizatorul și staff-ul.
+   În culoarea textului obișnuit, nu în cea a legăturilor: e o informație
+   care se citește, nu un buton pe care să apeși din greșeală. Se aprinde
+   la trecerea cu mouse-ul, ca să se vadă că totuși se poate apăsa. */
+.person__telefon {
+  display: inline-flex; align-items: center; gap: 5px;
+  align-self: flex-start;
+  margin-top: 2px;
+  font-size: 12.5px; font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-soft);
+  transition: color .18s var(--ease);
+}
+.person__telefon:hover { color: var(--brand-link); }
+.person__telefon .ico { width: 13px; height: 13px; flex: none; }
 .person__badge {
   padding: 2px 9px;
   border-radius: var(--radius-pill);
@@ -2967,9 +2983,13 @@ body { overscroll-behavior-y: none; }
 .review-form__unde a { color: var(--brand-link); font-weight: 600; }
 
 /* --------------------------- 22. ACTIVITATE ----------------------------- */
+/* Patru cartonașe, de când s-a adăugat „Coduri QR găsite". Pe un ecran lat
+   stau toate pe un rând; sub 900px se rup în două rânduri de câte două, ca
+   eticheta cea mai lungă („A confirmat, dar nu a venit") să nu se strângă în
+   trei rânduri; pe telefon, unul sub altul. */
 .stats {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 16px;
   margin-top: 18px;
 }
@@ -3008,6 +3028,11 @@ body { overscroll-behavior-y: none; }
 .stat__ico--ok    { background: rgba(22, 163, 74, .13); color: #16a34a; }
 .stat__ico--warn  { background: rgba(240, 160, 40, .15); color: #d68a10; }
 [data-theme="dark"] .stat__ico--warn { color: #f0a028; }
+
+/* „Coduri QR găsite" — jocul „FindMe". Mov, ca al doilea capăt al gradientului
+   de brand: e altceva decât evenimentele, dar tot de-al casei. */
+.stat__ico--qr    { background: rgba(124, 92, 255, .13); color: #6d4bff; }
+[data-theme="dark"] .stat__ico--qr { color: var(--brand-2); }
 
 .stat__value { font-size: 27px; font-weight: 800; letter-spacing: -.02em; line-height: 1.1; }
 .stat__label { font-size: 13px; color: var(--text-soft); line-height: 1.35; }
@@ -3096,6 +3121,14 @@ body { overscroll-behavior-y: none; }
 .comment__main .rating__stars { margin-bottom: 5px; }
 
 /* ------------------- responsive pagina de profil ------------------------ */
+
+/* Patru cartonașe nu încap pe un rând sub 900px: eticheta cea mai lungă
+   („A confirmat, dar nu a venit") s-ar strânge în trei rânduri. Două câte
+   două, și pe telefon unul sub altul. */
+@media (max-width: 900px) {
+  .stats { grid-template-columns: repeat(2, 1fr); }
+}
+
 @media (max-width: 800px) {
   .stats { grid-template-columns: 1fr; }
   /* Cartonașele fiind acum unul sub altul, e loc destul ca iconița, cifra și

@@ -159,6 +159,16 @@ $cateOrganizate = $p ? cateEvenimenteOrganizate((int) $p['id']) : 12;
 $cateParticipari = $p ? laCateEvenimenteAFost((int) $p['id'])     : 0;
 $cateAbsente     = $p ? laCateEvenimenteNuAVenit((int) $p['id'])  : 0;
 
+/**
+ * A patra cifră: codurile QR găsite prin oraș, la jocul „FindMe".
+ *
+ * Deocamdată e mereu zero — jocul se scrie mai târziu, iar tabelul scanărilor
+ * nu există încă. Cartonașul stă totuși de pe acum lângă celelalte trei:
+ * adăugat mai târziu, ar fi rearanjat un rând pe care oamenii se obișnuiseră
+ * să-l citească. Vezi cateCoduriQrGasite() din inc/evaluari.php.
+ */
+$cateCoduriQr = $p ? cateCoduriQrGasite((int) $p['id']) : 0;
+
 /** Câte se văd din prima. Restul intră în pagină, dar ascunse. */
 const EVENIMENTE_VIZIBILE = 4;
 
@@ -334,6 +344,24 @@ require __DIR__ . '/inc/antet.php';
         </span>
         <span class="stat__value"><?= (int) $cateAbsente ?></span>
         <span class="stat__label">A confirmat, dar nu a venit</span>
+      </div>
+
+      <!--
+        „FindMe": coduri QR ascunse prin oraș, pe care oamenii le caută și le
+        scanează. Jocul se scrie mai târziu; cifra e deocamdată mereu zero,
+        dintr-un singur loc (cateCoduriQrGasite).
+      -->
+      <div class="stat">
+        <span class="stat__ico stat__ico--qr" aria-hidden="true">
+          <svg class="ico" viewBox="0 0 24 24">
+            <rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/>
+            <rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/>
+            <rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/>
+            <path d="M13.5 13.5h3v3h-3zM20.5 13.5h-1M20.5 17.5v3h-3M16.5 20.5h-1"/>
+          </svg>
+        </span>
+        <span class="stat__value"><?= (int) $cateCoduriQr ?></span>
+        <span class="stat__label">Coduri QR găsite</span>
       </div>
     </section>
 

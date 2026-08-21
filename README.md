@@ -1872,6 +1872,82 @@ altfel, cine îndreaptă o virgulă cu o oră înainte de start ar fi fost trimi
 să-și amâne ieșirea cu două ore. `verificaEveniment()` primește pentru asta un
 al cincilea argument: ce scrie acum în bază, sau `null` la un eveniment nou.
 
+## Numerele de telefon din lista de participanți
+
+Le văd **doar organizatorul și staff-ul**. Nimeni altcineva — nici măcar omul
+în dreptul numărului lui.
+
+Motivul e simplu: un participant și-a dat numărul organizatorului, nu celor
+douăzeci de pe listă. Dacă și-l vede pe al lui acolo, e firesc să creadă că-l
+văd și ceilalți pe-al lor, iar data viitoare nu-l mai scrie. Al lui îl are
+oricum în setări.
+
+Numai pe lista de **participanți**. La „Interesați" nu se scrie niciodată, nici
+pentru organizator: interesatului nu i s-a cerut vreodată numărul — „Mă
+interesează" nu e o hotărâre, e o însemnare.
+
+Regula stă într-un singur loc, `poateVedeaTelefoanele()`, fiindcă o cer trei:
+`event.php`, `api/interes.php` și `api/exclude-participant.php`. Al doilea e cel
+care contează: el redesenează listele pentru **oricine** apasă „Voi participa",
+deci un steag uitat acolo ar fi trimis numerele spre toți.
+
+Pentru cine n-are voie, coloana **nici nu se cere din bază** (al treilea
+argument al lui `oameniiCuStarea()`). Adusă mereu și ascunsă la desenare, ar fi
+fost la un pas de a ajunge în pagină: o funcție nouă care tipărește rândul
+întreg, un `var_dump` uitat într-o zi de căutat un bug.
+
+### Ordinea taburilor
+
+„Participă" e înaintea lui „Interesați": cine a spus că vine e vestea, ceilalți
+sunt o promisiune. Iar la un eveniment încheiat rămâne oricum numai primul,
+deci tot el trebuie să fie cel pe care cade ochiul.
+
+## Categorii ținute pentru casă
+
+Coloana `categorii.doar_staff` (vezi `sql/024-categorii-doar-staff.sql`). Prima
+astfel de categorie e **„FindMe"**: jocul cu coduri QR ascunse prin oraș, pe
+care oamenii le caută și le scanează. Evenimentele lui nu le propune nimeni —
+le pune casa.
+
+| | `doar_staff = 0` | `doar_staff = 1` |
+|---|---|---|
+| în formularul de publicare | toată lumea | doar staff |
+| se poate publica în ea | toată lumea | doar staff |
+| în filtrele de pe prima pagină | da | **nu, pentru nimeni** |
+| evenimentele din ea | se văd | **se văd la fel** |
+
+Ultimul rând e important: ascunsă e **categoria, ca alegere** — nu ce e în ea.
+Evenimentele „FindMe" apar pe prima pagină, au pagina lor și se pot da mai
+departe; altfel n-ar avea cine să caute codurile.
+
+Din filtre lipsește și pentru staff: filtrele sunt pentru cine caută o ieșire,
+nu o unealtă de administrare.
+
+`categoriiEvenimente()` întoarce **implicit** doar categoriile obișnuite — așa,
+o funcție nouă care uită să ceară lista întreagă arată prea puțin, nu prea mult.
+De `idCategoriiValide()` atârnă și cine **poate publica** acolo: nu e de ajuns
+că lista din formular n-o arată, fiindcă numărul se poate scrie de mână în
+cerere.
+
+Rândul se adaugă de mână, din phpMyAdmin:
+
+```sql
+INSERT INTO categorii (nume, slug, ordine, doar_staff)
+     VALUES ('FindMe', 'findme', 99, 1);
+```
+
+## „Coduri QR găsite" — al patrulea cartonaș de pe profil
+
+Lângă „Ieșiri organizate", „Prezent la activități" și „A confirmat, dar nu a
+venit". Cifra vine din `cateCoduriQrGasite()` și e **deocamdată mereu zero**:
+jocul „FindMe" se scrie mai târziu, iar tabelul scanărilor nu există încă.
+
+Funcția e acolo de pe acum ca să existe un singur loc de schimbat când vine ziua
+aceea — un zero scris de-a dreptul în `profil.php` ar fi fost de căutat prin
+pagină peste trei luni, într-un fișier care n-are nicio treabă cu jocul.
+Cartonașul la fel: adăugat mai târziu, ar fi rearanjat un rând pe care oamenii
+se obișnuiseră să-l citească.
+
 ## „Remake": încă unul la fel
 
 Pe dos față de „Editează": butonul apare abia **după ce evenimentul s-a

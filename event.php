@@ -152,6 +152,17 @@ $imiCereTelefon = $eLogat && !$eOrganizatorul && telefonulMembrului($membruId) =
 $poateScoateParticipanti = ($eOrganizatorul || $eStaff) && $ePublicat && !$aInceput;
 
 /**
+ * Cine vede numerele de telefon din lista de participanți: organizatorul și
+ * staff-ul, nimeni altcineva — nici măcar omul în dreptul numărului lui.
+ *
+ * Regula e a lui poateVedeaTelefoanele() din inc/interese.php, fiindcă o cer
+ * și cele două puncte de intrare care redesenează listele. Aici se hotărăște
+ * doar ce se trimite la desenat; pentru ceilalți, coloana nici nu se cere din
+ * bază.
+ */
+$vedeTelefoanele = poateVedeaTelefoanele($eveniment, $membru);
+
+/**
  * De ce nu se poate înscrie omul care se uită — dacă nu se poate.
  *
  * Ușa închisă de organizator, sau un eveniment care nu e pentru el (doar
@@ -850,6 +861,21 @@ require __DIR__ . '/inc/antet.php';
             <span class="tab__count" data-count-for="comentarii"><?= $cateComentarii ?></span>
           </button>
 
+          <!--
+            „Participă" înaintea lui „Interesați", dinadins: cine a spus că vine
+            e vestea, ceilalți sunt doar o promisiune. Iar la un eveniment
+            încheiat rămâne oricum numai ăsta, deci tot el trebuie să fie primul
+            pe care cade ochiul.
+          -->
+          <button class="tab" type="button" role="tab" id="tab-going"
+                  aria-controls="panel-going" aria-selected="false" tabindex="-1">
+            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="12" r="9"/><path d="m8.2 12.3 2.6 2.6 5-5.2"/>
+            </svg>
+            <span><?= $eIncheiat ? 'Au participat' : 'Participă' ?></span>
+            <span class="tab__count" data-count-for="participant"><?= (int) $numarInterese['participant'] ?></span>
+          </button>
+
           <?php if (!$eIncheiat): ?>
           <!--
             „Interesați" ține numai cât mai e ceva de hotărât.
@@ -869,15 +895,6 @@ require __DIR__ . '/inc/antet.php';
             <span class="tab__count" data-count-for="interesat"><?= (int) $numarInterese['interesat'] ?></span>
           </button>
           <?php endif; ?>
-
-          <button class="tab" type="button" role="tab" id="tab-going"
-                  aria-controls="panel-going" aria-selected="false" tabindex="-1">
-            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
-              <circle cx="12" cy="12" r="9"/><path d="m8.2 12.3 2.6 2.6 5-5.2"/>
-            </svg>
-            <span><?= $eIncheiat ? 'Au participat' : 'Participă' ?></span>
-            <span class="tab__count" data-count-for="participant"><?= (int) $numarInterese['participant'] ?></span>
-          </button>
         </div>
 
         <!-- ------------------------ PANOU: COMENTARII --------------------- -->
@@ -979,31 +996,6 @@ require __DIR__ . '/inc/antet.php';
           într-un singur loc și schimbat într-unul singur.
         ============================================================== -->
 
-        <!-- ------------------------ PANOU: INTERESAȚI --------------------- -->
-        <!-- Numai cât mai e ceva de hotărât — vezi tabul lui, de mai sus. -->
-        <?php if (!$eIncheiat): ?>
-        <div class="panel" id="panel-interested" role="tabpanel" aria-labelledby="tab-interested" tabindex="0" hidden
-             data-oameni
-             data-stare="interesat"
-             data-deodata="<?= OAMENI_DEODATA ?>">
-
-          <!-- Fără nimeni pe listă, rândul ăsta e o invitație, nu o
-               numărătoare: se așază pe mijloc, ca „Niciun comentariu încă" din
-               tabul de alături. Cu oameni pe listă, rămâne în stânga. -->
-          <p class="panel__intro<?= $numarInterese['interesat'] === 0 ? ' panel__intro--gol' : '' ?>">
-            <?= vorbaDespreCatiSunt((int) $numarInterese['interesat'], 'interesat', $eIncheiat) ?>
-          </p>
-
-          <ul class="people" data-lista-oameni>
-            <?= randeazaListaOameni($evenimentId, 'interesat', (int) $eveniment['membru_id']) ?>
-          </ul>
-
-          <div class="load-more" data-mai-multi hidden>
-            <button class="btn btn--ghost" type="button" data-mai-multi-buton>Vezi mai mult</button>
-          </div>
-        </div>
-        <?php endif; ?>
-
         <!-- ------------------------ PANOU: PARTICIPĂ ---------------------- -->
         <!--
           Tokenul CSRF se scrie doar aici, și doar pentru cine poate scoate pe
@@ -1022,7 +1014,7 @@ require __DIR__ . '/inc/antet.php';
           </p>
 
           <ul class="people" data-lista-oameni>
-            <?= randeazaListaOameni($evenimentId, 'participant', (int) $eveniment['membru_id'], $poateScoateParticipanti, $contextEvaluare) ?>
+            <?= randeazaListaOameni($evenimentId, 'participant', (int) $eveniment['membru_id'], $poateScoateParticipanti, $contextEvaluare, $vedeTelefoanele) ?>
           </ul>
 
           <div class="load-more" data-mai-multi hidden>
@@ -1114,6 +1106,32 @@ require __DIR__ . '/inc/antet.php';
           </template>
           <?php endif; ?>
         </div>
+
+        <!-- ------------------------ PANOU: INTERESAȚI --------------------- -->
+        <!-- Numai cât mai e ceva de hotărât — vezi tabul lui, de mai sus. -->
+        <?php if (!$eIncheiat): ?>
+        <div class="panel" id="panel-interested" role="tabpanel" aria-labelledby="tab-interested" tabindex="0" hidden
+             data-oameni
+             data-stare="interesat"
+             data-deodata="<?= OAMENI_DEODATA ?>">
+
+          <!-- Fără nimeni pe listă, rândul ăsta e o invitație, nu o
+               numărătoare: se așază pe mijloc, ca „Niciun comentariu încă" din
+               tabul de alături. Cu oameni pe listă, rămâne în stânga. -->
+          <p class="panel__intro<?= $numarInterese['interesat'] === 0 ? ' panel__intro--gol' : '' ?>">
+            <?= vorbaDespreCatiSunt((int) $numarInterese['interesat'], 'interesat', $eIncheiat) ?>
+          </p>
+
+          <ul class="people" data-lista-oameni>
+            <?= randeazaListaOameni($evenimentId, 'interesat', (int) $eveniment['membru_id']) ?>
+          </ul>
+
+          <div class="load-more" data-mai-multi hidden>
+            <button class="btn btn--ghost" type="button" data-mai-multi-buton>Vezi mai mult</button>
+          </div>
+        </div>
+        <?php endif; ?>
+
       </section>
     </article>
 

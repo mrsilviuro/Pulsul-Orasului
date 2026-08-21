@@ -63,7 +63,7 @@ $inceputulDeAcum = $deEditat === null
  * Nu o copie „mai îngăduitoare": dacă previzualizarea ar trece peste ceva ce
  * salvarea refuză, omul ar vedea o pagină frumoasă și apoi un teanc de erori.
  */
-$rezultat = verificaEveniment($_POST, idCategoriiValide(), oraseDisponibile(),
+$rezultat = verificaEveniment($_POST, idCategoriiValide(esteStaff($membru)), oraseDisponibile(),
                               null, $inceputulDeAcum);
 
 if ($rezultat['erori'] !== []) {
@@ -80,7 +80,9 @@ $curat = $rezultat['curat'];
  */
 $categorie = '';
 
-foreach (categoriiEvenimente() as $c) {
+// Cu tot cu cele ale casei: staff-ul previzualizează și un eveniment din
+// „FindMe", iar fără ele numele categoriei ar fi ieșit gol.
+foreach (categoriiEvenimente(true) as $c) {
     if ((int) $c['id'] === (int) $curat['categorie_id']) {
         $categorie = (string) $c['nume'];
         break;

@@ -128,7 +128,12 @@ inc/
                       GD — și nu e o portiță, fiindcă fișierul de plecare e
                       unul scris chiar de noi, pixel cu pixel, la prima
                       încărcare. O cere „Remake"-ul
-  evenimente.php    → categorii, regula „un eveniment activ", lista de pe
+  evenimente.php    → categorii (categoriiEvenimente($cuAleStaffului) — implicit
+                      FĂRĂ cele cu `doar_staff = 1`, ca „FindMe": așa o funcție
+                      nouă care uită să ceară lista întreagă arată prea puțin,
+                      nu prea mult; de idCategoriiValide() atârnă și cine poate
+                      PUBLICA acolo, nu doar ce se vede în formular), regula
+                      „un eveniment activ", lista de pe
                       profil, LISTA DE PE PRIMA PAGINĂ (evenimenteDePePrima —
                       singura care se aduce din bază în teancuri, nu toată
                       deodată), pagina unui eveniment, salvarea ȘI cartonașul
@@ -202,7 +207,16 @@ inc/
   interese.php      → „Mergi la acest eveniment?" — cine e interesat, cine
                       vine, numărătoarea, locurile, rândul cu chipuri, listele
                       din taburi (aceeași funcție pentru amândouă), scoaterea
-                      cuiva de pe cea de participanți ȘI
+                      cuiva de pe cea de participanți. TOT AICI:
+                      poateVedeaTelefoanele() — NUMERELE DE TELEFON de pe lista
+                      de participanți le văd DOAR organizatorul și staff-ul,
+                      nici măcar omul în dreptul numărului lui. Pentru ceilalți
+                      coloana nici nu se cere din bază (al treilea argument al
+                      lui oameniiCuStarea), ca să nu fie la un pas de a ajunge
+                      în pagină. Numai pe lista de PARTICIPANȚI: interesatului
+                      nu i s-a cerut niciodată numărul. Regula o cer trei
+                      locuri — event.php, api/interes.php și
+                      api/exclude-participant.php ȘI
                       oameniiDeInstiintatLaAnulare() — cine primește vestea
                       când se anulează un eveniment (și cei care confirmaseră,
                       și cei doar interesați; fără organizator, care tocmai a
@@ -306,7 +320,8 @@ sql/                → schema.sql + migrări numerotate (002, 003, 004, 005-goo
                       018-multumiri-eveniment, 019-newsletter,
                       020-rapoarte-comentarii,
                       021-instiintari-comentarii,
-                      022-evenimente-staff, 023-dorinte)
+                      022-evenimente-staff, 023-dorinte,
+                      024-categorii-doar-staff)
 teste/              → test-validare.php (verificările din inc/validare.php;
                       verificaDorinta e probată în test-dorinte.php, lângă
                       restul tablei)

@@ -454,5 +454,18 @@ $q = db()->prepare('SELECT COUNT(*) FROM evaluari WHERE eveniment_id = ?');
 $q->execute([$trecutId]);
 verifica('evenimentul șters își ia notele cu el', 0, (int) $q->fetchColumn());
 
+/* ==================== CODURILE QR („FindMe") ======================== */
+
+echo "\n=== CODURILE QR GĂSITE ===\n";
+
+/**
+ * Al patrulea cartonaș de pe profil. Jocul se scrie mai târziu — până atunci
+ * cifra e mereu zero, dintr-un singur loc, ca să existe ce schimba când vine
+ * ziua aceea.
+ */
+verifica('deocamdată zero pentru oricine', 0, cateCoduriQrGasite($organizator));
+verifica('și pentru un id care nu există', 0, cateCoduriQrGasite(999999));
+verifica('și pentru zero',                 0, cateCoduriQrGasite(0));
+
 printf("\n%s\nTOTAL: %d trecute, %d picate\n", str_repeat('=', 60), $treceri, $picaturi);
 exit($picaturi > 0 ? 1 : 0);

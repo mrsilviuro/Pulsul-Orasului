@@ -21,23 +21,51 @@ const EVENIMENTE_ACTIVE_IMPLICIT = 1;
 /* ============================ CATEGORIILE ============================= */
 
 /** Categoriile, în ordinea în care se arată. */
-function categoriiEvenimente(): array
+function categoriiEvenimente(bool $cuAleStaffului = false): array
 {
-    static $cache = null;
+    /**
+     * Cache-ul e ținut pe fiecare fel de listă în parte.
+     *
+     * O singură variabilă ar fi însemnat că prima întrebare din pagină o
+     * hotărăște și pe a doua: dacă staff-ul cere întâi lista lui și pe urmă
+     * cea obișnuită, ar fi primit-o tot pe prima.
+     */
+    static $cache = [];
 
-    if ($cache !== null) {
-        return $cache;
+    $cheie = $cuAleStaffului ? 'tot' : 'obisnuite';
+
+    if (isset($cache[$cheie])) {
+        return $cache[$cheie];
     }
 
-    $q = db()->query('SELECT id, nume, slug FROM categorii ORDER BY ordine, nume');
+    /**
+     * Implicit, FĂRĂ categoriile ținute pentru casă (`doar_staff = 1`).
+     *
+     * Așa în jurul lui zero e răspunsul strâmt: o funcție nouă care uită să
+     * ceară lista întreagă arată prea puțin, nu prea mult. Prima astfel de
+     * categorie e „FindMe", jocul cu coduri QR: evenimentele lui nu le propune
+     * nimeni, le pune casa.
+     */
+    $doarObisnuite = $cuAleStaffului ? '' : ' WHERE doar_staff = 0';
 
-    return $cache = $q->fetchAll();
+    $q = db()->query('SELECT id, nume, slug, doar_staff FROM categorii'
+                   . $doarObisnuite . ' ORDER BY ordine, nume');
+
+    return $cache[$cheie] = $q->fetchAll();
 }
 
-/** Doar id-urile, pentru verificarea din formular. */
-function idCategoriiValide(): array
+/**
+ * Doar id-urile, pentru verificarea din formular.
+ *
+ * De aici atârnă cine POATE PUBLICA într-o categorie ținută pentru casă: cine
+ * nu e staff nu primește id-ul ei, deci verificarea din verificaEveniment()
+ * îl respinge chiar dacă a scris numărul de mână în cerere. Nu e de ajuns că
+ * lista din formular n-o arată.
+ */
+function idCategoriiValide(bool $cuAleStaffului = false): array
 {
-    return array_map(static fn(array $c): int => (int) $c['id'], categoriiEvenimente());
+    return array_map(static fn(array $c): int => (int) $c['id'],
+                     categoriiEvenimente($cuAleStaffului));
 }
 
 /**
@@ -54,7 +82,13 @@ function idCategoriiValide(): array
  * chiar nu există, nu pentru categorii care nu există.
  *
  * Formularul de publicat un eveniment folosește mai departe categoriiEvenimente()
- * — acolo trebuie să apară TOATE, tocmai ca ele să se poată umple.
+ * — acolo trebuie să apară TOATE cele obișnuite, tocmai ca ele să se poată
+ * umple.
+ *
+ * Categoriile ținute pentru casă (`doar_staff = 1`, ca „FindMe") lipsesc de
+ * aici pentru TOȚI, inclusiv pentru staff: filtrele sunt pentru cine caută o
+ * ieșire, nu o unealtă de administrare. Evenimentele lor se văd oricum în
+ * listă, sub „Toate" — ascunsă e categoria ca alegere, nu ce e în ea.
  *
  * „Public" înseamnă ACELEAȘI TREI STĂRI ca în evenimenteDePePrima(), inclusiv
  * „anulat". Un anunț anulat nu se mai ascunde de nimeni: se vede pe prima
@@ -68,7 +102,8 @@ function categoriiCuEvenimente(): array
     $q = db()->query(
         'SELECT c.id, c.nume, c.slug
            FROM categorii c
-          WHERE EXISTS (
+          WHERE c.doar_staff = 0
+            AND EXISTS (
                   SELECT 1 FROM evenimente e
                    WHERE e.categorie_id = c.id
                      AND e.stare_moderare IN (\'aprobat\', \'incheiat\', \'anulat\')

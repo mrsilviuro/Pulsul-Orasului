@@ -176,6 +176,33 @@ function faOrganizatorulParticipant(int $evenimentId, int $membruId): void
 }
 
 /**
+ * Cine vede numerele de telefon din lista de participanți.
+ *
+ * Organizatorul, fiindcă el trebuie să poată suna pe cineva care întârzie sau
+ * să dea de veste dacă se schimbă ceva în ultima clipă — de aceea se și cere
+ * numărul la înscriere. Și staff-ul, care răspunde de tot ce se întâmplă pe
+ * site.
+ *
+ * NIMENI ALTCINEVA, nici măcar omul în dreptul numărului lui. Un participant
+ * și-a dat numărul organizatorului, nu celor douăzeci de pe listă; dacă și-l
+ * vede pe al lui acolo, e firesc să creadă că-l văd și ceilalți pe-al lor, iar
+ * data viitoare nu-l mai scrie. Al lui îl are oricum în setări.
+ *
+ * Regula stă într-un singur loc fiindcă o cer trei: pagina evenimentului și
+ * cele două puncte de intrare care redesenează listele (api/interes.php și
+ * api/exclude-participant.php). Scrisă de trei ori, ar fi fost de ajuns ca una
+ * să rămână în urmă ca numerele să plece spre cine nu trebuie.
+ */
+function poateVedeaTelefoanele(array $eveniment, ?array $membru): bool
+{
+    if ($membru === null) {
+        return false;
+    }
+
+    return (int) $eveniment['membru_id'] === (int) $membru['id'] || esteStaff($membru);
+}
+
+/**
  * Numărul de telefon al unui membru, sau '' dacă n-a dat niciunul.
  *
  * Se citește separat, nu din membruCurent(): acolo sunt coloanele de care are
@@ -312,10 +339,20 @@ const OAMENI_DEODATA = 10;
  * cine s-a arătat interesat acum o lună și a trecut aseară la „particip" s-a
  * băgat acum o lună.
  */
-function oameniiCuStarea(int $evenimentId, string $stare): array
+function oameniiCuStarea(int $evenimentId, string $stare, bool $cuTelefon = false): array
 {
+    /**
+     * Telefonul se CERE DIN BAZĂ doar când are cine să-l vadă.
+     *
+     * Adus mereu și ascuns la desenare, ar fi fost la un pas de a ajunge în
+     * pagină: o funcție nouă care tipărește rândul întreg, un `var_dump` uitat
+     * într-o zi de căutat un bug. Așa, pentru un vizitator oarecare numărul nu
+     * iese din bază deloc. Cine hotărăște e poateVedeaTelefoanele().
+     */
+    $telefon = $cuTelefon ? ', m.telefon' : '';
+
     $q = db()->prepare(
-        'SELECT m.id, m.permalink, m.nume, m.prenume, m.poza, m.sex, m.este_staff,
+        'SELECT m.id, m.permalink, m.nume, m.prenume, m.poza, m.sex, m.este_staff' . $telefon . ',
                 i.creat_la
            FROM interese_evenimente i
            ' . INTERESE_DOAR_ACTIVI . '
@@ -598,7 +635,8 @@ function randeazaOm(
     string $stare,
     int $organizatorId,
     bool $poateScoate,
-    ?array $evaluare = null
+    ?array $evaluare = null,
+    bool $cuTelefon = false
 ): string {
     $id           = (int) $om['id'];
     $eOrganizator = $id === $organizatorId;
@@ -713,6 +751,37 @@ function randeazaOm(
         }
     }
 
+    /* ---------------------------- telefonul --------------------------- */
+
+    /**
+     * Numărul, sub nume — dar numai pentru organizator și staff.
+     *
+     * Nu se decide aici cine are voie: `$cuTelefon` vine de sus, din
+     * poateVedeaTelefoanele(), iar pentru ceilalți coloana nici măcar nu s-a
+     * cerut din bază. Aici se hotărăște doar cum arată.
+     *
+     * `tel:` fiindcă ăsta e rostul lui: organizatorul se uită pe listă tocmai
+     * când vrea să sune pe cineva care întârzie, și de cele mai multe ori se
+     * uită de pe telefon. Numărul rămâne scris la vedere, nu ascuns sub un
+     * buton: se copiază, se citește cu voce tare, se compară.
+     *
+     * Cine n-a lăsat niciun număr n-are rând gol dedesubt — organizatorul a
+     * primit numărul de la cine l-a dat, atât.
+     */
+    $telefon = '';
+
+    if ($cuTelefon) {
+        $numar = trim((string) ($om['telefon'] ?? ''));
+
+        if ($numar !== '') {
+            $telefon = '<a class="person__telefon" href="tel:' . h($numar) . '">'
+                     . '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">'
+                     . '<path d="M7 3.5h3l1.5 4-2 1.5a12 12 0 0 0 5.5 5.5l1.5-2 4 1.5v3a2 2 0 0 1-2.2 2'
+                     . 'A16.5 16.5 0 0 1 5 5.7 2 2 0 0 1 7 3.5Z"/></svg>'
+                     . '<span>' . h($numar) . '</span></a>';
+        }
+    }
+
     return '<li class="person' . ($stele !== '' ? ' person--cu-stele' : '') . '"'
          . ' data-participant="' . $id . '">'
          . '<img class="person__avatar" src="' . h(urlPoza($om['poza'] ?? null, true)) . '" alt=""'
@@ -720,6 +789,7 @@ function randeazaOm(
          . '<div class="person__info">'
          . $legatura
          . '<span class="person__meta">' . h(candSAInscris($om, $stare)) . '</span>'
+         . $telefon
          . '</div>'
          . $insigne
          . $buton
@@ -739,7 +809,8 @@ function randeazaListaOameni(
     string $stare,
     int $organizatorId,
     bool $poateScoate = false,
-    ?array $evaluare = null
+    ?array $evaluare = null,
+    bool $cuTelefoane = false
 ): string {
     $html = '';
 
@@ -747,8 +818,18 @@ function randeazaListaOameni(
     // omul la eveniment, iar cine s-a arătat doar interesat n-a fost nicăieri.
     $cuStele = $stare === 'participant' ? $evaluare : null;
 
-    foreach (oameniiCuStarea($evenimentId, $stare) as $om) {
-        $html .= randeazaOm($om, $stare, $organizatorId, $poateScoate, $cuStele);
+    /**
+     * Numerele, la fel: numai pe lista de participanți.
+     *
+     * Interesatului nu i s-a cerut niciodată numărul — „Mă interesează" nu e o
+     * hotărâre, e o însemnare — deci n-are ce arăta acolo. Iar cine a apucat
+     * să-și lase numărul altundeva (la contact, în setări) nu l-a lăsat pentru
+     * asta.
+     */
+    $telefoane = $cuTelefoane && $stare === 'participant';
+
+    foreach (oameniiCuStarea($evenimentId, $stare, $telefoane) as $om) {
+        $html .= randeazaOm($om, $stare, $organizatorId, $poateScoate, $cuStele, $telefoane);
     }
 
     return $html;
@@ -821,7 +902,8 @@ function vorbaDespreCatiSunt(int $cati, string $stare, bool $incheiat): string
  * altceva când nu e nimeni („Nimeni nu s-a arătat încă interesat") și se
  * așază pe mijloc, nu în stânga. Cine desenează textul spune și cum se așază.
  */
-function raspunsulPanourilor(array $eveniment, bool $poateScoate = false, ?array $evaluare = null): array
+function raspunsulPanourilor(array $eveniment, bool $poateScoate = false,
+                             ?array $evaluare = null, bool $cuTelefoane = false): array
 {
     $evenimentId   = (int) $eveniment['id'];
     $organizatorId = (int) $eveniment['membru_id'];
@@ -842,7 +924,8 @@ function raspunsulPanourilor(array $eveniment, bool $poateScoate = false, ?array
                 $stare,
                 $organizatorId,
                 $stare === 'participant' && $poateScoate,
-                $evaluare
+                $evaluare,
+                $cuTelefoane
             ),
             'intro' => vorbaDespreCatiSunt($cati, $stare, $incheiat),
             'gol'   => $cati === 0,

@@ -132,7 +132,7 @@ $inceputulDeAcum = $deEditat === null
     ? null
     : (string) $deEditat['data_eveniment'] . ' ' . (string) $deEditat['ora_inceput'];
 
-$rezultat = verificaEveniment($_POST, idCategoriiValide(), oraseDisponibile(),
+$rezultat = verificaEveniment($_POST, idCategoriiValide($eStaff), oraseDisponibile(),
                               null, $inceputulDeAcum);
 
 if ($rezultat['erori'] !== []) {

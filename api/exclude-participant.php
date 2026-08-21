@@ -236,7 +236,12 @@ raspunsJson([
     // Amândouă listele din taburi, în aceeași formă ca la api/interes.php, ca
     // main.js să le aplice cu o singură funcție. Cu butoane de scoatere: cine
     // a apăsat aici e organizatorul sau staff-ul, care le are.
-    'panouri'     => raspunsulPanourilor($eveniment, true),
+    // Aici ajunge numai organizatorul sau staff-ul (se verifică mai sus), deci
+    // tot ei sunt și cei care văd numerele — dar se întreabă din nou, cu
+    // aceeași funcție ca pagina: un steag scris de mână s-ar fi despărțit de
+    // regulă la prima schimbare.
+    'panouri'     => raspunsulPanourilor($eveniment, true, null,
+                                         poateVedeaTelefoanele($eveniment, $membru)),
     // Chipurile de sub butoane se schimbă și ele: omul scos nu mai are ce
     // căuta acolo, iar „încă 84 de persoane" a scăzut cu unu.
     'chipuri'     => randeazaChipuri($evenimentId),

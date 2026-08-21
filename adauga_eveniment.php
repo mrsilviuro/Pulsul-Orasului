@@ -48,7 +48,23 @@ if ($membru === null) {
 }
 
 $membruId  = (int) $membru['id'];
-$categorii = categoriiEvenimente();
+
+/**
+ * Omul de casă publică direct: anunțul lui nu mai are pe cine să aștepte.
+ *
+ * De steagul ăsta atârnă patru lucruri pe pagina asta — ce categorii i se
+ * arată, ce scrie pe buton, ce scrie în panoul de după, și dacă se desenează
+ * bifa „nu-l arăta pe profil". Toate patru sunt purtare frumoasă; regula o
+ * ține api/eveniment.php, care întreabă din nou baza la fiecare cerere.
+ */
+$eStaff = esteStaff($membru);
+
+/**
+ * Lista din care alege omul. Categoriile ținute pentru casă („FindMe") intră
+ * în ea numai pentru staff — iar cine nu e staff nici nu poate publica în
+ * ele: api/eveniment.php cere aceeași listă la verificare.
+ */
+$categorii = categoriiEvenimente($eStaff);
 
 /**
  * Ce se editează, dacă se editează ceva.
@@ -123,16 +139,6 @@ if ($eRemake) {
     $sursa['ora_inceput']    = null;
     $sursa['ora_sfarsit']    = null;
 }
-
-/**
- * Omul de casă publică direct: anunțul lui nu mai are pe cine să aștepte.
- *
- * De steagul ăsta atârnă trei lucruri pe pagina asta — ce scrie pe buton, ce
- * scrie în panoul de după, și dacă se desenează bifa „nu-l arăta pe profil".
- * Toate trei sunt purtare frumoasă; regula o ține api/eveniment.php, care
- * întreabă din nou baza la fiecare cerere.
- */
-$eStaff = esteStaff($membru);
 
 /**
  * Bifa de ținut deoparte: la editare urmează ce e în bază, la un formular gol

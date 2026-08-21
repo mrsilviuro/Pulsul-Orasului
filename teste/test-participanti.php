@@ -33,6 +33,15 @@ function verifica(string $ce, $asteptat, $primit): void
         $ok ? '' : "  (aștept " . var_export($asteptat, true) . ", am primit " . var_export($primit, true) . ")");
 }
 
+/** Rândul evenimentului din bază — raspunsulPanourilor() îl cere întreg. */
+function evenimentDinBaza2(int $id): array
+{
+    $q = db()->prepare('SELECT * FROM evenimente WHERE id = ?');
+    $q->execute([$id]);
+
+    return $q->fetch() ?: [];
+}
+
 /* ========================= oamenii de probă ========================== */
 
 const SEMN = 'test-participanti-';
@@ -428,6 +437,93 @@ verifica('altceva decât text, respins', true, verificaMotivExcludere(['a'])['er
 // În bază intră text curat, neescapat — regula 9 din CLAUDE.md.
 verifica('textul nu se escapează la salvare', 'Dinamo & Rapid, iar nu vine',
     verificaMotivExcludere('Dinamo & Rapid, iar nu vine')['text']);
+
+/* ================== NUMERELE DE TELEFON DIN LISTĂ =================== */
+
+echo "\n=== NUMERELE DE TELEFON ===\n";
+
+/**
+ * Le văd organizatorul și staff-ul, nimeni altcineva — nici măcar omul în
+ * dreptul numărului lui. Un participant și-a dat numărul organizatorului, nu
+ * celor douăzeci de pe listă.
+ */
+/**
+ * Doi oameni noi, ai probei ăsteia: pe cei de mai sus i-au scos și i-au pus la
+ * loc verificările de dinainte, iar cine e pe listă la capătul lor nu e ceva
+ * de care să atârne proba de aici.
+ */
+$cuNumar   = faMembru('tel1', 'Ionescu', 'Sorin');
+$cuNumar2  = faMembru('tel2', 'Marin',   'Ana', 'F');
+$faraNumar = faMembru('tel0', 'Barbu',   'Emil');
+
+foreach ([$cuNumar, $cuNumar2, $faraNumar] as $cine) {
+    salveazaInteres($evenimentId, $cine, 'participant');
+}
+
+db()->prepare('UPDATE membri SET telefon = ? WHERE id = ?')->execute(['0722111222', $cuNumar]);
+db()->prepare('UPDATE membri SET telefon = ? WHERE id = ?')->execute(['0733222333', $cuNumar2]);
+db()->prepare('UPDATE membri SET telefon = NULL WHERE id = ?')->execute([$faraNumar]);
+
+$ev = ['id' => $evenimentId, 'membru_id' => $organizator];
+
+$omul = static fn(int $id, bool $staff = false): array =>
+    ['id' => $id, 'este_staff' => $staff ? 1 : 0];
+
+verifica('organizatorul vede numerele',  true,
+    poateVedeaTelefoanele($ev, $omul($organizator)));
+verifica('staff-ul, chiar dacă nu e al lui', true,
+    poateVedeaTelefoanele($ev, $omul($staff, true)));
+verifica('un participant oarecare, nu',  false, poateVedeaTelefoanele($ev, $omul($cuNumar)));
+verifica('nici vizitatorul fără cont',   false, poateVedeaTelefoanele($ev, null));
+
+/**
+ * Numărul nici nu SE CERE DIN BAZĂ pentru cine n-are voie să-l vadă. Adus
+ * mereu și ascuns la desenare, ar fi fost la un pas de a ajunge în pagină.
+ */
+$fara = oameniiCuStarea($evenimentId, 'participant');
+verifica('fără voie, coloana nici nu vine din bază', false,
+    array_key_exists('telefon', $fara[0] ?? []));
+
+$cu = oameniiCuStarea($evenimentId, 'participant', true);
+verifica('cu voie, vine', true, array_key_exists('telefon', $cu[0] ?? []));
+
+/* --- și acum, ce ajunge în pagină --- */
+
+$listaFara = randeazaListaOameni($evenimentId, 'participant', $organizator);
+verifica('fără voie, niciun număr în HTML', false, str_contains($listaFara, '0722111222'));
+verifica('nici măcar al doilea',            false, str_contains($listaFara, '0733222333'));
+verifica('și niciun rând de telefon',       false, str_contains($listaFara, 'person__telefon'));
+
+$listaCu = randeazaListaOameni($evenimentId, 'participant', $organizator, false, null, true);
+verifica('cu voie, numărul e scris',   true, str_contains($listaCu, '0722111222'));
+verifica('și al celuilalt',            true, str_contains($listaCu, '0733222333'));
+verifica('ca legătură „tel:"',         true, str_contains($listaCu, 'href="tel:0722111222"'));
+// Trei oameni noi pe listă, dar numai doi cu număr — al treilea n-are rând.
+verifica('cine n-a dat număr n-are rând gol', 2,
+    substr_count($listaCu, 'person__telefon'));
+
+/**
+ * Pe lista de INTERESAȚI nu se scriu numere niciodată, nici pentru
+ * organizator: interesatului nu i s-a cerut numărul, „Mă interesează" nu e o
+ * hotărâre.
+ */
+salveazaInteres($evenimentId, $curios, 'interesat');
+db()->prepare('UPDATE membri SET telefon = ? WHERE id = ?')->execute(['0744333444', $curios]);
+
+$interesati = randeazaListaOameni($evenimentId, 'interesat', $organizator, false, null, true);
+verifica('la interesați, niciun număr', false, str_contains($interesati, '0744333444'));
+verifica('nici rândul lui',             false, str_contains($interesati, 'person__telefon'));
+
+/* Și prin funcția care redesenează amândouă panourile, pentru API-uri. */
+$panouri = raspunsulPanourilor(evenimentDinBaza2($evenimentId), false, null, true);
+verifica('panoul de participanți are numere', true,
+    str_contains($panouri['participant']['lista'], '0722111222'));
+verifica('cel de interesați, nu', false,
+    str_contains($panouri['interesat']['lista'], '0744333444'));
+
+$panouriFara = raspunsulPanourilor(evenimentDinBaza2($evenimentId));
+verifica('fără steag, niciun număr nicăieri', false,
+    str_contains($panouriFara['participant']['lista'], '0722111222'));
 
 /* =========================== curățenie ============================= */
 

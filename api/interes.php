@@ -280,7 +280,8 @@ function raspunsulListei(array $eveniment, int $membruId, string $mesaj): array
          * scoatere nu se trimit niciodată de aici — cine apasă „Voi participa"
          * e un participant oarecare, nu organizatorul care face curat.
          */
-        'panouri' => raspunsulPanourilor($eveniment),
+        'panouri' => raspunsulPanourilor($eveniment, false, null,
+                                         poateVedeaTelefoanele($eveniment, membruCurent())),
         'mesaj'  => $mesaj,
     ];
 }

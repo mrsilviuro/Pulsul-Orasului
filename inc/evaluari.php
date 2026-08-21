@@ -536,6 +536,27 @@ function laCateEvenimenteNuAVenit(int $membruId): int
     return (int) $q->fetchColumn();
 }
 
+/**
+ * Câte coduri QR a găsit omul ăsta prin oraș — cifra de pe al patrulea
+ * cartonaș al profilului.
+ *
+ * ÎNTOARCE DEOCAMDATĂ ZERO, ȘI E DINADINS. Jocul „FindMe" — coduri ascunse
+ * prin oraș, pe care oamenii le caută și le scanează — se scrie mai târziu;
+ * până atunci nu există nici tabelul care ține scanările, nici pagina care le
+ * numără.
+ *
+ * Funcția e aici de pe acum ca să existe UN SINGUR LOC de schimbat când vine
+ * ziua aceea. Cifra scrisă de-a dreptul în profil.php ar fi fost un zero de
+ * căutat prin pagină peste trei luni, într-un fișier care n-are nicio treabă
+ * cu jocul.
+ *
+ * TODO(FindMe): numără din tabelul scanărilor, când există.
+ */
+function cateCoduriQrGasite(int $membruId): int
+{
+    return 0;
+}
+
 /* ========================= CUM ARATĂ PE ECRAN ======================== */
 
 /**
