@@ -340,6 +340,51 @@ function golesteDateleEvenimentului(int $evenimentId): array
     }
 }
 
+/**
+ * Șterge un eveniment DE TOT: rândul, tot ce atârnă de el, și coperta de pe
+ * disc.
+ *
+ * Nu e golirea de mai sus. Aceea lasă anunțul în picioare și îi mătură
+ * împrejurimile; asta îl ia cu totul. Se cheamă dintr-un singur loc —
+ * api/admin.php, la curățenia unui anunț RESPINS — și numai de acolo, fiindcă
+ * e singura ștergere adevărată de pe tot site-ul: contul se anonimizează,
+ * comentariul se golește, dorința rămâne în tabel. Un anunț respins n-a fost
+ * niciodată public, deci nu lasă în urmă pe nimeni care să se întrebe unde a
+ * dispărut.
+ *
+ * CINE ARE VOIE ȘI CE SE POATE ȘTERGE NU SE ÎNTREABĂ AICI. Funcția asta face
+ * fapta; paza e la punctul de intrare, care cere și om de casă, și starea
+ * „respins" — vezi api/admin.php.
+ *
+ * Rândurile din celelalte tabele pleacă în CASCADĂ, prin cheile străine
+ * (comentarii, interese, evaluări, excluderi — și aprecierile, în cascada
+ * comentariilor). Scrise de mână aici, ar fi fost o a doua listă, care într-o
+ * zi n-ar mai fi fost la fel cu prima. Singura care NU pleacă e `coduri_qr`:
+ * acolo cheia e ON DELETE SET NULL, iar asta e chiar ce trebuie — abțibildul e
+ * lipit pe un stâlp și rămâne, doar că se întoarce în „nefolosit" și poate fi
+ * legat de alt anunț.
+ *
+ * COPERTA SE ȘTERGE DE PE DISC LA URMĂ, după ce rândul a plecat cu bine. Invers
+ * — fișierul întâi — o cădere la scriere ar fi lăsat un eveniment care arată
+ * spre o poză care nu mai e.
+ *
+ * Întoarce true dacă rândul chiar a plecat.
+ */
+function stergeEvenimentDeTot(array $eveniment): bool
+{
+    $q = db()->prepare('DELETE FROM evenimente WHERE id = ?');
+    $q->execute([(int) $eveniment['id']]);
+
+    if ($q->rowCount() !== 1) {
+        return false;
+    }
+
+    require_once __DIR__ . '/imagini.php';
+    stergeCopertaDeFisier($eveniment['coperta'] ?? null);
+
+    return true;
+}
+
 function evenimenteActive(int $membruId): array
 {
     [$unde, $azi] = filtruNeincheiat();
