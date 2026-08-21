@@ -381,8 +381,12 @@ function istoricEvenimente(int $membruId): array
 
     $q = db()->prepare(
         'SELECT e.id, e.titlu, e.slug, e.coperta, e.data_eveniment, e.ora_inceput,
-                e.locatie, e.descriere, e.stare_moderare,
+                e.locatie, e.descriere, e.stare_moderare, e.participanti_max,
                 c.nume AS categorie, c.slug AS categorie_slug, c.imagine_default,
+                -- De el atârnă ce cifre se scriu în colțul cartonașului: la o
+                -- vânătoare „FindMe" participanții nu se arată deloc. Vezi
+                -- cifreleCartonasului() din inc/evenimente.php.
+                c.joc_qr AS categorie_joc_qr,
                 ' . CIFRE_CARTONAS . ',
                 (e.membru_id = i.membru_id) AS e_organizator,
                 EXISTS (

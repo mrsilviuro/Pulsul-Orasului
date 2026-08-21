@@ -194,13 +194,17 @@ inc/
                       TOT AICI:
                       randeazaCartonasEveniment() primește starea
                       ('' | 'incheiat' | 'anulat' | 'live') și
-                      cifreleCartonasului() scrie în colțul de jos DOAR câte
-                      comentarii are anunțul — cifra vine din CIFRE_CARTONAS, o
-                      bucată de SQL lipită în toate listele care desenează
-                      cartonașe. A scris și câți participă, și nu mai scrie: un
-                      „0" lângă un omuleț nu se citește „încă nu s-a înscris
-                      nimeni", ci „nu se duce nimeni", tocmai la anunțurile
-                      proaspete. TOT AICI titluCuNumar() — al doilea anunț cu
+                      cifreleCartonasului() scrie în colțul de jos câți vin
+                      („7" sau „7 / 12", dacă e limită) și câte comentarii sunt
+                      — cifrele vin din CIFRE_CARTONAS, o bucată de SQL lipită
+                      în toate listele care desenează cartonașe. LA O VÂNĂTOARE
+                      „FINDME" participanții NU se scriu deloc (după
+                      `categorie_joc_qr`): acolo nu se înscrie nimeni, caseta de
+                      interes nici nu există pe pagină, iar un „0" lângă un
+                      omuleț ar fi spus „nu se duce nimeni" despre singurul fel
+                      de eveniment la care nimeni n-are unde să se ducă.
+                      Subcererea se aduce oricum — ce se ARATĂ e treaba funcției
+                      de desenat, nu a bucății de SQL. TOT AICI titluCuNumar() — al doilea anunț cu
                       același nume AL ACELUIAȘI OM primește „ #2", al treilea
                       „ #3"; se cheamă din salveazaEveniment(), niciodată la
                       editare, iar numărul se ia din CEL MAI MARE de până acum,

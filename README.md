@@ -1937,20 +1937,24 @@ fi urcat cu unu la fiecare virgulă îndreptată.
 La „Remake" merge de la sine: formularul vine completat cu „Fotbal #2", iar la
 salvare iese „Fotbal #3".
 
-## Cifra din colțul cartonașului
+## Cifrele din colțul cartonașului
 
-Doar **câte comentarii** are anunțul. A stat acolo și numărul participanților, și
-nu mai stă.
+Câți vin („7", sau „7 / 12" când e limită) și câte comentarii sunt — la orice
+eveniment, **în afară de vânătorile „FindMe"**, unde participanții nu se scriu
+deloc.
 
-Motivul: pe un cartonaș, „0" scris lângă un omuleț nu se citește „încă nu s-a
-înscris nimeni", se citește „nu se duce nimeni" — și asta chiar la evenimentele
-proaspăt publicate, cărora le-ar fi trebuit ajutorul cel mai mult. Cine vrea să
-știe câți vin deschide anunțul, unde scrie cu vorbe.
+Acolo nu se înscrie nimeni: caseta cu „Mă interesează / Voi participa" nici nu
+există pe pagina anunțului, deci lista e goală prin însăși alcătuirea jocului. Un
+„0" lângă un omuleț n-ar fi spus „încă nu s-a înscris nimeni", ci „nu se duce
+nimeni" — și ar fi fost un neadevăr despre singurul fel de eveniment la care
+nimeni n-are unde să se ducă. Rămân comentariile, care la o vânătoare chiar spun
+ceva: acolo lumea se întreabă unde n-a căutat încă.
 
-Odată cu cifra a ieșit și subcererea care o aducea (`CIFRE_CARTONAS`), și
-coloana `participanti_max` din listele care desenează cartonașe: nimic nu le mai
-citea, iar un `SELECT` care aduce ce nu se folosește e o socoteală făcută la
-fiecare încărcare a primei pagini, degeaba.
+**Hotărârea stă în funcția care desenează** (`cifreleCartonasului()`, după
+`categorie_joc_qr`), nu în `CIFRE_CARTONAS`. Subcererea aduce mai departe
+amândouă cifrele, oricare ar fi evenimentul: e o listă, nu o hotărâre, iar o
+bucată de SQL care se uită la ce fel de eveniment aduce ar fi ajuns să fie
+scrisă în două feluri.
 
 ## „FindMe" — abțibildele cu coduri QR
 

@@ -420,6 +420,53 @@ verifica('dar tot spune că s-a găsit',      true, str_contains($caseta, 'findm
 db()->prepare('UPDATE membri SET stare = "activ" WHERE id = ?')->execute([$omul]);
 
 /* ==================================================================== */
+sectiune('cifrele de pe cartonaș');
+
+/**
+ * LA O VÂNĂTOARE, PARTICIPANȚII NU SE SCRIU. Acolo nu se înscrie nimeni:
+ * caseta de interes nici nu există pe pagina anunțului, deci lista e goală prin
+ * însăși alcătuirea jocului. Un „0" lângă un omuleț ar fi spus „nu se duce
+ * nimeni" despre singurul fel de eveniment la care nimeni n-are unde să se
+ * ducă.
+ *
+ * Rândurile de mai jos sunt cum vin din bază (CIFRE_CARTONAS le aduce pe
+ * amândouă, oricare ar fi evenimentul): hotărârea e a funcției de desenat.
+ */
+$cartonasObisnuit = [
+    'cati_participanti' => 3,
+    'cate_comentarii'   => 4,
+    'participanti_max'  => 12,
+    'categorie_joc_qr'  => 0,
+];
+
+$cifre = cifreleCartonasului($cartonasObisnuit);
+verifica('la unul obișnuit, se scriu participanții', true, str_contains($cifre, '3 / 12'));
+verifica('și comentariile',                          true, str_contains($cifre, 'comentarii'));
+verifica('două cifre în total',                         2, substr_count($cifre, 'card__cifra'));
+
+$cifre = cifreleCartonasului(['categorie_joc_qr' => 1] + $cartonasObisnuit);
+verifica('la o vânătoare, participanții lipsesc', false, str_contains($cifre, '3 / 12'));
+verifica('și omulețul odată cu ei',               false, str_contains($cifre, 'persoane participă'));
+verifica('rămân comentariile',                     true, str_contains($cifre, 'comentarii'));
+verifica('o singură cifră',                           1, substr_count($cifre, 'card__cifra'));
+
+/* Fără limită, cifra e singură — dar tot nu se scrie la o vânătoare. */
+$faraLimita = ['cati_participanti' => 7, 'cate_comentarii' => 0, 'categorie_joc_qr' => 0];
+verifica('fără limită, doar cifra', true,
+    str_contains(cifreleCartonasului($faraLimita), '>7</span>'));
+verifica('la vânătoare, nici atât', 1,
+    substr_count(cifreleCartonasului(['categorie_joc_qr' => 1] + $faraLimita), 'card__cifra'));
+
+/**
+ * Steagul călătorește cu rândul evenimentului, deci o listă adevărată îl are.
+ * Dacă vreo cerere ar uita `c.joc_qr AS categorie_joc_qr`, cartonașul ar fi
+ * arătat participanții la o vânătoare — de-aia se probează pe rândul venit din
+ * bază, nu doar pe unul scris de mână.
+ */
+$dinBaza = evenimentDupaSlug('tstfm-joc');
+verifica('rândul din bază poartă steagul', 1, (int) $dinBaza['categorie_joc_qr']);
+
+/* ==================================================================== */
 sectiune('lista staff-ului');
 
 $lista = toateCodurileQr();
