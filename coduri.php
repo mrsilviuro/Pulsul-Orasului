@@ -18,25 +18,11 @@ declare(strict_types=1);
  */
 
 require_once __DIR__ . '/inc/coduri-qr.php';
+// Pentru paza de staff și rândul de legături al zonei de administrare.
+require_once __DIR__ . '/inc/admin.php';
 
-/**
- * Pagina cere cont ȘI cere să fii de-al casei.
- *
- * cereIntrare() întâi, pentru cine nu e conectat: el trebuie să ajungă la login
- * și să se întoarcă. Cine e conectat dar n-are ce căuta aici pleacă pe prima
- * pagină — același răspuns ca la un eveniment pe care n-are voie să-l vadă, ca
- * să nu afle nimeni din purtarea site-ului ce pagini de casă există.
- */
-$membru = membruCurent();
-
-if ($membru === null) {
-    cereIntrare('/coduri.php');
-}
-
-if (!esteStaff($membru)) {
-    header('Location: index.php');
-    exit;
-}
+// Paza, ca la orice pagină de administrare — vezi cerePazaDeStaff().
+$membru = cerePazaDeStaff('/coduri.php');
 
 $membruId = (int) $membru['id'];
 
@@ -73,13 +59,14 @@ $coduri  = toateCodurileQr();
 $adresaCodului = static fn(string $cod): string => urlIntreg('/findme.php?qr=' . urlencode($cod));
 
 $titlu   = 'Abțibilde FindMe — PulsulOrasului.Ro';
-$pagina  = '';
+$pagina  = 'admin';
 $noindex = true;
 
 require __DIR__ . '/inc/antet.php';
 ?>
 <main id="main">
   <div class="wrap">
+    <?= randeazaMeniulAdmin('coduri') ?>
 
     <header class="page-head">
       <h1>Abțibilde FindMe</h1>

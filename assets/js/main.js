@@ -5841,5 +5841,149 @@
       });
     });
   }
+  /* ======================================================================
+     ZONA DE ADMINISTRARE
+
+     Un singur bloc pentru toate paginile de admin, fiindcă fac toate același
+     lucru: iau un `data-fapta` de pe un buton (sau de pe un câmp), îl trimit
+     la api/admin.php, și schimbă rândul pe loc.
+
+     Fără el paginile merg TOT, doar că nu se poate apăsa nimic — nu e o
+     stricăciune tăcută: butoanele astea n-au un „fără JS" cu formulare, fiindcă
+     sunt unelte de casă, apăsate de doi-trei oameni, de pe calculator.
+
+     `data-intreb` cere o încuviințare înainte. Se pune doar pe ce nu se ia
+     înapoi: ștergerile. O bifă de „citit" sau o limită schimbată nu întreabă —
+     se apasă din nou și gata.
+     ====================================================================== */
+
+  var zoneAdmin = document.querySelectorAll('[data-admin]');
+
+  if (zoneAdmin.length) {
+    /**
+     * Trimite o faptă și întoarce răspunsul. Un singur loc care știe adresa,
+     * tokenul și felul în care se citește ce vine înapoi.
+     */
+    var faptaAdmin = function (zona, date) {
+      date.csrf = zona.getAttribute('data-csrf') || '';
+
+      return fetch('api/admin.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify(date)
+      }).then(citesteRaspuns);
+    };
+
+    /** Rândul din care s-a apăsat — un `<tr>` sau un `<li>`, după pagină. */
+    var randulLui = function (el) { return el.closest('[data-rand]'); };
+
+    Array.prototype.forEach.call(zoneAdmin, function (zona) {
+
+      /* ------------------------- butoanele -------------------------- */
+      zona.addEventListener('click', function (e) {
+        var buton = e.target.closest('[data-fapta]');
+        if (!buton || buton.tagName === 'SELECT' || buton.tagName === 'INPUT') { return; }
+
+        var fapta = buton.getAttribute('data-fapta');
+        var intreb = buton.getAttribute('data-intreb');
+
+        if (intreb && !window.confirm(intreb)) { return; }
+
+        var date = { fapta: fapta, id: parseInt(buton.getAttribute('data-id'), 10) };
+
+        if (buton.hasAttribute('data-hotarare')) {
+          date.hotarare = buton.getAttribute('data-hotarare');
+        }
+
+        // Bifa de „citit" comută: trimite opusul a ce e acum.
+        if (buton.hasAttribute('data-citit')) {
+          date.citit = buton.getAttribute('data-citit') === '1';
+        }
+
+        buton.disabled = true;
+
+        faptaAdmin(zona, date).then(function (rez) {
+          var c = rez.corp;
+
+          if (!c || !c.ok) {
+            buton.disabled = false;
+            toast((c && c.mesaj) || 'N-a mers.');
+            return;
+          }
+
+          toast(c.mesaj || 'Gata.');
+
+          /**
+           * Ce se întâmplă cu rândul, după faptă:
+           *
+           *   citit / necitit → butonul se întoarce, rândul rămâne. Reîncărcat,
+           *                     omul ar fi pierdut locul din listă la fiecare bifă.
+           *   dorință hotărâtă → pagina se cere din nou: rândul își schimbă și
+           *                     starea, și butoanele, și locul în listă (cele
+           *                     care așteaptă stau în cap). Redesenat din JS,
+           *                     ar fi fost al doilea loc care știe cum arată.
+           *   restul (ștergeri) → rândul pleacă din tabel.
+           */
+          if (fapta === 'marcheaza-mesaj') {
+            var acumCitit = !!c.citit;
+            buton.setAttribute('data-citit', acumCitit ? '0' : '1');
+            buton.textContent = acumCitit ? 'Citit' : 'Însemnează citit';
+            buton.disabled = false;
+
+            var rand = randulLui(buton);
+            if (rand) { rand.classList.toggle('admin-mesaj--nou', !acumCitit); }
+            return;
+          }
+
+          if (fapta === 'modereaza-dorinta') { window.location.reload(); return; }
+
+          var deScos = randulLui(buton);
+          if (deScos) { deScos.remove(); }
+        }).catch(function () {
+          buton.disabled = false;
+          toast(mesajFaraLegatura());
+        });
+      });
+
+      /* ------------- listele de ales și câmpurile cu cifre ----------- */
+      /*
+        Se scrie la SCHIMBARE, adică la ieșirea din câmp sau la Enter — nu la
+        fiecare tastă apăsată. Altfel o limită de „12" ar fi plecat întâi ca
+        „1", iar omul ar fi rămas cu ea dacă închidea fila la mijloc.
+      */
+      zona.addEventListener('change', function (e) {
+        var camp = e.target.closest('[data-fapta][data-camp]');
+        if (!camp) { return; }
+
+        var date = {
+          fapta: camp.getAttribute('data-fapta'),
+          id:    parseInt(camp.getAttribute('data-id'), 10)
+        };
+
+        date[camp.getAttribute('data-camp')] = camp.value;
+
+        camp.disabled = true;
+
+        faptaAdmin(zona, date).then(function (rez) {
+          camp.disabled = false;
+          var c = rez.corp;
+
+          if (!c || !c.ok) {
+            toast((c && c.mesaj) || 'N-a mers.');
+            // Pagina e acum mai proaspătă decât ce se vede: se cere din nou,
+            // ca omul să nu rămână cu o valoare care n-a intrat nicăieri.
+            window.setTimeout(function () { window.location.reload(); }, 1600);
+            return;
+          }
+
+          toast(c.mesaj || 'Gata.');
+        }).catch(function () {
+          camp.disabled = false;
+          toast(mesajFaraLegatura());
+        });
+      });
+    });
+  }
 
 })();

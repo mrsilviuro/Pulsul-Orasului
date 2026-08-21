@@ -116,23 +116,38 @@ index.php, event.php, contact.php, despre.php, login.php,
 profil.php, poza.php, setari.php, adauga_eveniment.php, previzualizare.php,
 parola-uitata.php, parola-noua.php, google.php, finalizare.php, confirma.php,
 stergere.php, iesire.php, verifica.php, constructie.php,
-findme.php, coduri.php
+findme.php, admin.php, admin-evenimente.php, admin-comentarii.php,
+admin-contact.php, admin-useri.php, admin-dorinte.php, coduri.php
 
   findme.php  → capătul unui abțibild „FindMe": aici ajunge cine scanează
                 codul QR. SINGURA pagină de pe site care schimbă starea
                 printr-un GET, fără token CSRF — un scaner de coduri nu
                 poate trimite un POST, iar tot ce se poate face cu o cerere
                 pusă la cale de altcineva e să CÂȘTIGI un abțibild
+  admin*.php  → ZONA DE ADMINISTRARE, toată numai pentru staff. O SINGURĂ
+                intrare în meniu, „Admin", fiindcă șase ar fi înecat „Acasă /
+                Despre / Contact". Paza NU se scrie în fiecare pagină, se
+                cheamă: cerePazaDeStaff() din inc/admin.php, prima linie, mereu.
+                Lista secțiunilor stă tot acolo (sectiuniAdmin) — o secțiune
+                nouă e un rând în tabloul acela și apare singură și pe panou, și
+                în rândul de legături. Faptele trec toate prin api/admin.php,
+                cu `fapta`, ca paza să fie scrisă o dată
   coduri.php  → pagina omului de casă: face coduri noi și le arată starea.
-                Prima pagină de administrare de pe site. Intrarea spre ea stă
-                în MENIU (nu printre butoanele rotunde — al cincilea buton
-                împingea bara peste marginea unui telefon de 390), numai
-                pentru staff. Se aduc cel mult CODURI_QR_PASTRATE (50) și se
+                Prima pagină de administrare de pe site; azi e „Abțibilduri" în
+                zona de admin. Se aduc cel mult CODURI_QR_PASTRATE (50) și se
                 văd CODURI_QR_DEODATA (10), restul sub „Vezi mai mult". „×"-ul
                 șterge un cod — dar NU unul găsit (poateFiStersCodul): de el
                 atârnă cifra de pe profilul câștigătorului
 
 inc/
+  admin.php        → partea comună a zonei de administrare: PAZA
+                      (cerePazaDeStaff — se cheamă prima, în fiecare pagină),
+                      lista secțiunilor (sectiuniAdmin), cifrele care se aprind
+                      pe cartonașe (cifreleAdmin — CÂTE AȘTEAPTĂ ceva, nu câte
+                      sunt) și interogările fiecărei liste. ADMIN_RANDURI (200)
+                      taie fiecare tabel: e o listă de lucru, iar ce n-a fost
+                      făcut în două sute de rânduri nu se face nici în al
+                      treilea sutar
   antet.php        → head + meniu + antete siguranță (folosit de toate paginile)
   subsol.php        → footer + scripturi
   bootstrap.php     → config, conexiune DB, sesiune, CSRF
@@ -378,12 +393,18 @@ sql/                → schema.sql + migrări numerotate (002, 003, 004, 005-goo
                       021-instiintari-comentarii,
                       022-evenimente-staff, 023-dorinte,
                       024-categorii-doar-staff, 025-coduri-qr)
+                      NIMIC NOU pentru zona de administrare: ea doar citește și
+                      schimbă ce era deja acolo
 teste/              → test-validare.php (verificările din inc/validare.php;
                       verificaDorinta e probată în test-dorinte.php, lângă
                       restul tablei)
                       test-comentarii.php, test-participanti.php,
                       test-evaluari.php, test-multumiri.php
                       (toate patru cer baza de date, nu și serverul)
+                      test-admin.php (zona de administrare; cere baza, iar
+                      partea de HTTP cere și serverul — se sare singură. Păzește
+                      mai presus de orice că paginile și faptele sunt NUMAI
+                      pentru staff)
                       test-findme.php (abțibildele cu coduri QR; cere baza,
                       iar partea de HTTP cere și serverul — se sare singură)
                       test-dorinte.php (tabla cu dorințe; cere baza, iar

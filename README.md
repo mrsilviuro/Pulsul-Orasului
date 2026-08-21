@@ -1902,6 +1902,119 @@ fost la un pas de a ajunge în pagină: o funcție nouă care tipărește rându
 sunt o promisiune. Iar la un eveniment încheiat rămâne oricum numai primul,
 deci tot el trebuie să fie cel pe care cade ochiul.
 
+## Zona de administrare
+
+Șase unelte ale casei, adunate sub `admin.php`. O singură intrare în meniu,
+„Admin", vizibilă numai pentru staff — șase legături acolo ar fi înecat „Acasă /
+Despre / Contact", adică tocmai meniul pentru care intră lumea pe site.
+
+| Secțiune | Ce face |
+|---|---|
+| Abțibilduri | `coduri.php`, cea de dinainte: coduri noi și starea fiecăruia |
+| Evenimente | ce așteaptă o hotărâre, și ce a fost respins |
+| Comentarii | ce s-a raportat, și ultimele 50 scrise pe site |
+| Contact | mesajele de la formular, cu „citit / necitit" |
+| Useri | caută pe cineva, schimbă-i starea, limita sau șterge-i poza |
+| Dorințe | aprobă, respinge sau șterge o dorință |
+
+### Paza se cheamă, nu se scrie
+
+`cerePazaDeStaff()` e prima linie a fiecărei pagini. Nu e o purtare frumoasă, e
+regula: cine nu e conectat ajunge la login și se întoarce, cine e conectat dar nu
+e de-al casei pleacă pe prima pagină — același răspuns ca la un eveniment pe care
+n-are voie să-l vadă, ca să nu afle nimeni din purtarea site-ului ce pagini de
+administrare există.
+
+Toate faptele trec printr-un singur punct de intrare, `api/admin.php`, cu
+`fapta` care spune care anume. Motivul e tot paza: fiecare faptă cere ACELAȘI
+lucru (token bun, cont, om de casă), iar șapte fișiere ar fi însemnat șapte copii
+ale aceleiași verificări, dintre care una va fi într-o zi mai îngăduitoare decât
+celelalte.
+
+### Cifrele care se aprind
+
+Fiecare cartonaș arată **câte lucruri așteaptă**, nu câte sunt. Un cartonaș care
+ar sta aprins mereu n-ar mai însemna nimic — exact ca un bec de avarie care arde
+de trei luni. Când nu e nimic de făcut, scrie „nimic de făcut" și rămâne stins.
+
+Cifrele se cer o dată (`cifreleAdmin()`) și se folosesc în amândouă locurile: pe
+cartonașe și în rândul de legături de sus.
+
+### Ce se poate șterge, și ce nu
+
+Zona asta e plină de butoane care nu se iau înapoi, așa că fiecare are o regulă
+scrisă lângă el:
+
+- **Un eveniment se șterge de tot doar dacă e RESPINS.** E singura ștergere
+  adevărată de pe site — contul se anonimizează, comentariul se golește, dorința
+  rămâne în tabel — și e îngăduită tocmai fiindcă un anunț respins n-a fost
+  niciodată public: nu lasă în urmă pe nimeni care să se întrebe unde a dispărut
+  ceva. Un anunț aprobat cu doisprezece oameni înscriși **nu** se șterge de aici;
+  dacă nu mai are loc, se anulează, și atunci oamenii primesc o veste și un
+  motiv. Coloana „ce atârnă de el" e acolo ca să se vadă cât se pierde la o
+  apăsare: un „0 · 0" liniștește, un „14 · 9" te face să te uiți încă o dată.
+- **Un comentariu cu răspunsuri sub el se golește, nu dispare.** E aceeași faptă
+  ca pe pagina evenimentului, prin aceeași funcție — o ștergere scrisă separat
+  „pentru staff" ar fi lăsat răspunsurile suspendate în aer.
+- **Pe un om de casă nu se umblă din tabelul de useri.** Nu e o pază (cine e
+  staff poate oricum orice), e o ferire de apăsarea greșită: doi oameni de casă
+  care se suspendă unul pe altul dintr-o listă de două sute de rânduri ar rămâne
+  amândoi pe dinafară.
+- **„Șters" nu e o stare care se pune de aici.** Ștergerea unui cont înseamnă
+  anonimizare; un `UPDATE stare='sters'` ar fi lăsat numele, adresa și poza în
+  bază, sub o stare care spune că nu mai sunt.
+
+### Limita de evenimente: gol nu e zero
+
+În `membri.limita_evenimente_active`, **NULL înseamnă „regula obișnuită"** (adică
+`EVENIMENTE_ACTIVE_IMPLICIT`), iar **0 înseamnă „nu mai publică nimic"**. Cele
+două arată la fel într-o căsuță și înseamnă lucruri opuse.
+
+De aceea căsuța din tabel rămâne **goală** pentru NULL, cu numărul obișnuit scris
+ca îndemn, iar golită la loc scrie NULL înapoi. Un `(int)` peste NULL ar fi
+arătat „0" pentru toți cei neatinși vreodată — și la prima salvare minciuna ar fi
+devenit adevăr, blocându-i pe toți.
+
+### Dorințele se aprobă, în sfârșit, dintr-o pagină
+
+Până acum se făcea de mână, din phpMyAdmin: o dorință scrisă de om nu se vedea
+nicăieri până nu intra cineva în bază să-i schimbe starea, ceea ce însemna că
+tabla se umplea numai cât își aducea cineva aminte.
+
+`publicat_la` **nu** se pune la aprobare: îl scrie `stampileazaCeleAprobate()` la
+prima încărcare a primei pagini, tot cu ceasul PHP. Așa, o dorință aprobată de
+aici și una aprobată din phpMyAdmin se poartă la fel, iar cele șapte zile de pe
+tablă se numără dintr-un singur loc.
+
+Ștergerea unei dorințe e, și ea, adevărată — spre deosebire de restul site-ului,
+unde rândurile din `dorinte` nu se șterg niciodată, ca mai târziu să se poată
+spune câte dorințe și-au pus oamenii. Butonul e pentru ce n-are ce căuta în
+numărătoarea aceea: o înjurătură, un test, o adresă strecurată în text.
+
+### Rapoartele se văd, în sfârșit
+
+Steagul de la capătul rândului de unelte se putea apăsa de mult, dar nimeni
+n-avea unde să se uite la ce a ieșit din el. Acum comentariile raportate stau în
+capul paginii, cel mai raportat primul.
+
+Numărul de raportări apare **numai aici**: pe pagina evenimentului omul află
+doar dacă el însuși a raportat.
+
+### Ce rămâne în phpMyAdmin
+
+Scris chiar pe pagina de admin, ca să nu caute nimeni degeaba:
+
+- steagul de om al casei (`membri.este_staff`) — nu se dă din nicio pagină,
+  dinadins;
+- ridicarea unei interdicții de reînscriere (`excluderi_evenimente.interzis`);
+- ștergerea unei note date pe nedrept, sau a unui „Nu s-a prezentat" pus din
+  greșeală;
+- ștergerea unui abțibild deja găsit.
+
+Iar **evenimentele anulate** încă nu se pot șterge din interfață: butonul de
+curățenie e doar pentru cele respinse. Rândul unui anunț anulat rămâne în bază,
+cu pagina lui publică — vezi `TODO`-ul din `anuleazaEveniment()`.
+
 ## Al doilea anunț cu același nume
 
 „Fotbal în seara asta", pus a doua oară de același om, intră în bază drept

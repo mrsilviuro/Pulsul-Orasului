@@ -4756,3 +4756,274 @@ a.findme__castigator:hover { color: var(--brand); }
 .cod-stare--in_joc    { background: color-mix(in srgb, var(--brand) 14%, transparent); color: var(--brand); }
 .cod-stare--gasit     { background: rgba(22, 163, 74, .14);                    color: #16a34a; }
 [data-theme="dark"] .cod-stare--gasit { color: #6ee7a0; }
+
+/* =========================================================================
+   ZONA DE ADMINISTRARE
+   -------------------------------------------------------------------------
+   Arată altfel decât restul site-ului, dinadins — ca blocul de moderare de pe
+   pagina unui eveniment. Sunt unelte ale casei, nu ceva ce ține de oraș: rânduri
+   dese, scris mic, culori stinse, nimic care să atragă ochiul în afară de ce
+   așteaptă o hotărâre.
+
+   Tot ce e lat (tabelele) se derulează în cutia lui. Regula de aur a site-ului:
+   nimic nu împinge <body> orizontal.
+   ========================================================================= */
+
+/* ------------------------- rândul de legături --------------------------- */
+
+.admin-nav {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px;
+  margin-bottom: 26px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.admin-nav ul {
+  display: flex; flex-wrap: wrap; gap: 4px 6px;
+  list-style: none; margin: 0; padding: 0;
+}
+.admin-nav__acasa {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 13px; font-weight: 800; letter-spacing: .04em;
+  text-transform: uppercase; color: var(--text-faint);
+}
+.admin-nav__acasa:hover { color: var(--brand); }
+.admin-nav__acasa .ico { width: 15px; height: 15px; }
+
+.admin-nav__link {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: var(--radius-pill);
+  font-size: 13.5px; font-weight: 600; color: var(--text-soft);
+  transition: background .15s var(--ease), color .15s var(--ease);
+}
+a.admin-nav__link:hover { background: var(--bg-soft); color: var(--text); }
+.admin-nav__link.is-active { background: var(--text); color: var(--surface); }
+
+/* Cifra din dreptul unei secțiuni: numai când e ceva de făcut. */
+.admin-nav__cifra {
+  min-width: 18px; padding: 1px 5px;
+  border-radius: var(--radius-pill);
+  background: var(--brand); color: #fff;
+  font-size: 11px; font-weight: 800; text-align: center;
+}
+.admin-nav__link.is-active .admin-nav__cifra { background: var(--brand-2); }
+
+/* ---------------------------- cartonașele ------------------------------- */
+
+.admin-grila {
+  display: grid; gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  margin-bottom: 34px;
+}
+
+.admin-cart {
+  display: flex; align-items: center; gap: 14px;
+  padding: 18px;
+  border: 1px solid var(--border); border-radius: var(--radius-lg);
+  background: var(--surface);
+  transition: border-color .15s var(--ease), transform .15s var(--ease);
+}
+.admin-cart:hover { border-color: var(--text-faint); transform: translateY(-2px); }
+
+/* Se aprinde numai când e ceva de făcut. Unul aprins mereu n-ar mai însemna
+   nimic — exact ca un bec de avarie care arde de trei luni. */
+.admin-cart--treaba { border-color: color-mix(in srgb, var(--brand) 45%, var(--border)); }
+
+.admin-cart__ico {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 42px; height: 42px; flex: none;
+  border-radius: var(--radius); background: var(--bg-soft); color: var(--text-soft);
+}
+.admin-cart--treaba .admin-cart__ico {
+  background: color-mix(in srgb, var(--brand) 12%, transparent); color: var(--brand);
+}
+.admin-cart__ico .ico { width: 21px; height: 21px; }
+
+.admin-cart__spus { flex: 1; min-width: 0; }
+.admin-cart__titlu { display: block; font-weight: 800; color: var(--text); }
+.admin-cart__vorba {
+  display: block; margin-top: 2px;
+  font-size: 12.5px; line-height: 1.45; color: var(--text-faint);
+}
+
+.admin-cart__cifra { flex: none; text-align: right; }
+.admin-cart__cifra strong {
+  display: block; font-size: 22px; font-weight: 800; line-height: 1;
+  color: var(--brand); font-variant-numeric: tabular-nums;
+}
+.admin-cart__cifra span { font-size: 11.5px; color: var(--text-faint); }
+.admin-cart__linistit { font-size: 11.5px; color: var(--text-faint); }
+
+/* -------------------------- secțiuni și tabele -------------------------- */
+
+.admin-sect { margin-bottom: 38px; }
+.admin-sect h2 {
+  display: flex; align-items: center; gap: 9px;
+  font-size: 18px; margin-bottom: 6px;
+}
+.admin-sect__cate {
+  padding: 1px 8px; border-radius: var(--radius-pill);
+  background: var(--bg-soft); color: var(--text-faint);
+  font-size: 12px; font-weight: 700;
+}
+.admin-sect__vorba {
+  margin-bottom: 12px; font-size: 13px; line-height: 1.6; color: var(--text-faint);
+  max-width: 70ch;
+}
+.admin-gol { color: var(--text-faint); font-size: 14.5px; }
+
+.admin-scroll { overflow-x: auto; }
+
+.admin-tabel { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.admin-tabel th, .admin-tabel td {
+  padding: 10px 12px; text-align: left; vertical-align: top;
+  border-bottom: 1px solid var(--border);
+}
+.admin-tabel th {
+  font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em;
+  color: var(--text-faint); font-weight: 700; white-space: nowrap;
+}
+.admin-tabel tbody tr:hover { background: var(--bg-soft); }
+
+/* Al doilea rând dintr-o celulă: categoria, orașul, numărul de evenimente. */
+.admin-tabel__mic {
+  display: block; margin-top: 2px;
+  font-size: 12px; color: var(--text-faint);
+}
+.admin-tabel__gol { color: var(--text-faint); }
+
+/* Uneltele nu se rup pe două rânduri și nu lățesc coloana mai mult decât e
+   nevoie: sunt la capăt, unde ochiul le caută. */
+.admin-tabel__unelte { white-space: nowrap; text-align: right; width: 1%; }
+.admin-tabel__unelte .btn + .btn { margin-left: 5px; }
+
+/* Datele stau pe un rând: „21 aug 2026, 15:06" rupt în două nu se mai citește
+   dintr-o privire. */
+.admin-tabel td:nth-last-child(-n+3) { white-space: nowrap; }
+.admin-tabel td:first-child { white-space: normal; min-width: 220px; }
+
+.admin-eticheta {
+  display: inline-block; padding: 1px 7px;
+  border-radius: var(--radius-pill); background: var(--bg-soft);
+  font-size: 11px; font-weight: 700; color: var(--text-faint);
+  vertical-align: middle;
+}
+.admin-eticheta--casa {
+  background: color-mix(in srgb, var(--brand) 13%, transparent); color: var(--brand);
+}
+.admin-eticheta--rea { background: rgba(224, 57, 59, .13); color: #c22b2d; }
+[data-theme="dark"] .admin-eticheta--rea { color: #ff9b97; }
+
+/* Cifra raportărilor: singurul loc de pe site unde se vede. */
+.admin-cifra-rea {
+  display: inline-block; min-width: 24px; padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background: rgba(224, 57, 59, .13); color: #c22b2d;
+  font-weight: 800; text-align: center; font-variant-numeric: tabular-nums;
+}
+[data-theme="dark"] .admin-cifra-rea { color: #ff9b97; }
+
+.admin-stare {
+  display: inline-block; padding: 2px 9px; border-radius: var(--radius-pill);
+  font-size: 12px; font-weight: 700;
+}
+.admin-stare--in_asteptare {
+  background: rgba(240, 160, 40, .16); color: #d68a10;
+}
+[data-theme="dark"] .admin-stare--in_asteptare { color: #f0a028; }
+.admin-stare--aprobat { background: rgba(22, 163, 74, .14); color: #16a34a; }
+[data-theme="dark"] .admin-stare--aprobat { color: #6ee7a0; }
+.admin-stare--respins { background: var(--bg-soft); color: var(--text-faint); }
+
+/* Ce a fost respins se stinge, ca un eveniment încheiat pe prima pagină. */
+.admin-rand--respins { opacity: .6; }
+
+/* ------------------------- căutarea de oameni --------------------------- */
+
+.admin-cauta {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+  margin-bottom: 22px;
+}
+.admin-cauta input[type="search"] {
+  flex: 1; min-width: 220px; max-width: 420px;
+  height: var(--field-h); padding: 0 14px;
+  border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--surface); color: var(--text); font-size: 14.5px;
+}
+.admin-cauta input[type="search"]:focus-visible {
+  outline: none; border-color: var(--brand);
+}
+
+.admin-om { display: flex; align-items: flex-start; gap: 10px; }
+.admin-om__chip { flex: none; }
+.admin-om__chip img {
+  width: 32px; height: 32px; border-radius: 50%; object-fit: cover;
+  display: block;
+}
+
+/* Câmpurile din tabel: mici, cât să nu împingă coloana. */
+.admin-select, .admin-numar {
+  height: 32px; padding: 0 8px;
+  border: 1px solid var(--border); border-radius: 9px;
+  background: var(--surface); color: var(--text); font-size: 13px;
+}
+.admin-numar { width: 62px; text-align: center; font-variant-numeric: tabular-nums; }
+.admin-select:disabled, .admin-numar:disabled { opacity: .5; }
+
+/* ------------------------ mesajele de la contact ------------------------ */
+
+.admin-mesaje { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+
+.admin-mesaj {
+  padding: 16px 18px;
+  border: 1px solid var(--border); border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+/* Necitit = ceva de făcut. Aceeași regulă ca la cartonașele de pe admin.php. */
+.admin-mesaj--nou { border-color: color-mix(in srgb, var(--brand) 45%, var(--border)); }
+
+.admin-mesaj__cap {
+  display: flex; flex-wrap: wrap; align-items: flex-start;
+  justify-content: space-between; gap: 10px;
+  margin-bottom: 10px;
+}
+.admin-mesaj__om { font-size: 15px; }
+.admin-mesaj__contact { display: block; margin-top: 2px; font-size: 12.5px; }
+.admin-mesaj__contact a { color: var(--brand-link); }
+
+.admin-mesaj__dreapta {
+  display: flex; align-items: center; gap: 12px; flex: none;
+}
+.admin-mesaj__cand { font-size: 12px; color: var(--text-faint); white-space: nowrap; }
+
+.admin-mesaj__bifa {
+  padding: 4px 10px; border: 1px solid var(--border);
+  border-radius: var(--radius-pill); background: none;
+  font-size: 12px; font-weight: 700; color: var(--text-faint);
+  cursor: pointer;
+}
+.admin-mesaj__bifa:hover { border-color: var(--text-faint); color: var(--text); }
+.admin-mesaj--nou .admin-mesaj__bifa { border-color: var(--brand); color: var(--brand); }
+
+.admin-mesaj__text {
+  font-size: 14.5px; line-height: 1.7; color: var(--text-soft);
+  /* Un mesaj cu o adresă lungă lipită în el n-are voie să lățească pagina. */
+  overflow-wrap: anywhere;
+}
+
+/* ------------------------- ce se face aiurea ---------------------------- */
+
+.admin-nota {
+  padding: 18px 20px;
+  border: 1px dashed var(--border); border-radius: var(--radius-lg);
+}
+.admin-nota h2 { font-size: 14px; margin-bottom: 8px; }
+.admin-nota ul { margin: 0; padding-left: 20px; }
+.admin-nota li {
+  font-size: 13px; line-height: 1.7; color: var(--text-faint);
+}
+.admin-nota code { font-size: 12px; }
+
+@media (max-width: 700px) {
+  .admin-cart { flex-wrap: wrap; }
+  .admin-cart__cifra { text-align: left; width: 100%; padding-left: 56px; }
+  .admin-mesaj__cap { flex-direction: column; }
+}
