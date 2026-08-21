@@ -1019,8 +1019,27 @@ require __DIR__ . '/inc/antet.php';
             goală: dacă omul își șterge singurul comentariu, main.js are ce să
             aprindă la loc, fără să lipească text din cod.
           -->
+          <!--
+            Trei stări, trei vorbe — fiindcă „nu se poate scrie" are trei
+            înțelesuri diferite, iar unul singur pentru toate mințea:
+
+              publicat → nu s-a scris nimic încă, e o invitație;
+              anulat   → s-a scris cândva sau nu, dar acum e închis, și se
+                         spune DE CE. Aici scria „discuția se deschide după ce
+                         evenimentul e publicat", ceea ce era de-a dreptul
+                         neadevărat: anunțul FUSESE publicat, tocmai de-aia
+                         avusese ce să se anuleze;
+              restul   → anunțul chiar n-a trecut încă pe la nimeni.
+          -->
           <p class="comments__gol" data-comentarii-gol <?= $fireComentarii === [] ? '' : 'hidden' ?>>
-            <?= $ePublicat ? 'Niciun comentariu încă. Fii primul care spune ceva.' : 'Discuția se deschide după ce evenimentul e publicat.' ?>
+            <?php if ($ePublicat): ?>
+            Niciun comentariu încă. Fii primul care spune ceva.
+            <?php elseif ($eAnulat): ?>
+            Acest eveniment a fost anulat de organizator, motiv pentru care
+            comentariile au fost închise.
+            <?php else: ?>
+            Discuția se deschide după ce evenimentul e publicat.
+            <?php endif; ?>
           </p>
 
           <!--

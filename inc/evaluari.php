@@ -381,7 +381,7 @@ function istoricEvenimente(int $membruId): array
 
     $q = db()->prepare(
         'SELECT e.id, e.titlu, e.slug, e.coperta, e.data_eveniment, e.ora_inceput,
-                e.locatie, e.descriere, e.stare_moderare, e.participanti_max,
+                e.locatie, e.descriere, e.stare_moderare,
                 c.nume AS categorie, c.slug AS categorie_slug, c.imagine_default,
                 ' . CIFRE_CARTONAS . ',
                 (e.membru_id = i.membru_id) AS e_organizator,

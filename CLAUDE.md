@@ -124,8 +124,13 @@ findme.php, coduri.php
                 poate trimite un POST, iar tot ce se poate face cu o cerere
                 pusă la cale de altcineva e să CÂȘTIGI un abțibild
   coduri.php  → pagina omului de casă: face coduri noi și le arată starea.
-                Prima pagină de administrare de pe site. Butonul spre ea
-                stă în antet, lângă rotiță, numai pentru staff
+                Prima pagină de administrare de pe site. Intrarea spre ea stă
+                în MENIU (nu printre butoanele rotunde — al cincilea buton
+                împingea bara peste marginea unui telefon de 390), numai
+                pentru staff. Se aduc cel mult CODURI_QR_PASTRATE (50) și se
+                văd CODURI_QR_DEODATA (10), restul sub „Vezi mai mult". „×"-ul
+                șterge un cod — dar NU unul găsit (poateFiStersCodul): de el
+                atârnă cifra de pe profilul câștigătorului
 
 inc/
   antet.php        → head + meniu + antete siguranță (folosit de toate paginile)
@@ -189,10 +194,17 @@ inc/
                       TOT AICI:
                       randeazaCartonasEveniment() primește starea
                       ('' | 'incheiat' | 'anulat' | 'live') și
-                      cifreleCartonasului() scrie în colțul de jos câți vin
-                      („7" sau „7 / 12", dacă e limită) și câte comentarii sunt
-                      — cifrele vin din CIFRE_CARTONAS, o bucată de SQL lipită
-                      în toate listele care desenează cartonașe. UN ANUNȚ
+                      cifreleCartonasului() scrie în colțul de jos DOAR câte
+                      comentarii are anunțul — cifra vine din CIFRE_CARTONAS, o
+                      bucată de SQL lipită în toate listele care desenează
+                      cartonașe. A scris și câți participă, și nu mai scrie: un
+                      „0" lângă un omuleț nu se citește „încă nu s-a înscris
+                      nimeni", ci „nu se duce nimeni", tocmai la anunțurile
+                      proaspete. TOT AICI titluCuNumar() — al doilea anunț cu
+                      același nume AL ACELUIAȘI OM primește „ #2", al treilea
+                      „ #3"; se cheamă din salveazaEveniment(), niciodată la
+                      editare, iar numărul se ia din CEL MAI MARE de până acum,
+                      nu din câte rânduri sunt. UN ANUNȚ
                       ANULAT nu se mai ascunde: se vede de oricine, pe prima
                       pagină și în istoricul de pe profil, stins ca unul
                       încheiat dar cu „Anulat" în colț, iar pe pagina lui stă

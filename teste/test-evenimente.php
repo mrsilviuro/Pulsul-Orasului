@@ -965,6 +965,103 @@ db()->exec('DELETE FROM evenimente');
 db()->prepare('DELETE FROM categorii WHERE id = ?')->execute([$idCasa]);
 verifica('am făcut curat după categoria de casă', 0, cateEvenimente());
 
+/* ============ AL DOILEA ANUNȚ CU ACELAȘI NUME („#2") ============== */
+
+echo "\n=== TITLURI CARE SE REPETĂ ===\n";
+
+/**
+ * Cine pune „Fotbal în seara asta" a doua oară primește „#2". Numai la
+ * evenimente NOI, și numai în dreptul aceluiași om.
+ */
+db()->exec('DELETE FROM evenimente');
+
+verifica('coada se taie', 'Fotbal', titluFaraNumar('Fotbal #12'));
+verifica('și cu spații în plus', 'Fotbal', titluFaraNumar('  Fotbal #3  '));
+verifica('fără coadă, rămâne cum e', 'Fotbal', titluFaraNumar('Fotbal'));
+
+/**
+ * Un diez la MIJLOC nu e o numărătoare de-a noastră, e ce a vrut omul să
+ * spună. Se taie doar coada, și doar dacă arată exact așa.
+ */
+verifica('diezul de la mijloc rămâne', 'Sala #3 la ora 8', titluFaraNumar('Sala #3 la ora 8'));
+verifica('și „#" fără cifre rămâne',   'Fotbal #',         titluFaraNumar('Fotbal #'));
+
+$faUnEveniment = static function (int $cine, string $titlu) use (&$idCategorie): string {
+    $curat = [
+        'titlu' => $titlu, 'categorie_id' => 1, 'oras' => 'Roman',
+        'locatie' => 'Undeva prin oraș', 'descriere' => str_repeat('Povestea lui. ', 30),
+        'data_eveniment' => date('Y-m-d', strtotime('+9 days')), 'ora_inceput' => '19:00',
+        'ora_sfarsit' => null, 'cost' => null, 'varsta_minima' => null,
+        'participanti_min' => null, 'participanti_max' => null,
+        'gen_participanti' => 'nespecificat',
+    ];
+
+    salveazaEveniment($cine, $curat, null, true);
+
+    $q = db()->prepare('SELECT titlu FROM evenimente WHERE membru_id = ? ORDER BY id DESC LIMIT 1');
+    $q->execute([$cine]);
+
+    return (string) $q->fetchColumn();
+};
+
+verifica('primul rămâne cum l-a scris', 'Fotbal în seara asta',
+    $faUnEveniment($idOrg, 'Fotbal în seara asta'));
+verifica('al doilea ia „#2"', 'Fotbal în seara asta #2',
+    $faUnEveniment($idOrg, 'Fotbal în seara asta'));
+verifica('al treilea ia „#3"', 'Fotbal în seara asta #3',
+    $faUnEveniment($idOrg, 'Fotbal în seara asta'));
+
+// Cine scrie el coada nu cere un al doilea „#2": cere un „Fotbal…", iar
+// numărul îl punem noi. Altfel s-ar fi ajuns la „Fotbal #2 #2".
+verifica('coada scrisă de om nu se dublează', 'Fotbal în seara asta #4',
+    $faUnEveniment($idOrg, 'Fotbal în seara asta #2'));
+
+verifica('alt titlu pornește curat', 'Volei duminică',
+    $faUnEveniment($idOrg, 'Volei duminică'));
+
+/**
+ * ÎN DREPTUL FIECĂRUI OM. Doi vecini care pun amândoi „Fotbal în seara asta"
+ * scriu despre două seri deosebite; un „#2" pus celui de-al doilea l-ar fi
+ * făcut să pară continuarea unui anunț pe care nu l-a scris.
+ */
+$idVecin = faMembru('vecin-titluri-test@exemplu-test.ro', 'organizat11');
+verifica('la alt om, fără număr', 'Fotbal în seara asta',
+    $faUnEveniment($idVecin, 'Fotbal în seara asta'));
+
+/**
+ * Se numără din TOATE, oricare le-ar fi starea. Tocmai cele încheiate și cele
+ * anulate sunt „din trecut": scoase din socoteală, anunțul de azi ar fi purtat
+ * același nume cu unul de pe profilul omului.
+ */
+db()->prepare('UPDATE evenimente SET stare_moderare = \'anulat\' WHERE membru_id = ?')
+    ->execute([$idOrg]);
+
+verifica('și cele anulate se numără', 'Fotbal în seara asta #5',
+    $faUnEveniment($idOrg, 'Fotbal în seara asta'));
+
+/**
+ * Numărul următor vine din CEL MAI MARE, nu din câte rânduri sunt: dacă „#2"
+ * se șterge de mână din phpMyAdmin, al șaselea rămâne „#6". Două anunțuri cu
+ * același nume, la același om, sunt tocmai ce evităm.
+ */
+db()->prepare('DELETE FROM evenimente WHERE membru_id = ? AND titlu = ?')
+    ->execute([$idOrg, 'Fotbal în seara asta #2']);
+
+verifica('un rând șters nu întoarce numărătoarea', 'Fotbal în seara asta #6',
+    $faUnEveniment($idOrg, 'Fotbal în seara asta'));
+
+// `%` din titlu ar fi fost joker în LIKE: „100%% reducere" ar fi potrivit orice
+// titlu care începe cu „100".
+$faUnEveniment($idOrg, '100% distracție');
+verifica('procentul nu e joker', '100% distracție #2',
+    $faUnEveniment($idOrg, '100% distracție'));
+verifica('și nu prinde alte titluri', '100 de motive',
+    $faUnEveniment($idOrg, '100 de motive'));
+
+db()->exec('DELETE FROM evenimente');
+db()->prepare('DELETE FROM membri WHERE id = ?')->execute([$idVecin]);
+verifica('am făcut curat după titluri', 0, cateEvenimente());
+
 echo "\n=== APĂRAREA PUNCTULUI DE INTRARE ===\n";
 
 $r = cerere($baza . '/api/eveniment.php', $c, ['csrf' => 'gresit', 'titlu' => 'x']);

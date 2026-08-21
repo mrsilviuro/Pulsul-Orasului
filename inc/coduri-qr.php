@@ -163,17 +163,69 @@ function codQrAlEvenimentului(int $evenimentId): ?array
 }
 
 /**
- * Toate codurile, cel mai nou întâi — pentru pagina staff-ului.
+ * Câte coduri se aduc din bază pentru pagina staff-ului, și câte se văd din
+ * prima.
  *
- * Fără paginare, dinadins: abțibildele se tipăresc pe hârtie și se lipesc de
- * mână prin oraș, deci n-o să fie niciodată mii. Când or să fie, se pune.
+ * Cincizeci, nu toate: dincolo de ele sunt abțibilde de acum trei luni, demult
+ * dezlipite, iar un șir care curge o jumătate de metru în jos nu e o listă, e
+ * un morman. Cine chiar are treabă cu unul vechi îl găsește în phpMyAdmin.
+ *
+ * Din cele cincizeci se văd zece; restul intră în pagină, dar ascunse, și se
+ * aprind din „Vezi mai mult" — același tipar ca la comentarii și la listele de
+ * oameni, unde numărul stă tot într-un `data-deodata`, ca să fie scris într-un
+ * singur loc.
  */
-function toateCodurileQr(int $cate = 200): array
+const CODURI_QR_PASTRATE = 50;
+const CODURI_QR_DEODATA  = 10;
+
+/**
+ * Codurile, cel mai nou întâi — pentru pagina staff-ului.
+ *
+ * Fără paginare adevărată, dinadins: abțibildele se tipăresc pe hârtie și se
+ * lipesc de mână prin oraș, deci n-o să fie niciodată mii de care să-ți pese
+ * deodată. Se taie sec la CODURI_QR_PASTRATE.
+ */
+function toateCodurileQr(int $cate = CODURI_QR_PASTRATE): array
 {
     $q = db()->prepare(CQR_SELECT . ' ORDER BY q.id DESC LIMIT ' . max(1, $cate));
     $q->execute();
 
     return $q->fetchAll();
+}
+
+/**
+ * Se poate șterge abțibildul ăsta?
+ *
+ * NU, dacă a fost găsit — și e singura oprire.
+ *
+ * Rândul acela nu mai e o unealtă, e istoria cuiva: de el atârnă cifra „Coduri
+ * QR găsite" de pe profilul câștigătorului. Un om de casă care face curat prin
+ * listă n-are de unde să știe că apăsând un „×" scade cu unu ceva de pe pagina
+ * altcuiva. Aceeași regulă ca peste tot pe site: ce a fost nu se șterge —
+ * contul se anonimizează, comentariul se golește, dorința rămâne în tabel.
+ *
+ * Cele încă nefolosite și cele aflate în joc se șterg: primele sunt hârtie
+ * netipărită, iar la a doua vânătoarea rămâne fără abțibild — supărător, dar
+ * al organizatorului, care poate lega altul din „Editează".
+ */
+function poateFiStersCodul(array $cod): bool
+{
+    return $cod['gasit_de'] === null;
+}
+
+/**
+ * Șterge un cod. Întoarce true dacă rândul chiar a plecat.
+ *
+ * `gasit_de IS NULL` stă în WHERE, nu doar în întrebarea de dinainte: între
+ * apăsarea „×"-ului și fapta asta încape scanarea care tocmai a câștigat, iar
+ * pagina din fața omului nu știe de ea.
+ */
+function stergeCodulQr(int $id): bool
+{
+    $q = db()->prepare('DELETE FROM coduri_qr WHERE id = ? AND gasit_de IS NULL');
+    $q->execute([$id]);
+
+    return $q->rowCount() === 1;
 }
 
 /**
@@ -457,9 +509,17 @@ function randeazaCasetaFindMe(array $eveniment, ?array $cod): string
          * arăta spre nimeni.
          */
         $areProfil = (string) $cod['gasit_stare'] === 'activ' && $nume !== '';
-        $poza      = urlPoza($cod['gasit_poza'] ?? null, true);
 
-        $chip = '<img class="findme__poza" src="' . h($poza) . '" alt="" width="56" height="56" loading="lazy">';
+        /**
+         * Poza MARE, nu cea mică: aici e chipul câștigătorului, nu o bulină
+         * dintr-un rând de participanți. urlPoza() cu al doilea argument false
+         * dă fișierul întreg — cel mic e făcut pentru 40 de pixeli și s-ar
+         * vedea moale la 130.
+         */
+        $poza = urlPoza($cod['gasit_poza'] ?? null);
+
+        $chip = '<img class="findme__poza" src="' . h($poza) . '" alt=""'
+              . ' width="130" height="130" loading="lazy">';
 
         $cine = $areProfil
             ? '<a class="findme__castigator" href="profil.php?m='
@@ -478,12 +538,25 @@ function randeazaCasetaFindMe(array $eveniment, ?array $cod): string
             }
         }
 
+        /**
+         * ALTĂ AȘEZARE decât celelalte două chipuri ale casetei: poza în
+         * stânga, pe toată înălțimea, iar cele patru rânduri de text alături.
+         *
+         * De aceea eticheta, titlul, vorba și data stau împreună într-un
+         * `.findme__spus`, nu risipite direct în secțiune: poza trebuie să aibă
+         * un singur frate cu care să se alinieze, altfel „pe toată înălțimea"
+         * n-ar fi avut față de ce să se măsoare.
+         */
         return '<section class="findme findme--gasit" aria-labelledby="findme-title">'
+             . '<div class="findme__om">'
+             . $chip
+             . '<div class="findme__spus">'
              . '<p class="findme__eticheta">Abțibildul a fost găsit</p>'
              . '<h2 class="findme__titlu" id="findme-title">Avem un câștigător</h2>'
-             . '<div class="findme__om">' . $chip . '<div>' . $cine
-             . '<p class="findme__vorba">a găsit abțibildul și a încheiat vânătoarea.</p>'
-             . '</div></div>' . $cand
+             . '<p class="findme__vorba">' . $cine
+             . ' a găsit abțibildul și a încheiat vânătoarea.</p>'
+             . $cand
+             . '</div></div>'
              . '</section>';
     }
 
