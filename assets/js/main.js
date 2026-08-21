@@ -5212,6 +5212,7 @@
       var primul = null;
 
       [['titlu', 'ev-titlu'], ['categorie_id', 'ev-categorie'],
+       ['cod_qr', 'ev-cod-qr'],
        ['oras', 'ev-oras'], ['locatie', 'ev-locatie'],
        ['data_eveniment', 'ev-data'], ['ora_inceput', 'ev-ora-inceput'],
        ['ora_sfarsit', 'ev-ora-sfarsit'], ['cost', 'ev-cost'],
@@ -5577,6 +5578,117 @@
         vestiSpune(mesajFaraLegatura(), false);
       });
     });
+  }
+
+  /* ======================================================================
+     „FINDME" — CÂMPUL CU CODUL DE ABȚIBILD
+
+     Se arată numai când categoria aleasă e un joc cu abțibilde. Care sunt
+     acelea nu ghicim după nume: fiecare <option> poartă `data-joc-qr="1"`,
+     scris din `categorii.joc_qr` (vezi sql/025-coduri-qr.sql).
+
+     JS-ul pune și `required`, nu HTML-ul. Un `required` pe un câmp ascuns
+     oprește trimiterea formularului cu o bulă pe care browserul n-o poate
+     arăta, fiindcă n-are unde s-o pună — iar omul rămâne cu un buton care nu
+     face nimic și fără nicio vorbă de ce.
+
+     Fără JS, câmpul rămâne vizibil tot timpul. E supărător, nu stricăcios: la
+     orice altă categorie serverul nici nu-l citește.
+     ====================================================================== */
+
+  var campQr     = document.querySelector('[data-camp-qr]');
+  var alegeCateg = document.getElementById('ev-categorie');
+
+  if (campQr && alegeCateg) {
+    var casutaQr = campQr.querySelector('input[name="cod_qr"]');
+
+    var potrivesteQr = function () {
+      var aleasa = alegeCateg.options[alegeCateg.selectedIndex];
+      var eJoc   = !!(aleasa && aleasa.getAttribute('data-joc-qr') === '1');
+
+      campQr.hidden = !eJoc;
+
+      if (casutaQr) {
+        casutaQr.required = eJoc;
+
+        // Câmpul ascuns nu trimite nimic: altfel un cod scris, apoi lăsat în
+        // urmă când omul s-a răzgândit de categorie, ar fi plecat spre server
+        // odată cu un anunț care n-are nicio treabă cu el.
+        casutaQr.disabled = !eJoc;
+      }
+    };
+
+    potrivesteQr();
+    alegeCateg.addEventListener('change', potrivesteQr);
+
+    // Semnele se scriu mereu cu majuscule, ca în bază. `autocapitalize` o cere
+    // tastaturii de telefon, dar nu toate ascultă, iar cine lipește codul din
+    // altă parte n-o atinge deloc.
+    if (casutaQr) {
+      casutaQr.addEventListener('input', function () {
+        var sus = casutaQr.value.toUpperCase();
+        if (sus !== casutaQr.value) { casutaQr.value = sus; }
+      });
+    }
+  }
+
+  /* ======================================================================
+     „FINDME" — NUMĂRĂTOAREA INVERSĂ
+
+     Pe pagina unei vânători, până când se închide. Clipa vine din server, în
+     `data-findme-timer`, ca număr de secunde — nu ca text de citit, fiindcă
+     un text ar fi fost citit după ceasul telefonului, care poate fi dat
+     oricum.
+
+     Dedesubt rămâne mereu clipa scrisă în litere (`<time>`): dacă JS-ul nu
+     pornește, omul tot află până când are de căutat. Ăsta e adevărul paginii;
+     cifrele de aici sunt doar mai vii.
+
+     Când ajunge la zero nu se reîncarcă nimic singur. O pagină care sare de
+     sub degete e mai supărătoare decât una care așteaptă o apăsare — iar
+     starea adevărată o știe oricum serverul, la următoarea încărcare.
+     ====================================================================== */
+
+  var ceasQr = document.querySelector('[data-findme-timer]');
+
+  if (ceasQr) {
+    var cifreQr = ceasQr.querySelector('.findme__ceas-cifre') || ceasQr;
+    var pana    = parseInt(ceasQr.getAttribute('data-findme-timer'), 10) * 1000;
+    var batere  = null;
+
+    var douaCifre = function (n) { return (n < 10 ? '0' : '') + n; };
+
+    var bateCeasul = function () {
+      var ramas = pana - Date.now();
+
+      if (ramas <= 0) {
+        cifreQr.textContent = 'S-a închis';
+        ceasQr.classList.add('e-gata');
+        if (batere) { clearInterval(batere); }
+        return;
+      }
+
+      var secunde = Math.floor(ramas / 1000);
+      var zile    = Math.floor(secunde / 86400);
+      var ore     = Math.floor((secunde % 86400) / 3600);
+      var minute  = Math.floor((secunde % 3600) / 60);
+      var sec     = secunde % 60;
+
+      // „o zi", „3 zile", dar „21 de zile" — aceeași regulă ca numaratoare()
+      // de mai sus și ca numaratoare() din PHP.
+      var vorbaZile = zile === 1
+        ? '1 zi'
+        : zile + (zile % 100 >= 1 && zile % 100 <= 19 ? ' zile' : ' de zile');
+
+      // Peste o zi, secundele n-ajută pe nimeni: „2 zile 04:31" se citește
+      // dintr-o privire, „2 zile 04:31:07" cere să te uiți de două ori.
+      cifreQr.textContent = zile > 0
+        ? vorbaZile + ' ' + douaCifre(ore) + ':' + douaCifre(minute)
+        : douaCifre(ore) + ':' + douaCifre(minute) + ':' + douaCifre(sec);
+    };
+
+    bateCeasul();
+    batere = setInterval(bateCeasul, 1000);
   }
 
 })();

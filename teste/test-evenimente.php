@@ -1399,7 +1399,16 @@ verifica('participanți maxim', '40', $valoarea('ev-max', $formular));
 verifica('descrierea e în textarea', true,
     str_contains($formular, 'Povestea evenimentului.'));
 
-verifica('categoria e aleasă', true, str_contains($formular, 'value="1"' . "\n" . '                      selected'));
+/**
+ * Că `<option value="1">` e cel bifat — fără să ne agățăm de spațierea din
+ * pagină. Prima scriere cerea o potrivire literală, cu tot cu rândul nou și
+ * cele 22 de spații dinaintea lui „selected": a picat de îndată ce în
+ * `<option>` a mai intrat un atribut (`data-joc-qr`), deși pagina era
+ * neschimbată. Un test care se sperie de o îndreptare de indentare nu apără
+ * nimic, doar dă alarme false.
+ */
+verifica('categoria e aleasă', true,
+    preg_match('/<option value="1"[^>]*\bselected\b/', $formular) === 1);
 verifica('vârsta minimă e aleasă', true, preg_match('/value="16"\s*\n?\s*selected/', $formular) === 1);
 verifica('genul e ales', true, preg_match('/value="barbati"\s*\n?\s*selected/', $formular) === 1);
 

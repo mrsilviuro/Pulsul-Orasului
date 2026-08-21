@@ -48,7 +48,7 @@ function categoriiEvenimente(bool $cuAleStaffului = false): array
      */
     $doarObisnuite = $cuAleStaffului ? '' : ' WHERE doar_staff = 0';
 
-    $q = db()->query('SELECT id, nume, slug, doar_staff FROM categorii'
+    $q = db()->query('SELECT id, nume, slug, doar_staff, joc_qr FROM categorii'
                    . $doarObisnuite . ' ORDER BY ordine, nume');
 
     return $cache[$cheie] = $q->fetchAll();
@@ -509,6 +509,7 @@ function evenimenteDePePrima(string $oras = '', string $categorie = '', int $deL
         'SELECT e.id, e.titlu, e.slug, e.coperta, e.data_eveniment, e.ora_inceput,
                 e.locatie, e.descriere, e.stare_moderare, e.oras, e.participanti_max,
                 c.nume AS categorie, c.slug AS categorie_slug, c.imagine_default,
+                c.joc_qr AS categorie_joc_qr,
                 ' . CIFRE_CARTONAS . ',
                 ' . $eIncheiat . ' AS incheiat
            FROM evenimente e
@@ -607,6 +608,7 @@ function evenimenteSugerate(int $fara = 0, int $cate = EVENIMENTE_SUGERATE): arr
         'SELECT e.id, e.titlu, e.slug, e.coperta, e.data_eveniment, e.ora_inceput,
                 e.locatie, e.descriere, e.stare_moderare, e.oras, e.participanti_max,
                 c.nume AS categorie, c.slug AS categorie_slug, c.imagine_default,
+                c.joc_qr AS categorie_joc_qr,
                 ' . CIFRE_CARTONAS . '
            FROM evenimente e
            JOIN categorii c ON c.id = e.categorie_id
@@ -737,6 +739,7 @@ function evenimenteDePeProfil(int $membruId, bool $vedeSiCeleInAsteptare): array
         'SELECT e.id, e.titlu, e.slug, e.coperta, e.data_eveniment, e.ora_inceput,
                 e.locatie, e.descriere, e.stare_moderare, e.participanti_max,
                 c.nume AS categorie, c.slug AS categorie_slug, c.imagine_default,
+                c.joc_qr AS categorie_joc_qr,
                 ' . CIFRE_CARTONAS . '
            FROM evenimente e
            JOIN categorii c ON c.id = e.categorie_id
@@ -809,6 +812,7 @@ function evenimentDupaSlug(string $slug): ?array
     $q = db()->prepare(
         'SELECT e.*,
                 c.nume AS categorie, c.slug AS categorie_slug, c.imagine_default,
+                c.joc_qr AS categorie_joc_qr,
                 m.permalink AS org_permalink, m.nume AS org_nume, m.prenume AS org_prenume,
                 m.poza AS org_poza, m.poza_actualizata_la AS org_poza_actualizata_la
            FROM evenimente e

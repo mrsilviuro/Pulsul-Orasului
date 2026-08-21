@@ -115,7 +115,17 @@ Site live: https://pulsulorasului.ro
 index.php, event.php, contact.php, despre.php, login.php,
 profil.php, poza.php, setari.php, adauga_eveniment.php, previzualizare.php,
 parola-uitata.php, parola-noua.php, google.php, finalizare.php, confirma.php,
-stergere.php, iesire.php, verifica.php, constructie.php
+stergere.php, iesire.php, verifica.php, constructie.php,
+findme.php, coduri.php
+
+  findme.php  → capătul unui abțibild „FindMe": aici ajunge cine scanează
+                codul QR. SINGURA pagină de pe site care schimbă starea
+                printr-un GET, fără token CSRF — un scaner de coduri nu
+                poate trimite un POST, iar tot ce se poate face cu o cerere
+                pusă la cale de altcineva e să CÂȘTIGI un abțibild
+  coduri.php  → pagina omului de casă: face coduri noi și le arată starea.
+                Prima pagină de administrare de pe site. Butonul spre ea
+                stă în antet, lângă rotiță, numai pentru staff
 
 inc/
   antet.php        → head + meniu + antete siguranță (folosit de toate paginile)
@@ -227,6 +237,30 @@ inc/
                       când se anulează un eveniment (și cei care confirmaseră,
                       și cei doar interesați; fără organizator, care tocmai a
                       apăsat butonul)
+  coduri-qr.php     → „FINDME": abțibildele cu coduri QR ascunse prin oraș.
+                      Codul are CINCI semne, din alfabetul fără O/0 și I/L/1
+                      (curataCodQr din inc/validare.php). ORDINEA JOCULUI E TOT
+                      ROSTUL TABELULUI: întâi se face codul (coduri.php, doar
+                      staff), se tipărește și se lipește, ABIA PE URMĂ se
+                      publică anunțul cu el în formular — de aceea
+                      `coduri_qr.eveniment_id` are voie să fie NULL, iar cine
+                      scanează atunci află că vânătoarea n-a început. „E joc?"
+                      NU se întreabă niciodată după numele sau slugul
+                      categoriei, ci după `categorii.joc_qr` (esteJocQr), steag
+                      care călătorește cu rândul evenimentului
+                      (`categorie_joc_qr`). `joc_qr` și `doar_staff` sunt
+                      DIFERITE: al doilea spune cine poate publica, primul ce
+                      fel de eveniment iese. Câștigul se hotărăște ÎN `WHERE`,
+                      nu în PHP (revendicaCodul: `gasit_de IS NULL`), și merge
+                      împreună cu încheierea evenimentului, sub aceeași
+                      tranzacție. Legarea la fel (legaCodulDeEveniment:
+                      `eveniment_id IS NULL`) — deCeNuSePoateLega() e doar
+                      pentru vorba din formular. TOT AICI caseta de pe pagina
+                      evenimentului (randeazaCasetaFindMe), care ia locul lui
+                      „Ce zici, te interesează?": ori numărătoarea inversă până
+                      la termen, ori câștigătorul. CODUL NU SE SCRIE NICIODATĂ
+                      ÎN PAGINĂ — cine deschide anunțul ar câștiga fără să se
+                      ridice de pe scaun
   evaluari.php      → notele dintre participanți, după eveniment: cine poate
                       nota, media și distribuția de pe profil, „Nu s-a
                       prezentat". STELELE SINGURE sunt anonime și nici nu se
@@ -327,13 +361,15 @@ sql/                → schema.sql + migrări numerotate (002, 003, 004, 005-goo
                       020-rapoarte-comentarii,
                       021-instiintari-comentarii,
                       022-evenimente-staff, 023-dorinte,
-                      024-categorii-doar-staff)
+                      024-categorii-doar-staff, 025-coduri-qr)
 teste/              → test-validare.php (verificările din inc/validare.php;
                       verificaDorinta e probată în test-dorinte.php, lângă
                       restul tablei)
                       test-comentarii.php, test-participanti.php,
                       test-evaluari.php, test-multumiri.php
                       (toate patru cer baza de date, nu și serverul)
+                      test-findme.php (abțibildele cu coduri QR; cere baza,
+                      iar partea de HTTP cere și serverul — se sare singură)
                       test-dorinte.php (tabla cu dorințe; cere baza, iar
                       partea de HTTP cere și serverul — se sare singură)
                       test-tine-minte.php, test-setari.php, test-contact.php,

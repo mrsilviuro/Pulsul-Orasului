@@ -23,6 +23,8 @@ declare(strict_types=1);
 require_once __DIR__ . '/inc/evenimente.php';
 // Pentru randeazaZonaAnulare(): aceeași zonă se desenează și pe event.php.
 require_once __DIR__ . '/inc/afisare-eveniment.php';
+// Pentru codul de abțibild al unei vânători „FindMe", la editare.
+require_once __DIR__ . '/inc/coduri-qr.php';
 
 $slug   = trim((string) ($_GET['slug'] ?? ''));
 $deRefacut = trim((string) ($_GET['remake'] ?? ''));
@@ -138,6 +140,25 @@ if ($eRemake) {
     $sursa['data_eveniment'] = null;
     $sursa['ora_inceput']    = null;
     $sursa['ora_sfarsit']    = null;
+}
+
+/**
+ * Codul de abțibild, la editarea unei vânători.
+ *
+ * Nu e o coloană din `evenimente` — legătura stă în `coduri_qr` — deci se aduce
+ * aici și se pune în $sursa, ca să-l poată citi $val() ca pe orice alt câmp.
+ *
+ * LA REFACERE NU SE COPIAZĂ, dinadins, deși „Remake" copiază tot restul: un
+ * abțibild s-a găsit o dată și s-a dezlipit. Vânătoarea nouă cere un cod nou,
+ * lipit în altă parte — altfel ar fi fost aceeași ascunzătoare, cu aceeași
+ * hârtie, pe care primul câștigător o știe deja.
+ */
+if ($eEditare && esteJocQr($sursa)) {
+    $codulLui = codQrAlEvenimentului((int) $sursa['id']);
+
+    if ($codulLui !== null) {
+        $sursa['cod_qr'] = $codulLui['cod'];
+    }
 }
 
 /**
@@ -324,11 +345,49 @@ require __DIR__ . '/inc/antet.php';
             <select id="ev-categorie" name="categorie_id" required aria-describedby="err-ev-categorie">
               <option value="" <?= $eEditare ? '' : 'selected' ?> disabled>Alege…</option>
               <?php foreach ($categorii as $c): ?>
+              <!-- `data-joc-qr` spune JS-ului care categorie cere un cod de
+                   abțibild. Steagul vine din bază (`categorii.joc_qr`), nu din
+                   numele categoriei — vezi sql/025-coduri-qr.sql. -->
               <option value="<?= (int) $c['id'] ?>"
+                      <?= (int) ($c['joc_qr'] ?? 0) === 1 ? 'data-joc-qr="1"' : '' ?>
                       <?= $val('categorie_id') === (string) $c['id'] ? 'selected' : '' ?>><?= h($c['nume']) ?></option>
               <?php endforeach; ?>
             </select>
             <p class="field__error" id="err-ev-categorie" hidden></p>
+          </div>
+
+          <!--
+            CODUL DE PE ABȚIBILD — numai la categoriile de joc („FindMe").
+
+            Stă ascuns până când se alege o astfel de categorie, și se arată
+            atunci; JS-ul face doar atât (vezi „codul de abțibild" din main.js).
+            Fără JS rămâne vizibil tot timpul, ceea ce e supărător, dar nu
+            stricăcios: la orice altă categorie serverul nici nu-l citește.
+
+            `required` NU se scrie în HTML, ci îl pune JS-ul odată cu arătarea
+            câmpului. Un `required` pe un câmp ascuns oprește trimiterea
+            formularului cu o bulă pe care browserul n-o poate arăta, fiindcă
+            n-are unde s-o pună — iar omul rămâne cu un buton care nu face
+            nimic și fără nicio vorbă de ce.
+
+            Regula adevărată e oricum pe server: verificaEveniment() cere codul
+            când categoria e un joc, iar api/eveniment.php verifică apoi că el
+            chiar există și e liber.
+          -->
+          <div class="field field--qr" id="camp-cod-qr" data-camp-qr hidden>
+            <label for="ev-cod-qr">Codul de pe abțibild <span class="req" aria-hidden="true">*</span></label>
+            <input type="text" id="ev-cod-qr" name="cod_qr"
+                   maxlength="<?= COD_QR_LUNGIME ?>" size="<?= COD_QR_LUNGIME ?>"
+                   value="<?= h($val('cod_qr')) ?>"
+                   placeholder="K3M7P" autocomplete="off"
+                   autocapitalize="characters" spellcheck="false"
+                   aria-describedby="err-ev-cod-qr ajutor-cod-qr">
+            <p class="field__hint" id="ajutor-cod-qr">
+              Cele <?= COD_QR_LUNGIME ?> semne de pe abțibildul pe care l-ai lipit
+              deja prin oraș. Îl iei de pe <a href="coduri.php">pagina codurilor</a>.
+              Vânătoarea începe în clipa în care publici anunțul.
+            </p>
+            <p class="field__error" id="err-ev-cod-qr" hidden></p>
           </div>
 
           <div class="field">

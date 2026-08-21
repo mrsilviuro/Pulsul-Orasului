@@ -1902,6 +1902,149 @@ fost la un pas de a ajunge în pagină: o funcție nouă care tipărește rându
 sunt o promisiune. Iar la un eveniment încheiat rămâne oricum numai primul,
 deci tot el trebuie să fie cel pe care cade ochiul.
 
+## „FindMe" — abțibildele cu coduri QR
+
+Un abțibild lipit pe un stâlp, cu un cod QR pe el. Cine îl găsește și îl scanează
+primul câștigă, iar evenimentul se încheie pe loc.
+
+### Ordinea, care e tot rostul tabelului
+
+1. Omul de casă face un cod pe `coduri.php`. E un rând singur: cinci semne, fără
+   eveniment, fără câștigător.
+2. Tipărește abțibildul și îl lipește undeva prin oraș.
+3. **Abia pe urmă** publică anunțul, scriind codul în formular. Atunci rândul
+   primește `eveniment_id` — vânătoarea a început.
+4. Cine găsește abțibildul îl scanează, ajunge pe `findme.php?qr=…`, și dacă e
+   primul, câștigă.
+
+Codul trebuie să existe **înaintea** evenimentului — altfel n-ai ce tipări. De
+aceea nu e o coloană în `evenimente`: acolo n-ar fi avut cum să existe mai
+devreme decât rândul care-l ține.
+
+Și de aceea `eveniment_id` are voie să fie NULL. Începând de la pasul 2,
+abțibildul e pe stâlp dar nu duce nicăieri; cine îl scanează atunci trebuie să dea
+de un „încă n-a început", nu de o pagină de eroare. Nu e o lipsă — e o treaptă a
+jocului.
+
+### Codul
+
+Cinci semne din alfabetul fără perechile care se confundă: fără **O** și **0**, fără
+**I**, **L** și **1** — același cu al parolelor temporare. În mod obișnuit nu-l
+scrie nimeni de mână, dar când telefonul nu vrea să citească, omul se uită la
+abțibild și tastează — și atunci un „0" citit ca „O" strică toată vânătoarea.
+
+Nu e o parolă și nici nu trebuie să fie: cine ghicește un cod nu află unde e lipit
+abțibildul, iar ca să câștige tot trebuie să fie primul.
+
+**Codul nu se scrie NICIODATĂ în pagina evenimentului.** Dacă ar apărea acolo,
+cine deschide anunțul ar câștiga fără să se ridice de pe scaun — adică exact
+opusul jocului. E probat, nu doar spus (vezi `teste/test-findme.php`).
+
+### Care categorie E jocul
+
+`categorii.joc_qr`, niciodată numele sau slugul. Cu un `if ($slug === 'findme')`
+prin PHP, o literă greșită în rândul adăugat de mână ar fi stins tot jocul fără să
+spună nimeni de ce.
+
+**`joc_qr` și `doar_staff` sunt două lucruri diferite** și nu se confundă: al
+doilea spune **cine poate publica**, primul spune **ce fel de eveniment iese**.
+Astăzi „FindMe" le are pe amândouă, dar dacă mâine jocul se deschide către toată
+lumea, întrebarea „e joc?" trebuie să rămână la fel.
+
+Steagul călătorește cu rândul evenimentului (`categorie_joc_qr`), ca `esteJocQr()`
+să poată fi întrebat oriunde a ajuns rândul, fără încă o interogare.
+
+### Pagina evenimentului arată altfel
+
+| | eveniment obișnuit | vânătoare |
+|---|---|---|
+| „Ce zici, te interesează?" | da | **nu** — în locul ei, caseta vânătorii |
+| taburile „Participă" / „Interesați" | da | **nu** |
+| tabul „Comentarii" | da | da |
+
+La o vânătoare nu se strânge nimeni: fiecare caută singur prin oraș, iar singurul
+lucru care contează e cine ajunge primul la abțibild. O listă de participanți la
+așa ceva ar fi fost o listă de oameni care au apăsat un buton. Rămân comentariile
+— acolo lumea se întreabă unde n-a căutat încă.
+
+Caseta vânătorii are două chipuri: **numărătoarea inversă** până la termen, sau
+**câștigătorul**, cu poza și cu legătură spre profilul lui. Sub cifre stă mereu și
+clipa scrisă în litere: dacă JS-ul nu pornește, omul tot află până când are de
+căutat. Cifrele sunt doar mai vii.
+
+### Termenul
+
+„Când o să aibă loc?" înseamnă, la o vânătoare, **clipa în care se închide** — nu
+ora la care se strânge lumea. După ea, cine scanează află că vânătoarea s-a
+terminat fără câștigător, și tot i se cere să dezlipească abțibildul. Ceasul e al
+PHP-ului, ca peste tot pe site.
+
+### `findme.php` schimbă starea printr-un GET
+
+E singura pagină de pe site care face asta, și e dinadins.
+
+Un scaner de coduri QR deschide o adresă. Nu poate trimite un POST, nu poate
+purta un token CSRF. Dacă am fi cerut o apăsare („Revendică abțibildul"), am fi
+pus un drum în plus exact în clipa în care omul stă în stradă, cu telefonul în
+mână, lângă un stâlp.
+
+Iar ce s-ar putea face cu o cerere pusă la cale de altcineva e să **câștigi** un
+abțibild. Nu se pierde nimic, nu se șterge nimic, nu se dă nimic altcuiva. E
+singurul loc de pe site unde asta e adevărat — și tocmai de aceea e singurul care
+are voie să lucreze pe GET.
+
+Pagina nu se indexează: o adresă de-asta ajunsă în rezultatele căutării ar face
+jocul de prisos.
+
+### Cine e primul se hotărăște în `WHERE`
+
+Doi oameni care scanează același abțibild în aceeași secundă trec amândoi de
+orice verificare de dinainte. `gasit_de IS NULL` din `UPDATE` îl lasă să treacă pe
+unul singur; al doilea primește false și vede „l-a găsit altcineva" — ceea ce e
+adevărat.
+
+Același tipar la legarea codului de eveniment (`eveniment_id IS NULL`):
+`deCeNuSePoateLega()` există doar pentru **vorba** din formular, nu pentru
+siguranță.
+
+Iar câștigul și încheierea evenimentului merg **împreună**, sub aceeași tranzacție.
+Dacă a doua ar pica singură, ar rămâne un anunț cu numărătoarea inversă mergând
+peste un abțibild deja găsit.
+
+### Nelogatul
+
+I se spune că l-a găsit și că trebuie să intre în cont ca să-l revendice, cu
+întoarcere înapoi la `findme.php?qr=…`. **Nu i se ține deoparte**: cât e la login,
+altcineva i-o poate lua înainte. De aceea butonul zice „Intră în cont", nu
+„Revendică".
+
+### `coduri.php` — prima pagină de administrare de pe site
+
+Restul lucrurilor de casă se fac din phpMyAdmin (aprobarea unei dorințe, steagul
+de staff, ridicarea unei interdicții). Asta n-avea cum: un cod de cinci semne
+ales de mână s-ar fi lovit într-o zi de altul, iar cheia unică ar fi respins
+abțibildul **după** ce era deja tipărit și lipit pe stâlp.
+
+Merge și fără JS: e un formular obișnuit, cu Post/Redirect/Get, fiindcă pagina se
+deschide în stradă, de pe telefon, adesea pe o rețea proastă.
+
+Butonul spre ea stă în antet, lângă rotiță, numai pentru staff — și trebuie să
+existe, fiindcă jocul cere ca întâi să faci codul și abia pe urmă să publici
+anunțul: pagina se cere înaintea formularului, deci n-are cum s-o dea formularul.
+
+Pagina **nu desenează codul QR** — dă adresa întreagă care intră în el. Imaginea
+o face omul cu unealta lui, și o lipește în pătratul alb din mijlocul
+abțibildului.
+
+### Ce rămâne de făcut
+
+- Codul QR nu se desenează pe site; adresa se copiază și se dă unei unelte din
+  afară.
+- Un abțibild găsit nu se poate desface din interfață (nici de staff). Rândul se
+  schimbă de mână, din phpMyAdmin.
+- Nu pleacă niciun e-mail când cineva câștigă: află pe loc, pe `findme.php`.
+- Codurile nu se șterg și nu se refolosesc, nici după ce vânătoarea s-a încheiat.
+
 ## Categorii ținute pentru casă
 
 Coloana `categorii.doar_staff` (vezi `sql/024-categorii-doar-staff.sql`). Prima
@@ -1910,7 +2053,10 @@ care oamenii le caută și le scanează. Evenimentele lui nu le propune nimeni �
 le pune casa.
 
 `doar_staff` spune **cine poate publica** acolo, și atât. Nu cine o vede, nu
-cine caută prin ea:
+cine caută prin ea — și nici ce fel de eveniment iese: aia e treaba lui
+`joc_qr`, un steag cu totul separat (vezi secțiunea „FindMe" de mai sus). Cele
+două cad astăzi peste aceeași categorie, dar nu se citesc niciodată una prin
+alta.
 
 | | `doar_staff = 0` | `doar_staff = 1` |
 |---|---|---|
@@ -1949,14 +2095,18 @@ INSERT INTO categorii (nume, slug, ordine, doar_staff)
 ## „Coduri QR găsite" — al patrulea cartonaș de pe profil
 
 Lângă „Ieșiri organizate", „Prezent la activități" și „A confirmat, dar nu a
-venit". Cifra vine din `cateCoduriQrGasite()` și e **deocamdată mereu zero**:
-jocul „FindMe" se scrie mai târziu, iar tabelul scanărilor nu există încă.
+venit". Câte abțibilde „FindMe" a găsit omul prin oraș.
 
-Funcția e acolo de pe acum ca să existe un singur loc de schimbat când vine ziua
-aceea — un zero scris de-a dreptul în `profil.php` ar fi fost de căutat prin
-pagină peste trei luni, într-un fișier care n-are nicio treabă cu jocul.
-Cartonașul la fel: adăugat mai târziu, ar fi rearanjat un rând pe care oamenii
-se obișnuiseră să-l citească.
+Cartonașul a stat o vreme pe zero, dinadins: a fost pus în rând **înainte** să
+existe jocul, fiindcă adăugat mai târziu ar fi rearanjat un rând pe care oamenii
+se obișnuiseră să-l citească. `cateCoduriQrGasite()` întorcea atunci zero
+de-a dreptul; astăzi numără din `coduri_qr`, și n-a fost nimic de căutat prin
+`profil.php` — un singur loc de schimbat, exact cum fusese gândit.
+
+Funcția stă mai departe în `inc/evaluari.php`, deși fraza e scrisă în
+`inc/coduri-qr.php`, lângă tabelul ei: `profil.php` cere toate cele patru cifre
+din același fișier, iar dacă a cincea ar veni de altundeva, pagina ar trebui să
+știe din care fișier vine fiecare.
 
 ## „Remake": încă unul la fel
 

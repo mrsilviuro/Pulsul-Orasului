@@ -425,6 +425,39 @@ function inceputDeText(string $text, int $caractere = 160): string
 }
 
 /**
+ * Cele cinci semne de pe un abțibild „FindMe", curățate.
+ *
+ * Întoarce codul cu majuscule dacă e bun, sau '' dacă nu e. Un singur loc care
+ * hotărăște ce e un cod: îl cheamă și formularul de publicare, și findme.php cu
+ * ce a venit din adresă, și pagina de coduri.
+ *
+ * Alfabetul e al parolelor temporare — cifre și litere mari, fără perechile
+ * care se confundă (O/0, I/L/1). Codul se scanează, deci de obicei nu-l scrie
+ * nimeni; dar când telefonul nu vrea să citească, omul se uită la abțibild și
+ * tastează, iar atunci diferența contează.
+ *
+ * Literele mici se ridică, nu se resping: cine tastează „k3m7p" a citit bine
+ * abțibildul, doar că telefonul lui scrie cu litere mici.
+ */
+const COD_QR_LUNGIME  = 5;
+const COD_QR_ALFABET  = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
+function curataCodQr(?string $cod): string
+{
+    $cod = mb_strtoupper(trim((string) $cod), 'UTF-8');
+
+    if ($cod === '' || mb_strlen($cod, 'UTF-8') !== COD_QR_LUNGIME) {
+        return '';
+    }
+
+    // strspn numără câte semne de la început sunt din alfabet. Dacă le prinde
+    // pe toate, n-a rămas niciunul străin. Merge pe octeți, dar aici e în
+    // regulă: alfabetul e numai ASCII, iar lungimea s-a numărat deja cu
+    // mb_strlen — un „ă" strecurat înăuntru ar fi picat la lungime.
+    return strspn($cod, COD_QR_ALFABET) === COD_QR_LUNGIME ? $cod : '';
+}
+
+/**
  * Formularul de eveniment, verificat pe server.
  *
  * $categoriiValide vine din bază, $oraseValide din inc/config.php — amândouă
@@ -434,11 +467,21 @@ function inceputDeText(string $text, int $caractere = 160): string
  * $azi se poate da din teste, ca verificarea datei să nu depindă de ziua în
  * care se rulează.
  *
+ * $categoriiJocQr — id-urile categoriilor care sunt un joc cu abțibilde
+ * („FindMe", vezi sql/025). Dacă omul a ales una dintre ele, formularul TREBUIE
+ * să vină și cu un cod QR: fără el n-ar avea ce încheia vânătoarea. Lista vine
+ * ca argument din același motiv ca celelalte două — aici nu se deschide baza.
+ *
+ * Ce NU se verifică aici: dacă acel cod există în bază și dacă e liber. Alea
+ * cer o interogare, deci le face api/eveniment.php prin inc/coduri-qr.php.
+ * Aici se hotărăște doar dacă a fost scris ceva și dacă acel ceva ARATĂ a cod.
+ *
  * Întoarce ['erori' => [...], 'curat' => [...]].
  */
 function verificaEveniment(array $date, array $categoriiValide, array $oraseValide = [],
                            ?DateTimeImmutable $azi = null,
-                           ?string $inceputulDeAcum = null): array
+                           ?string $inceputulDeAcum = null,
+                           array $categoriiJocQr = []): array
 {
     $azi   = $azi ?? new DateTimeImmutable('today');
     $erori = [];
@@ -473,6 +516,33 @@ function verificaEveniment(array $date, array $categoriiValide, array $oraseVali
         $erori['categorie_id'] = 'Alege o categorie din listă.';
     } else {
         $curat['categorie_id'] = $categorie;
+    }
+
+    /* ---------------------------- Codul QR ---------------------------- */
+    /**
+     * Numai la categoriile de joc, și acolo obligatoriu.
+     *
+     * Se întreabă de categoria CITITĂ, nu de cea curată: dacă id-ul a picat mai
+     * sus, nu mai are rost o a doua eroare despre un cod cerut de o categorie
+     * care nu există.
+     *
+     * La celelalte categorii câmpul nici nu se citește. Un cod trimis din
+     * greșeală odată cu un anunț de la „Sport" nu e o eroare — e un câmp rămas
+     * completat în formular când omul s-a răzgândit; se lasă pe dinafară, tăcut,
+     * fiindcă în `curat` nu intră decât ce chiar se salvează.
+     */
+    if (isset($curat['categorie_id']) && in_array($categorie, $categoriiJocQr, true)) {
+        $scris  = trim($citeste('cod_qr'));
+        $codQr  = curataCodQr($scris);
+
+        if ($scris === '') {
+            $erori['cod_qr'] = 'Scrie codul de pe abțibild.';
+        } elseif ($codQr === '') {
+            $erori['cod_qr'] = 'Codul are ' . COD_QR_LUNGIME
+                             . ' semne — cifre și litere mari, cum scrie pe abțibild.';
+        } else {
+            $curat['cod_qr'] = $codQr;
+        }
     }
 
     /* ------------------------------ Data ------------------------------ */

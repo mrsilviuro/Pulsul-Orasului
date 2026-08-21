@@ -4468,3 +4468,241 @@ body { overscroll-behavior-y: none; }
 /* Scoasă bifa, urmarea nu mai e o lămurire, e o avertizare: ce se șterge nu se
    mai aduce înapoi. Singurul lucru din tot blocul care nu se ia înapoi. */
 .moderare__urmare--grea { color: var(--brand); }
+
+/* =========================================================================
+   „FINDME" — VÂNĂTOAREA DE ABȚIBILDE
+   -------------------------------------------------------------------------
+   Trei locuri, un singur fel de a arăta:
+
+     .findme      — caseta de pe pagina evenimentului, în locul lui „Ce zici,
+                    te interesează?" (inc/coduri-qr.php)
+     .fm-card     — pagina de după scanare, findme.php
+     .coduri      — lista de abțibilde a omului de casă, coduri.php
+
+   Toate trei se sprijină pe aceleași două lucruri: numerele scrise cu
+   `tabular-nums`, ca să nu joace cifrele când se schimbă, și un chenar care
+   își ia culoarea din starea vânătorii.
+   ========================================================================= */
+
+/* ---------------------- caseta de pe pagina evenimentului --------------- */
+
+.findme {
+  margin-top: 40px;
+  padding: 26px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-soft);
+  text-align: center;
+}
+
+/* Cât abțibildul e ascuns, caseta e vie: chenarul ia culoarea mărcii, ca să
+   se vadă din prima că e ceva de făcut chiar acum. Găsit sau trecut, se
+   stinge — la fel ca un cartonaș de eveniment încheiat. */
+.findme--cautare { border-color: color-mix(in srgb, var(--brand) 45%, var(--border)); }
+.findme--gasit   { border-color: color-mix(in srgb, #16a34a 40%, var(--border)); }
+
+.findme__eticheta {
+  font-size: 12.5px; font-weight: 700; letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin-bottom: 6px;
+}
+.findme--cautare .findme__eticheta { color: var(--brand); }
+.findme--gasit   .findme__eticheta { color: #16a34a; }
+[data-theme="dark"] .findme--gasit .findme__eticheta { color: #6ee7a0; }
+
+.findme__titlu { font-size: clamp(19px, 3vw, 23px); margin-bottom: 8px; }
+
+.findme__vorba {
+  color: var(--text-soft); font-size: 14.5px; line-height: 1.6;
+  max-width: 46ch; margin-inline: auto;
+}
+
+/* Numărătoarea inversă. `tabular-nums` e tot rostul: fără el, cifrele au
+   lățimi diferite, iar ceasul tresaltă la fiecare secundă. */
+.findme__ceas {
+  margin-top: 18px;
+  font-size: clamp(30px, 7vw, 44px);
+  font-weight: 800;
+  letter-spacing: -.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--brand);
+  line-height: 1.1;
+}
+.findme__ceas.e-gata { color: var(--text-faint); font-size: 22px; }
+
+.findme__cand { margin-top: 8px; font-size: 13px; color: var(--text-faint); }
+
+/* Câștigătorul: poza, numele, o vorbă. Pe telefon trec unul sub altul. */
+.findme__om {
+  display: flex; align-items: center; justify-content: center;
+  gap: 14px; text-align: left;
+  margin-top: 16px;
+}
+.findme__poza {
+  width: 56px; height: 56px; flex: none;
+  border-radius: 50%; object-fit: cover;
+  border: 2px solid var(--surface);
+  box-shadow: 0 0 0 2px color-mix(in srgb, #16a34a 45%, transparent);
+}
+.findme__castigator {
+  display: block; font-size: 17px; font-weight: 800; color: var(--text);
+}
+a.findme__castigator:hover { color: var(--brand); }
+.findme__om .findme__vorba { margin: 2px 0 0; font-size: 14px; max-width: none; }
+
+@media (max-width: 480px) {
+  .findme__om { flex-direction: column; text-align: center; gap: 10px; }
+}
+
+/* -------------------------- pagina de după scanare ---------------------- */
+
+.findme-pagina { padding-block: 46px 64px; }
+
+.fm-card {
+  padding: 34px 26px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  text-align: center;
+}
+.fm-card--castigat { border-color: color-mix(in srgb, #16a34a 45%, var(--border)); }
+.fm-card--nelogat  { border-color: color-mix(in srgb, var(--brand) 45%, var(--border)); }
+
+/* Semnul de sus, în cerc. Culoarea vine din starea cardului — verde la câștig,
+   culoarea mărcii cât mai e ceva de făcut, cenușiu când nu mai e. */
+.fm-card__semn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 62px; height: 62px; margin-bottom: 16px;
+  border-radius: 50%;
+  background: var(--bg-soft);
+  color: var(--text-faint);
+}
+.fm-card__semn .ico { width: 30px; height: 30px; }
+.fm-card--castigat .fm-card__semn { background: rgba(22, 163, 74, .13); color: #16a34a; }
+[data-theme="dark"] .fm-card--castigat .fm-card__semn { color: #6ee7a0; }
+.fm-card--nelogat .fm-card__semn {
+  background: color-mix(in srgb, var(--brand) 13%, transparent); color: var(--brand);
+}
+
+.fm-card__eticheta {
+  font-size: 12.5px; font-weight: 700; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--text-faint);
+  margin-bottom: 6px;
+}
+.fm-card__titlu { font-size: clamp(22px, 5vw, 30px); line-height: 1.25; margin-bottom: 10px; }
+.fm-card__vorba {
+  color: var(--text-soft); font-size: 15px; line-height: 1.65;
+  max-width: 46ch; margin-inline: auto;
+}
+.fm-card__butoane {
+  display: flex; flex-wrap: wrap; gap: 12px; justify-content: center;
+  margin-top: 22px;
+}
+.fm-card__eveniment {
+  margin-top: 10px; font-size: 13px; color: var(--text-faint); font-weight: 600;
+}
+
+/* Rugămintea de dezlipit, ca pe abțibild. Rândul cu semnul în stânga și textul
+   în dreapta e chiar așezarea de pe hârtie. */
+.fm-dezlipeste {
+  display: flex; align-items: center; gap: 16px;
+  margin-top: 22px; padding: 20px 22px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-lg);
+}
+.fm-dezlipeste__semn { flex: none; color: var(--brand); }
+.fm-dezlipeste__semn .ico { width: 30px; height: 30px; }
+.fm-dezlipeste__text { font-size: 15px; line-height: 1.6; color: var(--text-soft); }
+.fm-dezlipeste__text strong { color: var(--brand); font-weight: 700; }
+.fm-dezlipeste__multumesc { margin-top: 6px; font-weight: 700; }
+
+@media (max-width: 480px) {
+  .fm-dezlipeste { flex-direction: column; text-align: center; gap: 10px; }
+}
+
+/* --------------------- câmpul cu codul, în formular --------------------- */
+
+/* Cinci semne, scrise rar și cu majuscule: câmpul arată ca lucrul pe care îl
+   copiezi de pe abțibild, nu ca o casetă de text obișnuită. */
+.field--qr input {
+  max-width: 11ch;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 19px; font-weight: 700;
+  letter-spacing: .18em; text-transform: uppercase;
+}
+
+/* ------------------------- pagina codurilor (staff) --------------------- */
+
+.coduri__rau {
+  margin-bottom: 18px; padding: 12px 14px;
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--brand) 12%, transparent);
+  color: var(--brand-link); font-weight: 600; font-size: 14px;
+}
+
+/* Codul proaspăt, scos în față: e singurul lucru pentru care omul a intrat. */
+.cod-nou {
+  margin-bottom: 20px; padding: 22px;
+  border: 1px solid color-mix(in srgb, var(--brand) 45%, var(--border));
+  border-radius: var(--radius-lg);
+  background: var(--bg-soft);
+  text-align: center;
+}
+.cod-nou__eticheta {
+  font-size: 12.5px; font-weight: 700; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--brand);
+}
+.cod-nou__cod {
+  margin: 6px 0 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: clamp(32px, 9vw, 46px); font-weight: 800; letter-spacing: .16em;
+}
+.cod-nou__adresa { font-size: 14px; color: var(--text-soft); }
+.cod-nou__adresa code {
+  display: inline-block; margin-top: 4px;
+  /* Adresa e lungă și n-are spații: fără asta, ea singură ar lăți pagina. */
+  word-break: break-all;
+}
+.cod-nou__vorba { margin-top: 10px; font-size: 13px; color: var(--text-faint); }
+
+.cod-form { margin-bottom: 30px; }
+
+.coduri h2 { font-size: 19px; margin-bottom: 12px; }
+.coduri__gol { color: var(--text-faint); font-size: 14.5px; }
+
+/* Tabelul se derulează în cutia lui, ca pagina să nu plece în lateral pe
+   telefon. Regula de aur a site-ului: nimic nu împinge <body> orizontal. */
+.coduri__scroll { overflow-x: auto; }
+
+.tabel-coduri { width: 100%; border-collapse: collapse; font-size: 14px; }
+.tabel-coduri th, .tabel-coduri td {
+  padding: 10px 12px; text-align: left; vertical-align: top;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.tabel-coduri th {
+  font-size: 12px; text-transform: uppercase; letter-spacing: .06em;
+  color: var(--text-faint); font-weight: 700;
+}
+
+.cod-rand__cod {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 16px; font-weight: 700; letter-spacing: .1em;
+}
+.cod-rand__adresa { font-size: 12px; color: var(--text-faint); }
+.cod-rand__mic { font-size: 12.5px; color: var(--text-faint); }
+
+/* Un abțibild deja găsit e istorie: rândul lui se stinge, ca un eveniment
+   încheiat pe prima pagină. */
+.cod-rand--gasit { opacity: .62; }
+
+.cod-stare {
+  display: inline-block; padding: 2px 9px;
+  border-radius: var(--radius-pill);
+  font-size: 12px; font-weight: 700;
+}
+.cod-stare--nefolosit { background: var(--bg-soft);                            color: var(--text-faint); }
+.cod-stare--in_joc    { background: color-mix(in srgb, var(--brand) 14%, transparent); color: var(--brand); }
+.cod-stare--gasit     { background: rgba(22, 163, 74, .14);                    color: #16a34a; }
+[data-theme="dark"] .cod-stare--gasit { color: #6ee7a0; }

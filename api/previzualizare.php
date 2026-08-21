@@ -21,6 +21,7 @@ declare(strict_types=1);
  */
 
 require_once __DIR__ . '/../inc/evenimente.php';
+require_once __DIR__ . '/../inc/coduri-qr.php';
 
 if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
     raspunsJson(['ok' => false, 'mesaj' => 'Metodă nepermisă.'], 405);
@@ -62,9 +63,18 @@ $inceputulDeAcum = $deEditat === null
  *
  * Nu o copie „mai îngăduitoare": dacă previzualizarea ar trece peste ceva ce
  * salvarea refuză, omul ar vedea o pagină frumoasă și apoi un teanc de erori.
+ *
+ * De aceea se cere și lista categoriilor de joc: la o vânătoare „FindMe" fără
+ * cod de abțibild, previzualizarea trebuie să spună la fel ca salvarea. Codul
+ * nu se vede în anunțul desenat mai jos — și nici n-ar trebui — dar asta nu-l
+ * face mai puțin obligatoriu.
+ *
+ * Ce NU se face aici, spre deosebire de api/eveniment.php: nu se întreabă baza
+ * dacă acel cod există și e liber. O previzualizare nu leagă nimic de nimic;
+ * întrebarea aceea are rost abia în clipa în care se scrie anunțul.
  */
 $rezultat = verificaEveniment($_POST, idCategoriiValide(esteStaff($membru)), oraseDisponibile(),
-                              null, $inceputulDeAcum);
+                              null, $inceputulDeAcum, idCategoriiJocQr());
 
 if ($rezultat['erori'] !== []) {
     raspunsJson(['ok' => false, 'erori' => $rezultat['erori']], 422);

@@ -10,6 +10,7 @@ declare(strict_types=1);
  */
 
 require_once __DIR__ . '/../inc/evenimente.php';
+require_once __DIR__ . '/../inc/coduri-qr.php';
 
 if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
     raspunsJson(['ok' => false, 'mesaj' => 'Metodă nepermisă.'], 405);
@@ -133,13 +134,34 @@ $inceputulDeAcum = $deEditat === null
     : (string) $deEditat['data_eveniment'] . ' ' . (string) $deEditat['ora_inceput'];
 
 $rezultat = verificaEveniment($_POST, idCategoriiValide($eStaff), oraseDisponibile(),
-                              null, $inceputulDeAcum);
+                              null, $inceputulDeAcum, idCategoriiJocQr());
 
 if ($rezultat['erori'] !== []) {
     raspunsJson(['ok' => false, 'erori' => $rezultat['erori']], 422);
 }
 
 $curat = $rezultat['curat'];
+
+/**
+ * Codul de abțibild, dacă e o vânătoare: EXISTĂ și e liber?
+ *
+ * verificaEveniment() a spus doar că arată a cod — el nu deschide baza. Aici se
+ * întreabă și baza, înainte de a scrie ceva: un anunț publicat cu un cod care
+ * nu duce nicăieri ar fi o vânătoare pe care n-o poate câștiga nimeni.
+ *
+ * Nu e dovada din urmă. Aceea e cheia unică din `coduri_qr`, sub care scrie
+ * legaCodulDeEveniment() mai jos — între întrebarea de aici și scrierea de
+ * acolo încap două cereri venite deodată. Verificarea asta e pentru VORBA
+ * limpede din formular, nu pentru siguranță.
+ */
+if (isset($curat['cod_qr'])) {
+    $deCe = deCeNuSePoateLega($curat['cod_qr'],
+                              $deEditat === null ? null : (int) $deEditat['id']);
+
+    if ($deCe !== '') {
+        raspunsJson(['ok' => false, 'erori' => ['cod_qr' => vorbaDespreCodulQr($deCe)]], 422);
+    }
+}
 
 /* =========================== 4. Coperta ============================== */
 
@@ -236,13 +258,56 @@ try {
     throw $e;
 }
 
+/* ==================== 6. Abțibildul, dacă e vânătoare ================= */
+
+/**
+ * DUPĂ salvare, fiindcă legătura cere id-ul evenimentului — iar la unul nou
+ * acela abia acum există.
+ *
+ * La editare se dezleagă întâi ce era: omul poate să fi scris alt cod, sau să
+ * fi mutat anunțul la altă categorie, caz în care nu mai e nimic de legat.
+ * Codul desprins se întoarce în „nefolosit" și se poate lega de altceva —
+ * abțibildul lui e tot pe stâlp. Cele deja găsite nu se ating (vezi funcția).
+ */
+$idSalvat = $deEditat !== null
+    ? (int) $deEditat['id']
+    // La unul nou, salveazaEveniment() întoarce slugul, nu id-ul — rândul se
+    // caută înapoi după el. O interogare în plus, o dată la o publicare.
+    : (int) (evenimentDupaSlug($slug)['id'] ?? 0);
+
+$necazQr = '';
+
+if ($idSalvat > 0) {
+    if ($deEditat !== null) {
+        dezleagaCodurileEvenimentului($idSalvat);
+    }
+
+    if (isset($curat['cod_qr'])) {
+        $legat = legaCodulDeEveniment($curat['cod_qr'], $idSalvat);
+
+        /**
+         * Aici nu se mai poate răspunde cu o eroare: anunțul e deja scris, iar
+         * un 422 l-ar lăsa pe om crezând că n-a publicat nimic. Se spune ce s-a
+         * întâmplat și se trimite tot la anunț, de unde poate intra pe
+         * „Editează" ca să pună alt cod.
+         *
+         * Se ajunge aici numai dacă cineva a apucat codul între verificarea de
+         * mai sus și clipa asta.
+         */
+        if ($legat !== 'gata') {
+            $necazQr = ' Dar codul de abțibild n-a putut fi legat: '
+                     . lcfirst(vorbaDespreCodulQr($legat));
+        }
+    }
+}
+
 // Adresa pleacă înapoi ca panoul de „gata" să aibă unde trimite omul: la un
 // eveniment nou, pagina abia acum s-a născut, deci formularul n-avea de unde
 // să știe slugul când s-a tipărit.
 raspunsJson([
     'ok'    => true,
-    'mesaj' => $eStaff
+    'mesaj' => ($eStaff
         ? 'Evenimentul a fost publicat.'
-        : 'Evenimentul tău a fost trimis spre aprobare.',
+        : 'Evenimentul tău a fost trimis spre aprobare.') . $necazQr,
     'url'   => $slug !== '' ? urlEveniment($slug) : '',
 ]);
