@@ -507,7 +507,7 @@ function evenimenteDePePrima(string $oras = '', string $categorie = '', int $deL
 
     $q = db()->prepare(
         'SELECT e.id, e.titlu, e.slug, e.coperta, e.data_eveniment, e.ora_inceput,
-                e.locatie, e.descriere, e.stare_moderare, e.oras,
+                e.locatie, e.descriere, e.stare_moderare, e.oras, e.participanti_max,
                 c.nume AS categorie, c.slug AS categorie_slug, c.imagine_default,
                 c.joc_qr AS categorie_joc_qr,
                 ' . CIFRE_CARTONAS . ',
@@ -606,7 +606,7 @@ function evenimenteSugerate(int $fara = 0, int $cate = EVENIMENTE_SUGERATE): arr
 
     $q = db()->prepare(
         'SELECT e.id, e.titlu, e.slug, e.coperta, e.data_eveniment, e.ora_inceput,
-                e.locatie, e.descriere, e.stare_moderare, e.oras,
+                e.locatie, e.descriere, e.stare_moderare, e.oras, e.participanti_max,
                 c.nume AS categorie, c.slug AS categorie_slug, c.imagine_default,
                 c.joc_qr AS categorie_joc_qr,
                 ' . CIFRE_CARTONAS . '
@@ -737,7 +737,7 @@ function evenimenteDePeProfil(int $membruId, bool $vedeSiCeleInAsteptare): array
 
     $q = db()->prepare(
         'SELECT e.id, e.titlu, e.slug, e.coperta, e.data_eveniment, e.ora_inceput,
-                e.locatie, e.descriere, e.stare_moderare,
+                e.locatie, e.descriere, e.stare_moderare, e.participanti_max,
                 c.nume AS categorie, c.slug AS categorie_slug, c.imagine_default,
                 c.joc_qr AS categorie_joc_qr,
                 ' . CIFRE_CARTONAS . '
@@ -914,9 +914,11 @@ function urlEveniment(string $slug): string
  * între ce urmează, ce e în toi și ce a fost; într-o listă unde totul e la fel
  * (o previzualizare, de pildă) un semn pe fiecare cartonaș ar fi doar zgomot.
  *
- * CIFRA DIN COLȚUL DE JOS — câte comentarii sunt — se scrie numai dacă rândul
- * o aduce cu el (`cate_comentarii`). Așa, o listă care n-a cerut-o din bază nu
- * ajunge să arate un zero inventat; vezi cifreleCartonasului().
+ * CIFRELE DIN COLȚUL DE JOS — câți vin și câte comentarii sunt — se scriu
+ * numai dacă rândul le aduce cu el (`cati_participanti`, `cate_comentarii`).
+ * Așa, o listă care nu le-a cerut din bază nu ajunge să arate zerouri
+ * inventate; vezi cifreleCartonasului(), care hotărăște și cine le vede: la o
+ * vânătoare „FindMe" participanții nu se scriu deloc.
  */
 function randeazaCartonasEveniment(
     array $ev,
@@ -994,65 +996,130 @@ function randeazaCartonasEveniment(
 }
 
 /**
- * Subcererea care aduce cifra de pe cartonaș.
+ * Cele două subcereri care aduc cifrele de pe cartonaș.
  *
  * O bucată de SQL scrisă o dată și lipită în fiecare listă care desenează
  * cartonașe — prima pagină, profilul, istoricul. Scrisă de patru ori, ar fi
  * ajuns să numere patru lucruri ușor diferite, iar același eveniment ar fi
  * arătat „7" într-un loc și „8" în altul.
  *
- * Comentariile se numără ca în numaraComentarii(): fără cele golite, care sunt
+ * PARTICIPANȚII se numără exact ca pe pagina evenimentului: numai conturile
+ * ACTIVE (vezi INTERESE_DOAR_ACTIVI din inc/interese.php). Cine și-a șters
+ * contul nu mai ține un loc, deci n-are ce căuta nici în cifra de pe cartonaș
+ * — altfel omul ar fi văzut „12 / 12" pe listă și un loc liber pe pagină.
+ *
+ * COMENTARIILE se numără ca în numaraComentarii(): fără cele golite, care sunt
  * pietre de mormânt, nu vorbe de citit.
  *
- * A NUMĂRAT ȘI PARTICIPANȚII, o vreme, iar cifra stătea lângă asta în colțul
- * pozei. A ieșit: pe un cartonaș, „0" scris lângă un omuleț nu spune „încă nu
- * s-a înscris nimeni", spune „nu se duce nimeni" — și asta chiar la
- * evenimentele proaspete, cărora le-ar fi trebuit ajutorul cel mai mult. Cine
- * vrea să știe câți vin deschide anunțul, unde scrie cu vorbe.
+ * Se aduc AMÂNDOUĂ, oricare ar fi evenimentul. Care dintre ele se și scrie pe
+ * cartonaș e treaba lui cifreleCartonasului() — la o vânătoare „FindMe", de
+ * pildă, participanții nu se arată. Subcererea rămâne totuși, ca bucata asta
+ * de SQL să nu ajungă să se uite la ce fel de eveniment aduce: e o listă, nu o
+ * hotărâre.
  *
  * Cere ca tabelul `evenimente` să fie aliasul `e` în cererea care o folosește —
  * așa e în toate cele de aici.
  */
 const CIFRE_CARTONAS = '
                 (SELECT COUNT(*)
+                   FROM interese_evenimente i
+                   JOIN membri mi ON mi.id = i.membru_id AND mi.stare = \'activ\'
+                  WHERE i.eveniment_id = e.id AND i.stare = \'participant\') AS cati_participanti,
+                (SELECT COUNT(*)
                    FROM comentarii cm
                   WHERE cm.eveniment_id = e.id AND cm.sters = 0) AS cate_comentarii';
 
 /**
- * Cifra din colțul de jos al pozei: câte comentarii are evenimentul.
+ * Cifrele din colțul de jos al pozei: câți vin și câte comentarii sunt.
  *
  * DE CE PE POZĂ, și nu sub titlu, lângă dată și loc: acolo jos e singurul loc
- * gol al cartonașului, iar cifra răspunde la întrebarea tăcută pe care și-o
- * pune omul când trece cu ochii peste o listă — „se vorbește ceva despre
- * asta?". Sub titlu ar fi împins data și locul pe al doilea rând, la fiecare
- * cartonaș.
+ * gol al cartonașului, iar amândouă răspund la aceeași întrebare tăcută pe care
+ * și-o pune omul când trece cu ochii peste o listă — „se duce cineva, se
+ * vorbește ceva despre asta?". Sub titlu ar fi împins data și locul pe al
+ * doilea rând, la fiecare cartonaș.
  *
- * A STAT AICI ȘI NUMĂRUL PARTICIPANȚILOR, iar acum nu mai stă — vezi
- * CIFRE_CARTONAS de mai sus pentru de ce.
+ * PARTICIPANȚII, în două feluri:
  *
- * Nu se scrie nimic dacă rândul n-a adus cifra din bază. Un cartonaș desenat
- * dintr-un rând care n-a cerut subcererea ar fi arătat „0" — un neadevăr care
- * pare o socoteală. De aceea se cere prezența CHEII, nu o valoare adevărată:
- * zero comentarii e un răspuns cinstit și trebuie arătat.
+ *   „7"      — când nu s-a pus nicio limită. Numărul e o veste bună, atât;
+ *   „7 / 12" — când există un număr maxim. Atunci cifra singură n-ar spune
+ *              nimic: șapte inși e mult la o partidă de tenis și puțin la un
+ *              concert. Cu numitorul alături, omul vede dintr-o privire dacă
+ *              mai are unde să intre.
  *
- * `aria-label`, fiindcă iconița singură nu spune nimic unui cititor de ecran.
+ * LA O VÂNĂTOARE „FINDME" NU SE SCRIU DELOC, oricât ar aduce rândul din bază.
+ * Acolo nu se înscrie nimeni: caseta cu „Mă interesează / Voi participa" nici
+ * nu există pe pagina anunțului (vezi $eVanatoare din event.php), deci lista de
+ * participanți e goală prin însăși alcătuirea jocului. Un „0" lângă un omuleț
+ * n-ar fi spus „încă nu s-a înscris nimeni", ci „nu se duce nimeni" — și ar fi
+ * fost un neadevăr despre singurul fel de eveniment la care nimeni n-are unde
+ * să se ducă. Rămân comentariile, care la o vânătoare chiar spun ceva: acolo
+ * lumea se întreabă unde n-a căutat încă.
+ *
+ * La orice alt eveniment se scriu ca mai înainte.
+ *
+ * Nu se scrie nimic dacă rândul n-a adus cifrele din bază. Un cartonaș
+ * desenat dintr-un rând care n-a cerut subcererile ar fi arătat „0 / 0" — un
+ * neadevăr care pare o socoteală. De aceea se cere prezența CHEII, nu o
+ * valoare adevărată: zero participanți e un răspuns cinstit și trebuie arătat.
+ *
+ * `aria-label` pe fiecare cifră, fiindcă iconița singură nu spune nimic unui
+ * cititor de ecran, iar „7 / 12" citit ca atare n-ar avea niciun înțeles.
  */
 function cifreleCartonasului(array $ev): string
 {
-    if (!array_key_exists('cate_comentarii', $ev)) {
+    /**
+     * Steagul călătorește cu rândul evenimentului (`categorie_joc_qr`), din
+     * `categorii.joc_qr` — niciodată din numele sau slugul categoriei. Aceeași
+     * întrebare o pune și pagina anunțului, prin esteJocQr().
+     *
+     * Se citește de-a dreptul, nu prin funcția aceea: ea stă în
+     * inc/coduri-qr.php, care cere fișierul ăsta, iar două fișiere care se cer
+     * unul pe altul de la început ar fi o buclă. E o singură comparație, și e
+     * scrisă chiar lângă lămurirea de ce.
+     */
+    $eVanatoare = (int) ($ev['categorie_joc_qr'] ?? 0) === 1;
+
+    $areParticipanti = !$eVanatoare && array_key_exists('cati_participanti', $ev);
+    $areComentarii   = array_key_exists('cate_comentarii', $ev);
+
+    if (!$areParticipanti && !$areComentarii) {
         return '';
     }
 
-    $cate  = (int) $ev['cate_comentarii'];
-    $vorba = $cate === 1 ? 'un comentariu' : $cate . ' comentarii';
+    $bucati = '';
 
-    return '<span class="card__cifre">'
-         . '<span class="card__cifra" aria-label="' . h($vorba) . '">'
-         . '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">'
-         . '<path d="M20.5 12.5c0 4-3.8 7-8.5 7-1 0-2-.1-2.9-.4L4 21l1.3-3.4'
-         . 'A7.4 7.4 0 0 1 3.5 12.5c0-4 3.8-7 8.5-7s8.5 3 8.5 7Z"/>'
-         . '</svg>' . $cate . '</span>'
-         . '</span>';
+    if ($areParticipanti) {
+        $cati  = (int) $ev['cati_participanti'];
+        $maxim = isset($ev['participanti_max']) && $ev['participanti_max'] !== null
+            ? (int) $ev['participanti_max']
+            : 0;
+
+        $text  = $maxim > 0 ? $cati . ' / ' . $maxim : (string) $cati;
+        $vorba = $maxim > 0
+            ? $cati . ' din ' . $maxim . ' locuri ocupate'
+            : ($cati === 1 ? 'o persoană participă' : $cati . ' persoane participă');
+
+        $bucati .= '<span class="card__cifra" aria-label="' . h($vorba) . '">'
+                 . '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">'
+                 . '<circle cx="9" cy="8" r="3.4"/>'
+                 . '<path d="M2.8 19.5c.5-3.2 3.1-5.2 6.2-5.2s5.7 2 6.2 5.2"/>'
+                 . '<path d="M16.4 5.2a3.4 3.4 0 0 1 0 6.5"/>'
+                 . '<path d="M18.2 14.6c1.7.7 2.8 2.4 3 4.4"/>'
+                 . '</svg>' . h($text) . '</span>';
+    }
+
+    if ($areComentarii) {
+        $cate  = (int) $ev['cate_comentarii'];
+        $vorba = $cate === 1 ? 'un comentariu' : $cate . ' comentarii';
+
+        $bucati .= '<span class="card__cifra" aria-label="' . h($vorba) . '">'
+                 . '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">'
+                 . '<path d="M20.5 12.5c0 4-3.8 7-8.5 7-1 0-2-.1-2.9-.4L4 21l1.3-3.4'
+                 . 'A7.4 7.4 0 0 1 3.5 12.5c0-4 3.8-7 8.5-7s8.5 3 8.5 7Z"/>'
+                 . '</svg>' . $cate . '</span>';
+    }
+
+    return '<span class="card__cifre">' . $bucati . '</span>';
 }
 
 /** Adresa formularului, în modul în care editează un eveniment anume. */
