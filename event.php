@@ -762,10 +762,22 @@ require __DIR__ . '/inc/antet.php';
       <?= randeazaZonaAnulare($eveniment, tokenCsrf()) ?>
       <?php endif; ?>
 
-      <?php if ($eStaff && poateFiModerat($eveniment)): ?>
+      <?php if ($eStaff && poateFiModerat($eveniment)
+                 && $eveniment['stare_moderare'] !== 'aprobat'): ?>
       <!-- ========================= MODERAREA ==============================
         Numai pentru staff, și numai la un anunț care mai poate fi hotărât —
         nici anulat, nici încheiat (vezi STARI_MODERABILE din inc/evenimente.php).
+
+        ȘI NICI APROBAT. Acolo treaba e făcută: anunțul e pe site, iar blocul
+        n-ar mai fi decât un teanc de butoane peste care omul de casă trece de
+        fiecare dată când deschide o pagină, ca oricine altcineva. Cine chiar
+        vrea să ia aprobarea înapoi o face din phpMyAdmin — e o răzgândire
+        rară, nu o unealtă de zi cu zi.
+
+        Verificarea stă AICI, nu în poateFiModerat(): aceea e regula pe care o
+        cere și api/modereaza-eveniment.php, iar acolo „aprobat" trebuie să
+        rămână o stare din care se poate ieși. Ce se schimbă e doar ce se
+        DESENEAZĂ.
 
         NU E ASCUNSĂ CU CSS: pentru cine nu e om de casă, blocul ăsta nici nu se
         scrie în pagină. Un buton ascuns rămâne un buton — se găsește din consolă

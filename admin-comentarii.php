@@ -60,9 +60,31 @@ $randComentariu = static function (array $c, bool $cuRapoarte): string {
          . $rapoarte
          . '<td>' . h(clipaScurta($c['creat_la'])) . '</td>'
          . '<td class="admin-tabel__unelte">'
+         . ($cuRapoarte
+            /**
+             * „E în regulă" — numai la cele raportate.
+             *
+             * Se raportează și din greșeală, și din supărare, și fiindcă cineva
+             * n-a fost de acord cu ce scrie acolo. Fără butonul ăsta, singurul
+             * fel de a scoate un rând din lista de raportate era să-l ștergi —
+             * adică să pedepsești pe cineva ca să faci curat pe o listă.
+             *
+             * Nu întreabă nimic înainte: nu se pierde nimic, iar dacă cineva îl
+             * raportează din nou mâine, se întoarce în listă.
+             */
+            ? '<button class="btn btn--ghost btn--xs" type="button"'
+              . ' data-fapta="curata-rapoarte" data-id="' . (int) $c['id'] . '"'
+              . ' title="Șterge raportările. Comentariul rămâne pe loc.">E în regulă</button>'
+            : '')
+         /**
+          * `data-motiv` cere o vorbă înainte de faptă, dar N-O IMPUNE: lăsată
+          * goală, e-mailul spune limpede că nu s-a dat niciun motiv, în loc să
+          * tacă. Vezi paragrafeleMotivului() din inc/email.php.
+          */
          . '<button class="btn btn--rau btn--xs" type="button"'
          . ' data-fapta="sterge-comentariu" data-id="' . (int) $c['id'] . '"'
-         . ' data-intreb="Ștergi comentariul ăsta?">Șterge</button>'
+         . ' data-motiv="De ce se șterge? Motivul îi pleacă autorului pe e-mail."'
+         . ' data-intreb="Ștergi comentariul ăsta? Autorul primește un e-mail.">Șterge</button>'
          . '</td></tr>';
 };
 
@@ -77,7 +99,8 @@ require __DIR__ . '/inc/antet.php';
       <p class="page-head__sub">
         Ce a fost raportat, și ce s-a scris de curând. Un comentariu cu
         răspunsuri sub el se golește în loc să dispară, ca discuția să-și
-        păstreze începutul.
+        păstreze începutul. La ștergere, autorul primește un e-mail — poți
+        scrie un motiv, sau îl poți lăsa gol.
       </p>
     </header>
 
@@ -91,6 +114,8 @@ require __DIR__ . '/inc/antet.php';
       <p class="admin-sect__vorba">
         Cel mai raportat, primul. Numărul ăsta nu se vede nicăieri altundeva pe
         site: pe pagina evenimentului omul află doar dacă el însuși a raportat.
+        „E în regulă" șterge raportările și lasă comentariul pe loc — se
+        raportează și din greșeală, sau doar fiindcă cineva n-a fost de acord.
       </p>
       <div class="admin-scroll">
         <table class="admin-tabel">

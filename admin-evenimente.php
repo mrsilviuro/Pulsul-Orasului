@@ -10,7 +10,8 @@ declare(strict_types=1);
  *                  anunțului, unde stă blocul de moderare cu „Aprobă" și
  *                  „Respinge". Hotărârea NU se ia de aici, dinadins: ca s-o
  *                  poți lua trebuie să citești ce a scris omul, iar dintr-un
- *                  rând de tabel n-ai ce citi.
+ *                  rând de tabel n-ai ce citi. Cele cărora li s-a cerut deja o
+ *                  îndreptare poartă un SEMN — vezi coloana „Stare".
  *   RESPINSE     — ce a fost refuzat. Aici se face curat: „Șterge" ia anunțul
  *                  cu tot ce atârnă de el.
  *
@@ -56,13 +57,16 @@ require __DIR__ . '/inc/antet.php';
               <th scope="col">Anunțul</th>
               <th scope="col">Organizator</th>
               <th scope="col">Când are loc</th>
+              <th scope="col">Stare</th>
               <th scope="col">Trimis</th>
               <th scope="col"><span class="sr-only">Acțiuni</span></th>
             </tr>
           </thead>
           <tbody>
-            <?php foreach ($inAsteptare as $e): ?>
-            <tr>
+            <?php foreach ($inAsteptare as $e):
+              $asteaptaCorectura = $e['corectura_ceruta_la'] !== null;
+            ?>
+            <tr<?= $asteaptaCorectura ? ' class="admin-rand--corectura"' : '' ?>>
               <td>
                 <strong><?= h((string) $e['titlu']) ?></strong>
                 <span class="admin-tabel__mic">
@@ -74,9 +78,35 @@ require __DIR__ . '/inc/antet.php';
                                      $e['org_permalink'], $e['org_stare']) ?></td>
               <td><?= h(dataScurta((string) $e['data_eveniment'])) ?>,
                   <?= h(oraScurta($e['ora_inceput'])) ?></td>
+
+              <td>
+                <?php if ($asteaptaCorectura): ?>
+                <!--
+                  SEMNUL. I s-a cerut o îndreptare și omul încă n-a atins
+                  anunțul — deci nu e nimic nou de citit aici.
+
+                  Se stinge singur la PRIMA schimbare făcută de el
+                  (actualizeazaEveniment), iar atunci rândul se întoarce în
+                  listă ca unul care așteaptă să fie citit. Fără semnul ăsta,
+                  un anunț citit-și-întors arăta exact ca unul necitit de
+                  nimeni: ori îl citeai a doua oară degeaba, ori îl lăsai
+                  deoparte („l-am mai văzut") deși omul îl schimbase de mult.
+                -->
+                <span class="admin-stare admin-stare--corectura"
+                      title="Cerută pe <?= h(clipaScurta($e['corectura_ceruta_la'])) ?>. Semnul dispare când organizatorul umblă la anunț.">
+                  i s-a cerut o îndreptare
+                </span>
+                <?php else: ?>
+                <span class="admin-stare admin-stare--in_asteptare">necitit</span>
+                <?php endif; ?>
+              </td>
+
               <td><?= h(clipaScurta($e['creat_la'])) ?></td>
               <td class="admin-tabel__unelte">
-                <a class="btn btn--ghost btn--xs"
+                <!-- Tab nou: hotărârea se ia CITIND anunțul, iar lista rămâne
+                     deschisă în spate, cu locul păstrat. Altfel, la fiecare
+                     anunț cercetat urma un drum înapoi. -->
+                <a class="btn btn--ghost btn--xs" target="_blank" rel="noopener"
                    href="event.php?slug=<?= h(urlencode((string) $e['slug'])) ?>">Vezi</a>
               </td>
             </tr>

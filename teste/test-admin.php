@@ -144,6 +144,58 @@ verifica('și cele respinse', true,
 verifica('fără să se amestece', false,
     in_array('tstadm-aprobat', $sluguri(evenimenteDupaStare('respins')), true));
 
+/**
+ * ȘTAMPILA DE CORECTURĂ. „Respinge, dar cu editare necesară" lasă anunțul în
+ * așteptare — altfel omul n-ar mai fi avut ce îndrepta — și tocmai de aceea, în
+ * listă, arăta la fel cu unul pe care nu-l citise nimeni. Ștampila spune care e
+ * care, iar prima editare a omului o stinge.
+ */
+$randDupaSlug = static function (string $slug, string $stare): ?array {
+    foreach (evenimenteDupaStare($stare) as $e) {
+        if ((string) $e['slug'] === $slug) { return $e; }
+    }
+    return null;
+};
+
+verifica('la început, fără ștampilă', null,
+    $randDupaSlug('tstadm-asteapta', 'in_asteptare')['corectura_ceruta_la']);
+
+moderezaEveniment(evenimentDupaSlug('tstadm-asteapta'), 'in_asteptare', true);
+
+verifica('„editare necesară" o pune', true,
+    $randDupaSlug('tstadm-asteapta', 'in_asteptare')['corectura_ceruta_la'] !== null);
+verifica('și anunțul rămâne în așteptare', 'in_asteptare',
+    (string) evenimentDupaSlug('tstadm-asteapta')['stare_moderare']);
+
+/* Orice editare a omului o stinge — nu una anume, ci oricare. */
+$vechi = evenimentDupaSlug('tstadm-asteapta');
+actualizeazaEveniment((int) $vechi['id'], [
+    'categorie_id'     => (int) $vechi['categorie_id'],
+    'titlu'            => (string) $vechi['titlu'],
+    'data_eveniment'   => (string) $vechi['data_eveniment'],
+    'ora_inceput'      => substr((string) $vechi['ora_inceput'], 0, 5),
+    'ora_sfarsit'      => null,
+    'oras'             => (string) $vechi['oras'],
+    'locatie'          => (string) $vechi['locatie'],
+    'cost'             => null,
+    'varsta_minima'    => null,
+    'participanti_min' => null,
+    'participanti_max' => null,
+    'descriere'        => (string) $vechi['descriere'],
+    'gen_participanti' => 'nespecificat',
+], null);
+
+verifica('prima editare o stinge', null,
+    $randDupaSlug('tstadm-asteapta', 'in_asteptare')['corectura_ceruta_la']);
+
+/* Iar o hotărâre adevărată o stinge la fel: n-are ce corectură să mai aștepte. */
+moderezaEveniment(evenimentDupaSlug('tstadm-asteapta'), 'in_asteptare', true);
+moderezaEveniment(evenimentDupaSlug('tstadm-asteapta'), 'aprobat');
+
+$q = db()->prepare('SELECT corectura_ceruta_la FROM evenimente WHERE slug = ?');
+$q->execute(['tstadm-asteapta']);
+verifica('aprobarea o șterge și ea', null, $q->fetchColumn());
+
 /* Ce atârnă de el se numără, ca omul de casă să vadă cât se pierde. */
 db()->prepare('INSERT INTO comentarii (eveniment_id, membru_id, text, creat_la)
                VALUES (?,?,?,?)')->execute([$evResp, $omul, 'Ceva scris.', acum()]);
@@ -272,6 +324,36 @@ verifica('cine nu e, nu se găsește', false, $gasit('Nimeni Pe Lume', $omul));
 // `%` scris de om nu e joker: altfel ar fi adus toată lista.
 verifica('procentul nu aduce pe toți', false, $gasit('%', $omul));
 
+/**
+ * AȘEZAȚI DUPĂ ULTIMA LOGARE, cel mult ADMIN_USERI. Un cont deschis acum doi
+ * ani, dar folosit ieri, e mai interesant decât unul făcut alaltăieri și lăsat
+ * baltă — iar lista întreagă, pe un site cu oameni, n-are cum să încapă.
+ */
+db()->prepare('UPDATE membri SET autentificat_la = ? WHERE id = ?')
+    ->execute([acumMinus(60 * 24 * 30), $omul]);
+db()->prepare('UPDATE membri SET autentificat_la = ? WHERE id = ?')
+    ->execute([acum(), $gazda]);
+
+$lista = cautaMembri('Adminescu');
+$ordine = array_map(static fn(array $m): int => (int) $m['id'], $lista);
+
+verifica('cel logat mai de curând, primul', [$gazda, $omul], $ordine);
+
+db()->prepare('UPDATE membri SET autentificat_la = ? WHERE id = ?')
+    ->execute([acum(), $omul]);
+db()->prepare('UPDATE membri SET autentificat_la = ? WHERE id = ?')
+    ->execute([acumMinus(60 * 24 * 30), $gazda]);
+
+verifica('și invers, dacă se schimbă ceasul', [$omul, $gazda],
+    array_map(static fn(array $m): int => (int) $m['id'], cautaMembri('Adminescu')));
+
+verifica('lista întreagă e tăiată la ADMIN_USERI', true,
+    count(cautaMembri('')) <= ADMIN_USERI);
+
+// Cine n-a intrat niciodată nu se pierde: stă la coadă, nu dispare.
+db()->prepare('UPDATE membri SET autentificat_la = NULL WHERE id = ?')->execute([$omul]);
+verifica('cine n-a intrat niciodată tot se vede', true, $gasit('Andrei', $omul));
+
 /* ==================================================================== */
 sectiune('limita de evenimente: gol nu e zero');
 
@@ -335,6 +417,38 @@ verifica('aprobată, tot fără ștampilă', null, $aNoastra()['publicat_la']);
 
 stampileazaCeleAprobate();
 verifica('ștampila vine de la prima pagină', true, $aNoastra()['publicat_la'] !== null);
+
+/**
+ * SE ARATĂ TOATE, oricâte ar fi — singura listă de administrare fără tăietură.
+ * Rândurile din `dorinte` nu se șterg niciodată, tocmai ca mai târziu să se
+ * poată spune câte dorințe și-au pus oamenii; o limită ar fi tăiat chiar
+ * istoria pentru care se păstrează.
+ */
+$q = db()->query('SELECT COUNT(*) FROM dorinte d JOIN membri m ON m.id = d.membru_id');
+verifica('lista aduce tot ce e în bază', (int) $q->fetchColumn(), count(toateDorintele()));
+
+// Rândul poartă cu el adresa: de ea atârnă vestea care pleacă la hotărâre.
+verifica('rândul are adresa omului', true, ($aNoastra()['email'] ?? '') !== '');
+
+/* ==================================================================== */
+sectiune('vorba despre motiv');
+
+require_once __DIR__ . '/../inc/email.php';
+
+/**
+ * Motivul e MEREU de scris, niciodată de cerut. Lăsat gol, mesajul spune
+ * limpede că nu s-a dat niciunul — altfel omul ar fi primit o veste fără cap și
+ * fără coadă, cu un gol în locul explicației.
+ */
+verifica('fără motiv, un singur paragraf', 1, count(paragrafeleMotivului('')));
+verifica('și spune că n-a fost niciunul', true,
+    str_contains(paragrafeleMotivului('')[0], 'niciun motiv'));
+verifica('numai spații tot e „fără"', paragrafeleMotivului(''), paragrafeleMotivului("  \n "));
+
+$cu = paragrafeleMotivului('  Nu se scrie așa.  ');
+verifica('cu motiv, două paragrafe', 2, count($cu));
+verifica('întâi întrebarea',  'Motivul:', $cu[0]);
+verifica('apoi vorba omului', 'Nu se scrie așa.', $cu[1]);
 
 /* ==================================================================== */
 if ($BAZA === '') {

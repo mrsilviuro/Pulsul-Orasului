@@ -1121,3 +1121,169 @@ function emailComentariuNou(
 
     return trimiteEmail($catre, $subiect, $blocuri);
 }
+
+/* ================== VEȘTILE DIN ZONA DE ADMINISTRARE ================= */
+
+/**
+ * Motivul scris de omul casei, gata de pus într-un e-mail.
+ *
+ * Toate cele patru vești de mai jos au aceeași croială: se poate da un motiv,
+ * și de cele mai multe ori nu se dă. Fraza pentru „n-a scris nimeni nimic"
+ * trebuie să fie ACEEAȘI peste tot — altfel patru locuri ar fi ajuns să spună
+ * patru lucruri ușor diferite despre aceeași tăcere.
+ *
+ * Întoarce paragrafele care se lipesc la coada mesajului.
+ */
+function paragrafeleMotivului(string $motiv, string $intrebare = 'Motivul'): array
+{
+    $motiv = trim($motiv);
+
+    if ($motiv === '') {
+        return [
+            'Nu s-a specificat niciun motiv. Pentru orice nelămurire, '
+            . 'te rugăm să ne contactezi.',
+        ];
+    }
+
+    return [$intrebare . ':', $motiv];
+}
+
+/**
+ * Vestea că un comentariu a fost șters de un om al casei.
+ *
+ * Se trimite ORICUM s-ar fi dus comentariul — șters de tot sau golit (cel cu
+ * răspunsuri sub el). Pentru omul care l-a scris, cele două înseamnă același
+ * lucru: ce a scris nu se mai citește.
+ *
+ * Textul comentariului NU se pune în mesaj. Dacă a fost șters fiindcă era
+ * urât, retrimiterea lui pe e-mail ar fi fost o a doua trecere a aceluiași
+ * lucru — de data asta în cutia poștală a omului, unde rămâne pentru totdeauna.
+ */
+function emailComentariuSters(string $catre, string $prenume, string $titluEveniment,
+                              string $motiv = ''): bool
+{
+    global $config;
+    $site = rtrim((string) ($config['url_site'] ?? ''), '/');
+
+    $paragrafe = array_merge(
+        [
+            'Un comentariu scris de tine la anunțul „' . $titluEveniment . '" a fost '
+            . 'șters de echipa PulsulOrasului.Ro.',
+        ],
+        paragrafeleMotivului($motiv)
+    );
+
+    return trimiteEmail($catre, 'Un comentariu de-al tău a fost șters', [
+        'salut'     => 'Bună, ' . $prenume . '!',
+        'paragrafe' => $paragrafe,
+        'buton'     => ['text' => 'Scrie-ne', 'href' => $site . '/contact.php'],
+        'incheiere' => 'Contul tău nu e atins: poți scrie mai departe pe site.',
+    ]);
+}
+
+/**
+ * Vestea că poza de profil a fost ștearsă de un om al casei.
+ *
+ * Se spune limpede că poza poate fi încărcată la loc: altfel omul rămâne cu
+ * gândul că i s-a luat ceva pentru totdeauna, când de fapt i s-a cerut, tăcut,
+ * să pună alta.
+ */
+function emailPozaStearsa(string $catre, string $prenume, string $motiv = ''): bool
+{
+    global $config;
+    $site = rtrim((string) ($config['url_site'] ?? ''), '/');
+
+    $paragrafe = array_merge(
+        ['Poza ta de profil de pe PulsulOrasului.Ro a fost ștearsă de echipa noastră.'],
+        paragrafeleMotivului($motiv)
+    );
+
+    $paragrafe[] = 'Poți încărca oricând alta din pagina profilului tău.';
+
+    return trimiteEmail($catre, 'Poza ta de profil a fost ștearsă', [
+        'salut'     => 'Bună, ' . $prenume . '!',
+        'paragrafe' => $paragrafe,
+        'buton'     => ['text' => 'Încarcă altă poză', 'href' => $site . '/poza.php'],
+        'incheiere' => 'Restul contului tău e neatins.',
+    ]);
+}
+
+/**
+ * Vestea că un cont a fost suspendat.
+ *
+ * NU se trimite și la ridicarea suspendării, dinadins: acolo omul intră pur și
+ * simplu în cont și merge mai departe, iar un e-mail care spune „acum poți din
+ * nou" ar fi amintit, fără rost, de o pedeapsă încheiată.
+ */
+function emailContSuspendat(string $catre, string $prenume, string $motiv = ''): bool
+{
+    global $config;
+    $site = rtrim((string) ($config['url_site'] ?? ''), '/');
+
+    $paragrafe = array_merge(
+        [
+            'Contul tău de pe PulsulOrasului.Ro a fost suspendat de echipa noastră. '
+            . 'Până la o nouă hotărâre nu te mai poți conecta.',
+        ],
+        paragrafeleMotivului($motiv)
+    );
+
+    return trimiteEmail($catre, 'Contul tău a fost suspendat', [
+        'salut'     => 'Bună, ' . $prenume . '!',
+        'paragrafe' => $paragrafe,
+        'atentie'   => 'Dacă ți se pare o greșeală, scrie-ne — citim tot ce ne vine.',
+        'buton'     => ['text' => 'Scrie-ne', 'href' => $site . '/contact.php'],
+        'incheiere' => 'Evenimentele și participările tale rămân neatinse.',
+    ]);
+}
+
+/**
+ * Vestea că o dorință a fost aprobată sau respinsă.
+ *
+ * Până acum omul nu afla nimic: vedea singur, dacă trecea pe prima pagină în
+ * cele șapte zile cât stă pe tablă. La respingere nu afla niciodată — dorința
+ * lui pur și simplu nu apărea, iar el nu știa dacă e citită sau uitată.
+ *
+ * La APROBARE nu se cere niciun motiv, evident, dar nici nu se primește: cine
+ * ar scrie unul acolo ar scrie de fapt o vorbă bună, iar aceea n-are ce căuta
+ * într-un e-mail de bifă.
+ */
+function emailDorintaHotarata(string $catre, string $prenume, string $dorinta,
+                              bool $aprobat, string $motiv = '', int $zile = 7): bool
+{
+    global $config;
+    $site = rtrim((string) ($config['url_site'] ?? ''), '/');
+
+    if ($aprobat) {
+        return trimiteEmail($catre, 'Dorința ta e pe tablă', [
+            'salut'     => 'Bună, ' . $prenume . '!',
+            'paragrafe' => [
+                'Am citit-o și am publicat-o: dorința ta e de acum pe tabla de pe prima '
+                . 'pagină, unde o vede oricine trece pe site.',
+                'Stă acolo ' . $zile . ' zile. Dacă cineva se prinde de idee și pune la '
+                . 'cale o ieșire, o să vezi anunțul tot pe prima pagină.',
+            ],
+            'citat'     => ['cine' => $prenume, 'text' => $dorinta],
+            'buton'     => ['text' => 'Vezi tabla', 'href' => $site . '/'],
+            'incheiere' => 'După cele ' . $zile . ' zile îți poți pune alta.',
+        ]);
+    }
+
+    $paragrafe = array_merge(
+        [
+            'Am citit dorința pe care ne-ai trimis-o, dar de data asta n-o putem pune '
+            . 'pe tablă.',
+        ],
+        paragrafeleMotivului($motiv)
+    );
+
+    $paragrafe[] = 'Poți scrie oricând alta — nu e nicio urmă și nicio așteptare.';
+
+    return trimiteEmail($catre, 'Despre dorința ta', [
+        'salut'     => 'Bună, ' . $prenume . '!',
+        'paragrafe' => $paragrafe,
+        'citat'     => ['cine' => $prenume, 'text' => $dorinta],
+        'buton'     => ['text' => 'Pune-ți altă dorință', 'href' => $site . '/'],
+        'incheiere' => 'Dacă ți se pare o greșeală, scrie-ne prin pagina de contact.',
+    ]);
+}

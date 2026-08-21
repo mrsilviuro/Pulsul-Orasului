@@ -180,7 +180,9 @@ if (!$editare && (string) $eveniment['stare_moderare'] === $stareNoua) {
  */
 $organizator = omulDeInstiintat((int) $eveniment['membru_id']);
 
-moderezaEveniment($eveniment, $stareNoua);
+// Al treilea argument pune ȘTAMPILA de corectură, ca lista de administrare
+// să deosebească un anunț citit-și-întors de unul necitit de nimeni.
+moderezaEveniment($eveniment, $stareNoua, $editare);
 
 $evenimentId = (int) $eveniment['id'];
 $sters = [];

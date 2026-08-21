@@ -276,14 +276,23 @@ function poateFiModerat(array $eveniment): bool
  * — aceeași împărțire ca la anuleazaEveniment() și incheieEveniment().
  *
  * `motiv_anulare` NU se atinge: e al anulării, iar de acolo nu se ajunge aici.
+ *
+ * $cerutaCorectura — s-a apăsat „Respinge" cu bifa „editare necesară". Starea
+ * rămâne „in_asteptare" (anunțul e viu, îl așteaptă pe om), dar se pune
+ * ȘTAMPILA, ca în lista de administrare să se vadă că anunțul ăsta a fost deja
+ * citit și i s-a cerut ceva. Fără ea, arăta exact ca unul necitit de nimeni.
+ *
+ * La ORICE ALTĂ hotărâre ștampila se șterge: un anunț tocmai aprobat sau
+ * respins de-a binelea n-are ce corectură să mai aștepte.
  */
-function moderezaEveniment(array $eveniment, string $stare): void
+function moderezaEveniment(array $eveniment, string $stare, bool $cerutaCorectura = false): void
 {
     $q = db()->prepare(
-        'UPDATE evenimente SET stare_moderare = ?, actualizat_la = ? WHERE id = ?'
+        'UPDATE evenimente SET stare_moderare = ?, corectura_ceruta_la = ?,
+                actualizat_la = ? WHERE id = ?'
     );
 
-    $q->execute([$stare, acum(), (int) $eveniment['id']]);
+    $q->execute([$stare, $cerutaCorectura ? acum() : null, acum(), (int) $eveniment['id']]);
 }
 
 /**
@@ -1759,6 +1768,21 @@ function actualizeazaEveniment(
     if ($copertaNoua !== null) {
         $campuri['coperta'] = $copertaNoua;
     }
+
+    /**
+     * ȘTAMPILA DE CORECTURĂ SE ȘTERGE LA PRIMA SCHIMBARE.
+     *
+     * Ea însemna „i s-a cerut ceva și încă n-a atins anunțul". Din clipa în
+     * care omul a apăsat „Trimite", partea lui e făcută — chiar dacă n-a
+     * schimbat mare lucru — iar în lista de administrare anunțul trebuie să
+     * arate din nou ca unul care așteaptă să fie citit.
+     *
+     * Se șterge AICI, nu într-un loc anume pentru corecturi: orice editare
+     * înseamnă că omul a umblat la anunț, iar noi n-avem de unde ști dacă a
+     * îndreptat exact ce i s-a cerut. Asta se vede citind, și de-aia anunțul
+     * se întoarce în listă.
+     */
+    $campuri['corectura_ceruta_la'] = null;
 
     $bucati = [];
     foreach (array_keys($campuri) as $nume) {

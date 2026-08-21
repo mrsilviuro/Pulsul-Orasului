@@ -277,6 +277,15 @@ const ADMIN_RANDURI = 200;
 const ADMIN_COMENTARII = 50;
 
 /**
+ * Câți oameni se arată deodată.
+ *
+ * Cincizeci, așezați după ULTIMA LOGARE — cei care au trecut de curând pe site
+ * sunt cei despre care se pune o întrebare. Cine caută pe cineva anume are
+ * căutarea de deasupra; cine se uită așa, peste listă, se uită la ce mișcă.
+ */
+const ADMIN_USERI = 50;
+
+/**
  * Evenimentele dintr-o stare anume, cu organizatorul lor.
  *
  * FĂRĂ COPERTĂ, dinadins: aici e o listă de lucru, nu o vitrină. Două sute de
@@ -291,6 +300,7 @@ function evenimenteDupaStare(string $stare, int $cate = ADMIN_RANDURI): array
     $q = db()->prepare(
         'SELECT e.id, e.titlu, e.slug, e.coperta, e.oras, e.locatie,
                 e.data_eveniment, e.ora_inceput, e.creat_la, e.stare_moderare,
+                e.corectura_ceruta_la,
                 c.nume AS categorie,
                 m.nume AS org_nume, m.prenume AS org_prenume,
                 m.permalink AS org_permalink, m.stare AS org_stare,
@@ -402,7 +412,7 @@ function mesajeDeContact(int $cate = ADMIN_RANDURI): array
  * scris în telefon: „+40722334455", „0040 722 334 455". Fără trecerea asta,
  * căutarea ar fi răspuns „nimeni" pentru un număr care există.
  */
-function cautaMembri(string $cauta, int $cate = ADMIN_RANDURI): array
+function cautaMembri(string $cauta, int $cate = ADMIN_USERI): array
 {
     $cauta = trim($cauta);
 
@@ -442,7 +452,17 @@ function cautaMembri(string $cauta, int $cate = ADMIN_RANDURI): array
                 (SELECT COUNT(*) FROM evenimente e WHERE e.membru_id = m.id) AS cate_evenimente
            FROM membri m'
         . ($unde !== [] ? ' WHERE ' . implode(' AND ', $unde) : '')
-        . ' ORDER BY m.creat_la DESC, m.id DESC
+        /**
+         * DUPĂ ULTIMA LOGARE, nu după data înscrierii. Un cont făcut acum doi
+         * ani, dar folosit ieri, e mai interesant decât unul deschis alaltăieri
+         * și lăsat baltă.
+         *
+         * Cine n-a intrat niciodată (`autentificat_la` NULL) cade la coadă: în
+         * MySQL, NULL e „mai mic" decât orice la ORDER BY DESC. E chiar ce
+         * trebuie — un cont neatins n-are ce spune nimănui. La egalitate (adică
+         * printre cei niciodată conectați) se așază după înscriere.
+         */
+        . ' ORDER BY m.autentificat_la DESC, m.creat_la DESC, m.id DESC
           LIMIT ' . max(1, $cate)
     );
     $q->execute($valori);
@@ -451,22 +471,32 @@ function cautaMembri(string $cauta, int $cate = ADMIN_RANDURI): array
 }
 
 /**
- * Dorințele, toate, cu omul lor — cele în așteptare întâi.
+ * Dorințele, TOATE, cu omul lor — cele în așteptare întâi, apoi restul de la
+ * cele mai noi la cele mai vechi.
  *
- * Ordinea nu e întâmplătoare: în capul listei stă ce are nevoie de o hotărâre,
- * iar dedesubt ce e deja pe tablă. Un tabel așezat după dată ar fi ținut
- * dorința netrecută pe la nimeni la mijloc, între alte douăzeci.
+ * Ordinea nu e întâmplătoare: în capul listei stă ce are nevoie de o hotărâre.
+ * Un tabel așezat numai după dată ar fi ținut dorința netrecută pe la nimeni la
+ * mijloc, între alte douăzeci.
+ *
+ * FĂRĂ TĂIETURĂ, spre deosebire de celelalte liste. Rândurile din `dorinte` nu
+ * se șterg niciodată — nici după ce ies de pe tablă — tocmai ca mai târziu să
+ * se poată spune câte dorințe și-au pus oamenii de-a lungul timpului. Tabelul
+ * ăsta e singurul loc unde se vede tot ce s-a scris vreodată, iar o limită
+ * pusă aici ar fi tăiat tocmai istoria pentru care se păstrează rândurile.
+ *
+ * Și e ieftin: o dorință e un rând de o sută de caractere, iar oamenii își pun
+ * cel mult una la șapte zile.
  */
-function toateDorintele(int $cate = ADMIN_RANDURI): array
+function toateDorintele(): array
 {
     $q = db()->prepare(
         'SELECT d.id, d.oras, d.dorinta, d.stare_moderare, d.creat_la, d.publicat_la,
-                m.nume, m.prenume, m.permalink, m.stare AS stare_cont
+                m.id AS membru_id, m.email, m.nume, m.prenume, m.permalink,
+                m.stare AS stare_cont
            FROM dorinte d
            JOIN membri m ON m.id = d.membru_id
           ORDER BY (d.stare_moderare = \'in_asteptare\') DESC,
-                   d.creat_la DESC, d.id DESC
-          LIMIT ' . max(1, $cate)
+                   d.creat_la DESC, d.id DESC'
     );
     $q->execute();
 

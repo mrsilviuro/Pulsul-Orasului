@@ -14,11 +14,15 @@ declare(strict_types=1);
  * PHP. Așa, o dorință aprobată de aici și una aprobată din phpMyAdmin se poartă
  * la fel, iar cele șapte zile de pe tablă se numără dintr-un singur loc.
  *
- * Ștergerea e ADEVĂRATĂ, spre deosebire de restul site-ului. Rândurile din
- * `dorinte` nu se șterg de obicei niciodată, nici după ce ies de pe tablă —
- * vrem să putem spune, mai târziu, câte dorințe și-au pus oamenii de-a lungul
- * timpului. Butonul de aici e pentru ce n-are ce căuta în numărătoarea aceea:
- * o înjurătură, un test, o adresă strecurată în text.
+ * SE ARATĂ TOATE, oricâte ar fi — singura listă de administrare fără tăietură.
+ * Rândurile din `dorinte` nu se șterg niciodată, tocmai ca mai târziu să se
+ * poată spune câte dorințe și-au pus oamenii; tabelul ăsta e singurul loc unde
+ * se vede tot ce s-a scris vreodată, iar o limită ar fi tăiat chiar istoria
+ * pentru care se păstrează rândurile.
+ *
+ * Ștergerea e ADEVĂRATĂ, și tocmai de aceea e singura de pe site: butonul de
+ * aici e pentru ce n-are ce căuta în numărătoarea de mai sus — o înjurătură, un
+ * test, o adresă strecurată în text.
  */
 
 require_once __DIR__ . '/inc/admin.php';
@@ -60,10 +64,10 @@ require __DIR__ . '/inc/antet.php';
     <header class="page-head">
       <h1>Tabla cu dorințe</h1>
       <p class="page-head__sub">
-        Ce așteaptă o hotărâre stă în capul listei. O dorință aprobată apare pe
-        prima pagină și stă acolo <?= ZILE_PE_TABLA ?> zile; omul nu află pe
-        e-mail nici că i-a fost aprobată, nici că i-a fost respinsă — vede
-        singur.
+        Ce așteaptă o hotărâre stă în capul listei, apoi restul de la cele mai
+        noi la cele mai vechi. O dorință aprobată apare pe prima pagină și stă
+        acolo <?= ZILE_PE_TABLA ?> zile. Omul află pe e-mail în amândouă
+        cazurile; la respingere poți scrie un motiv, sau îl poți lăsa gol.
       </p>
     </header>
 
@@ -110,8 +114,15 @@ require __DIR__ . '/inc/antet.php';
                 <button class="btn btn--primary btn--xs" type="button"
                         data-fapta="modereaza-dorinta" data-hotarare="aprobat"
                         data-id="<?= (int) $d['id'] ?>">Aprobă</button>
+                <!--
+                  Motivul se cere NUMAI la respingere: la aprobare n-are ce
+                  spune, iar o întrebare pusă degeaba e o întrebare pe care
+                  omul învață s-o închidă fără să citească. Lăsat gol, e-mailul
+                  spune limpede că nu s-a dat niciunul.
+                -->
                 <button class="btn btn--ghost btn--xs" type="button"
                         data-fapta="modereaza-dorinta" data-hotarare="respins"
+                        data-motiv="De ce se respinge? Motivul îi pleacă pe e-mail."
                         data-id="<?= (int) $d['id'] ?>">Respinge</button>
                 <?php endif; ?>
 
