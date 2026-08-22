@@ -191,39 +191,36 @@ if ($fapta === 'scrie') {
     $text = $rezultat['text'] !== '' ? $rezultat['text'] : null;
 }
 
-/**
- * Ce scria ÎNAINTE — citit cât încă se mai poate.
- *
- * De el atârnă o singură hotărâre: pleacă sau nu vestea pe e-mail. Se trimite
- * numai când textul e ALTUL decât cel de dinainte, ca îndreptarea unei virgule
- * să nu ajungă a doua oară în cutia poștală a omului. O părere ștearsă nu
- * vestește nimic: n-are cine să citească ce nu mai e.
- */
-$textVechi = null;
-
-if ($fapta === 'scrie') {
-    $inainte   = evaluareaMea($evenimentId, $membruId, $tintaId);
-    $textVechi = $inainte !== null ? (string) ($inainte['text'] ?? '') : '';
-}
-
 salveazaEvaluare($evenimentId, $tintaId, $membruId, $stele, $text, false, $fapta === 'scrie');
 
 /**
- * VESTEA CĂ I S-A SCRIS CEVA.
+ * VESTEA CĂ I S-A SCRIS CEVA — O SINGURĂ DATĂ.
  *
- * Numai la o părere SCRISĂ, și numai la una nouă sau schimbată. Stelele rămân
- * anonime și tăcute — vezi omDeInstiintatLaFeedback(), unde stă regula
- * întreagă, și sql/027-instiintari-feedback.sql, unde stă bifa.
+ * Numai la o părere SCRISĂ. Stelele rămân anonime și tăcute — vezi
+ * omDeInstiintatLaFeedback(), unde stă regula întreagă, și
+ * sql/027-instiintari-feedback.sql, unde stă bifa.
+ *
+ * ȘI NUMAI LA CEA DINTÂI. Vestea pleca, o vreme, la fiecare text schimbat: în
+ * viață, omul își îndreaptă vorbele — scrie în grabă, vede o greșeală, se
+ * răzgândește asupra unui cuvânt — iar zece îndreptări însemnau zece e-mailuri
+ * despre ACEEAȘI părere. Ștampila (`evaluari.instiintat_la`, sql/028) se pune
+ * o dată și nu se mai șterge, nici când omul își retrage vorbele: altfel
+ * „scrie – șterge – scrie" ar fi devenit felul de a trimite oricâte mesaje.
+ *
+ * ORDINEA CONTEAZĂ. Se ștampilează ÎNTÂI, și abia dacă ștampila a prins se
+ * trimite. Invers, două file deschise deodată ar fi trimis amândouă înainte ca
+ * vreuna să apuce să însemne ceva. Iar dacă poșta pică după ștampilă, se pierde
+ * un mesaj — mai bine decât un potop, și părerea rămâne scrisă oricum.
  *
  * Pleacă DUPĂ scriere: un e-mail care spune „ți-a scris cineva" pentru o
- * părere care n-a intrat în bază e mai rău decât nimic. Iar dacă e-mailul nu
- * pleacă, părerea rămâne scrisă — poșta n-are voie să întoarcă din drum ce a
- * apucat omul să spună.
+ * părere care n-a intrat în bază e mai rău decât nimic.
  */
-if ($fapta === 'scrie' && $text !== null && $text !== $textVechi) {
+if ($fapta === 'scrie' && $text !== null) {
     $celNotat = omDeInstiintatLaFeedback($tintaId, $membruId);
 
-    if ($celNotat !== null) {
+    if ($celNotat !== null
+        && insemneazaVesteaTrimisa($evenimentId, $tintaId, $membruId)) {
+
         require_once __DIR__ . '/../inc/email.php';
 
         emailFeedbackNou(

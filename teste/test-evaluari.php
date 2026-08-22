@@ -512,6 +512,44 @@ db()->prepare('UPDATE membri SET stare = "activ" WHERE id = ?')->execute([$vlad]
 
 verifica('iar acum află din nou', $vlad, $cineAfla(omDeInstiintatLaFeedback($vlad, $ana)));
 
+/**
+ * O SINGURĂ VESTE PENTRU O PĂRERE, ORICÂTE ÎNDREPTĂRI AR URMA.
+ *
+ * Vestea pleca la fiecare text schimbat. Suna cuminte, dar în viață omul își
+ * îndreaptă vorbele — scrie în grabă, vede o greșeală, se răzgândește asupra
+ * unui cuvânt — iar zece îndreptări însemnau zece e-mailuri despre ACEEAȘI
+ * părere. Cel care le primea învăța, pe bună dreptate, să nu le mai deschidă.
+ *
+ * Ștampila e chiar hotărârea, nu o urmă lăsată după ea: cine o pune, trimite.
+ */
+verifica('cea dintâi veste se ia', true, insemneazaVesteaTrimisa($trecutId, $vlad, $ana));
+verifica('a doua, nu',            false, insemneazaVesteaTrimisa($trecutId, $vlad, $ana));
+verifica('nici a zecea',          false, insemneazaVesteaTrimisa($trecutId, $vlad, $ana));
+
+$q = db()->prepare('SELECT instiintat_la FROM evaluari
+                     WHERE eveniment_id = ? AND evaluat_id = ? AND evaluator_id = ?');
+$q->execute([$trecutId, $vlad, $ana]);
+verifica('ștampila e pusă', true, $q->fetchColumn() !== null);
+
+/**
+ * Ștampila NU se șterge la retragerea vorbelor. Altfel „scrie – șterge –
+ * scrie" ar fi devenit felul de a trimite oricâte mesaje.
+ */
+salveazaEvaluare($trecutId, $vlad, $ana, 3, null, false, true);
+$q->execute([$trecutId, $vlad, $ana]);
+verifica('și rămâne pusă și după ce omul își retrage vorbele', true,
+    $q->fetchColumn() !== null);
+verifica('deci nici acum nu se mai trimite nimic', false,
+    insemneazaVesteaTrimisa($trecutId, $vlad, $ana));
+
+// Dar e a PERECHII de oameni, la evenimentul acela: altcineva vestește la rândul lui.
+verifica('un alt om are ștampila lui', true,
+    insemneazaVesteaTrimisa($trecutId, $vlad, $organizator));
+
+// Iar o pereche care n-are rând în `evaluari` n-are ce ștampila.
+verifica('fără evaluare, n-are ce ștampila', false,
+    insemneazaVesteaTrimisa($trecutId, $strain, $ana));
+
 /* =========================== curățenie ============================= */
 
 curata();

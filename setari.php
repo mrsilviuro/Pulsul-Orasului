@@ -185,7 +185,9 @@ require __DIR__ . '/inc/antet.php';
     <section class="card-set" aria-labelledby="t-news">
       <h2 class="card-set__titlu" id="t-news">E-mailuri de la noi</h2>
 
-      <form class="form" id="newsletter-form" novalidate>
+      <!-- `form--bife`: numai bife cu text lung, deci un spațiu mai larg între
+           ele decât între câmpuri obișnuite — vezi lămurirea din style.css. -->
+      <form class="form form--bife" id="newsletter-form" novalidate>
         <input type="hidden" name="csrf" value="<?= h($csrf) ?>">
 
         <div class="field">

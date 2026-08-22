@@ -390,6 +390,11 @@ case 'sterge-poza':
 
     raspunsJson([
         'ok'    => true,
+        // Chipul de pus în locul celui șters, ca rândul să nu mai arate spre un
+        // fișier care nu mai e. Îl socotește tot urlPoza(), într-un singur loc:
+        // scris cu mâna în JS, ar fi fost al doilea loc care știe cum arată
+        // inițiala cuiva.
+        'poza'  => urlPoza(null, true),
         'mesaj' => 'Poza a fost ștearsă.'
                  . ($omulPozei !== null ? ' I-am dat de veste.' : ''),
     ]);

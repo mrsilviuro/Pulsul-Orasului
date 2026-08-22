@@ -6094,6 +6094,7 @@
            *
            *   citit / necitit → butonul se întoarce, rândul rămâne. Reîncărcat,
            *                     omul ar fi pierdut locul din listă la fiecare bifă.
+           *   poză ștearsă    → OMUL RĂMÂNE. S-a șters poza lui, nu el.
            *   dorință hotărâtă → pagina se cere din nou: rândul își schimbă și
            *                     starea, și butoanele, și locul în listă (cele
            *                     care așteaptă stau în cap). Redesenat din JS,
@@ -6108,6 +6109,33 @@
 
             var rand = randulLui(buton);
             if (rand) { rand.classList.toggle('admin-mesaj--nou', !acumCitit); }
+            return;
+          }
+
+          /**
+           * ȘTERGEREA POZEI NU ȘTERGE OMUL.
+           *
+           * Rândul cădea în ramura de mai jos și pleca din tabel — iar la
+           * următoarea reîncărcare omul apărea la loc, fiindcă nu se ștersese
+           * niciodată. Adică lista mințea până la refresh, în cel mai
+           * neliniștitor fel cu putință: „unde a dispărut omul ăsta?".
+           *
+           * Rămâne rândul, se schimbă doar ce s-a schimbat: chipul se întoarce
+           * la inițială, iar butonul face loc unei liniuțe — aceeași liniuță pe
+           * care o are din capul locului cine n-avea poză.
+           */
+          if (fapta === 'sterge-poza') {
+            var randOm = randulLui(buton);
+
+            if (randOm) {
+              var chip = randOm.querySelector('.admin-om__chip img');
+              if (chip && c.poza) { chip.src = c.poza; }
+            }
+
+            var gol = document.createElement('span');
+            gol.className = 'admin-tabel__gol';
+            gol.textContent = '—';
+            buton.replaceWith(gol);
             return;
           }
 
