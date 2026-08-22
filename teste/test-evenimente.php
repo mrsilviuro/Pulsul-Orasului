@@ -2813,10 +2813,71 @@ verifica('adresa filtrată e absolută', '/index.php?categorie=sport',
     adresaFiltrata('', 'sport'));
 verifica('și cea goală, la fel', '/index.php', adresaFiltrata('', ''));
 
+/* ---------------- imaginea implicită a unei categorii ------------------ */
+
+/**
+ * Fișierele astea NU trec prin inc/imagini.php: se urcă de mână pe FTP, iar în
+ * bază stă doar numele lor (`categorii.imagine_default`). Adică o cale care
+ * vine DIN BAZĂ, nu din cod — de aceea a scăpat de măturatul adreselor și a dat
+ * 404 de pe `/eveniment/<slug>`, căutată în `/eveniment/assets/img/categorii/`.
+ */
+$dosarCat = dirname(__DIR__) . '/' . CATEGORIE_DOSAR;
+$aveaDosar = is_dir($dosarCat);
+
+if (!$aveaDosar) { @mkdir($dosarCat, 0775, true); }
+
+$pozaCat = $dosarCat . '/tst-categorie.jpg';
+$imCat = imagecreatetruecolor(80, 45);
+imagejpeg($imCat, $pozaCat, 70);
+imagedestroy($imCat);
+
+verifica('adresa pornește de la rădăcină', '/' . CATEGORIE_DOSAR . '/tst-categorie.jpg',
+    urlImagineCategorie('tst-categorie.jpg'));
+
+/**
+ * SE VERIFICĂ PE DISC, nu doar în bază: coloana există de mult, fișierele se
+ * urcă de mână, iar unele lipsesc. O adresă care duce la 404 e mai rea decât
+ * niciuna — cartonașul ar avea o gaură în loc de poză.
+ */
+verifica('un fișier care nu e pe disc nu dă adresă', '',
+    urlImagineCategorie('nu-exista-pe-disc.jpg'));
+
+/* Numele vine din bază, deci se cerne. */
+verifica('nicio cale în sus',  '', urlImagineCategorie('../../inc/config.php'));
+verifica('nici cu bară',       '', urlImagineCategorie('categorii/x.jpg'));
+verifica('nici altă extensie', '', urlImagineCategorie('tst-categorie.php'));
+verifica('gol, nu',            '', urlImagineCategorie(''));
+verifica('null, nici el',      '', urlImagineCategorie(null));
+
+@unlink($pozaCat);
+if (!$aveaDosar) { @rmdir($dosarCat); }
+
 if ($baza !== '') {
     // Un anunț al lui, făcut aici: cele de mai sus au fost șterse pe parcurs.
     $idFrumos   = pune($idOrg, 'Un anunț cu adresă frumoasă', 'aprobat', 8);
     $slugFrumos = $slugul($idFrumos);
+
+    /**
+     * ANUNȚUL ĂSTA N-ARE COPERTĂ, IAR CATEGORIA LUI ARE IMAGINE.
+     *
+     * Fără asta, proba de mai jos („nicio adresă relativă în pagină") desenează
+     * o pagină în care imaginea de categorie nici nu apare — și tocmai ea a
+     * fost adresa relativă care a scăpat. O probă care nu vede lucrul stricat
+     * nu-l poate prinde.
+     */
+    if (!is_dir($dosarCat)) { @mkdir($dosarCat, 0775, true); }
+
+    $imCat = imagecreatetruecolor(80, 45);
+    imagejpeg($imCat, $pozaCat, 70);
+    imagedestroy($imCat);
+
+    $catFrumos = (int) db()->query('SELECT categorie_id FROM evenimente WHERE id = ' . $idFrumos)
+                           ->fetchColumn();
+    $imgVeche = db()->query('SELECT imagine_default FROM categorii WHERE id = ' . $catFrumos)
+                    ->fetchColumn();
+
+    db()->prepare('UPDATE categorii SET imagine_default = ? WHERE id = ?')
+        ->execute(['tst-categorie.jpg', $catFrumos]);
 
     /**
      * ADRESA VECHE TRIMITE LA CEA NOUĂ, cu 301 — nu cu 302.
@@ -2879,6 +2940,23 @@ if ($baza !== '') {
     ));
 
     verifica('nicio adresă relativă în pagină', [], $relative);
+
+    /* Și imaginea categoriei chiar a ajuns în ea — altfel proba de sus n-a
+       avut ce cerne. */
+    verifica('imaginea categoriei e în pagină, de la rădăcină', true,
+        str_contains($paginaFrumos, 'src="/' . CATEGORIE_DOSAR . '/tst-categorie.jpg"'));
+
+    /* Și în cartonașul de pe WhatsApp, ca adresă întreagă. */
+    verifica('și în og:image, ca adresă întreagă',
+        urlIntreg('/' . CATEGORIE_DOSAR . '/tst-categorie.jpg'),
+        $og($paginaFrumos, 'og:image'));
+
+    /* Înapoi cum era. */
+    db()->prepare('UPDATE categorii SET imagine_default = ? WHERE id = ?')
+        ->execute([$imgVeche, $catFrumos]);
+
+    @unlink($pozaCat);
+    if (!$aveaDosar) { @rmdir($dosarCat); }
 }
 
 /* ---------------------------- curățenie -------------------------------- */

@@ -1484,10 +1484,10 @@ din browserul omului: o cer ele, de pe alt server, iar o cale de forma
 rămâne fără poză deși pe site totul arată bine.
 
 Dacă evenimentul n-are copertă, se încearcă imaginea categoriei — dar **numai
-dacă fișierul chiar există pe disc**: coloana `categorii.imagine_default`
-există de mult, fișierele nu s-au urcat încă. O adresă care duce la 404 e mai
-rea decât niciuna, fiindcă WhatsApp ar încerca s-o ia și ar arăta un cartonaș
-ciuntit. Fără poză, `twitter:card` scade de la `summary_large_image` la
+dacă fișierul chiar există pe disc** (`urlImagineCategorie()`): coloana
+`categorii.imagine_default` există de mult, iar fișierele se urcă de mână, deci
+unele lipsesc. O adresă care duce la 404 e mai rea decât niciuna, fiindcă
+WhatsApp ar încerca s-o ia și ar arăta un cartonaș ciuntit. Fără poză, `twitter:card` scade de la `summary_large_image` la
 `summary`.
 
 ### Un eveniment care s-a încheiat
@@ -2669,9 +2669,9 @@ intră cu `stare_moderare = 'in_asteptare'` și nu se vede pe prima pagină; omu
 vede doar „Evenimentul tău a fost trimis spre aprobare" — dinadins fără detalii
 despre cât durează, cât timp nu putem promite nimic.
 
-Lipsesc și imaginile implicite de categorie (`categorii.imagine_default`):
-codul le preferă deja când există, dar fișierele nu sunt urcate, deci un
-eveniment fără copertă rămâne fără poza mare.
+Imaginile implicite de categorie (`categorii.imagine_default`) se urcă de mână
+în `assets/img/categorii/`; unde lipsesc, un eveniment fără copertă rămâne fără
+poza mare. Adresa lor se scrie printr-un singur loc, `urlImagineCategorie()`.
 
 Verificările: `php teste/test-evenimente.php http://127.0.0.1:8126`
 (292 de cazuri, cere serverul pornit).

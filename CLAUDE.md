@@ -780,8 +780,17 @@ assets/css/style.css, assets/js/main.js, assets/img/
   să n-o poată schimba mai târziu — dar dacă a pus-o din greșeală, rândul se
   șterge de mână din phpMyAdmin
 - Paginile de categorie (slugurile sunt în tabelul `categorii`)
-- Imaginile implicite de categorie (`categorii.imagine_default`) — coloana
-  există, fișierele nu; se urcă de mână, nu prin `inc/imagini.php`
+- Imaginile implicite de categorie (`categorii.imagine_default`) — se urcă DE
+  MÂNĂ în `assets/img/categorii/`, nu prin `inc/imagini.php`, iar în bază stă
+  doar numele fișierului („socializare.jpg"). Adresa se scrie DOAR prin
+  `urlImagineCategorie()` (inc/imagini.php), care se uită și pe disc: un fișier
+  lipsă înseamnă „fără poză", nu o adresă care dă 404. E singura cale de imagine
+  care vine DIN BAZĂ, nu din cod — de aceea a scăpat la trecerea la adrese
+  absolute și dădea 404 de pe `/eveniment/<slug>`.
+  ATENȚIE: dosarul ăsta NU primește un `.htaccess` ca `membri/` și
+  `evenimente/` — acolo lista albă e `^[0-9a-f]{32}\.jpg$`, adică ar bloca
+  tocmai fișierele cu nume citibil de aici. Nici nu-i trebuie: în el nu scrie
+  nimeni din afară.
 
 ## Workflow recomandat cu Claude Code
 
