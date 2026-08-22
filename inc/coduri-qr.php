@@ -151,6 +151,88 @@ function codQrDupaCod(?string $cod): ?array
     return $rand === false ? null : $rand;
 }
 
+/* =================== BÂJBÂIALA DUPĂ UN COD BUN ===================== */
+
+/**
+ * Câte scanări greșite se îngăduie de la aceeași adresă IP, într-un ceas.
+ *
+ * DE CE E NEVOIE DE O LIMITĂ. Un cod are cinci semne dintr-un alfabet de 32 —
+ * vreo 33 de milioane de combinații. Sună mult, dar nimeni n-are nevoie să le
+ * încerce pe toate: e de ajuns să nimerească UNUL dintre cele câteva active la
+ * un moment dat. Cu zece vânători în oraș, un program care încearcă cincizeci
+ * de coduri pe secundă nimerește unul în câteva ore, de pe canapea. Asta ar
+ * goli jocul de tot rostul lui: „FindMe" nu e un concurs de ghicit, e un motiv
+ * de a te plimba prin oraș cu ochii deschiși.
+ *
+ * DE CE TOCMAI TREIZECI. Un om care scanează un abțibild adevărat greșește cel
+ * mult o dată sau de două ori — telefonul prinde codul dintr-o dată, iar cine
+ * îl tastează de mână are cinci semne de scris. Treizeci într-un ceas e larg
+ * pentru orice om și strâmt pentru orice program: la ritmul ăsta, cele 33 de
+ * milioane cer o sută douăzeci de ani.
+ */
+const QR_INCERCARI_PE_CEAS = 30;
+
+/** Cât ține fereastra în care se numără. */
+const QR_MINUTE_FEREASTRA = 60;
+
+/**
+ * S-a bâjbâit prea mult de la adresa asta?
+ *
+ * Se numără doar scanările care N-AU NIMERIT nimic: cine scanează un abțibild
+ * adevărat n-are de ce să fie numărat — a fost acolo, s-a uitat, a găsit.
+ *
+ * Adresa vine din `ipBinar()` (inc/bootstrap.php), adică din REMOTE_ADDR și
+ * niciodată din antete precum „X-Forwarded-For": pe acelea le scrie oricine,
+ * iar o limită care se ocolește schimbând un antet nu e o limită.
+ *
+ * Fără adresă (linia de comandă, un server ciudat) nu se numără nimic: n-avem
+ * după ce, iar a opri pe toată lumea ar fi mai rău decât a nu opri pe nimeni.
+ */
+function preaMulteIncercariQr(): bool
+{
+    $ip = ipBinar();
+
+    if ($ip === null) {
+        return false;
+    }
+
+    $q = db()->prepare(
+        'SELECT COUNT(*) FROM incercari_qr WHERE ip = ? AND creat_la > ?'
+    );
+    $q->execute([$ip, acumMinus(QR_MINUTE_FEREASTRA)]);
+
+    return (int) $q->fetchColumn() >= QR_INCERCARI_PE_CEAS;
+}
+
+/**
+ * Ține minte o scanare care n-a nimerit nimic.
+ *
+ * Tot aici se face și curățenia, din când în când: rândurile mai vechi decât
+ * fereastra nu mai spun nimic. Se face pe loc, nu dintr-un cron — o dată la
+ * douăzeci de scanări, ca să nu coste la fiecare.
+ */
+function insemneazaIncercareaQr(): void
+{
+    $ip = ipBinar();
+
+    if ($ip === null) {
+        return;
+    }
+
+    try {
+        db()->prepare('INSERT INTO incercari_qr (ip, creat_la) VALUES (?, ?)')
+            ->execute([$ip, acum()]);
+
+        if (random_int(1, 20) === 1) {
+            db()->prepare('DELETE FROM incercari_qr WHERE creat_la < ?')
+                ->execute([acumMinus(QR_MINUTE_FEREASTRA * 2)]);
+        }
+    } catch (PDOException $e) {
+        // O scanare nenumărată e mai bună decât o pagină căzută.
+        error_log('PulsulOrasului: nu am putut ține minte o scanare de cod QR.');
+    }
+}
+
 /** Abțibildul unui eveniment, dacă are unul. */
 function codQrAlEvenimentului(int $evenimentId): ?array
 {

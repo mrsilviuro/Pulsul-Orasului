@@ -581,11 +581,86 @@ verifica('rândul e tot acolo', $cod1, (string) codQrDupaCod($cod1)['cod']);
 verifica('și cifra de pe profil e neatinsă', 1, cateCoduriQrGasiteDe($omul));
 
 /* ==================================================================== */
+sectiune('bâjbâiala după un cod bun');
+
+/**
+ * Numărătoarea se face pe adresa IP, iar din linia de comandă nu există una:
+ * PHP-CLI n-are REMOTE_ADDR. O punem noi, ca funcțiile să aibă după ce număra —
+ * și o luăm de acolo la sfârșit, ca restul testelor să nu moștenească nimic.
+ */
+$ipDeProba = '203.0.113.77';   // gama rezervată probelor (RFC 5737)
+$ipVechi   = $_SERVER['REMOTE_ADDR'] ?? null;
+$_SERVER['REMOTE_ADDR'] = $ipDeProba;
+
+$binar = ipBinar();
+db()->prepare('DELETE FROM incercari_qr WHERE ip = ?')->execute([$binar]);
+
+verifica('la început, nimeni n-a bâjbâit', false, preaMulteIncercariQr());
+
+// Cu o scanare greșită mai puțin decât limita, ușa e tot deschisă.
+for ($i = 1; $i < QR_INCERCARI_PE_CEAS; $i++) {
+    insemneazaIncercareaQr();
+}
+verifica('cu una sub limită, tot se poate', false, preaMulteIncercariQr());
+
+insemneazaIncercareaQr();
+verifica('a treizecea închide ușa', true, preaMulteIncercariQr());
+
+/**
+ * Fereastra e de un ceas: ce s-a încercat acum două ceasuri nu mai spune nimic.
+ * Mutăm rândurile în urmă și numărătoarea trebuie să pornească de la zero.
+ */
+db()->prepare('UPDATE incercari_qr SET creat_la = ? WHERE ip = ?')
+    ->execute([acumMinus(QR_MINUTE_FEREASTRA * 2), $binar]);
+verifica('după ce trece ceasul, se poate din nou', false, preaMulteIncercariQr());
+
+/** Alt om, altă adresă: limita unuia nu-l încuie pe vecin. */
+$_SERVER['REMOTE_ADDR'] = $ipDeProba;
+db()->prepare('DELETE FROM incercari_qr WHERE ip = ?')->execute([$binar]);
+for ($i = 0; $i < QR_INCERCARI_PE_CEAS; $i++) { insemneazaIncercareaQr(); }
+verifica('adresa care a bâjbâit e oprită', true, preaMulteIncercariQr());
+
+$_SERVER['REMOTE_ADDR'] = '203.0.113.78';
+$binarVecin = ipBinar();
+db()->prepare('DELETE FROM incercari_qr WHERE ip = ?')->execute([$binarVecin]);
+verifica('vecinul de la altă adresă trece', false, preaMulteIncercariQr());
+
+/**
+ * Fără adresă deloc (linia de comandă, un server ciudat) nu se oprește nimeni:
+ * n-avem după ce număra, iar a opri toată lumea ar fi mai rău decât a nu opri
+ * pe nimeni.
+ */
+unset($_SERVER['REMOTE_ADDR']);
+verifica('fără adresă, nu se oprește nimic', false, preaMulteIncercariQr());
+$candNuENimic = (int) db()->query('SELECT COUNT(*) FROM incercari_qr')->fetchColumn();
+insemneazaIncercareaQr();
+verifica('și nici nu se scrie ceva în tabel', $candNuENimic,
+    (int) db()->query('SELECT COUNT(*) FROM incercari_qr')->fetchColumn());
+
+db()->prepare('DELETE FROM incercari_qr WHERE ip IN (?, ?)')->execute([$binar, $binarVecin]);
+
+if ($ipVechi === null) { unset($_SERVER['REMOTE_ADDR']); }
+else                   { $_SERVER['REMOTE_ADDR'] = $ipVechi; }
+
+/* ==================================================================== */
 if ($BAZA === '') {
     echo "\n(sar peste HTTP: dă adresa serverului ca argument, "
        . "ex. php teste/test-findme.php http://127.0.0.1:8099)\n";
 } else {
     sectiune('pagina de scanare');
+
+    /**
+     * Proba de mai jos scanează dinadins coduri care nu există, iar fiecare
+     * dintre ele se numără la frâna împotriva ghicitului. Rulată de câteva ori
+     * la rând, proba și-ar fi pus singură lacătul — și ar fi picat pe ceva ce
+     * funcționa. De aceea se pornește de la zero, pentru adresa de pe care vin
+     * cererile.
+     */
+    $ipulProbei = @inet_pton('127.0.0.1');
+    $uitaScanarile = static function () use ($ipulProbei): void {
+        db()->prepare('DELETE FROM incercari_qr WHERE ip = ?')->execute([$ipulProbei]);
+    };
+    $uitaScanarile();
 
     /** Ce răspunde findme.php pentru o adresă, fără cont. */
     $ia = static function (string $adresa) use ($BAZA): string {
@@ -623,6 +698,38 @@ if ($BAZA === '') {
     verifica('și nimeni n-a câștigat pe furiș', null, codQrDupaCod($cod4)['gasit_de']);
     verifica('evenimentul lui e tot deschis', 'aprobat',
         (string) evenimentDupaSlug('tstfm-limita')['stare_moderare']);
+
+    /* ------------------ frâna, văzută din pagină ------------------ */
+
+    /**
+     * Se umple numărătoarea de-a dreptul în bază, nu cu treizeci de cereri:
+     * proba ar fi durat un minut ca să arate același lucru.
+     */
+    $umple = db()->prepare('INSERT INTO incercari_qr (ip, creat_la) VALUES (?, ?)');
+    for ($i = 0; $i < QR_INCERCARI_PE_CEAS; $i++) { $umple->execute([$ipulProbei, acum()]); }
+
+    $pagina = $ia('/findme.php?qr=ZZZZZ');
+    verifica('după prea multe încercări, pagina se oprește', true,
+        str_contains($pagina, 'Hai să ne oprim puțin'));
+
+    /**
+     * ȘI LA UN COD BUN. Altfel, „codul ăsta trece, ăsta nu" ar fi fost chiar
+     * răspunsul pe care îl caută cine ghicește — frâna ar fi devenit unealta
+     * lui.
+     */
+    $pagina = $ia('/findme.php?qr=' . urlencode($cod4));
+    verifica('nici măcar un cod bun nu mai spune nimic', true,
+        str_contains($pagina, 'Hai să ne oprim puțin'));
+    verifica('și abțibildul rămâne negăsit', null, codQrDupaCod($cod4)['gasit_de']);
+    verifica('fără rugămintea de dezlipit', false, str_contains($pagina, 'fm-dezlipeste'));
+
+    // Cu numărătoarea uitată, totul merge iar.
+    $uitaScanarile();
+    $pagina = $ia('/findme.php?qr=' . urlencode($cod4));
+    verifica('după ce se uită, codul bun se vede iar', true,
+        str_contains($pagina, 'fm-card--nelogat'));
+
+    $uitaScanarile();
 
     sectiune('pagina codurilor');
 

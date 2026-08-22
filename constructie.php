@@ -94,6 +94,11 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
  */
 http_response_code(503);
 header('Retry-After: 86400');
+
+// Aceleași antete ca pe tot site-ul. Pagina asta nu trece prin inc/antet.php,
+// dar e singura care se vede cu site-ul închis — deci tocmai ea n-are voie să
+// rămână fără pază.
+antetedeSiguranta();
 ?>
 <!doctype html>
 <html lang="ro" data-theme="dark">
@@ -110,7 +115,7 @@ header('Retry-After: 86400');
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/css/style.css?v=88">
+<link rel="stylesheet" href="assets/css/style.css?v=89">
 </head>
 
 <!--
@@ -209,6 +214,6 @@ header('Retry-After: 86400');
 
 </main>
 
-<script src="assets/js/main.js?v=80"></script>
+<script src="assets/js/main.js?v=81"></script>
 </body>
 </html>

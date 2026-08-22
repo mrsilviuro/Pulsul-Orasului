@@ -31,35 +31,61 @@ declare(strict_types=1);
 require_once __DIR__ . '/inc/coduri-qr.php';
 
 $codCerut = is_string($_GET['qr'] ?? null) ? $_GET['qr'] : '';
-$cod      = codQrDupaCod($codCerut);
 $membru   = membruCurent();
 
 /**
  * Ce s-a întâmplat, într-un cuvânt. De el atârnă tot ce se vede mai jos.
  *
  *   'necunoscut' — nu există abțibild cu codul ăsta (sau adresa e stricată)
+ *   'prea_des'   — s-a bâjbâit prea mult de la adresa asta
  *   'castigat'   — CHIAR ACUM a câștigat omul care se uită
  *   'nepornit' | 'nepublic' | 'tarziu' | 'luat' | 'nelogat' — vezi
  *   deCeNuSePoateRevendica()
  */
-$ce = 'necunoscut';
+$ce  = 'necunoscut';
+$cod = null;
 
-if ($cod !== null) {
-    $ce = deCeNuSePoateRevendica($cod, $membru);
+/**
+ * ÎNAINTE DE ORICE: s-a bâjbâit prea mult de la adresa asta?
+ *
+ * Un cod are 33 de milioane de combinații, dar nimeni n-are nevoie să le
+ * încerce pe toate — e de ajuns să nimerească unul dintre cele câteva active.
+ * Fără limita asta, un program ar fi câștigat toate vânătoarele din oraș de pe
+ * canapea, ceea ce ar goli jocul de tot rostul lui.
+ *
+ * Se răspunde ÎNAINTE de a atinge baza cu codul cerut: cine bâjbâie nu află
+ * nici măcar dacă a nimerit sau nu — iar asta e chiar ce încearcă să afle.
+ */
+if (preaMulteIncercariQr()) {
+    $ce = 'prea_des';
+} else {
+    $cod = codQrDupaCod($codCerut);
 
-    if ($ce === '') {
+    if ($cod === null) {
         /**
-         * E rândul lui. revendicaCodul() hotărăște în `WHERE` cine a fost
-         * primul: dacă altcineva a apucat înaintea lui — fie și cu o secundă —
-         * întoarce false, iar rândul se citește din nou ca să se vadă cine.
+         * N-a nimerit nimic. SE ȚINE MINTE, ca bâjbâiala să se poată număra —
+         * numai cele greșite: cine scanează un abțibild adevărat a fost acolo,
+         * s-a uitat, a găsit.
          */
-        if (revendicaCodul($cod, $membru)) {
-            $ce = 'castigat';
-        } else {
-            $ce = 'luat';
-        }
+        insemneazaIncercareaQr();
+    } else {
+        $ce = deCeNuSePoateRevendica($cod, $membru);
 
-        $cod = codQrDupaCod($codCerut);
+        if ($ce === '') {
+            /**
+             * E rândul lui. revendicaCodul() hotărăște în `WHERE` cine a fost
+             * primul: dacă altcineva a apucat înaintea lui — fie și cu o
+             * secundă — întoarce false, iar rândul se citește din nou ca să se
+             * vadă cine.
+             */
+            if (revendicaCodul($cod, $membru)) {
+                $ce = 'castigat';
+            } else {
+                $ce = 'luat';
+            }
+
+            $cod = codQrDupaCod($codCerut);
+        }
     }
 }
 
@@ -122,6 +148,20 @@ $vorbe = [
         'titlu'    => 'Codul ăsta nu ne spune nimic',
         'vorba'    => 'Ori s-a citit greșit, ori abțibildul nu e de la noi. '
                     . 'Încearcă să scanezi din nou, mai de aproape.',
+    ],
+    /**
+     * S-a bâjbâit prea mult de la adresa asta. Vorba e blândă dinadins: cel
+     * mai probabil e un om care a tastat de zece ori greșit, nu un program.
+     * Iar dacă totuși e un program, nu-i spunem nimic din ce caută — nici
+     * măcar dacă ultimul cod încercat exista.
+     */
+    'prea_des' => [
+        'fel'      => 'necunoscut',
+        'eticheta' => 'Prea multe încercări',
+        'titlu'    => 'Hai să ne oprim puțin',
+        'vorba'    => 'S-au încercat prea multe coduri de aici într-un timp scurt. '
+                    . 'Mai așteaptă un ceas și încearcă din nou — sau scanează '
+                    . 'abțibildul cu camera, în loc să scrii codul de mână.',
     ],
 ];
 
@@ -203,7 +243,7 @@ require __DIR__ . '/inc/antet.php';
       <?php endif; ?>
     </section>
 
-    <?php if ($ce !== 'necunoscut' && $ce !== 'nepornit' && $ce !== 'nepublic'): ?>
+    <?php if (!in_array($ce, ['necunoscut', 'nepornit', 'nepublic', 'prea_des'], true)): ?>
     <!--
       Rugămintea de pe abțibild, spusă și aici.
 
@@ -213,7 +253,9 @@ require __DIR__ . '/inc/antet.php';
       care nu mai folosește nimănui.
 
       NU se scrie celui care a picat peste un abțibild înainte de vreme: acela
-      trebuie să rămână pe stâlp.
+      trebuie să rămână pe stâlp. Și nici celui oprit de frână („prea_des"):
+      el n-a găsit nimic, nu stă în fața niciunei hârtii, iar „dezlipește-l" nu
+      i-ar spune decât că undeva există unul.
     -->
     <section class="fm-dezlipeste">
       <span class="fm-dezlipeste__semn" aria-hidden="true">

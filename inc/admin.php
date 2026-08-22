@@ -116,6 +116,26 @@ function sectiuniAdmin(): array
                       . '<path d="M18.4 14.5c1.8.8 3 2.6 3.1 4.8"/>',
         ],
         [
+            'cheie'  => 'evaluari',
+            'href'   => 'admin-evaluari.php',
+            'titlu'  => 'Evaluări',
+            'vorba'  => 'Cine cui a dat stele, de la ce eveniment și când.',
+            /**
+             * CIFRA E „CELE MICI", nu „câte sunt".
+             *
+             * Peste tot pe panou, cifra înseamnă CÂTE AȘTEAPTĂ ceva de făcut —
+             * iar la evaluări nu așteaptă niciuna: nu se aprobă și nu se
+             * resping. Se aprinde deci ce merită o privire: notele de una sau
+             * două stele, singurele despre care cineva ar putea veni vreodată
+             * să spună că sunt nedrepte. Zero acolo înseamnă „nimeni n-a fost
+             * aspru cu nimeni", și asta chiar e o veste bună.
+             */
+            'cifra'  => 'note_mici',
+            'unitate'=> 'sub 3 stele',
+            'ico'    => '<path d="m12 3.8 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.5 10l5.9-.9L12 3.8Z"'
+                      . ' fill="none"/><path d="M12 8.5v4M12 15.2v.1"/>',
+        ],
+        [
             'cheie'  => 'dorinte',
             'href'   => 'admin-dorinte.php',
             'titlu'  => 'Dorințe',
@@ -164,6 +184,14 @@ function cifreleAdmin(): array
         'suspendati' => $numara('SELECT COUNT(*) FROM membri WHERE stare = \'suspendat\''),
         'dorinte'    => $numara('SELECT COUNT(*) FROM dorinte
                                   WHERE stare_moderare = \'in_asteptare\''),
+
+        /**
+         * Notele aspre, singurele despre care poate veni cineva să se plângă.
+         * FĂRĂ cele automate: „Nu s-a prezentat" pune o stea, dar aia nu e o
+         * părere rea, e o absență însemnată de organizator.
+         */
+        'note_mici'  => $numara('SELECT COUNT(*) FROM evaluari
+                                  WHERE stele <= 2 AND automat = 0'),
     ];
 }
 
@@ -501,4 +529,120 @@ function toateDorintele(): array
     $q->execute();
 
     return $q->fetchAll();
+}
+
+/* ============================ EVALUĂRILE ============================= */
+
+/**
+ * Notele dintre participanți, toate: cine, cui, câte stele, când și de la ce
+ * eveniment.
+ *
+ * DE CE EXISTĂ PAGINA ASTA. Până acum, o notă dată pe nedrept n-avea cui i se
+ * spune. Nu se poate retrage, nu se poate raporta, nu există moderare — iar
+ * media de pe profilul cuiva se socotește din ele. Cu zece oameni pe site nu
+ * conta; cu o sută, o singură stea pusă din supărare rămâne acolo pentru
+ * totdeauna, și e singurul loc de pe site unde cineva poate face rău altuia
+ * fără ca nimeni să poată îndrepta.
+ *
+ * SE ADUC ȘI CELE FĂRĂ TEXT. Pe profil se văd doar părerile SCRISE — stelele
+ * singure sunt anonime și nici nu se arată (vezi randeazaEvaluari). Dar tocmai
+ * ele intră în medie, deci tocmai ele trebuie să se poată vedea de aici. E
+ * singurul loc de pe site unde o stea are un nume lângă ea, și de-aia pagina e
+ * numai pentru staff.
+ *
+ * `automat` deosebește „Nu s-a prezentat" — o însemnare a organizatorului, nu
+ * o părere — ca omul de casă să nu creadă că cineva a dat o stea din răutate
+ * când de fapt a bifat o absență.
+ */
+function toateEvaluarile(int $cate = ADMIN_RANDURI): array
+{
+    $q = db()->prepare(
+        'SELECT ev.id, ev.stele, ev.text, ev.automat, ev.creat_la, ev.actualizat_la,
+                e.titlu AS ev_titlu, e.slug AS ev_slug, e.data_eveniment,
+                aut.id   AS autor_id,   aut.nume AS autor_nume,
+                aut.prenume AS autor_prenume, aut.permalink AS autor_permalink,
+                aut.stare AS autor_stare,
+                tin.id   AS tinta_id,   tin.nume AS tinta_nume,
+                tin.prenume AS tinta_prenume, tin.permalink AS tinta_permalink,
+                tin.stare AS tinta_stare
+           FROM evaluari ev
+           JOIN evenimente e ON e.id  = ev.eveniment_id
+           JOIN membri aut   ON aut.id = ev.evaluator_id
+           JOIN membri tin   ON tin.id = ev.evaluat_id
+          ORDER BY ev.creat_la DESC, ev.id DESC
+          LIMIT ' . max(1, $cate)
+    );
+    $q->execute();
+
+    return $q->fetchAll();
+}
+
+/**
+ * Câte note a dat fiecare om, cu media lor.
+ *
+ * Tabelul mic de deasupra celui mare: „cine, câte stelușe a oferit". De aici se
+ * vede dintr-o privire cine împarte note cu mâna largă și cine dă numai unu —
+ * adică tocmai ce nu se poate vedea uitându-te la o notă singură.
+ *
+ * Cei care au dat mai multe, primii: o singură notă de unu poate fi o seară
+ * proastă, douăzeci sunt un obicei.
+ */
+function ceAuDatOamenii(int $cate = ADMIN_USERI): array
+{
+    $q = db()->prepare(
+        'SELECT m.id, m.nume, m.prenume, m.permalink, m.stare AS stare_cont,
+                COUNT(*)          AS cate,
+                AVG(ev.stele)     AS media,
+                SUM(ev.automat)   AS cate_automate,
+                MIN(ev.stele)     AS cea_mai_mica,
+                MAX(ev.creat_la)  AS ultima
+           FROM evaluari ev
+           JOIN membri m ON m.id = ev.evaluator_id
+          GROUP BY m.id, m.nume, m.prenume, m.permalink, m.stare
+          ORDER BY cate DESC, ultima DESC
+          LIMIT ' . max(1, $cate)
+    );
+    $q->execute();
+
+    return $q->fetchAll();
+}
+
+/** O evaluare anume, cu numele celor doi — pentru ștergerea din api/admin.php. */
+function evaluareaDupaId(int $id): ?array
+{
+    $q = db()->prepare(
+        'SELECT ev.id, ev.stele, ev.text, ev.evaluat_id, ev.evaluator_id,
+                e.titlu AS ev_titlu,
+                tin.prenume AS tinta_prenume
+           FROM evaluari ev
+           JOIN evenimente e ON e.id  = ev.eveniment_id
+           JOIN membri tin   ON tin.id = ev.evaluat_id
+          WHERE ev.id = ?
+          LIMIT 1'
+    );
+    $q->execute([$id]);
+
+    return $q->fetch() ?: null;
+}
+
+/**
+ * Șterge o notă, de tot.
+ *
+ * A DOUA ȘTERGERE ADEVĂRATĂ DE PE SITE, după cea a unei dorințe — și dinadins:
+ * o notă nu se poate goli ca un comentariu, fiindcă nu e un text pe care să-l
+ * ștergi lăsând rândul. E o cifră care intră într-o medie. Golită, ar fi rămas
+ * acolo tot ca o cifră.
+ *
+ * Nu pleacă niciun e-mail. Cine a dat nota n-are ce afla: dacă a pus-o din
+ * răutate, o veste i-ar spune doar că merită încercat din nou de pe alt cont;
+ * dacă a pus-o cinstit, i-ar spune că cineva i-a citit părerea și a hotărât s-o
+ * șteargă, ceea ce e mai rău decât tăcerea. Nici cel notat: pentru el, media a
+ * fost mereu doar o cifră care se mișcă.
+ */
+function stergeEvaluarea(int $id): bool
+{
+    $q = db()->prepare('DELETE FROM evaluari WHERE id = ?');
+    $q->execute([$id]);
+
+    return $q->rowCount() === 1;
 }

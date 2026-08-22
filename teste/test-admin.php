@@ -20,6 +20,8 @@ require_once __DIR__ . '/../inc/admin.php';
 require_once __DIR__ . '/../inc/comentarii.php';
 // Pentru stampileazaCeleAprobate(), ștampila pe care o pune prima pagină.
 require_once __DIR__ . '/../inc/dorinte.php';
+// Pentru EVALUARE_ABSENT_STELE, steaua pe care o pune „Nu s-a prezentat".
+require_once __DIR__ . '/../inc/evaluari.php';
 
 $BAZA = rtrim($argv[1] ?? '', '/');
 
@@ -96,9 +98,9 @@ sectiune('secțiunile și cifrele');
 
 $chei = array_map(static fn(array $s): string => (string) $s['cheie'], sectiuniAdmin());
 
-verifica('șase secțiuni', 6, count($chei));
+verifica('șapte secțiuni', 7, count($chei));
 verifica('în ordinea cerută',
-    ['coduri', 'evenimente', 'comentarii', 'contact', 'useri', 'dorinte'], $chei);
+    ['coduri', 'evenimente', 'comentarii', 'contact', 'useri', 'evaluari', 'dorinte'], $chei);
 
 /**
  * Fiecare secțiune trebuie să aibă o cifră care CHIAR se numără. O cheie
@@ -375,6 +377,122 @@ verifica('un număr înseamnă numărul', 5, limitaEvenimente($omul));
 db()->prepare('UPDATE membri SET limita_evenimente_active = NULL WHERE id = ?')->execute([$omul]);
 
 /* ==================================================================== */
+sectiune('evaluările');
+
+/**
+ * DE CE PAGINA ASTA EXISTĂ: notele nu se retrag, nu se raportează și nu se
+ * moderează nicăieri altundeva. O stea pusă din supărare rămânea pentru
+ * totdeauna în media cuiva, iar cel notat n-avea cui să spună.
+ */
+$evNotat = faEveniment($gazda, 'tstadm-notat', 'incheiat');
+
+$scrieNota = static function (int $ev, int $dela, int $catre, int $stele,
+                              ?string $text, bool $automat = false) : int {
+    db()->prepare(
+        'INSERT INTO evaluari (eveniment_id, evaluator_id, evaluat_id, stele, text,
+                               automat, creat_la, actualizat_la)
+         VALUES (?,?,?,?,?,?,?,?)'
+    )->execute([$ev, $dela, $catre, $stele, $text, $automat ? 1 : 0, acum(), acum()]);
+
+    return (int) db()->lastInsertId();
+};
+
+$notaScrisa = $scrieNota($evNotat, $omul,  $gazda, 2, 'TSTADM o părere aspră');
+$notaGoala  = $scrieNota($evNotat, $gazda, $omul,  5, null);
+
+$aNoastraNota = static function (int $id): ?array {
+    foreach (toateEvaluarile() as $e) {
+        if ((int) $e['id'] === $id) { return $e; }
+    }
+    return null;
+};
+
+verifica('nota scrisă se vede în listă', true, $aNoastraNota($notaScrisa) !== null);
+
+/**
+ * ȘI CEA FĂRĂ TEXT. Pe profil se arată doar părerile SCRISE — stelele singure
+ * sunt anonime și nici nu apar. Dar tocmai ele fac media, deci tocmai ele
+ * trebuie să se poată vedea de aici. E singurul loc de pe site unde o stea
+ * are un nume lângă ea.
+ */
+verifica('și cea fără text, la fel', true, $aNoastraNota($notaGoala) !== null);
+
+$rand = $aNoastraNota($notaScrisa);
+verifica('cu cine a dat-o',   'Andrei', (string) $rand['autor_prenume']);
+verifica('și cui i-a dat-o',  'Silviu', (string) $rand['tinta_prenume']);
+verifica('cu stelele ei',            2, (int) $rand['stele']);
+verifica('și cu evenimentul de unde vine',
+    'tstadm-notat', (string) $rand['ev_slug']);
+
+/* ------------------- cine împarte note, și cu ce mână ------------- */
+
+$catAdat = static function (int $id) {
+    foreach (ceAuDatOamenii() as $o) {
+        if ((int) $o['id'] === $id) { return $o; }
+    }
+    return null;
+};
+
+$suma = $catAdat($omul);
+verifica('omul apare printre cei care au dat', true, $suma !== null);
+verifica('cu o notă la activ',           1, (int) $suma['cate']);
+verifica('și cu cea mai mică a lui',     2, (int) $suma['cea_mai_mica']);
+
+/* --------------------------- cifra de pe panou -------------------- */
+
+/**
+ * Cifra secțiunii NU e „câte note sunt", ci câte sunt sub trei stele —
+ * singurele despre care poate veni cineva să se plângă. Peste tot pe panou,
+ * cifra înseamnă „ceva de privit", iar la evaluări nu așteaptă nimic.
+ */
+$cifreDupa = (static function (): array {
+    // cifreleAdmin() își ține minte răspunsul pentru cererea de acum, iar noi
+    // tocmai am scris în bază după ce a fost chemată o dată mai sus. Se
+    // numără din nou, de-a dreptul.
+    return [
+        'note_mici' => (int) db()->query('SELECT COUNT(*) FROM evaluari
+                                           WHERE stele <= 2 AND automat = 0')->fetchColumn(),
+    ];
+})();
+
+verifica('nota de două stele intră în cifra de pe panou', true, $cifreDupa['note_mici'] >= 1);
+
+/**
+ * „Nu s-a prezentat" pune o stea, dar NU e o părere: e o însemnare a
+ * organizatorului. N-are ce căuta în cifra care spune „uită-te la asta".
+ */
+// Alt eveniment: o pereche (eveniment, cine, cui) nu poate avea două note —
+// cheia `uk_evaluari_eveniment_evaluat_evaluator` are grijă de asta.
+$evAbsent = faEveniment($gazda, 'tstadm-absent', 'incheiat');
+
+$notaAutomata = $scrieNota($evAbsent, $gazda, $omul, EVALUARE_ABSENT_STELE,
+                           EVALUARE_ABSENT_TEXT, true);
+
+$dupaAutomata = (int) db()->query('SELECT COUNT(*) FROM evaluari
+                                    WHERE stele <= 2 AND automat = 0')->fetchColumn();
+
+verifica('dar cea automată nu intră în ea', $cifreDupa['note_mici'], $dupaAutomata);
+verifica('deși se vede în listă', true, $aNoastraNota($notaAutomata) !== null);
+verifica('cu semnul că e automată', 1, (int) $aNoastraNota($notaAutomata)['automat']);
+
+/* ------------------------------ ștergerea ------------------------- */
+
+verifica('nota se găsește după id', true, evaluareaDupaId($notaScrisa) !== null);
+
+/**
+ * ȘTERGERE ADEVĂRATĂ, nu golire. Un comentariu cu răspunsuri sub el se
+ * golește, fiindcă de el atârnă discuția; de o notă nu atârnă decât o cifră
+ * dintr-o medie, iar o cifră „golită" ar fi rămas tot o cifră.
+ */
+verifica('și pleacă de tot',  true, stergeEvaluarea($notaScrisa));
+verifica('rândul nu mai e',   null, evaluareaDupaId($notaScrisa));
+verifica('nici în listă',     null, $aNoastraNota($notaScrisa));
+verifica('a doua oară nu mai are ce șterge', false, stergeEvaluarea($notaScrisa));
+
+// Cele care n-au fost atinse au rămas la locul lor.
+verifica('celelalte sunt tot acolo', true, $aNoastraNota($notaGoala) !== null);
+
+/* ==================================================================== */
 sectiune('dorințele');
 
 db()->prepare('INSERT INTO dorinte (membru_id, oras, dorinta, stare_moderare, creat_la, publicat_la)
@@ -475,8 +593,8 @@ if ($BAZA === '') {
     };
 
     $pagini = ['/admin.php', '/admin-evenimente.php', '/admin-comentarii.php',
-               '/admin-contact.php', '/admin-useri.php', '/admin-dorinte.php',
-               '/coduri.php'];
+               '/admin-contact.php', '/admin-useri.php', '/admin-evaluari.php',
+               '/admin-dorinte.php', '/coduri.php'];
 
     $toateInchise = true;
     $scapate      = [];

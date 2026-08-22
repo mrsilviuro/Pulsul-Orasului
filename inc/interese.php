@@ -450,7 +450,66 @@ function motivBlocajParticipare(array $eveniment, ?array $membru): string
         return 'Evenimentul e doar pentru bărbați.';
     }
 
+    /**
+     * VÂRSTA MINIMĂ, cerută de organizator.
+     *
+     * Coloana `varsta_minima` exista de mult, formularul o cerea, pagina o
+     * scria în caseta cu detalii — dar nimeni nu se uita la ea la înscriere.
+     * Adică site-ul spunea „18+" și lăsa înăuntru pe oricine, ceea ce e mai rău
+     * decât să nu fi spus nimic: organizatorul se bizuia pe o regulă care nu
+     * exista.
+     *
+     * SE SOCOTEȘTE LA ZIUA EVENIMENTULUI, nu la ziua de azi. Cine împlinește
+     * 16 ani poimâine și vine la ceva de peste trei zile va avea 16 ani acolo —
+     * asta cere organizatorul, nu ca omul să-i fi avut deja când s-a înscris.
+     * Invers nu se întâmplă niciodată: un anunț nu se mută înapoi în timp.
+     *
+     * „Împlinit" înseamnă împlinit: la 16 ani ceruți, cel care are exact 16
+     * intră, cel care are 15 nu. De-aia `<` și nu `<=`.
+     */
+    $varstaCeruta = $eveniment['varsta_minima'] ?? null;
+    $nascut       = (string) ($membru['data_nasterii'] ?? '');
+
+    if ($varstaCeruta !== null && $nascut !== '') {
+        $varsta = varstaLaZiua($nascut, (string) ($eveniment['data_eveniment'] ?? ''));
+
+        if ($varsta !== null && $varsta < (int) $varstaCeruta) {
+            return 'Organizatorul cere cel puțin ' . (int) $varstaCeruta
+                 . ' ani împliniți pentru evenimentul ăsta.';
+        }
+    }
+
     return '';
+}
+
+/**
+ * Câți ani are cineva născut în `$nascut`, în ziua `$zi`.
+ *
+ * Întoarce null dacă una dintre date lipsește sau nu se poate citi — atunci
+ * cine întreabă hotărăște singur ce face, iar aici nu se inventează o vârstă.
+ *
+ * Se socotește cu DateTime, nu scăzând ani din ani: „29 februarie 2008" plus
+ * șaisprezece ani nu e o zi care există, iar o socoteală făcută cu mâna ar fi
+ * greșit exact în cazul pe care nimeni nu-l probează niciodată.
+ */
+function varstaLaZiua(string $nascut, string $zi): ?int
+{
+    if ($nascut === '' || $zi === '') {
+        return null;
+    }
+
+    try {
+        $n = new DateTimeImmutable($nascut);
+        $z = new DateTimeImmutable($zi);
+    } catch (Exception $e) {
+        return null;
+    }
+
+    if ($z < $n) {
+        return 0;
+    }
+
+    return (int) $n->diff($z)->y;
 }
 
 /**

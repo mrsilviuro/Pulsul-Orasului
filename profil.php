@@ -80,6 +80,21 @@ $rezumatProfil  = $p ? rezumatEvaluari((int) $p['id']) : ['medie' => 0.0, 'cate'
 $evaluariProfil = $p ? evaluarilePrimite((int) $p['id']) : [];
 
 /**
+ * Omul de casă vede un „×" în dreptul fiecărei păreri scrise.
+ *
+ * E singurul fel în care o vorbă nedreaptă poate pleca de pe profilul cuiva:
+ * notele nu se retrag, nu se raportează, iar mai devreme nu exista nicio
+ * pagină de moderare a lor. Ștergerea propriu-zisă se face de la lista
+ * întreagă (admin-evaluari.php) SAU de aici, de la locul faptei — de obicei
+ * așa afli de ea: intri pe profilul cuiva și vezi ce scrie.
+ *
+ * Se întreabă din bază la fiecare cerere (esteStaff citește `este_staff` din
+ * rândul adus de membruCurent), nu din sesiune: un drept luat înapoi trebuie
+ * să dispară pe loc.
+ */
+$eStaffulCasei = $eu !== null && esteStaff($eu);
+
+/**
  * Istoricul: pe unde a fost omul.
  *
  * Tabul de lângă evaluări. Se citește tot, dintr-o cerere, și intră tot în
@@ -575,9 +590,16 @@ require __DIR__ . '/inc/antet.php';
         Lista de evaluări primite. Doar cele SCRISE: stelele date dintr-o
         apăsare intră în medie și în barele de sus, dar n-au ce citi aici.
         Cine s-a așezat să scrie ceva își pune și numele.
+
+        `data-admin` și `data-csrf` se pun NUMAI pentru staff, și numai atunci
+        se desenează și „×"-urile. Sunt aceleași atribute de care se leagă
+        blocul de administrare din main.js — singura pagină din afara zonei de
+        admin care le are, fiindcă aici e singurul loc unde o părere nedreaptă
+        se vede la locul ei, pe profilul omului despre care e scrisă.
       -->
-      <ul class="comments" data-lista-evaluari data-descopera-lista>
-        <?= randeazaEvaluari($evaluariProfil) ?>
+      <ul class="comments" data-lista-evaluari data-descopera-lista
+          <?php if ($eStaffulCasei): ?>data-admin data-csrf="<?= h(tokenCsrf()) ?>"<?php endif; ?>>
+        <?= randeazaEvaluari($evaluariProfil, $eStaffulCasei) ?>
       </ul>
 
       <?php if ($evaluariProfil === []): ?>

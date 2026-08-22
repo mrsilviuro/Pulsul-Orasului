@@ -4186,6 +4186,12 @@ Ce nu se poate controla din CSS: formatul afișat în câmpul de dată
    rămâne deschis, iar `inc/config.php` se poate descărca de oricine, cu parola
    bazei de date în el. În FileZilla: *Server → Force showing hidden files*.
 
+   Sunt **șapte** fișiere `.htaccess`: unul în rădăcină și câte unul în `inc/`,
+   `sql/`, `cron/`, `private/`, `assets/img/membri/` și
+   `assets/img/evenimente/`. Cele șase din dosare închid; cel din rădăcină nu
+   închide nimic — trece site-ul pe https, împachetează textul la trimitere și
+   spune browserului ce are voie să țină minte (vezi mai jos).
+
 2. **Faci baza de date din panoul găzduirii** (cPanel → MySQL Databases), apoi
    un utilizator, apoi **îl legi de bază** — „Add User To Database", cu toate
    drepturile bifate. Legarea e un pas separat și se uită des; fără ea, PHP
@@ -4197,6 +4203,11 @@ Ce nu se poate controla din CSS: formatul afișat în câmpul de dată
 3. **Importi `sql/schema.sql`** în phpMyAdmin: alegi întâi baza din lista din
    stânga, abia apoi „Import". Fără pasul cu alegerea bazei, importul nu are
    unde să scrie.
+
+   Apoi **migrările, în ordinea numerelor**, de la `002` până la ultima. Sunt
+   bucăți care adaugă coloane și tabele apărute după prima schemă; sărită una,
+   pagina care are nevoie de ea dă eroare, iar celelalte merg — deci se vede
+   greu. Ultima de azi e `sql/030-incercari-qr.sql`.
 
 4. **Faci `inc/config.php` pe server**, pornind de la `inc/config.example.php`.
 
@@ -4217,6 +4228,44 @@ Ce nu se poate controla din CSS: formatul afișat în câmpul de dată
 
 8. **Dacă vrei intrarea cu Google**, urmează pașii din secțiunea „Intrarea cu
    Google". Până atunci butoanele nici nu se tipăresc, deci nu e grabă.
+
+### `.htaccess`-ul din rădăcină
+
+Celelalte șase închid dosare. Ăsta nu închide nimic: face site-ul să se
+deschidă mai repede și îl ține pe https.
+
+**https, mereu.** Toate cookie-urile de pe site primesc steagul `secure` când
+cererea vine pe https (`pornesteSesiunea()`). Pe http pleacă în clar — deci nu e
+de ajuns că https *merge*, trebuie să fie singurul drum. Redirecționarea
+întreabă și de `X-Forwarded-Proto`, fiindcă multe găzduiri termină certificatul
+într-un proxy și trimit mai departe pe http; fără întrebarea aia s-ar fi făcut o
+buclă fără sfârșit.
+
+**Textul pleacă împachetat.** `style.css` are vreo 180 KB și `main.js` vreo
+230 KB — patru sute și ceva de kilobiți pe care fiecare om îi descarcă la prima
+vizită. Împachetate (`mod_deflate`), rămân sub o sută. Pe un telefon cu semnal
+slab, asta e diferența dintre „s-a deschis" și „nu merge". Pozele nu se
+împachetează: JPEG-ul e deja împachetat, iar a doua trecere ar da un fișier mai
+mare.
+
+**Ce nu se schimbă, se ține minte.** CSS-ul și JS-ul se cer cu `?v=88` la coadă,
+iar numărul crește la fiecare modificare (regula 2 din CLAUDE.md) — adresa fiind
+alta, browserul aduce fișierul nou oricum. De aceea au voie să fie ținute minte
+un an, cu `immutable`. **HTML-ul, niciodată:** el poartă numărul de versiune al
+celorlalte, iar ținut minte ar fi cerut mai departe fișierele vechi. Și mai e un
+motiv: cine iese din cont și apasă „înapoi" ar vedea pagina dinainte, cu numele
+lui pe ea, luată din memoria browserului.
+
+**Ce nu se descarcă.** Fișierele răzlețe care ar putea ajunge pe server dintr-o
+scăpare: o copie de siguranță, un `.env`, dosarul `.git` dacă site-ul s-a pus
+vreodată prin `git clone` în loc de FTP. `.git/` are TOT codul și toată istoria
+lui, inclusiv fișiere șterse cândva, și se descarcă fișier cu fișier cu unelte
+care se găsesc de-a gata.
+
+**Tot ce e în el e învelit în `<IfModule>`.** Dacă găzduirea n-are modulul,
+bucata se sare în tăcere în loc să dea „500" pe tot site-ul. Și totuși, dacă
+după ce-l urci site-ul dă 500: **îl redenumești în `htaccess.txt` prin FTP** și
+se întoarce cum era. Nimic din el nu e necesar ca site-ul să funcționeze.
 
 ### Gazda bazei de date
 
@@ -4903,3 +4952,127 @@ Lista celor active se citește oricum, și pentru el: e ce arată pagina sub
 formular („ai deja pe astea"), și n-are de ce să dispară doar fiindcă nu-l mai
 oprește nimic. Iar steagul se citește din bază la fiecare cerere, deci un drept
 luat înapoi îl pune la loc sub limită imediat, nu la următoarea conectare.
+
+## Trei plase de siguranță, puse înainte de deschidere
+
+Înainte de a scoate site-ul din construcție s-a mai citit o dată tot codul, cu
+ochii pe partea de siguranță. Cea mai mare parte era în regulă: escaparea la
+randare cu `h()`, tokenul CSRF la orice faptă, întrebarea „e al tău?" pusă la
+fiecare API, pozele redesenate pixel cu pixel, aceleași vorbe pentru „parolă
+greșită" și „cont inexistent". Trei lucruri au trebuit îndreptate, și toate
+trei sunt de același fel: nu greșeli de scriere, ci lucruri care merg perfect
+cu un om și se rup cu o mie.
+
+### 1. Ultimul loc, cerut de opt oameni deodată
+
+`api/interes.php` întreba, în ordinea asta: „mai sunt locuri?", iar dacă da,
+„scrie-mă pe listă". Între cele două întrebări încape o clipă, iar într-o clipă
+încap alte șapte cereri. Fiecare dintre ele a apucat să întrebe înainte ca
+vreuna să apuce să scrie, fiecare a primit „mai sunt", și toate opt s-au trecut
+pe listă.
+
+Nu e o închipuire: la un eveniment cu două locuri, opt cereri pornite în aceeași
+clipă lăsau cinci oameni înăuntru. De fiecare dată, la fiecare rulare.
+
+Se vedea greu fiindcă pe un server de dezvoltare nu se întâmplă niciodată — el
+răspunde la o singură cerere odată. A trebuit pornit unul cu mai mulți lucrători
+(`PHP_CLI_SERVER_WORKERS=8`) ca să se poată arăta.
+
+Îndreptarea e o tranzacție cu `SELECT … FOR UPDATE` pe rândul evenimentului:
+primul care intră ține ușa, ceilalți așteaptă pe hol, iar când le vine rândul
+întreabă din nou și află adevărul. Aceleași opt cereri, acum: unul intră, șapte
+primesc „nu mai sunt locuri". Numărul din bază: exact doi.
+
+Regula rămâne pentru orice altceva se numără: **la un lucru cu număr limitat, nu
+se citește într-un loc și se scrie în altul.** Ori hotărârea intră în `WHERE`
+(cum face de la bun început revendicarea unui abțibild), ori se pune o
+tranzacție în jurul amândurora.
+
+### 2. „FindMe" jucat de pe canapea
+
+Un cod de abțibild are cinci semne dintr-un alfabet de treizeci și două — vreo
+treizeci și trei de milioane de combinații. Pare mult, dar socoteala e greșită:
+nimeni n-are nevoie să le încerce pe toate. E de ajuns să nimerească **unul**
+dintre cele câteva lipite prin oraș la un moment dat. Cu zece vânători active,
+un program care încearcă cincizeci de coduri pe secundă nimerește unul în câteva
+ore, fără să se ridice de pe scaun.
+
+Asta ar fi golit jocul de tot rostul lui. „FindMe" nu e un concurs de ghicit, e
+un motiv de a te plimba prin oraș cu ochii deschiși.
+
+Acum se ține minte fiecare scanare care **n-a nimerit nimic**, într-un tabel al
+ei (`incercari_qr`, `sql/030`), și de la treizeci într-un ceas de la aceeași
+adresă IP pagina spune „hai să ne oprim puțin" fără să se mai uite în bază. La
+ritmul ăsta, cele treizeci și trei de milioane cer o sută douăzeci de ani.
+
+Trei hotărâri din spatele lui, toate cu socoteală:
+
+- **Doar cele greșite se numără.** Cine scanează un abțibild adevărat a fost
+  acolo, s-a uitat, a găsit — n-are de ce să fie pedepsit că mai scanează unul.
+- **Un tabel al lui, nu `incercari_autentificare`.** Acolo numărătoarea duce la
+  blocarea unui cont, iar o limită de pe altă pagină n-are voie să încuie contul
+  cuiva. Aici nu se încuie nimic: se încetinește o adresă.
+- **Întrebarea se pune înainte de a se uita în bază după codul cerut.** O frână
+  pusă după ce a trecut mașina nu e o frână.
+
+Treizeci e larg pentru orice om — telefonul prinde codul dintr-o dată, iar cine
+îl tastează de mână are cinci semne de scris — și strâmt pentru orice program.
+
+### 3. A doua plasă sub escapare
+
+Escaparea cu `h()` e prima apărare împotriva unui `<script>` strecurat în
+pagină, și e pusă peste tot: s-au verificat toate cele douăzeci și două de
+locuri în care se scrie text venit de la oameni, plus șabloanele de e-mail.
+Toate curate.
+
+Dar „toate curate azi" nu e „toate curate mereu". A doua plasă se cheamă
+politică de conținut (CSP), și e un antet prin care pagina îi spune browserului
+de unde are voie să aducă fiecare fel de lucru:
+
+```
+default-src 'self'; script-src 'self' 'nonce-…'; style-src 'self' 'unsafe-inline'
+https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com;
+img-src 'self' data:; connect-src 'self'; form-action 'self'; base-uri 'self';
+frame-ancestors 'none'; frame-src 'none'; object-src 'none'
+```
+
+E o listă de îngăduințe, nu una de opreliști: tot ce nu scrie acolo e oprit.
+Dacă un `<script>` ar scăpa vreodată într-o pagină, browserul refuză să-l ruleze
+— fiindcă n-are cifra cererii.
+
+**Cifra** e un număr făcut din nou la fiecare cerere (`nonceCsp()`). Site-ul are
+un singur script scris direct în HTML, cel care pune tema înainte de randare ca
+să nu clipească alb, iar el o poartă:
+
+```php
+<script nonce="<?= h(nonceCsp()) ?>">
+```
+
+De aici o regulă pentru mai târziu: **un `<script>` nou scris direct în pagină
+nu va merge fără cifră.** Mai bine îl pui în `assets/js/main.js`, ca tot restul —
+regula 1 spune oricum același lucru.
+
+`style-src 'unsafe-inline'` e o portiță lăsată deschisă dinadins: cifra nu
+funcționează pe atributele `style=`, iar site-ul are trei (bara de note de pe
+profil, care are lățimea în procente, și pagina de eroare). Ce se poate face cu
+un stil strecurat e mult mai puțin decât cu un script — nu citește sesiunea, nu
+trimite nimic nicăieri, fiindcă `connect-src 'self'` și `form-action 'self'` îi
+taie și drumul de întoarcere.
+
+Antetele stau într-un singur loc, `antetedeSiguranta()` din `inc/bootstrap.php`,
+și se cheamă din două: `inc/antet.php`, adică tot site-ul, și `constructie.php`,
+singura pagină care nu trece prin antet. Scrise de două ori, a doua copie ar fi
+rămas în urmă la prima schimbare — și tocmai afișul de pe ușă, singura pagină
+care se vede cu site-ul închis, ar fi fost cel rămas fără pază. (Chiar așa era:
+până acum, afișul n-avea niciun antet de siguranță.)
+
+### Ce s-a verificat și era în regulă
+
+Ca să nu se caute a doua oară: drepturile și „e al tău?" la toate cele
+douăzeci și cinci de API-uri, tokenul CSRF, metoda HTTP, injecția SQL (totul
+trece prin interogări pregătite), XSS-ul în cele douăzeci și două de locuri de
+randare și în cele patru șabloane de e-mail, injecția de antete în e-mail,
+verificarea fișierelor încărcate, `.htaccess`-urile care închid `private/`,
+`cron/` și `sql/`, scurgerea de conturi la intrare și la recuperarea parolei, și
+adresa IP — care se ia mereu din `REMOTE_ADDR`, niciodată dintr-un antet scris
+de client.

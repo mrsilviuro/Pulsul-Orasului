@@ -227,24 +227,57 @@ if (!$eOrganizatorul && telefonulMembrului($membruId) === '') {
 /* --------------------------- c) locurile ---------------------------- */
 
 /**
+ * NUMĂRATUL ȘI ÎNSCRIEREA, ÎNTR-O SINGURĂ MIȘCARE.
+ *
  * Se numără ACUM, nu la desenarea paginii: între încărcare și apăsare pot
  * intra alții. Numărul de pe ecran e o veste, nu o rezervare.
+ *
+ * Dar „acum" nu era de ajuns. Numărătoarea și scrierea erau două cereri
+ * despărțite, iar la un eveniment cu un singur loc rămas zece oameni care
+ * apasă în aceeași clipă citeau toți același număr, treceau toți de
+ * verificare și intrau toți pe listă. Nu e o închipuire: cu opt cereri
+ * pornite deodată, un eveniment de două locuri ajungea la cinci participanți,
+ * de fiecare dată.
+ *
+ * De aceea cele două stau acum într-o tranzacție, iar rândul evenimentului se
+ * încuie cu `FOR UPDATE`: al doilea venit așteaptă la ușă până termină
+ * primul, și abia apoi numără — găsind locul luat. Se încuie RÂNDUL
+ * EVENIMENTULUI, nu tabelul de înscrieri: e cheia după care se face
+ * socoteala, deci e locul firesc în care se face rândul la coadă, iar două
+ * evenimente deosebite nu se așteaptă unul pe altul.
+ *
+ * Aceeași croială ca la revendicarea unui abțibild și ca la ștampila
+ * mulțumirilor: cine ajunge primul câștigă, ceilalți află că n-au ce câștiga.
  *
  * Cine e deja participant nu trece pe aici — a apăsat pe starea lui și s-a
  * retras la pasul 3. Cine e „interesat" și trece la „particip" ocupă un loc
  * nou, deci se numără ca oricine altcineva.
  */
-$numar = numaraInterese($evenimentId);
+$pdo = db();
+$pdo->beginTransaction();
 
-if (!maiSuntLocuri($eveniment, $numar['participant'])) {
-    raspunsJson([
-        'ok'    => false,
-        'plin'  => true,
-        'mesaj' => 'Nu mai sunt locuri disponibile la acest eveniment.',
-    ], 409);
+try {
+    $pdo->prepare('SELECT id FROM evenimente WHERE id = ? FOR UPDATE')->execute([$evenimentId]);
+
+    $numar = numaraInterese($evenimentId);
+
+    if (!maiSuntLocuri($eveniment, $numar['participant'])) {
+        $pdo->rollBack();
+
+        raspunsJson([
+            'ok'    => false,
+            'plin'  => true,
+            'mesaj' => 'Nu mai sunt locuri disponibile la acest eveniment.',
+        ], 409);
+    }
+
+    salveazaInteres($evenimentId, $membruId, 'participant');
+
+    $pdo->commit();
+} catch (Throwable $e) {
+    if ($pdo->inTransaction()) { $pdo->rollBack(); }
+    throw $e;
 }
-
-salveazaInteres($evenimentId, $membruId, 'participant');
 
 raspunsJson(raspunsulListei($eveniment, $membruId, 'Te-am trecut pe lista de participanți.'));
 

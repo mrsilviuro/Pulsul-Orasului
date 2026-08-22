@@ -69,14 +69,9 @@ opresteDacaTrebuieParolaNoua();
 
 /* ------------------------- Antete de siguranță ------------------------ */
 
-// Pagina nu poate fi încărcată într-un cadru pe alt site (clickjacking).
-header('X-Frame-Options: DENY');
-// Browserul nu ghicește tipul fișierelor, ci îl respectă pe cel trimis.
-header('X-Content-Type-Options: nosniff');
-// Către alte site-uri nu se trimite calea completă, doar domeniul.
-header('Referrer-Policy: strict-origin-when-cross-origin');
-// Fără acces la cameră, microfon sau localizare.
-header('Permissions-Policy: geolocation=(), microphone=(), camera=()');
+// Toate stau în inc/bootstrap.php, într-un singur loc: le cere și afișul de
+// șantier (constructie.php), singura pagină care nu trece pe aici.
+antetedeSiguranta();
 
 /* --------------------------- Meniul principal ------------------------- */
 
@@ -197,10 +192,12 @@ if ($logat) {
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/css/style.css?v=88">
+<link rel="stylesheet" href="assets/css/style.css?v=89">
 
-<!-- Setează tema ÎNAINTE de randare, ca să nu apară un flash alb pe dark mode -->
-<script>
+<!-- Setează tema ÎNAINTE de randare, ca să nu apară un flash alb pe dark mode.
+     Singurul script scris în pagină de pe tot site-ul, de aceea singurul care
+     poartă cifra din antetul de siguranță (nonceCsp). Fără ea nu rulează. -->
+<script nonce="<?= h(nonceCsp()) ?>">
 (function () {
   try {
     var saved = localStorage.getItem('po-theme');
