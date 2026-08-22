@@ -163,9 +163,26 @@ inc/
                       baltă; iar toateDorintele() NU taie deloc, fiindcă
                       rândurile din `dorinte` nu se șterg niciodată și tabelul
                       ăsta e singurul loc unde se vede tot ce s-a scris vreodată
-  antet.php        → head + meniu + antete siguranță (folosit de toate paginile)
+  antet.php        → head + meniu (folosit de toate paginile). ANTETELE DE
+                      SIGURANȚĂ nu se scriu aici, se cheamă:
+                      antetedeSiguranta() din inc/bootstrap.php
   subsol.php        → footer + scripturi
-  bootstrap.php     → config, conexiune DB, sesiune, CSRF
+  bootstrap.php     → config, conexiune DB, sesiune, CSRF, ANTETELE DE
+                      SIGURANȚĂ. antetedeSiguranta() le pune pe toate, inclusiv
+                      POLITICA DE CONȚINUT (CSP): „doar de la noi", cu fonturile
+                      Google singura excepție. Se cheamă din DOUĂ locuri, fiindcă
+                      atâtea desenează pagini: inc/antet.php (tot site-ul) și
+                      constructie.php (afișul de șantier, singura pagină care nu
+                      trece prin antet). Scrise de două ori, a doua copie ar fi
+                      rămas în urmă la prima schimbare. SINGURUL script scris în
+                      pagină de pe tot site-ul e cel care pune tema, în
+                      inc/antet.php, iar el poartă cifra de unică folosință a
+                      cererii (nonceCsp) — fără ea nu rulează. Deci un
+                      `<script>` nou scris direct în HTML NU va merge dacă nu
+                      primește `nonce="<?= h(nonceCsp()) ?>"`; mai bine îl pui
+                      în assets/js/main.js, ca tot restul. `style-src` are
+                      'unsafe-inline' dinadins: cifra nu merge pe atributele
+                      `style=`, iar site-ul are trei
   validare.php      → toate verificările server-side (fără atingere DB)
   imagini.php       → procesare/validare poze de profil ȘI coperți de eveniment.
                       TOT AICI copiazaCoperta(): singurul loc de pe site unde
@@ -320,7 +337,14 @@ inc/
                       „Ce zici, te interesează?": ori numărătoarea inversă până
                       la termen, ori câștigătorul. CODUL NU SE SCRIE NICIODATĂ
                       ÎN PAGINĂ — cine deschide anunțul ar câștiga fără să se
-                      ridice de pe scaun
+                      ridice de pe scaun. TOT AICI FRÂNA ÎMPOTRIVA GHICITULUI:
+                      preaMulteIncercariQr() și insemneazaIncercareaQr(),
+                      QR_INCERCARI_PE_CEAS (30) de la o adresă IP, în
+                      QR_MINUTE_FEREASTRA (60). Se numără DOAR scanările care
+                      n-au nimerit nimic — cine scanează un abțibild adevărat a
+                      fost acolo, s-a uitat, a găsit. findme.php întreabă ÎNAINTE
+                      să se uite în bază după codul cerut, altfel frâna ar fi
+                      fost pusă după ce trecea mașina
   evaluari.php      → notele dintre participanți, după eveniment: cine poate
                       nota, media și distribuția de pe profil, „Nu s-a
                       prezentat". STELELE SINGURE sunt anonime și nici nu se
@@ -441,7 +465,15 @@ api/                → endpoint-uri JSON apelate din JS (fetch); eveniment.php 
                       „e al tău?", ci „ești de-al casei?": modereaza-eveniment.php
                       și fixeaza-eveniment.php (piuneza). Restul —
                       incheie-eveniment.php, anuleaza-eveniment.php — sunt ale
-                      organizatorului
+                      organizatorului.
+                      interes.php ÎNSCRIE SUB TRANZACȚIE, cu
+                      `SELECT … FOR UPDATE` pe rândul evenimentului: între
+                      „mai sunt locuri?" și „scrie-mă pe listă" încap alte
+                      cereri, iar opt oameni care apasă deodată la un eveniment
+                      cu două locuri intrau toți. Cine vine al doilea așteaptă
+                      la ușă până se hotărăște primul. Orice altă socoteală de
+                      forma „citește, hotărăște, scrie" pe un lucru cu număr
+                      limitat se face la fel
 cron/               → scripturi rulate din cron (doar CLI, .htaccess le blochează)
                       anonimizeaza-conturi.php      — o dată pe zi
                       multumeste-participantilor.php — din oră în oră
@@ -457,7 +489,17 @@ sql/                → schema.sql + migrări numerotate (002, 003, 004, 005-goo
                       022-evenimente-staff, 023-dorinte,
                       024-categorii-doar-staff, 025-coduri-qr,
                       026-corectura-eveniment, 027-instiintari-feedback,
-                      028-feedback-instiintat, 029-eveniment-fixat)
+                      028-feedback-instiintat, 029-eveniment-fixat,
+                      030-incercari-qr)
+                      `incercari_qr` (030) ține minte scanările de abțibild care
+                      N-AU NIMERIT nimic, ca să se poată număra: fără ea, un
+                      program care încearcă coduri de pe canapea nimerea unul
+                      dintre cele active în câteva ore, și „FindMe" nu mai era o
+                      plimbare prin oraș. TABEL AL LUI, nu `incercari_autentificare`
+                      — acolo numărătoarea duce la blocarea unui cont, iar o
+                      limită de pe altă pagină n-are voie să încuie contul
+                      cuiva. Rândurile vechi se șterg singure, la scanare, fără
+                      cron
                       Zona de administrare citește și schimbă, în cea mai mare
                       parte, ce era deja acolo. SINGURA coloană nouă a ei e
                       `evenimente.corectura_ceruta_la` (026): ștampila pusă la
@@ -474,8 +516,12 @@ teste/              → test-validare.php (verificările din inc/validare.php;
                       partea de HTTP cere și serverul — se sare singură. Păzește
                       mai presus de orice că paginile și faptele sunt NUMAI
                       pentru staff)
-                      test-findme.php (abțibildele cu coduri QR; cere baza,
-                      iar partea de HTTP cere și serverul — se sare singură)
+                      test-findme.php (abțibildele cu coduri QR ȘI frâna
+                      împotriva ghicitului; cere baza,
+                      iar partea de HTTP cere și serverul — se sare singură.
+                      Secțiunea „bâjbâiala" își pune singură un REMOTE_ADDR
+                      din gama de probe 203.0.113.x, fiindcă din linia de
+                      comandă nu există unul, și îl ia de acolo la sfârșit)
                       test-dorinte.php (tabla cu dorințe; cere baza, iar
                       partea de HTTP cere și serverul — se sare singură)
                       test-tine-minte.php, test-setari.php, test-contact.php,
@@ -486,7 +532,12 @@ teste/              → test-validare.php (verificările din inc/validare.php;
                       și fără, sar doar partea care cere serverul. ATENȚIE:
                       test-constructie
                       pornește și oprește `in_constructie` din inc/config.php,
-                      și îl pune la loc cum l-a găsit)
+                      și îl pune la loc cum l-a găsit. TOT EL păzește ANTETELE
+                      DE SIGURANȚĂ, fiindcă e singurul care cere și afișul de
+                      șantier, singura pagină din afara lui inc/antet.php: că
+                      există politică de conținut, că scriptul temei poartă
+                      aceeași cifră ca antetul, și că la a doua cerere cifra e
+                      alta)
 private/            → loguri (emailuri-trimise.log), protejat prin .htaccess
 assets/css/style.css, assets/js/main.js, assets/img/
   assets/img/hero-zi.svg, hero-noapte.svg
@@ -530,9 +581,19 @@ assets/css/style.css, assets/js/main.js, assets/img/
 - Amprentă browser legată de sesiune (fără IP — se schimbă legit pe mobil)
 - Stare cont (suspendat etc.) se citește din DB la fiecare cerere, nu din sesiune
 - Limitele pe IP se numără în tabelul propriu al funcției (conturi noi în `membri`,
-  mesaje în `mesaje_contact`), nu într-un sistem separat. `incercari_autentificare`
+  mesaje în `mesaje_contact`, scanări greșite de abțibild în `incercari_qr`), nu
+  într-un sistem separat. `incercari_autentificare`
   rămâne doar pentru intrarea în cont: acolo numărătoarea duce la blocare, iar o
   limită de pe altă pagină n-are voie să încuie contul cuiva.
+- Adresa IP se ia MEREU din `REMOTE_ADDR`, printr-o singură funcție —
+  `ipBinar()` din `inc/bootstrap.php` — și NICIODATĂ dintr-un antet de forma
+  „X-Forwarded-For": pe acelea le scrie oricine, iar o limită care se ocolește
+  schimbând un antet nu e o limită. Dacă site-ul ajunge vreodată în spatele unui
+  Cloudflare sau al unui alt proxy, se schimbă funcția aceea, într-un singur
+  loc, și se scrie acolo pe ce proxy anume se are încredere.
+- Politica de conținut (CSP) e a doua plasă sub escaparea cu `h()`: dacă un
+  `<script>` ar scăpa vreodată într-o pagină, browserul refuză să-l ruleze
+  fiindcă n-are cifra cererii. Vezi `antetedeSiguranta()` în `inc/bootstrap.php`.
 - „Ține-mă minte" = rând în `sesiuni_amintite`, nu un cookie de sesiune lung.
   Cookie-ul are forma `selector:secret`, în DB stă doar sha256 al secretului,
   se rotește la fiecare folosire, e legat de amprenta browserului, iar

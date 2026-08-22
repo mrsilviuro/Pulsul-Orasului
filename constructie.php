@@ -94,6 +94,11 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
  */
 http_response_code(503);
 header('Retry-After: 86400');
+
+// Aceleași antete ca pe tot site-ul. Pagina asta nu trece prin inc/antet.php,
+// dar e singura care se vede cu site-ul închis — deci tocmai ea n-are voie să
+// rămână fără pază.
+antetedeSiguranta();
 ?>
 <!doctype html>
 <html lang="ro" data-theme="dark">

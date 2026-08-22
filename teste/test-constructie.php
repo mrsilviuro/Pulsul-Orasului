@@ -284,14 +284,16 @@ if ($BAZA === '') {
 
         $raspuns = @file_get_contents($BAZA . $cale, false, stream_context_create($ctx));
         $cod = 0; $unde = ''; $cookieNou = $cookie;
+        $antete = $http_response_header ?? [];
 
-        foreach ($http_response_header ?? [] as $rand) {
+        foreach ($antete as $rand) {
             if (preg_match('#^HTTP/\S+ (\d+)#', $rand, $m) === 1)      { $cod = (int) $m[1]; }
             if (preg_match('/^Location:\s*(.+)$/i', $rand, $m) === 1)  { $unde = trim($m[1]); }
             if (preg_match('/^Set-Cookie:\s*([^;]+)/i', $rand, $m) === 1) { $cookieNou = $m[1]; }
         }
 
-        return ['cod' => $cod, 'corp' => (string) $raspuns, 'unde' => $unde, 'cookie' => $cookieNou];
+        return ['cod' => $cod, 'corp' => (string) $raspuns, 'unde' => $unde,
+                'cookie' => $cookieNou, 'antete' => $antete];
     }
 
     /* --- doi oameni: unul obișnuit, unul de casă --- */
@@ -342,6 +344,65 @@ if ($BAZA === '') {
     verifica('afișul se deschide',        503, $r['cod']);
     verifica('și scrie ce trebuie', true, str_contains($r['corp'], 'Se pregătește ceva tare'));
     verifica('cu formularul de vești', true, str_contains($r['corp'], 'data-newsletter'));
+
+    /* ---------------- ANTETELE DE SIGURANȚĂ, PE AFIȘ ---------------- */
+
+    /**
+     * Afișul e SINGURA pagină care nu trece prin inc/antet.php, deci singura
+     * care putea rămâne fără antete de siguranță fără să bage nimeni de seamă.
+     * Și e tocmai pagina care se vede cât e site-ul închis, adică singura pe
+     * care o vede lumea în perioada în care e cel mai probabil să se lucreze la
+     * cod.
+     */
+    $antetul = static function (array $antete, string $nume): string {
+        foreach ($antete as $rand) {
+            if (preg_match('/^' . preg_quote($nume, '/') . ':\s*(.+)$/i', $rand, $m) === 1) {
+                return trim($m[1]);
+            }
+        }
+        return '';
+    };
+
+    $cspAfis = $antetul($r['antete'], 'Content-Security-Policy');
+
+    verifica('afișul are politică de conținut', true, $cspAfis !== '', $cspAfis);
+    verifica('care pornește de la „doar de la noi"', true,
+        str_contains($cspAfis, "default-src 'self'"));
+    verifica('fără scripturi străine',  true, str_contains($cspAfis, "script-src 'self'"));
+    verifica('și fără cadre',           true, str_contains($cspAfis, "frame-ancestors 'none'"));
+    verifica('cu X-Frame-Options',   'DENY', $antetul($r['antete'], 'X-Frame-Options'));
+    verifica('și cu nosniff',     'nosniff', $antetul($r['antete'], 'X-Content-Type-Options'));
+
+    /**
+     * Scriptul care pune tema, singurul scris în pagină de pe tot site-ul,
+     * poartă o cifră de unică folosință — iar cifra din antet și cea din pagină
+     * trebuie să fie ACEEAȘI. Dacă s-ar despărți vreodată, scriptul n-ar mai
+     * rula și site-ul ar clipi alb la fiecare încărcare pe temă întunecată.
+     *
+     * Se cere de pe pagina de intrare, care e deschisă și în lacăt.
+     */
+    $rl = cere('/login.php');
+    $cspLogin = $antetul($rl['antete'], 'Content-Security-Policy');
+
+    preg_match("/'nonce-([^']+)'/", $cspLogin, $mn);
+    $cifraDinAntet = $mn[1] ?? '';
+
+    preg_match('/<script nonce="([^"]+)"/', $rl['corp'], $mp);
+    $cifraDinPagina = $mp[1] ?? '';
+
+    verifica('antetul poartă o cifră',      true, $cifraDinAntet !== '');
+    verifica('și scriptul temei o poartă pe aceeași',
+        $cifraDinAntet, $cifraDinPagina);
+
+    /**
+     * Cifra e de UNICĂ folosință: la a doua cerere trebuie să fie alta. Dacă ar
+     * fi mereu aceeași, cine ar reuși vreodată să strecoare un `<script>` în
+     * pagină ar putea s-o scrie în el, și politica n-ar mai apăra nimic.
+     */
+    $cspAlDoilea = $antetul(cere('/login.php')['antete'], 'Content-Security-Policy');
+    preg_match("/'nonce-([^']+)'/", $cspAlDoilea, $mn2);
+
+    verifica('iar la a doua cerere e alta', false, ($mn2[1] ?? '') === $cifraDinAntet);
 
     $r = cere('/login.php');
     verifica('intrarea în cont e deschisă', 200, $r['cod']);

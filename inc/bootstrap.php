@@ -370,6 +370,87 @@ function octetiDinSetare(string $valoare): int
     return $numar;
 }
 
+/* ------------------------- ANTETE DE SIGURANȚĂ ------------------------ */
+
+/**
+ * Cifra de o singură folosință cu care se însemnează scripturile noastre.
+ *
+ * Politica de conținut (mai jos) spune browserului: „rulează doar scripturile
+ * aduse de pe site-ul ăsta și, dintre cele scrise chiar în pagină, doar pe
+ * cele care poartă cifra asta". Cifra se face din nou la fiecare cerere, deci
+ * cine ar reuși vreodată să strecoare un `<script>` în pagină n-are de unde
+ * s-o ghicească, iar scriptul lui rămâne o bucată de text.
+ *
+ * Se face o singură dată pe cerere și se ține minte: antetul și eticheta din
+ * pagină trebuie să spună aceeași cifră, altfel nu rulează nici scriptul
+ * nostru.
+ */
+function nonceCsp(): string
+{
+    static $nonce = null;
+
+    if ($nonce === null) {
+        $nonce = base64_encode(random_bytes(16));
+    }
+
+    return $nonce;
+}
+
+/**
+ * Antetele de siguranță ale unei PAGINI (nu ale unui răspuns JSON).
+ *
+ * Stau într-un singur loc fiindcă le cer două pagini care nu se ating:
+ * `inc/antet.php`, adică tot site-ul, și `constructie.php`, singura pagină
+ * care nu trece prin antetul comun (vezi lămurirea de acolo). Scrise de două
+ * ori, a doua copie ar fi rămas în urmă la prima schimbare — și tocmai afișul
+ * de pe ușă, singurul care se vede cu site-ul închis, ar fi fost cel rămas
+ * fără pază.
+ *
+ * DESPRE `style-src 'unsafe-inline'`: da, e o portiță, și e deschisă anume.
+ * Site-ul are trei locuri cu `style="…"` scris în pagină (bara de note de pe
+ * profil, care are lățimea în procente, și pagina de eroare din bootstrap), iar
+ * o cifră de unică folosință nu funcționează pe atributele `style`, doar pe
+ * etichetele `<style>`. Ce se poate face cu un stil strecurat e mult mai puțin
+ * decât cu un script: nu citește sesiunea, nu trimite nimic nicăieri —
+ * `connect-src 'self'` și `form-action 'self'` îi taie și drumul de întoarcere.
+ */
+function antetedeSiguranta(): void
+{
+    // Pagina nu poate fi încărcată într-un cadru pe alt site (clickjacking).
+    header('X-Frame-Options: DENY');
+    // Browserul nu ghicește tipul fișierelor, ci îl respectă pe cel trimis.
+    header('X-Content-Type-Options: nosniff');
+    // Către alte site-uri nu se trimite calea completă, doar domeniul.
+    header('Referrer-Policy: strict-origin-when-cross-origin');
+    // Fără acces la cameră, microfon sau localizare.
+    header('Permissions-Policy: geolocation=(), microphone=(), camera=()');
+
+    // De unde are voie browserul să aducă fiecare fel de lucru. Tot ce nu e
+    // scris aici e oprit: e o listă de îngăduințe, nu una de opreliști.
+    header('Content-Security-Policy: '
+        . "default-src 'self'; "
+        // Scripturile: ale noastre, plus cel scris în pagină care poartă cifra.
+        . "script-src 'self' 'nonce-" . nonceCsp() . "'; "
+        // Stilurile: ale noastre, fontul de la Google și atributele `style=`.
+        . "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+        // Fișierele de font vin de pe celălalt domeniu al Google.
+        . "font-src 'self' https://fonts.gstatic.com; "
+        // Pozele: ale noastre, plus cele desenate în cod (`data:`).
+        . "img-src 'self' data:; "
+        // `fetch` din main.js merge doar spre api/-ul nostru.
+        . "connect-src 'self'; "
+        // Un formular strecurat în pagină n-are unde trimite ce a scris omul.
+        . "form-action 'self'; "
+        // Nimeni nu poate muta rădăcina adreselor relative pe alt server.
+        . "base-uri 'self'; "
+        // Aceeași vorbă ca X-Frame-Options, pentru browserele noi.
+        . "frame-ancestors 'none'; "
+        // Fără cadre, fără Flash, fără applet-uri: site-ul n-are niciunul.
+        . "frame-src 'none'; "
+        . "object-src 'none'"
+    );
+}
+
 /** Adresa IP a vizitatorului, în formă binară, pentru coloana VARBINARY(16). */
 function ipBinar(): ?string
 {
