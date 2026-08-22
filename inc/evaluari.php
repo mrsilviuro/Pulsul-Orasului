@@ -329,6 +329,41 @@ function omDeInstiintatLaFeedback(int $evaluatId, int $evaluatorId): ?array
 }
 
 /**
+ * Pune ștampila „vestea a plecat" — și spune dacă ea CHIAR se pune acum.
+ *
+ * O SINGURĂ VESTE PENTRU O PĂRERE, ORICÂTE ÎNDREPTĂRI AR URMA. Vestea pleca,
+ * până acum, la fiecare text nou sau schimbat. Suna cuminte, dar în viață un om
+ * își îndreaptă vorbele: scrie în grabă, vede o greșeală, se răzgândește asupra
+ * unui cuvânt. Zece îndreptări însemnau zece e-mailuri despre ACEEAȘI părere,
+ * iar cel care le primea învăța, pe bună dreptate, să nu le mai deschidă.
+ *
+ * HOTĂRÂREA SE IA ÎN `WHERE`, nu într-un `SELECT` de dinainte urmat de un
+ * `UPDATE`. Două file deschise deodată, sau două apăsări la o secundă distanță,
+ * ar fi trecut amândouă de o verificare făcută separat și ar fi trimis două
+ * mesaje — exact lucrul de care ne ferim. Aici, a doua cerere schimbă zero
+ * rânduri și primește „nu".
+ *
+ * Aceeași croială ca la revendicarea unui abțibild (revendicaCodul) și ca la
+ * ștampila de mulțumiri: cine scrie primul câștigă, ceilalți află că n-au ce
+ * scrie.
+ *
+ * Ștampila NU se șterge niciodată, nici când omul își retrage vorbele. Dacă ar
+ * fi ștearsă, „scrie – șterge – scrie" ar fi devenit felul de a trimite oricâte
+ * mesaje.
+ */
+function insemneazaVesteaTrimisa(int $evenimentId, int $evaluatId, int $evaluatorId): bool
+{
+    $q = db()->prepare(
+        'UPDATE evaluari SET instiintat_la = ?
+          WHERE eveniment_id = ? AND evaluat_id = ? AND evaluator_id = ?
+            AND instiintat_la IS NULL'
+    );
+    $q->execute([acum(), $evenimentId, $evaluatId, $evaluatorId]);
+
+    return $q->rowCount() === 1;
+}
+
+/**
  * Cine a fost însemnat ca neprezentat la evenimentul ăsta.
  *
  * Se citește o dată, pentru toată lista, nu o dată pe rând. Întoarce o hartă

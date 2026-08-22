@@ -836,6 +836,17 @@ spunând „cineva te-a notat, nu-ți spunem cine, nu-ți spunem cât" — nefol
 în cel mai bun caz, apăsător în cel mai rău. Iar cu numele în el, mesajul ar fi
 spart tocmai anonimatul care ține notele cinstite.
 
+**Cele trei bife stau la distanțe egale**, și asta a cerut o regulă a lor
+(`.form--bife`). Cei 18px dintre câmpurile unui formular obișnuit sunt buni
+acolo unde fiecare câmp are eticheta lui deasupra și o cutie desenată dedesubt:
+marginile spun singure unde se termină unul și începe altul. La bife nu e nimic
+de felul ăsta, doar rânduri de text — iar un rând sare la altul, în aceeași
+frază, la 20px. Cu 18px *între* bife, rândurile aceleiași fraze ajungeau mai
+depărtate decât două alegeri deosebite, și ochiul le citea pe toate ca pe un
+bloc. 24px e destul cât să se vadă unde se termină una și începe alta, oricâte
+rânduri ar avea fiecare — și tocmai de aceea spațiile *arată* egale, deși
+frazele n-au aceeași lungime.
+
 **Un singur buton, totuși:** toate trei răspund la aceeași întrebare și pleacă
 într-o singură cerere, cu un singur `UPDATE`. Trei butoane alăturate ar fi pus
 omul să apese de trei ori pentru o hotărâre. Ca peste tot, o bifă scoasă nu
@@ -1954,6 +1965,30 @@ lucru (token bun, cont, om de casă), iar șapte fișiere ar fi însemnat șapte
 ale aceleiași verificări, dintre care una va fi într-o zi mai îngăduitoare decât
 celelalte.
 
+### Tabelele se derulează singure, nu toată pagina
+
+Un tabel de opt coloane nu încape pe un telefon, și nici n-are cum: sunt opt
+lucruri de citit în dreptul aceluiași rând. Se derulează pe orizontală, în cutia
+lui — asta a fost limpede de la început, și de aceea fiecare tabel stă într-un
+`.admin-scroll` cu `overflow-x: auto`.
+
+Numai că **nu era de ajuns.** Cutia chiar prindea derularea, dar tabelul de
+dedesubt tot lățea *documentul*, iar pe telefon asta înseamnă că se plimbă toată
+pagina în lateral, cu antet cu tot: omul trăgea de tabel și pleca site-ul de sub
+degete, lăsând o fâșie goală în dreapta.
+
+Leacul e `contain: paint` pe cutia care se derulează. Spune limpede că ce e
+înăuntru se desenează înăuntru și nu iese nicăieri, deci nu mai are de ce să fie
+luat în seamă la lățimea paginii. (`overflow-x: clip` pe `body` **nu** rezolvă
+nimic aici — l-am încercat și l-am măsurat: documentul rămânea lat. Merită scris,
+fiindcă e primul lucru la care sare mintea.)
+
+Alături, `overscroll-behavior-x: contain`: ajuns la capătul tabelului, gestul nu
+mai trece mai departe la pagină sau la „înapoi" din browser.
+
+Aceeași pereche de reguli o poartă și `.coduri__scroll`, fiindcă e același fel de
+tabel în aceeași cutie prea îngustă.
+
 ### Cifrele care se aprind
 
 Fiecare cartonaș arată **câte lucruri așteaptă**, nu câte sunt. Un cartonaș care
@@ -2012,6 +2047,15 @@ scrisă lângă el:
 - **„Șters" nu e o stare care se pune de aici.** Ștergerea unui cont înseamnă
   anonimizare; un `UPDATE stare='sters'` ar fi lăsat numele, adresa și poza în
   bază, sub o stare care spune că nu mai sunt.
+- **Ștergerea pozei nu șterge omul.** Rândul cădea, o vreme, în aceeași ramură cu
+  ștergerile și pleca din tabel — iar la următoarea reîncărcare omul apărea la
+  loc, fiindcă nu se ștersese niciodată. Adică lista mințea până la refresh, în
+  cel mai neliniștitor fel cu putință: „unde a dispărut omul ăsta?". Acum rândul
+  rămâne și se schimbă doar ce s-a schimbat — chipul se întoarce la inițială, iar
+  butonul face loc aceleiași liniuțe pe care o are din capul locului cine n-avea
+  poză. Adresa chipului implicit vine din răspunsul serverului, prin `urlPoza()`:
+  scrisă cu mâna în JS, ar fi fost al doilea loc care știe cum arată inițiala
+  cuiva.
 
 ### Limita de evenimente: gol nu e zero
 
@@ -3297,11 +3341,40 @@ fost ori inutil („cineva te-a notat, nu-ți spunem cine, nu-ți spunem cât"),
 o spargere a anonimatului care ține notele cinstite. Cinci oameni la o ieșire ar
 fi însemnat cinci astfel de mesaje.
 
-**Nici la fiecare virgulă îndreptată.** Vestea pleacă numai când textul e
-**altul** decât cel de dinainte — de aceea `api/evaluare.php` citește ce scria
-înainte de a scrie. O părere ștearsă nu vestește nimic: n-are cine să citească
-ce nu mai e. Și nici la „Nu s-a prezentat": textul acela nu e părerea nimănui,
-e scris de noi.
+**O singură dată pentru o părere, oricâte îndreptări ar urma.** Vestea pleca, o
+vreme, la fiecare text schimbat. Suna cuminte, dar în viață omul își îndreaptă
+vorbele: scrie în grabă, vede o greșeală, se răzgândește asupra unui cuvânt.
+Zece îndreptări însemnau zece e-mailuri despre *aceeași* părere — iar cel care
+le primea învăța, pe bună dreptate, să nu le mai deschidă.
+
+Ștampila e `evaluari.instiintat_la` (`sql/028`), pusă pe chiar rândul părerii —
+acolo e unicitatea care ne trebuie, fiindcă un rând din `evaluari` **înseamnă**
+„părerea lui X despre Y, la evenimentul Z". O socoteală ținută în altă parte ar
+fi trebuit să refacă tocmai cheia asta, cu mâna.
+
+**Hotărârea se ia în `WHERE`**, nu într-un `SELECT` urmat de un `UPDATE`:
+
+```sql
+UPDATE evaluari SET instiintat_la = ?
+ WHERE eveniment_id = ? AND evaluat_id = ? AND evaluator_id = ?
+   AND instiintat_la IS NULL
+```
+
+Două file deschise deodată ar fi trecut amândouă de o verificare făcută separat.
+Aici, a doua cerere schimbă zero rânduri și primește „nu" — aceeași croială ca
+la revendicarea unui abțibild și ca la ștampila de mulțumiri: cine scrie primul
+câștigă, ceilalți află că n-au ce scrie.
+
+**Ordinea contează:** se ștampilează întâi, și abia dacă ștampila a prins se
+trimite. Invers, cele două file ar fi trimis amândouă înainte ca vreuna să apuce
+să însemne ceva. Dacă poșta pică după ștampilă se pierde un mesaj — mai bine
+decât un potop, iar părerea rămâne scrisă oricum.
+
+**Ștampila nu se șterge niciodată**, nici când omul își retrage vorbele: altfel
+„scrie – șterge – scrie" ar fi devenit felul de a trimite oricâte mesaje.
+
+Și nici la „Nu s-a prezentat" nu pleacă nimic: textul acela nu e părerea
+nimănui, e scris de noi.
 
 Nu primesc nimic: omul însuși, cine a stins bifa `email_feedback` din setări, și
 un cont care nu mai e activ.

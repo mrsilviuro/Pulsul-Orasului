@@ -973,14 +973,19 @@ main { padding-block: 46px 64px; }
 /* Trei coloane, de când caseta de newsletter a plecat din subsol: semnul
    site-ului, și cele două liste de legături.
 
-   `auto` la cele două liste, `1fr` la semn: listele se strâng cât le trebuie
-   și rămân împreună, în dreapta, iar tot golul rămas se duce la stânga. Cu
-   trei coloane egale, cele patru legături scurte ar fi plutit fiecare în
-   sfertul ei de subsol. */
+   TREI ZONE, LA DISTANȚE EGALE. Coloanele de legături erau `auto`: se strângeau
+   cât le trebuia și se lipeau amândouă în colțul din dreapta, cu tot golul
+   adunat la stânga. Ieșea un subsol dezechilibrat — un sfert plin, un sfert
+   gol, și două liste înghesuite una într-alta.
+
+   Acum se împarte lățimea: semnul ia ceva mai mult (are sub el o frază și
+   rândul de rețele), iar cele două liste iau părți egale și stau fiecare la
+   locul ei. `minmax(0, …)` peste tot, ca o legătură lungă să se rupă în cutia
+   ei în loc să lățească rândul. */
 .footer__top {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
-  gap: 34px 64px;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1fr);
+  gap: 34px 48px;
   padding-bottom: 34px;
 }
 
@@ -2117,6 +2122,26 @@ html.cu-lupa, html.cu-lupa body { overflow: hidden; }
 }
 
 .form { display: grid; gap: 18px; }
+
+/* Un formular care e numai bife cu text lung — „E-mailuri de la noi", din
+   setări.
+
+   Cele 18px de mai sus sunt bune între câmpuri, unde fiecare are eticheta lui
+   deasupra și o cutie desenată dedesubt: marginile spun singure unde se termină
+   unul și începe altul. La bife nu e nimic de felul ăsta, doar rânduri de text
+   — iar un rând sare la altul din aceeași frază la 20px (13,5px × 1,5). Cu un
+   spațiu de 18px ÎNTRE bife, rândurile aceleiași fraze ajungeau mai depărtate
+   decât două alegeri deosebite, și ochiul le citea pe toate ca pe un bloc.
+
+   24px e destul cât să se vadă unde se termină una și începe alta, oricâte
+   rânduri ar avea fiecare — și tocmai de aceea spațiile arată egale, deși
+   frazele n-au aceeași lungime.
+
+   Puțin aer și sub titlul secțiunii: acolo, la alte chenare, stă un paragraf de
+   lămurire; aici formularul începe de-a dreptul sub el. Marginea de aici o
+   ÎNGHITE pe cea de jos a titlului (marginile vecine se strâng la cea mai
+   mare), deci cifra asta e chiar spațiul care se vede — nu se adună cu nimic. */
+.form--bife { gap: 24px; margin-top: 20px; }
 
 .field-row {
   display: grid;
@@ -4713,6 +4738,13 @@ a.findme__castigator:hover { color: var(--brand); }
 /* Tabelul se derulează în cutia lui, ca pagina să nu plece în lateral pe
    telefon. Regula de aur a site-ului: nimic nu împinge <body> orizontal. */
 .coduri__scroll { overflow-x: auto; }
+/* Vezi „TABELELE DE ADMINISTRARE SE DERULEAZĂ SINGURE", de mai jos: aceeași
+   regulă, fiindcă e același fel de tabel într-o cutie prea îngustă. */
+.coduri__scroll, .admin-scroll {
+  max-width: 100%;
+  contain: paint;
+  overscroll-behavior-x: contain;
+}
 
 /* Butonul „Vezi încă…" stă lipit de tabel, nu la patruzeci de pixeli ca pe
    prima pagină: aici e o unealtă, iar rândul de sub listă e chiar capătul ei. */
@@ -4884,6 +4916,25 @@ a.admin-nav__link:hover { background: var(--bg-soft); color: var(--text); }
 }
 .admin-gol { color: var(--text-faint); font-size: 14.5px; }
 
+/* ------- TABELELE DE ADMINISTRARE SE DERULEAZĂ SINGURE ------------------
+   Un tabel de opt coloane nu încape pe un telefon, și nici n-are cum: sunt
+   opt lucruri de citit în dreptul aceluiași rând. Se derulează pe orizontală,
+   în cutia lui.
+
+   `overflow-x: auto` singur NU era de ajuns. Cutia chiar prindea derularea,
+   dar tabelul de dedesubt tot lățea DOCUMENTUL — iar pe telefon asta înseamnă
+   că se plimbă toată pagina în lateral, cu antet cu tot: omul trăgea de tabel
+   și pleca site-ul de sub degete, lăsând o fâșie goală în dreapta.
+
+   `contain: paint` e leacul: spune limpede că ce e înăuntru se desenează
+   înăuntru și nu iese nicăieri, deci nu mai are de ce să fie luat în seamă la
+   lățimea paginii. (`overflow-x: clip` pe body NU rezolvă nimic aici — am
+   încercat și am măsurat: documentul rămânea lat.)
+
+   `overscroll-behavior-x: contain` oprește derularea la capătul tabelului: pe
+   Android, ajuns la margine, gestul ar fi trecut mai departe la pagină sau la
+   „înapoi" din browser.
+------------------------------------------------------------------------- */
 .admin-scroll { overflow-x: auto; }
 
 .admin-tabel { width: 100%; border-collapse: collapse; font-size: 13.5px; }

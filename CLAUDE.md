@@ -324,7 +324,13 @@ inc/
                       e-mail că i s-a scris ceva — DOAR pentru părerile SCRISE,
                       niciodată pentru stele, care rămân anonime (bifa
                       `email_feedback`, sql/027). Mesajul îl trimite
-                      api/evaluare.php, și numai la un text NOU sau SCHIMBAT.
+                      api/evaluare.php, O SINGURĂ DATĂ pentru o părere:
+                      insemneazaVesteaTrimisa() pune ștampila
+                      (`evaluari.instiintat_la`, sql/028) ÎN `WHERE`, iar cine
+                      n-o prinde nu trimite nimic. Zece îndreptări ale
+                      aceluiași text nu mai înseamnă zece e-mailuri, iar
+                      ștampila nu se șterge nici la retragerea vorbelor —
+                      altfel „scrie–șterge–scrie" ar fi fost robinetul.
                       TOT AICI: cifrele de
                       pe profil și tabul „Istoric" (istoricEvenimente) — pe
                       unde a fost omul, DOAR evenimente încheiate, cu
@@ -431,7 +437,8 @@ sql/                → schema.sql + migrări numerotate (002, 003, 004, 005-goo
                       021-instiintari-comentarii,
                       022-evenimente-staff, 023-dorinte,
                       024-categorii-doar-staff, 025-coduri-qr,
-                      026-corectura-eveniment, 027-instiintari-feedback)
+                      026-corectura-eveniment, 027-instiintari-feedback,
+                      028-feedback-instiintat)
                       Zona de administrare citește și schimbă, în cea mai mare
                       parte, ce era deja acolo. SINGURA coloană nouă a ei e
                       `evenimente.corectura_ceruta_la` (026): ștampila pusă la
