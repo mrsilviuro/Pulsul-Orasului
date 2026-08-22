@@ -539,6 +539,14 @@ teste/              → test-validare.php (verificările din inc/validare.php;
                       aceeași cifră ca antetul, și că la a doua cerere cifra e
                       alta)
 private/            → loguri (emailuri-trimise.log), protejat prin .htaccess
+.htaccess           → CEL DIN RĂDĂCINĂ nu închide nimic (celelalte șase, da):
+                      https obligatoriu, mod_deflate pe text (style.css 180 KB
+                      + main.js 230 KB → sub 100 împachetate), cache de un an
+                      pe css/js — au voie fiindcă adresa poartă `?v=`, vezi
+                      regula 2 — și `no-store` pe .php, ca „înapoi" după ieșirea
+                      din cont să nu arate pagina cu numele omului pe ea. TOTUL
+                      în <IfModule>: o găzduire fără modulul cerut sare bucata,
+                      nu dă 500 pe tot site-ul
 assets/css/style.css, assets/js/main.js, assets/img/
   assets/img/hero-zi.svg, hero-noapte.svg
                     → fundalul primei ferestre de pe index.php, unul pentru

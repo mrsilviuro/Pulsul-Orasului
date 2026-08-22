@@ -1,0 +1,151 @@
+# =========================================================================
+#  PulsulOrasului.Ro — setările serverului, pentru tot site-ul.
+#
+#  Celelalte .htaccess-uri de pe site ÎNCHID dosare (inc/, sql/, cron/,
+#  private/, dosarele cu poze). Ăsta nu închide nimic: face site-ul să meargă
+#  mai repede și pe https.
+#
+#  TOT CE E AICI E ÎNVELIT ÎN <IfModule>. Dacă găzduirea n-are modulul, bucata
+#  se sare în tăcere, în loc să dea „500 Internal Server Error" pe tot site-ul.
+#  E singurul fel în care un fișier ca ăsta se poate urca fără teamă: nu se
+#  poate ști dinainte ce module are un cPanel.
+#
+#  DACĂ TOTUȘI SITE-UL DĂ 500 după ce urci fișierul, îl redenumești în
+#  `htaccess.txt` prin FTP și se întoarce cum era. Nimic din el nu e necesar
+#  ca site-ul să funcționeze.
+# =========================================================================
+
+
+# -------------------------------------------------------------------------
+#  1. HTTPS, MEREU
+#
+#  Toate cookie-urile de pe site au steagul `secure` pus când cererea vine pe
+#  https (vezi pornesteSesiunea() din inc/bootstrap.php). Pe http, ele pleacă
+#  în clar — deci nu e de ajuns că https MERGE, trebuie să fie singurul drum.
+#
+#  Se pornește DOAR când cererea chiar e pe http. Multe găzduiri termină
+#  certificatul într-un proxy și trimit mai departe pe http, punând
+#  `X-Forwarded-Proto: https` — de aceea se întreabă și de el, altfel s-ar face
+#  o buclă de redirecționări fără sfârșit.
+# -------------------------------------------------------------------------
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  RewriteCond %{HTTPS} !=on
+  RewriteCond %{HTTP:X-Forwarded-Proto} !=https
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+</IfModule>
+
+
+# -------------------------------------------------------------------------
+#  2. TEXTUL PLEACĂ ÎMPACHETAT
+#
+#  `style.css` are vreo 180 KB, `main.js` vreo 230 KB — patru sute și ceva de
+#  kilobiți de text pe care fiecare om îi descarcă la prima vizită. Împachetate,
+#  rămân sub o sută. Pe un telefon cu semnal slab, asta e diferența dintre „s-a
+#  deschis" și „nu merge".
+#
+#  Pozele NU se împachetează: JPEG-ul și PNG-ul sunt deja împachetate, iar a
+#  doua trecere doar ar mânca procesor ca să iasă un fișier ceva mai mare.
+# -------------------------------------------------------------------------
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css
+  AddOutputFilterByType DEFLATE application/javascript application/x-javascript
+  AddOutputFilterByType DEFLATE application/json application/xml
+  AddOutputFilterByType DEFLATE image/svg+xml
+</IfModule>
+
+
+# -------------------------------------------------------------------------
+#  3. CE NU SE SCHIMBĂ, SE ȚINE MINTE
+#
+#  CSS-ul și JS-ul se cer cu `?v=88` la coadă (regula 2 din CLAUDE.md), iar
+#  numărul crește la fiecare modificare. Adresa fiind alta, browserul aduce
+#  fișierul nou oricum — deci îl poate ține minte oricât fără să rămână vreodată
+#  cu unul vechi.
+#
+#  HTML-ul NU se ține minte deloc: el e altul la fiecare încărcare (un
+#  eveniment nou, un comentariu nou), și tot el poartă numărul de versiune al
+#  celorlalte. Ținut minte, ar fi cerut mai departe fișierele vechi.
+#
+#  Pozele: o lună. Numele lor e făcut din semne la întâmplare și nu se
+#  refolosește niciodată (vezi inc/imagini.php), deci o poză de la adresa aia
+#  nu se schimbă în veci.
+# -------------------------------------------------------------------------
+<IfModule mod_expires.c>
+  ExpiresActive On
+
+  ExpiresByType text/css                "access plus 1 year"
+  ExpiresByType application/javascript  "access plus 1 year"
+  ExpiresByType image/svg+xml           "access plus 1 year"
+
+  ExpiresByType image/jpeg              "access plus 1 month"
+  ExpiresByType image/png               "access plus 1 month"
+  ExpiresByType image/webp              "access plus 1 month"
+
+  ExpiresByType text/html               "access plus 0 seconds"
+</IfModule>
+
+<IfModule mod_headers.c>
+  # `immutable` spune browserului să nu întrebe NICIODATĂ dacă s-a schimbat
+  # ceva, nici măcar la un refresh — are voie tocmai fiindcă adresa poartă
+  # numărul de versiune.
+  <FilesMatch "\.(css|js)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+
+  # Pagina, niciodată. Altfel, cine iese din cont și apasă „înapoi" ar vedea
+  # pagina dinainte, cu numele lui pe ea, luată din memoria browserului.
+  <FilesMatch "\.php$">
+    Header set Cache-Control "no-store, no-cache, must-revalidate"
+  </FilesMatch>
+</IfModule>
+
+
+# -------------------------------------------------------------------------
+#  4. CE NU SE DESCARCĂ
+#
+#  Dosarele cu cod (inc/, sql/, cron/, private/) au fiecare .htaccess-ul lui.
+#  Aici rămân fișierele răzlețe care ar putea ajunge pe server dintr-o
+#  scăpare: o copie de siguranță, un fișier de configurare, dosarul .git dacă
+#  site-ul s-a pus vreodată prin `git clone` în loc de FTP.
+#
+#  `.git/config` are în el adresa depozitului; `.git/` întreg are TOT codul și
+#  toată istoria lui, inclusiv fișiere șterse cândva. Se descarcă fișier cu
+#  fișier, cu unelte care se găsesc de-a gata.
+# -------------------------------------------------------------------------
+<IfModule mod_rewrite.c>
+  RewriteRule (^|/)\.(git|svn|hg|env)(/|$) - [F,L]
+</IfModule>
+
+<FilesMatch "(^\.|~$|\.(bak|old|orig|save|swp|sql|log|ini|sh|dist|example)$)">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+  </IfModule>
+</FilesMatch>
+
+
+# -------------------------------------------------------------------------
+#  5. MĂRUNȚIȘURI
+# -------------------------------------------------------------------------
+
+# Fără lista fișierelor dintr-un dosar fără index.
+<IfModule mod_autoindex.c>
+  Options -Indexes
+</IfModule>
+
+# Tot ce iese de aici e UTF-8. Fără linia asta, un server pus pe ISO-8859-1
+# strică diacriticele din paginile scrise de PHP fără antet propriu.
+AddDefaultCharset UTF-8
+
+# Fișierele pe care le urcă oamenii: o copertă de eveniment poate trece de
+# limita implicită a unora dintre găzduiri. Cifrele adevărate se citesc oricum
+# din PHP (vezi octetiDinSetare), astea sunt doar plafonul serverului.
+<IfModule mod_php.c>
+  php_value upload_max_filesize 12M
+  php_value post_max_size 14M
+</IfModule>

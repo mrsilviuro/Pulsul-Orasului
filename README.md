@@ -4186,6 +4186,12 @@ Ce nu se poate controla din CSS: formatul afișat în câmpul de dată
    rămâne deschis, iar `inc/config.php` se poate descărca de oricine, cu parola
    bazei de date în el. În FileZilla: *Server → Force showing hidden files*.
 
+   Sunt **șapte** fișiere `.htaccess`: unul în rădăcină și câte unul în `inc/`,
+   `sql/`, `cron/`, `private/`, `assets/img/membri/` și
+   `assets/img/evenimente/`. Cele șase din dosare închid; cel din rădăcină nu
+   închide nimic — trece site-ul pe https, împachetează textul la trimitere și
+   spune browserului ce are voie să țină minte (vezi mai jos).
+
 2. **Faci baza de date din panoul găzduirii** (cPanel → MySQL Databases), apoi
    un utilizator, apoi **îl legi de bază** — „Add User To Database", cu toate
    drepturile bifate. Legarea e un pas separat și se uită des; fără ea, PHP
@@ -4197,6 +4203,11 @@ Ce nu se poate controla din CSS: formatul afișat în câmpul de dată
 3. **Importi `sql/schema.sql`** în phpMyAdmin: alegi întâi baza din lista din
    stânga, abia apoi „Import". Fără pasul cu alegerea bazei, importul nu are
    unde să scrie.
+
+   Apoi **migrările, în ordinea numerelor**, de la `002` până la ultima. Sunt
+   bucăți care adaugă coloane și tabele apărute după prima schemă; sărită una,
+   pagina care are nevoie de ea dă eroare, iar celelalte merg — deci se vede
+   greu. Ultima de azi e `sql/030-incercari-qr.sql`.
 
 4. **Faci `inc/config.php` pe server**, pornind de la `inc/config.example.php`.
 
@@ -4217,6 +4228,44 @@ Ce nu se poate controla din CSS: formatul afișat în câmpul de dată
 
 8. **Dacă vrei intrarea cu Google**, urmează pașii din secțiunea „Intrarea cu
    Google". Până atunci butoanele nici nu se tipăresc, deci nu e grabă.
+
+### `.htaccess`-ul din rădăcină
+
+Celelalte șase închid dosare. Ăsta nu închide nimic: face site-ul să se
+deschidă mai repede și îl ține pe https.
+
+**https, mereu.** Toate cookie-urile de pe site primesc steagul `secure` când
+cererea vine pe https (`pornesteSesiunea()`). Pe http pleacă în clar — deci nu e
+de ajuns că https *merge*, trebuie să fie singurul drum. Redirecționarea
+întreabă și de `X-Forwarded-Proto`, fiindcă multe găzduiri termină certificatul
+într-un proxy și trimit mai departe pe http; fără întrebarea aia s-ar fi făcut o
+buclă fără sfârșit.
+
+**Textul pleacă împachetat.** `style.css` are vreo 180 KB și `main.js` vreo
+230 KB — patru sute și ceva de kilobiți pe care fiecare om îi descarcă la prima
+vizită. Împachetate (`mod_deflate`), rămân sub o sută. Pe un telefon cu semnal
+slab, asta e diferența dintre „s-a deschis" și „nu merge". Pozele nu se
+împachetează: JPEG-ul e deja împachetat, iar a doua trecere ar da un fișier mai
+mare.
+
+**Ce nu se schimbă, se ține minte.** CSS-ul și JS-ul se cer cu `?v=88` la coadă,
+iar numărul crește la fiecare modificare (regula 2 din CLAUDE.md) — adresa fiind
+alta, browserul aduce fișierul nou oricum. De aceea au voie să fie ținute minte
+un an, cu `immutable`. **HTML-ul, niciodată:** el poartă numărul de versiune al
+celorlalte, iar ținut minte ar fi cerut mai departe fișierele vechi. Și mai e un
+motiv: cine iese din cont și apasă „înapoi" ar vedea pagina dinainte, cu numele
+lui pe ea, luată din memoria browserului.
+
+**Ce nu se descarcă.** Fișierele răzlețe care ar putea ajunge pe server dintr-o
+scăpare: o copie de siguranță, un `.env`, dosarul `.git` dacă site-ul s-a pus
+vreodată prin `git clone` în loc de FTP. `.git/` are TOT codul și toată istoria
+lui, inclusiv fișiere șterse cândva, și se descarcă fișier cu fișier cu unelte
+care se găsesc de-a gata.
+
+**Tot ce e în el e învelit în `<IfModule>`.** Dacă găzduirea n-are modulul,
+bucata se sare în tăcere în loc să dea „500" pe tot site-ul. Și totuși, dacă
+după ce-l urci site-ul dă 500: **îl redenumești în `htaccess.txt` prin FTP** și
+se întoarce cum era. Nimic din el nu e necesar ca site-ul să funcționeze.
 
 ### Gazda bazei de date
 
