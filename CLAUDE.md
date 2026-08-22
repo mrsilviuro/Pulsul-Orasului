@@ -117,13 +117,57 @@ profil.php, poza.php, setari.php, adauga_eveniment.php, previzualizare.php,
 parola-uitata.php, parola-noua.php, google.php, finalizare.php, confirma.php,
 stergere.php, iesire.php, verifica.php, constructie.php,
 findme.php, admin.php, admin-evenimente.php, admin-comentarii.php,
-admin-contact.php, admin-useri.php, admin-dorinte.php, coduri.php
+admin-contact.php, admin-useri.php, admin-evaluari.php, admin-dorinte.php,
+coduri.php, sitemap.php, robots.txt
+
+  event.php   → ADRESA LUI E `/eveniment/<slug>`, nu `event.php?slug=`.
+                Rescrierea o face .htaccess-ul din rădăcină (și
+                teste/router.php, în dezvoltare): pentru event.php cererea
+                arată exact ca înainte. Drumul invers îl face event.php,
+                cu 301 — DAR ABIA DUPĂ ce s-a găsit anunțul și s-a văzut
+                că omul are voie la el: pus mai sus, ar fi trimis
+                PERMANENT și un slug scris aiurea. Adresa se scrie DOAR
+                prin urlEveniment() (inc/evenimente.php); la fel profilul,
+                prin urlProfil()
+  sitemap.php → harta pentru motoarele de căutare, cerută la `/sitemap.xml`
+                (rescriere). SE SCRIE DIN BAZĂ la fiecare cerere: una făcută
+                o dată și lăsată acolo ar fi rămas în urmă la primul
+                eveniment nou, iar o hartă care minte e mai rea decât
+                niciuna. Cu site-ul închis răspunde 503, nu o listă de
+                adrese care duc toate la afișul de șantier
+  robots.txt  → ce n-au voie roboții să ceară. E o RUGĂMINTE, nu un lacăt:
+                ce chiar trebuie închis se închide în cod. Ține deoparte
+                zona de admin, uneltele contului, API-urile, filtrele de pe
+                prima pagină ȘI PROFILURILE — pe un profil scriu numele
+                omului, chipul lui, notele și pe unde a fost, date pe care
+                le-a dat ca să iasă prin oraș, nu ca să fie găsit după nume
+                în Google. Paginile rămân publice pentru cine primește
+                linkul; doar nu se caută
 
   findme.php  → capătul unui abțibild „FindMe": aici ajunge cine scanează
                 codul QR. SINGURA pagină de pe site care schimbă starea
                 printr-un GET, fără token CSRF — un scaner de coduri nu
                 poate trimite un POST, iar tot ce se poate face cu o cerere
                 pusă la cale de altcineva e să CÂȘTIGI un abțibild
+  admin-evaluari.php → NOTELE dintre participanți: „cine împarte note, și cu
+                ce mână" (tabelul mic, cu media dată și cea mai mică) și „ce
+                s-a dat, cui, când și de la ce eveniment" (tabelul mare).
+                Există fiindcă notele NU se retrag, NU se raportează și nu se
+                moderau nicăieri: o stea pusă din supărare rămânea pentru
+                totdeauna în media cuiva. SE VĂD ȘI CELE FĂRĂ TEXT — pe profil
+                apar doar părerile scrise, dar în medie intră amândouă, deci
+                tocmai stelele singure trebuie să se poată vedea de aici. E
+                SINGURUL loc de pe site unde o stea are un nume lângă ea.
+                Cifra de pe panou e „câte sunt sub trei stele", nu „câte sunt":
+                la evaluări nu așteaptă nimic o hotărâre, deci se aprinde ce
+                merită o privire — fără cele automate („Nu s-a prezentat" pune
+                o stea, dar aia e o absență, nu o părere). Ștergerea e
+                ADEVĂRATĂ (a doua de pe site, după dorințe: o notă nu se poate
+                goli ca un comentariu, fiindcă e o cifră într-o medie) și NU
+                trimite niciun e-mail — vezi lămurirea din api/admin.php.
+                Același „×" stă și pe profil, în dreptul fiecărei păreri
+                scrise, doar pentru staff: de obicei așa afli de o vorbă
+                nedreaptă
   admin*.php  → ZONA DE ADMINISTRARE, toată numai pentru staff. O SINGURĂ
                 intrare în meniu, „Admin", fiindcă șase ar fi înecat „Acasă /
                 Despre / Contact". Paza NU se scrie în fiecare pagină, se
@@ -300,7 +344,18 @@ inc/
   interese.php      → „Mergi la acest eveniment?" — cine e interesat, cine
                       vine, numărătoarea, locurile, rândul cu chipuri, listele
                       din taburi (aceeași funcție pentru amândouă), scoaterea
-                      cuiva de pe cea de participanți. TOT AICI:
+                      cuiva de pe cea de participanți. TOT AICI TOATE
+                      OPRELIȘTILE LA ÎNSCRIERE, într-un singur loc
+                      (motivBlocajParticipare): ușa închisă de organizator,
+                      regula de gen ȘI VÂRSTA MINIMĂ. Ultima se socotește LA
+                      ZIUA EVENIMENTULUI, nu la ziua de azi — cine împlinește
+                      16 ani poimâine îi are la ceva de peste trei zile, și
+                      asta cere organizatorul; „împlinit" înseamnă împlinit, la
+                      16 ceruți cel de 16 intră și cel de 15 nu (varstaLaZiua,
+                      socotită cu DateTime, ca 29 februarie să nu strice
+                      socoteala). Organizatorul trece de toate trei: e omul de
+                      care se leagă evenimentul.
+                      TOT AICI:
                       poateVedeaTelefoanele() — NUMERELE DE TELEFON de pe lista
                       de participanți le văd DOAR organizatorul și staff-ul,
                       nici măcar omul în dreptul numărului lui. Pentru ceilalți
@@ -431,7 +486,14 @@ inc/
                       `stare_moderare` în „aprobat". O SINGURĂ DORINȚĂ o dată
                       de om — regula se ține la SCRIERE (puneODorinta), nu în
                       butonul de pe ecran, fiindcă două file deschise deodată
-                      ar fi trimis amândouă. O dorință RESPINSĂ nu-l oprește
+                      ar fi trimis amândouă. ȘI SUB LACĂT: întrebarea „mai
+                      poate?" și scrierea stau într-o tranzacție, cu
+                      `SELECT … FOR UPDATE` pe rândul omului din `membri`
+                      (scrieDorintaSubLacat). Fără el, două SESIUNI deosebite
+                      ale aceluiași om — laptopul și telefonul — intrau
+                      amândouă; două file ale ACELUIAȘI browser nu erau de
+                      ajuns ca să se vadă, fiindcă PHP ține un lacăt pe
+                      fișierul sesiunii. O dorință RESPINSĂ nu-l oprește
                       să încerce din nou; una în așteptare sau una încă pe
                       tablă, da (poatePuneODorinta → 'poate' | 'asteapta' |
                       'e_pe_tabla'). Rândurile NU se șterg niciodată, nici
@@ -506,7 +568,14 @@ sql/                → schema.sql + migrări numerotate (002, 003, 004, 005-goo
                       „respinge, dar cu editare necesară" și ștearsă la prima
                       editare a omului. E DATETIME, nu 0/1, tocmai ca să se vadă
                       și de cât timp așteaptă
-teste/              → test-validare.php (verificările din inc/validare.php;
+teste/              → router.php: serverul de probă cu ADRESE FRUMOASE.
+                      `php -S 127.0.0.1:8099 teste/router.php` din rădăcină, și
+                      merge tot ca pe găzduire; fără el, `/eveniment/<slug>` dă
+                      404 în dezvoltare, fiindcă serverul din PHP nu citește
+                      .htaccess. ACOLO rămâne locul adevărat al regulilor —
+                      aici sunt scrise a doua oară DOAR cele două rescrieri de
+                      care atârnă adrese
+                      test-validare.php (verificările din inc/validare.php;
                       verificaDorinta e probată în test-dorinte.php, lângă
                       restul tablei)
                       test-comentarii.php, test-participanti.php,
@@ -546,7 +615,11 @@ private/            → loguri (emailuri-trimise.log), protejat prin .htaccess
                       regula 2 — și `no-store` pe .php, ca „înapoi" după ieșirea
                       din cont să nu arate pagina cu numele omului pe ea. TOTUL
                       în <IfModule>: o găzduire fără modulul cerut sare bucata,
-                      nu dă 500 pe tot site-ul
+                      nu dă 500 pe tot site-ul. TOT EL rescrie ADRESELE
+                      FRUMOASE: `/eveniment/<slug>` → event.php?slug=…, și
+                      `/sitemap.xml` → sitemap.php. Fără mod_rewrite site-ul
+                      merge mai departe, doar că adresele frumoase dau 404 —
+                      de aceea urlEveniment() e într-un singur loc
 assets/css/style.css, assets/js/main.js, assets/img/
   assets/img/hero-zi.svg, hero-noapte.svg
                     → fundalul primei ferestre de pe index.php, unul pentru
@@ -651,7 +724,17 @@ assets/css/style.css, assets/js/main.js, assets/img/
   motivul). Ștergerea lui (cu tot cu coperta de pe disc, înscrieri și
   comentarii) e o acțiune viitoare de staff — vezi `TODO`-ul din
   `anuleazaEveniment()`
-- Adresele frumoase: acum sunt `profil.php?m=<permalink>` și `event.php?slug=…`
+- Adresele frumoase există pentru evenimente: `/eveniment/<slug>`. Profilul a
+  rămas `profil.php?m=<permalink>`, dinadins — un permalink e zece semne la
+  întâmplare, n-are ce câștiga din a fi scos în cale.
+  TOATE ADRESELE PE CARE LE SCRIE SITE-UL PORNESC DE LA RĂDĂCINĂ, cu `/` în
+  față: `/index.php`, `/assets/css/style.css`, `fetch('/api/…')`. Nu e o
+  preferință, e o cerință — pagina unui eveniment stă la adâncimea 1, iar un
+  `assets/…` scris fără `/` ar fi căutat în `/eveniment/assets/…`. Așa se rupe
+  un site la trecerea la adrese frumoase, și se rupe TĂCUT: pozele lipsesc,
+  legăturile dau 404. Există o probă care păzește regula asta
+  („nicio adresă relativă în pagină", în teste/test-evenimente.php).
+  DE AICI DECURGE: site-ul stă la RĂDĂCINA domeniului, nu într-un subdosar.
 - Înștiințările pe e-mail care pleacă azi: mulțumirea de după eveniment
   (cron/multumeste-participantilor.php), vestea că cineva a fost scos de pe
   listă, vestea că un eveniment s-a anulat (api/anuleaza-eveniment.php),
@@ -690,13 +773,12 @@ assets/css/style.css, assets/js/main.js, assets/img/
   raportează și din greșeală, și din răutate, iar fără al doilea buton singurul
   fel de a închide un raport nedrept ar fi fost să ștergi ce n-avea nimic. Cine
   a raportat NU află nimic, în niciunul din cazuri
-- Notele nu se pot retrage și nici raporta. Cine a primit o stea pe nedrept nu
-  are cui să spună — nu există pagină de moderare a evaluărilor. Nici
+- Notele nu se pot retrage și nici raporta DE CĂTRE OAMENI — dar staff-ul le
+  vede și le poate șterge, din `admin-evaluari.php` sau de-a dreptul de pe
+  profil, cu „×"-ul din dreptul fiecărei păreri scrise. Nici
   „Nu s-a prezentat" nu se ia înapoi: e definitivă, dinadins, ca organizatorul
   să n-o poată schimba mai târziu — dar dacă a pus-o din greșeală, rândul se
   șterge de mână din phpMyAdmin
-- `evenimente.varsta_minima` nu se verifică la înscriere: coloana există, dar
-  nimeni nu se uită la ea (spre deosebire de `gen_participanti`, care se ține)
 - Paginile de categorie (slugurile sunt în tabelul `categorii`)
 - Imaginile implicite de categorie (`categorii.imagine_default`) — coloana
   există, fișierele nu; se urcă de mână, nu prin `inc/imagini.php`

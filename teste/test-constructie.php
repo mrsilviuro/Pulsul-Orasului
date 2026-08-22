@@ -324,7 +324,7 @@ if ($BAZA === '') {
     verifica('prima pagină trimite la afiș', 302, $r['cod']);
     verifica('și anume acolo', true, str_contains($r['unde'], 'constructie.php'), );
 
-    foreach (['/event.php?slug=x', '/contact.php', '/despre.php', '/profil.php'] as $cale) {
+    foreach (['/eveniment/x', '/contact.php', '/despre.php', '/profil.php'] as $cale) {
         $r = cere($cale);
         verifica('„' . $cale . '" e închisă', 302, $r['cod']);
     }
@@ -466,7 +466,7 @@ if ($BAZA === '') {
 
     verifica('cine nu e staff nu intră',    503,   $r['cod']);
     verifica('și i se spune de ce',         'in_constructie', $corp['stare'] ?? '');
-    verifica('e trimis înapoi la afiș',     'constructie.php', $corp['redirect'] ?? '');
+    verifica('e trimis înapoi la afiș',     '/constructie.php', $corp['redirect'] ?? '');
     verifica('iar sesiune nu se face',      false, $corp['ok'] ?? true);
 
     // Și chiar nu s-a făcut: cu același cookie, prima pagină tot îl respinge.

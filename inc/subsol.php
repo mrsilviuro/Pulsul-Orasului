@@ -27,7 +27,7 @@ if (session_status() === PHP_SESSION_ACTIVE && !empty($_SESSION['mesaj_bun'])) {
     <div class="footer__top">
 
       <div class="footer__brand">
-        <a class="logo logo--footer" href="index.php">
+        <a class="logo logo--footer" href="/index.php">
           <span class="logo__mark" aria-hidden="true">
             <svg viewBox="0 0 32 32" fill="none">
               <path d="M2 16h6.2l2.6-7.4a1 1 0 0 1 1.9.05l4.1 14.2a1 1 0 0 0 1.9.04L21.4 16H30"
@@ -51,13 +51,13 @@ if (session_status() === PHP_SESSION_ACTIVE && !empty($_SESSION['mesaj_bun'])) {
       <nav class="footer__col" aria-label="Site">
         <h3>Site</h3>
         <ul>
-          <li><a href="index.php">Prima pagină</a></li>
-          <li><a href="despre.php">Despre noi</a></li>
-          <li><a href="contact.php">Contactează-ne</a></li>
+          <li><a href="/index.php">Prima pagină</a></li>
+          <li><a href="/despre.php">Despre noi</a></li>
+          <li><a href="/contact.php">Contactează-ne</a></li>
           <?php if ($logat): ?>
-          <li><a href="profil.php">Profilul tău</a></li>
+          <li><a href="/profil.php">Profilul tău</a></li>
           <?php else: ?>
-          <li><a href="login.php">Alătură-te și tu</a></li>
+          <li><a href="/login.php">Alătură-te și tu</a></li>
           <?php endif; ?>
         </ul>
       </nav>
@@ -83,6 +83,6 @@ if (session_status() === PHP_SESSION_ACTIVE && !empty($_SESSION['mesaj_bun'])) {
 <div class="toast" id="toast" role="status" aria-live="polite"
      data-mesaj="<?= h($mesajTrecator) ?>"></div>
 
-<script src="assets/js/main.js?v=81"></script>
+<script src="/assets/js/main.js?v=81"></script>
 </body>
 </html>

@@ -18,7 +18,7 @@ require_once __DIR__ . '/inc/auth.php';
  * o preîncărcare făcută de browser ar da omul afară fără ca el să fi cerut-o.
  */
 if (esteLogat()) {
-    header('Location: index.php');
+    header('Location: /index.php');
     exit;
 }
 
@@ -125,7 +125,7 @@ require __DIR__ . '/inc/antet.php';
           <h1 class="auth__title">Site-ul e în lucru</h1>
           <p class="auth__lead">
             Deocamdată intră doar echipa. Dacă ai ajuns aici din greșeală,
-            <a href="constructie.php">lasă-ne adresa</a> și îți dăm de veste
+            <a href="/constructie.php">lasă-ne adresa</a> și îți dăm de veste
             când deschidem.
           </p>
           <?php else: ?>
@@ -173,7 +173,7 @@ require __DIR__ . '/inc/antet.php';
             <div class="field">
               <div class="field__head">
                 <label for="lg-password">Parola</label>
-                <a class="field__link" href="parola-uitata.php">Ai uitat parola?</a>
+                <a class="field__link" href="/parola-uitata.php">Ai uitat parola?</a>
               </div>
               <div class="input-pass">
                 <input type="password" id="lg-password" name="parola" autocomplete="current-password"
@@ -261,7 +261,7 @@ require __DIR__ . '/inc/antet.php';
             <p class="done__hint">Ți-ai uitat parola? O poți schimba, ca să nu mai aștepți.</p>
 
             <div class="done__actions">
-              <a class="btn btn--primary" href="parola-uitata.php">Mi-am uitat parola</a>
+              <a class="btn btn--primary" href="/parola-uitata.php">Mi-am uitat parola</a>
             </div>
           </div>
         </div>
@@ -437,7 +437,7 @@ require __DIR__ . '/inc/antet.php';
             </p>
 
             <div class="done__actions">
-              <a class="btn btn--ghost" href="index.php">Mergi la prima pagină</a>
+              <a class="btn btn--ghost" href="/index.php">Mergi la prima pagină</a>
             </div>
           </div>
         </div>
@@ -449,7 +449,7 @@ require __DIR__ . '/inc/antet.php';
                nimeni acolo — vezi inc/constructie.php. */ ?>
       <?php if (!$inConstructie): ?>
       <p class="auth__foot">
-        Ai nevoie de ajutor? <a href="contact.php">Scrie-ne</a>.
+        Ai nevoie de ajutor? <a href="/contact.php">Scrie-ne</a>.
       </p>
       <?php endif; ?>
 

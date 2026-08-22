@@ -28,7 +28,7 @@ require_once __DIR__ . '/inc/auth.php';
  * iar cine îl deschidea dintr-un bookmark ar fi crezut că încă n-am pornit.
  */
 if (!siteInConstructie()) {
-    header('Location: index.php');
+    header('Location: /index.php');
     exit;
 }
 
@@ -38,7 +38,7 @@ if (!siteInConstructie()) {
  * dinafară din propriul site.
  */
 if (esteStaff()) {
-    header('Location: index.php');
+    header('Location: /index.php');
     exit;
 }
 
@@ -111,11 +111,11 @@ antetedeSiguranta();
 <!-- Cât e închis, n-are ce căuta în căutări. -->
 <meta name="robots" content="noindex, follow">
 
-<link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/css/style.css?v=89">
+<link rel="stylesheet" href="/assets/css/style.css?v=89">
 </head>
 
 <!--
@@ -134,13 +134,13 @@ antetedeSiguranta();
   `aria-hidden` fiindcă n-are nimic de spus: e o stare, nu o informație.
 ============================================================== -->
 <div class="constructie__fundal" aria-hidden="true">
-  <img src="assets/img/constructie-fundal.svg" alt="" width="1600" height="900" decoding="async">
+  <img src="/assets/img/constructie-fundal.svg" alt="" width="1600" height="900" decoding="async">
 </div>
 <div class="constructie__voal" aria-hidden="true"></div>
 
 <main class="constructie__cuprins" id="main">
 
-  <a class="logo logo--constructie" href="constructie.php" aria-label="PulsulOrasului.Ro">
+  <a class="logo logo--constructie" href="/constructie.php" aria-label="PulsulOrasului.Ro">
     <span class="logo__mark" aria-hidden="true">
       <svg viewBox="0 0 32 32" fill="none">
         <path d="M2 16h6.2l2.6-7.4a1 1 0 0 1 1.9.05l4.1 14.2a1 1 0 0 0 1.9.04L21.4 16H30"
@@ -167,7 +167,7 @@ antetedeSiguranta();
     reîncarcă pagina, iar constructie.php îl primește sus. Cu JS, adresa pleacă
     pe lângă pagină și mesajul apare pe loc.
   ============================================================== -->
-  <form class="constructie__forma" method="post" action="constructie.php" data-newsletter>
+  <form class="constructie__forma" method="post" action="/constructie.php" data-newsletter>
     <input type="hidden" name="csrf" value="<?= h(tokenCsrf()) ?>">
 
     <!--
@@ -209,11 +209,11 @@ antetedeSiguranta();
     căuta înăuntru nu trece de ea nici dacă apasă — vezi api/autentificare.php.
   -->
   <p class="constructie__intrare">
-    <a href="login.php">Ai deja cont? Intră aici</a>
+    <a href="/login.php">Ai deja cont? Intră aici</a>
   </p>
 
 </main>
 
-<script src="assets/js/main.js?v=81"></script>
+<script src="/assets/js/main.js?v=81"></script>
 </body>
 </html>

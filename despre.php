@@ -87,8 +87,8 @@ require __DIR__ . '/inc/antet.php';
 
       <p>
         Dacă vrei să publici un eveniment, începe de la pagina
-        <a href="login.php#inregistrare">Alătură-te și tu</a>. Dacă ai o propunere, o corectură sau
-        vrei să colaborăm, scrie-ne prin <a href="contact.php">formularul de contact</a> —
+        <a href="/login.php#inregistrare">Alătură-te și tu</a>. Dacă ai o propunere, o corectură sau
+        vrei să colaborăm, scrie-ne prin <a href="/contact.php">formularul de contact</a> —
         răspundem, de regulă, în aceeași zi lucrătoare.
       </p>
 
@@ -104,8 +104,8 @@ require __DIR__ . '/inc/antet.php';
           Publică evenimentul tău pe PulsulOrasului.Ro. E gratuit și durează câteva minute.
         </p>
         <div class="cta__actions">
-          <a class="btn btn--primary" href="login.php#inregistrare">Alătură-te și tu</a>
-          <a class="btn btn--outline" href="contact.php">Scrie-ne</a>
+          <a class="btn btn--primary" href="/login.php#inregistrare">Alătură-te și tu</a>
+          <a class="btn btn--outline" href="/contact.php">Scrie-ne</a>
         </div>
       </div>
     </section>

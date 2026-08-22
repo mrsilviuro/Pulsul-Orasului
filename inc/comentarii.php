@@ -725,7 +725,7 @@ function randeazaComentariu(array $c, array $context): string
     $poza   = $activ ? urlPoza($c['poza'] ?? null, true) : POZA_IMPLICITA;
 
     $autor = ($activ && ($c['permalink'] ?? '') !== '')
-        ? '<a class="comment__author" href="profil.php?m=' . h((string) $c['permalink']) . '">' . $nume . '</a>'
+        ? '<a class="comment__author" href="' . h(urlProfil((string) $c['permalink'])) . '">' . $nume . '</a>'
         : '<span class="comment__author comment__author--sters">' . $nume . '</span>';
 
     /* ------------------------------- ora ------------------------------ */
@@ -781,7 +781,7 @@ function randeazaComentariu(array $c, array $context): string
             $numeTinta = '<span class="comment__at">@</span>' . h($tinta['nume']);
 
             $mentiune = ($tinta['permalink'] !== ''
-                    ? '<a class="comment__mentiune" href="profil.php?m=' . h($tinta['permalink']) . '">'
+                    ? '<a class="comment__mentiune" href="' . h(urlProfil((string) $tinta['permalink'])) . '">'
                       . $numeTinta . '</a>'
                     : '<span class="comment__mentiune">' . $numeTinta . '</span>')
                 // Spațiul stă AICI, nu în CSS: el desparte două cuvinte, iar

@@ -36,7 +36,7 @@ if (!tokenCsrfValid(is_string($date['csrf'] ?? null) ? $date['csrf'] : '')) {
 }
 
 if (esteLogat()) {
-    raspunsJson(['ok' => true, 'redirect' => 'index.php', 'mesaj' => 'Ești deja conectat.']);
+    raspunsJson(['ok' => true, 'redirect' => '/index.php', 'mesaj' => 'Ești deja conectat.']);
 }
 
 /* --------------------- Ce ne-a spus Google despre om ------------------- */
@@ -49,7 +49,7 @@ if (!is_array($nou) || empty($nou['sub']) || empty($nou['email'])
     raspunsJson([
         'ok'       => false,
         'mesaj'    => 'A trecut prea mult timp. Ia-o de la capăt cu Google.',
-        'redirect' => 'login.php',
+        'redirect' => '/login.php',
     ], 419);
 }
 
@@ -101,7 +101,7 @@ if ($existent = $q->fetch()) {
 
     // Aceeași persistență ca pe drumul obișnuit cu Google — vezi google.php.
     autentifica($existent, true);
-    raspunsJson(['ok' => true, 'redirect' => 'index.php', 'mesaj' => 'Contul exista deja. Te-am conectat.']);
+    raspunsJson(['ok' => true, 'redirect' => '/index.php', 'mesaj' => 'Contul exista deja. Te-am conectat.']);
 }
 
 /* ------------------------------ Salvarea ------------------------------ */
@@ -180,6 +180,6 @@ emailBunVenit((string) $membru['email'], (string) $membru['prenume']);
 
 raspunsJson([
     'ok'       => true,
-    'redirect' => $inapoiLa !== '' ? $inapoiLa : 'index.php',
+    'redirect' => $inapoiLa !== '' ? $inapoiLa : '/index.php',
     'mesaj'    => 'Bine ai venit, ' . $membru['prenume'] . '!',
 ], 201);

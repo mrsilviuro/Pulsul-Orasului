@@ -145,7 +145,7 @@ function cereIntrare(string $inapoiLa = ''): void
 {
     $cale = caleInterna($inapoiLa);
 
-    header('Location: login.php' . ($cale !== '' ? '?redirect=' . urlencode($cale) : ''));
+    header('Location: /login.php' . ($cale !== '' ? '?redirect=' . urlencode($cale) : ''));
     exit;
 }
 
@@ -744,12 +744,12 @@ function opresteDacaTrebuieParolaNoua(bool $esteApi = false): void
         raspunsJson([
             'ok'       => false,
             'mesaj'    => 'Alege-ți întâi o parolă nouă.',
-            'redirect' => 'parola-noua.php',
+            'redirect' => '/parola-noua.php',
         ], 403);
     }
 
     if (!headers_sent()) {
-        header('Location: parola-noua.php');
+        header('Location: /parola-noua.php');
         exit;
     }
 }

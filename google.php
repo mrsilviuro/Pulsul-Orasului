@@ -20,7 +20,7 @@ function inapoiCuNecaz(string $mesaj): void
 {
     pornesteSesiunea();
     $_SESSION['google_necaz'] = $mesaj;
-    header('Location: login.php');
+    header('Location: /login.php');
     exit;
 }
 
@@ -30,7 +30,7 @@ if (!googleEsteConfigurat()) {
 
 // Cine e deja conectat n-are ce căuta aici.
 if (esteLogat()) {
-    header('Location: index.php');
+    header('Location: /index.php');
     exit;
 }
 
@@ -179,7 +179,7 @@ if ($membru) {
     // autentifica() a lăsat acolo un mesaj mai important decât salutul.
     $_SESSION['mesaj_bun'] ??= 'Bine ai revenit, ' . $membru['prenume'] . '!';
 
-    header('Location: ' . ($inapoiLa !== '' ? $inapoiLa : 'index.php'));
+    header('Location: ' . ($inapoiLa !== '' ? $inapoiLa : '/index.php'));
     exit;
 }
 
@@ -216,5 +216,5 @@ $_SESSION['google_nou'] = [
     'la'       => time(),
 ];
 
-header('Location: finalizare.php');
+header('Location: /finalizare.php');
 exit;

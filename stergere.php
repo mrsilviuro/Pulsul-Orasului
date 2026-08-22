@@ -89,11 +89,11 @@ require __DIR__ . '/inc/antet.php';
 
             <div class="done__actions">
               <?php if ($reusit): ?>
-              <a class="btn btn--primary" href="login.php">M-am răzgândit, intru în cont</a>
-              <a class="btn btn--ghost" href="index.php">Mergi pe prima pagină</a>
+              <a class="btn btn--primary" href="/login.php">M-am răzgândit, intru în cont</a>
+              <a class="btn btn--ghost" href="/index.php">Mergi pe prima pagină</a>
               <?php else: ?>
-              <a class="btn btn--primary" href="setari.php">Mergi la setări</a>
-              <a class="btn btn--ghost" href="index.php">Mergi pe prima pagină</a>
+              <a class="btn btn--primary" href="/setari.php">Mergi la setări</a>
+              <a class="btn btn--ghost" href="/index.php">Mergi pe prima pagină</a>
               <?php endif; ?>
             </div>
           </div>

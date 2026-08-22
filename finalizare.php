@@ -15,7 +15,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/inc/auth.php';
 
 if (esteLogat()) {
-    header('Location: index.php');
+    header('Location: /index.php');
     exit;
 }
 
@@ -30,7 +30,7 @@ $nou = $_SESSION['google_nou'] ?? null;
  */
 if (!is_array($nou) || empty($nou['sub']) || empty($nou['email'])) {
     $_SESSION['google_necaz'] = 'A trecut prea mult timp. Încearcă din nou cu Google.';
-    header('Location: login.php');
+    header('Location: /login.php');
     exit;
 }
 
@@ -38,7 +38,7 @@ if (!is_array($nou) || empty($nou['sub']) || empty($nou['email'])) {
 if ((time() - (int) ($nou['la'] ?? 0)) > 900) {
     unset($_SESSION['google_nou']);
     $_SESSION['google_necaz'] = 'A trecut prea mult timp. Încearcă din nou cu Google.';
-    header('Location: login.php');
+    header('Location: /login.php');
     exit;
 }
 
@@ -138,7 +138,7 @@ require __DIR__ . '/inc/antet.php';
 
               <p class="auth__switch">
                 Te-ai răzgândit?
-                <a class="link-btn" href="login.php">Înapoi la pagina de cont</a>
+                <a class="link-btn" href="/login.php">Înapoi la pagina de cont</a>
               </p>
             </form>
           </div><!-- /#final-block -->

@@ -769,7 +769,7 @@ function adresaFiltrata(string $oras = '', string $categorie = ''): string
     if ($oras !== '')      { $parti['oras']      = $oras; }
     if ($categorie !== '') { $parti['categorie'] = $categorie; }
 
-    return $parti === [] ? 'index.php' : 'index.php?' . http_build_query($parti);
+    return $parti === [] ? '/index.php' : '/index.php?' . http_build_query($parti);
 }
 
 /**
@@ -998,10 +998,44 @@ function poateVedeaEvenimentul(array $eveniment, int $membruId, bool $eStaff = f
     return evenimentPublicat($eveniment);
 }
 
-/** Adresa paginii unui eveniment. Un singur loc care o știe. */
+/**
+ * Adresa paginii unui eveniment. UN SINGUR LOC care o știe.
+ *
+ * `/eveniment/mergem-la-alergat`, nu `event.php?slug=mergem-la-alergat`.
+ *
+ * DE CE. Adresa unui eveniment e singura de pe site pe care oamenii o pun în
+ * mesaje, o lipesc pe Facebook și o citesc unii altora la telefon. „Intră pe
+ * pulsulorasului.ro slash eveniment slash mergem la alergat" se poate spune;
+ * „event punct php întrebare slug egal" nu se poate. Iar în lista de rezultate
+ * a lui Google, adresa se vede sub titlu.
+ *
+ * CUM MERGE. `.htaccess` din rădăcină rescrie `/eveniment/<slug>` în
+ * `event.php?slug=<slug>`, iar event.php nu știe nimic despre asta: pentru el
+ * cererea arată exact ca înainte. Fără mod_rewrite, adresa veche merge mai
+ * departe — de aceea event.php nu s-a schimbat, doar trimite de la ea la cea
+ * nouă (o redirecționare 301, ca să existe o singură adresă adevărată).
+ *
+ * `rawurlencode`, nu `urlencode`: al doilea scrie spațiul ca „+", ceea ce
+ * într-o CALE înseamnă un plus adevărat, nu un spațiu. Slugurile n-au spații
+ * (vezi slugEveniment), dar regula asta n-are voie să atârne de altă regulă.
+ */
 function urlEveniment(string $slug): string
 {
-    return 'event.php?slug=' . urlencode($slug);
+    return '/eveniment/' . rawurlencode($slug);
+}
+
+/**
+ * Adresa profilului cuiva. Tot un singur loc, din același motiv.
+ *
+ * Aici rămâne forma veche, cu întrebare: un permalink e zece semne la
+ * întâmplare, deci n-are ce să câștige din a fi scos în cale. Funcția există
+ * ca cele nouă locuri care o scriau de mână să nu mai poată ajunge să spună
+ * lucruri deosebite — și ca ziua în care se schimbă și ea să fie o singură
+ * linie.
+ */
+function urlProfil(string $permalink): string
+{
+    return '/profil.php?m=' . rawurlencode($permalink);
 }
 
 /**
@@ -1300,7 +1334,7 @@ function cifreleCartonasului(array $ev): string
 /** Adresa formularului, în modul în care editează un eveniment anume. */
 function urlEditareEveniment(string $slug): string
 {
-    return 'adauga_eveniment.php?slug=' . urlencode($slug);
+    return '/adauga_eveniment.php?slug=' . rawurlencode($slug);
 }
 
 /**
@@ -1313,7 +1347,7 @@ function urlEditareEveniment(string $slug): string
  */
 function urlRefacereEveniment(string $slug): string
 {
-    return 'adauga_eveniment.php?remake=' . urlencode($slug);
+    return '/adauga_eveniment.php?remake=' . rawurlencode($slug);
 }
 
 /**

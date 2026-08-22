@@ -60,9 +60,9 @@ require __DIR__ . '/inc/antet.php';
   <div class="wrap wrap--ingust">
 
     <nav class="crumbs" aria-label="Navigare">
-      <a href="index.php">Acasă</a>
+      <a href="/index.php">Acasă</a>
       <span aria-hidden="true">/</span>
-      <a href="profil.php">Profilul tău</a>
+      <a href="/profil.php">Profilul tău</a>
       <span aria-hidden="true">/</span>
       <span class="crumbs__current">Setări</span>
     </nav>
@@ -143,7 +143,7 @@ require __DIR__ . '/inc/antet.php';
           schimbarea, scrie-ne imediat.
         </p>
         <div class="done__actions">
-          <a class="btn btn--ghost" href="setari.php">Înapoi la setări</a>
+          <a class="btn btn--ghost" href="/setari.php">Înapoi la setări</a>
         </div>
       </div>
     </section>

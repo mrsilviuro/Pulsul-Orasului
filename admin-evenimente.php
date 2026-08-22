@@ -107,7 +107,7 @@ require __DIR__ . '/inc/antet.php';
                      deschisă în spate, cu locul păstrat. Altfel, la fiecare
                      anunț cercetat urma un drum înapoi. -->
                 <a class="btn btn--ghost btn--xs" target="_blank" rel="noopener"
-                   href="event.php?slug=<?= h(urlencode((string) $e['slug'])) ?>">Vezi</a>
+                   href="<?= h(urlEveniment((string) $e['slug'])) ?>">Vezi</a>
               </td>
             </tr>
             <?php endforeach; ?>
@@ -144,7 +144,7 @@ require __DIR__ . '/inc/antet.php';
             <?php foreach ($respinse as $e): ?>
             <tr data-rand>
               <td>
-                <a href="event.php?slug=<?= h(urlencode((string) $e['slug'])) ?>">
+                <a href="<?= h(urlEveniment((string) $e['slug'])) ?>">
                   <strong><?= h((string) $e['titlu']) ?></strong></a>
                 <span class="admin-tabel__mic">
                   <?= h((string) $e['categorie']) ?> · <?= h((string) $e['oras']) ?>

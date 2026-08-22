@@ -33,7 +33,7 @@ pornesteSesiunea();
 $pastrat = $_SESSION['previzualizari'][$cheie] ?? null;
 
 if (!is_array($pastrat) || !is_array($pastrat['date'] ?? null)) {
-    header('Location: adauga_eveniment.php');
+    header('Location: /adauga_eveniment.php');
     exit;
 }
 
@@ -66,7 +66,7 @@ require __DIR__ . '/inc/antet.php';
   <div class="wrap">
 
     <nav class="crumbs" aria-label="Navigare">
-      <a href="index.php">Acasă</a>
+      <a href="/index.php">Acasă</a>
       <span aria-hidden="true">/</span>
       <span><?= h((string) $date['categorie']) ?></span>
       <span aria-hidden="true">/</span>

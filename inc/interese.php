@@ -283,7 +283,7 @@ function randeazaChipuri(int $evenimentId): string
     foreach ($numiti as $om) {
         $nume = h(numeAfisat((string) $om['nume'], (string) $om['prenume']));
         $legate[] = ($om['permalink'] ?? '') !== ''
-            ? '<a href="profil.php?m=' . h((string) $om['permalink']) . '"><strong>' . $nume . '</strong></a>'
+            ? '<a href="' . h(urlProfil((string) $om['permalink'])) . '"><strong>' . $nume . '</strong></a>'
             : '<strong>' . $nume . '</strong>';
     }
 
@@ -713,7 +713,7 @@ function randeazaOm(
     $nume         = h(numeAfisat((string) $om['nume'], (string) $om['prenume']));
 
     $legatura = ($om['permalink'] ?? '') !== ''
-        ? '<a class="person__name" href="profil.php?m=' . h((string) $om['permalink']) . '">' . $nume . '</a>'
+        ? '<a class="person__name" href="' . h(urlProfil((string) $om['permalink'])) . '">' . $nume . '</a>'
         : '<span class="person__name">' . $nume . '</span>';
 
     /* ---------------------------- insignele --------------------------- */

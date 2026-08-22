@@ -12,7 +12,7 @@ require_once __DIR__ . '/inc/auth.php';
 
 // Cine e deja conectat nu are ce căuta aici: își schimbă parola din cont.
 if (esteLogat()) {
-    header('Location: parola-noua.php');
+    header('Location: /parola-noua.php');
     exit;
 }
 
@@ -60,7 +60,7 @@ require __DIR__ . '/inc/antet.php';
 
               <p class="auth__switch">
                 Ți-ai adus aminte?
-                <a class="link-btn" href="login.php">Înapoi la autentificare</a>
+                <a class="link-btn" href="/login.php">Înapoi la autentificare</a>
               </p>
             </form>
           </div><!-- /#uitata-block -->
@@ -89,7 +89,7 @@ require __DIR__ . '/inc/antet.php';
             </p>
 
             <div class="done__actions">
-              <a class="btn btn--primary" href="login.php">Intră în cont</a>
+              <a class="btn btn--primary" href="/login.php">Intră în cont</a>
             </div>
           </div>
 

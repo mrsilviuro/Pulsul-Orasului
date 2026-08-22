@@ -42,7 +42,7 @@ if ($cerut !== '') {
     $membruProfil = membruDupaPermalink($cerut);
 
     if ($membruProfil === null) {
-        header('Location: index.php');
+        header('Location: /index.php');
         exit;
     }
 }
@@ -198,7 +198,7 @@ require __DIR__ . '/inc/antet.php';
   <div class="wrap">
 
     <nav class="crumbs" aria-label="Navigare">
-      <a href="index.php">Acasă</a>
+      <a href="/index.php">Acasă</a>
       <span aria-hidden="true">/</span>
       <a href="#">Membri</a>
       <span aria-hidden="true">/</span>
@@ -243,7 +243,7 @@ require __DIR__ . '/inc/antet.php';
           <?php endif; ?>
 
           <?php if ($eProfilulMeu): ?>
-          <a class="profile__poza-edit" href="poza.php"
+          <a class="profile__poza-edit" href="/poza.php"
              title="Schimbă poza de profil" aria-label="Schimbă poza de profil">
             <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M4 20h4l10-10a2.4 2.4 0 0 0-3.4-3.4L4.6 16.6z"/>
@@ -410,7 +410,7 @@ require __DIR__ . '/inc/antet.php';
           Cine are deja un eveniment în desfășurare ajunge pe pagina care i-o
           spune; de acolo, „Înapoi" îl aduce fix aici.
         -->
-        <a class="btn btn--primary btn--sm" href="adauga_eveniment.php">
+        <a class="btn btn--primary btn--sm" href="/adauga_eveniment.php">
           <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M12 5v14"/><path d="M5 12h14"/>
           </svg>
@@ -425,8 +425,8 @@ require __DIR__ . '/inc/antet.php';
         <?php if ($eProfilulMeu): ?>
         <p class="fara-nimic__text">Nu organizezi nimic, nu vrei să încerci?</p>
         <a class="btn btn--primary btn--sm" href="<?= $logat
-              ? 'adauga_eveniment.php'
-              : 'login.php?redirect=' . h(urlencode('/adauga_eveniment.php')) ?>">
+              ? '/adauga_eveniment.php'
+              : '/login.php?redirect=' . h(urlencode('/adauga_eveniment.php')) ?>">
           <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M12 5v14"/><path d="M5 12h14"/>
           </svg>

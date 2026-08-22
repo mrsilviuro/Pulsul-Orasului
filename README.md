@@ -5076,3 +5076,225 @@ verificarea fișierelor încărcate, `.htaccess`-urile care închid `private/`,
 `cron/` și `sql/`, scurgerea de conturi la intrare și la recuperarea parolei, și
 adresa IP — care se ia mereu din `REMOTE_ADDR`, niciodată dintr-un antet scris
 de client.
+
+## Adresele frumoase
+
+`pulsulorasului.ro/eveniment/mergem-la-alergat`, nu
+`pulsulorasului.ro/event.php?slug=mergem-la-alergat`.
+
+Adresa unui eveniment e singura de pe site pe care oamenii o pun în mesaje, o
+lipesc pe Facebook și o citesc unii altora la telefon. „Intră pe
+pulsulorasului.ro slash eveniment slash mergem la alergat" se poate spune;
+„event punct php întrebare slug egal" nu se poate. Iar în lista de rezultate a
+lui Google, adresa se vede sub titlu.
+
+### Cum merge
+
+`.htaccess` din rădăcină rescrie `/eveniment/<slug>` în `event.php?slug=<slug>`.
+E o **rescriere**, nu o redirecționare: browserul rămâne la adresa frumoasă, iar
+`event.php` primește cererea exact ca înainte și nu știe nimic despre ea.
+
+Drumul invers îl face `event.php` însuși, cu un **301**: cine deschide un link
+vechi de pe WhatsApp ajunge la adresa nouă. 301, nu 302, fiindcă Google numără
+două adrese cu același conținut drept conținut repetat și alege singur pe care
+s-o arate — 301 îi spune care e cea adevărată și mută spre ea și ce a strâns cea
+veche. Tot pentru asta, fiecare pagină poartă acum un `<link rel="canonical">`.
+
+Redirecționarea se face **abia după** ce s-a găsit anunțul și s-a văzut că omul
+are voie să-l vadă. Pusă înaintea căutării, ar fi trimis permanent — iar
+browserul ține minte un 301 — și un slug scris aiurea, către o adresă care
+oricum dă 404. Așa, ce nu duce nicăieri sfârșește tot pe prima pagină, ca
+înainte.
+
+### Capcana: toate adresele pornesc acum de la rădăcină
+
+Pagina unui eveniment stă la **adâncimea 1**. O adresă relativă scrisă acolo —
+`assets/css/style.css`, `profil.php?m=…`, `fetch('api/interes.php')` — s-ar
+căuta în `/eveniment/assets/…`, `/eveniment/profil.php`, `/eveniment/api/…`.
+
+Ăsta e felul obișnuit în care se rupe un site la trecerea la adrese frumoase, și
+se rupe **tăcut**: pozele lipsesc, butoanele nu mai fac nimic, legăturile dau
+404 — dar numai pe pagina aia, iar restul site-ului pare în regulă. De aceea
+toate adresele pe care le scrie site-ul au acum `/` în față:
+
+```
+href="/index.php"          fetch('/api/interes.php')
+src="/assets/img/…"        header('Location: /login.php')
+urlPoza()  → /assets/img/membri/…
+urlCoperta() → /assets/img/evenimente/…
+```
+
+Există o probă care păzește regula: „nicio adresă relativă în pagină", din
+`teste/test-evenimente.php`, adună toate `href`, `src` și `action` de pe pagina
+unui eveniment și pică dacă vreuna nu începe cu `/`.
+
+**De aici decurge că site-ul stă la rădăcina domeniului**, nu într-un subdosar.
+Nu era altfel nici înainte, dar acum contează.
+
+### Adresele se scriu într-un singur loc
+
+`urlEveniment($slug)` și `urlProfil($permalink)`, amândouă în
+`inc/evenimente.php`. Erau nouă locuri care le scriau de mână; acum ziua în care
+se schimbă forma unei adrese e o singură linie.
+
+Profilul a rămas cu întrebare (`/profil.php?m=<permalink>`), dinadins: un
+permalink e zece semne la întâmplare, n-are ce câștiga din a fi scos în cale.
+
+### În dezvoltare
+
+Serverul din PHP nu citește `.htaccess`, deci fără ajutor adresele frumoase dau
+404 local. `teste/router.php` face cele două rescrieri:
+
+```
+php -S 127.0.0.1:8099 teste/router.php
+```
+
+`.htaccess` rămâne locul adevărat al regulilor; în router sunt scrise a doua
+oară **doar** cele două de care atârnă adrese.
+
+## Vârsta minimă, în sfârșit verificată
+
+`evenimente.varsta_minima` exista de la început. Formularul o cerea, pagina o
+scria în caseta cu detalii — și nimeni nu se uita la ea la înscriere. Site-ul
+scria „18+" și lăsa înăuntru pe oricine.
+
+Asta e mai rău decât să nu fi spus nimic: organizatorul se bizuia pe o regulă
+care nu exista, iar el n-avea de unde să știe.
+
+Acum regula stă în `motivBlocajParticipare()`, lângă ușa închisă și regula de
+gen — un singur loc de care atârnă și butonul stins din pagină, și refuzul din
+`api/interes.php`.
+
+**Se socotește la ziua evenimentului, nu la ziua de azi.** Cine împlinește 16
+ani poimâine îi va avea la ceva de peste trei zile, și asta cere organizatorul —
+nu ca omul să-i fi avut deja când s-a înscris. Invers nu se întâmplă niciodată:
+un anunț nu se mută înapoi în timp.
+
+**„Împlinit" înseamnă împlinit.** La 16 ani ceruți, cel care are exact 16 intră,
+cel care are 15 nu.
+
+Socoteala o face `varstaLaZiua()`, cu `DateTime`, nu scăzând ani din ani: „29
+februarie 2008" plus șaisprezece ani nu e o zi care există, iar o socoteală
+făcută cu mâna ar fi greșit exact în cazul pe care nimeni nu-l probează
+niciodată.
+
+Organizatorul trece de regulă, ca și la gen: el e omul de care se leagă
+evenimentul, iar un anunț „18+" pus de cineva de 17 ani e o greșeală de
+moderare, nu ceva de reparat scoțându-l de pe propria listă.
+
+## Moderarea notelor
+
+Până acum, o stea pusă din supărare rămânea pentru totdeauna în media cuiva.
+Notele nu se retrag, nu se raportează, iar pagină de moderare nu exista — era
+singurul loc de pe site unde cineva putea face rău altuia fără ca nimeni să
+poată îndrepta.
+
+### `admin-evaluari.php`
+
+Două tabele, fiindcă sunt două întrebări deosebite.
+
+**„Cine împarte note, și cu ce mână"** — câte a dat fiecare, media lor, cea mai
+mică, câte automate, când a fost ultima. Cei cu mai multe, primii. O notă de unu
+poate fi o seară proastă; douăzeci de la același om sunt un obicei, și numai
+tabelul ăsta le pune una lângă alta.
+
+**„Ce s-a dat, cui, când și de la ce eveniment"** — notele, cele mai noi întâi.
+
+Se văd **și cele fără text**. Pe profil apar doar părerile scrise — stelele
+singure sunt anonime și nici nu se arată. Dar tocmai ele fac media, deci tocmai
+ele trebuie să se poată vedea de undeva. E singurul loc de pe site unde o stea
+are un nume lângă ea, și de aceea pagina e numai pentru staff.
+
+Notele automate — „Nu s-a prezentat", care pune o stea — poartă o etichetă.
+Fără ea, un om de casă ar fi văzut un „1" lângă un nume și ar fi crezut că
+cineva a fost răutăcios, când de fapt organizatorul a bifat o absență.
+
+### Cifra de pe panou
+
+E **„câte sunt sub trei stele"**, nu „câte sunt". Peste tot pe panoul de
+administrare, cifra înseamnă „câte așteaptă ceva de făcut" — iar la evaluări nu
+așteaptă niciuna: nu se aprobă și nu se resping. Se aprinde deci ce merită o
+privire: notele de una sau două stele, singurele despre care ar putea veni
+cineva să spună că sunt nedrepte. Fără cele automate. Zero acolo înseamnă
+„nimeni n-a fost aspru cu nimeni", și asta chiar e o veste bună.
+
+### „×"-ul de pe profil
+
+Același buton stă și pe profilul omului, în dreptul fiecărei păreri scrise,
+numai pentru staff — fiindcă de obicei așa afli de o vorbă nedreaptă: intri pe
+profilul cuiva și vezi ce scrie acolo. Stă în antetul părerii, lângă oră, ca
+steagul de raportare de la comentarii; nu sub text, unde ar fi arătat ca un
+buton al cititorului.
+
+Pentru cine nu e de-al casei, butonul nu e ascuns din CSS — nu ajunge în pagină
+deloc. Iar `api/admin.php` întreabă din nou, fiindcă o legătură care nu se vede
+rămâne o cerere care se poate scrie de mână.
+
+### Ștergerea
+
+E o **ștergere adevărată**, a doua de pe site după cea a unei dorințe. Un
+comentariu cu răspunsuri sub el se golește, fiindcă de el atârnă discuția; de o
+notă nu atârnă decât o cifră dintr-o medie, iar o cifră „golită" ar fi rămas tot
+o cifră.
+
+**Nu pleacă niciun e-mail**, dinadins. Nici către cel care a dat nota: dacă a
+pus-o din răutate, o veste i-ar spune doar că merită încercat de pe alt cont, iar
+dacă a pus-o cinstit, i-ar spune că cineva i-a citit părerea și a hotărât s-o
+șteargă — mai rău decât tăcerea. Nici către cel notat: pentru el media a fost
+mereu doar o cifră care se mișcă, iar „ți-am șters o notă de una" înseamnă
+„cineva ți-a dat una și n-ai știut". De aceea butonul nici nu cere un motiv:
+n-ar avea cine să-l citească.
+
+După ștergere pagina se cere din nou, fiindcă amândouă locurile de unde se poate
+apăsa au un rezumat care se socotește din note: profilul are media și barele,
+admin-evaluari.php are tabelul de sus. Scos doar rândul, media ar fi rămas cea
+veche pe ecran — exact cifra despre care mesajul tocmai a spus că s-a schimbat.
+
+## Dorința pusă de două ori
+
+Aceeași formă ca la ultimul loc de la un eveniment: `puneODorinta()` întreba „ai
+deja una?" și, dacă nu, scria. Între cele două întrebări încape o clipă.
+
+Reprodusă cu șase cereri pornite în aceeași clipă: **două-trei dorințe** de
+fiecare dată. Cu lacătul pus: una singură, la fiecare rulare.
+
+Interesant e ce a trebuit ca s-o vezi. Cu șase **file ale aceluiași browser**
+proba trecea mereu — fiindcă PHP ține un lacăt exclusiv pe fișierul sesiunii cât
+ține o cerere, deci două file ale aceluiași om se așteaptă oricum una pe alta.
+Cursa adevărată se vede numai când sesiunile sunt **deosebite**: laptopul și
+telefonul aceluiași om, sau o filă privată.
+
+Asta merită ținut minte pentru orice altă socoteală de forma „citește,
+hotărăște, scrie" care ține de un singur om: nu e apărată de lacătul sesiunii
+decât dacă omul are o singură sesiune.
+
+Se încuie rândul omului din `membri` (`SELECT id … FOR UPDATE`): regula e a lui,
+deci acolo e locul firesc de făcut rândul la coadă, iar doi oameni deosebiți nu
+se așteaptă unul pe altul.
+
+## Harta site-ului și robots.txt
+
+`sitemap.php`, cerută la `/sitemap.xml` printr-o rescriere. **Se scrie din bază
+la fiecare cerere**: una făcută o dată și lăsată acolo ar fi rămas în urmă la
+primul eveniment nou, iar o hartă care minte e mai rea decât niciuna — Google se
+duce după ea, găsește pagini care nu există, și învață să n-o mai citească.
+
+Intră prima pagină, „Despre", „Contact" și toate evenimentele publice — cu
+„anulat" inclus, fiindcă pagina unui anunț anulat rămâne pe site cu motivul
+scris de organizator, tocmai ca oamenii care își făcuseră planuri să afle ce s-a
+întâmplat. Ea trebuie găsită, nu ascunsă.
+
+Cu site-ul în construcție răspunde 503, nu o listă de adrese: altfel un robot
+care trece în timpul lucrărilor ar lua lista întreagă, s-ar duce la fiecare, ar
+găsi afișul de șantier peste tot, și ar ține minte că site-ul e gol tocmai în
+ziua în care nu trebuia.
+
+`robots.txt` e o **rugăminte, nu un lacăt** — ce chiar trebuie închis se închide
+în cod. Ține deoparte zona de administrare, uneltele contului, API-urile (care
+răspund JSON, deci n-au nimic de citit pentru un motor de căutare) și filtrele
+de pe prima pagină, care sunt aceleași evenimente așezate altfel.
+
+**Și profilurile.** Pe un profil scriu numele omului, chipul lui, notele primite
+și pe unde a fost — date pe care le-a dat ca să meargă la ieșiri prin oraș, nu ca
+să fie găsit după nume în Google. Paginile rămân publice pentru cine primește
+linkul: nu se ascund, doar nu se caută.

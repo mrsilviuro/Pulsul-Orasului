@@ -185,7 +185,7 @@ function opresteDacaEInConstructie(): void
      * „constructie.php" relativ, cerut de la /api/, ar fi arătat spre
      * /api/constructie.php.
      */
-    header('Location: constructie.php', true, 302);
+    header('Location: /constructie.php', true, 302);
     exit;
 }
 

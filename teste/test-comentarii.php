@@ -377,7 +377,7 @@ $html = randeazaComentarii($fire, $ctx);
 
 verifica('numele e prescurtat: „R. Ioana"', true, str_contains($html, '>R. Ioana<'));
 verifica('numele duce la profil', true,
-    str_contains($html, 'href="profil.php?m=' . 'tstcom-org'));
+    str_contains($html, 'href="/profil.php?m=' . 'tstcom-org'));
 
 verifica('„&" se escapează la afișare', true, str_contains($html, 'Dinamo &amp; Rapid'));
 verifica('dar în bază a rămas curat', 'Dinamo & Rapid, la 18:00.',
@@ -389,7 +389,7 @@ verifica('dar în bază a rămas curat', 'Dinamo & Rapid, la 18:00.',
  * N. Elena" pare o însușire a lui Ioana, nu începutul vorbei ei.
  */
 verifica('răspunsul la un răspuns începe cu @numele lui',
-    '<p class="comment__text"><a class="comment__mentiune" href="profil.php?m=tstcom-part">'
+    '<p class="comment__text"><a class="comment__mentiune" href="/profil.php?m=tstcom-part">'
     . '<span class="comment__at">@</span>N. Elena</a> Și eu.</p>',
     (static function (string $html): string {
         preg_match('#<p class="comment__text"><a class="comment__mentiune".*?</p>#', $html, $g);

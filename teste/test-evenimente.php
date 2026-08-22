@@ -385,7 +385,7 @@ verifica('orașul ajunge în bază așa cum e în config', 'Roman', $ev['oras'])
 verifica('are slug', true, preg_match('/^[a-z0-9-]+-[0-9a-f]{6}$/', (string) $ev['slug']) === 1);
 verifica('slugul e făcut din titlu', true, str_starts_with((string) $ev['slug'], 'cursa-de-seara'));
 verifica('răspunsul aduce adresa paginii lui',
-    'event.php?slug=' . $ev['slug'], $r['url'] ?? '');
+    urlEveniment((string) $ev['slug']), $r['url'] ?? '');
 
 echo "\n=== UN SINGUR EVENIMENT ACTIV ===\n";
 
@@ -1199,7 +1199,7 @@ $pagina = cerere($baza . '/profil.php', $c)['corp'];
 verifica('pe profilul propriu, o invitație', true,
     str_contains($pagina, 'Nu organizezi nimic, nu vrei să încerci?'));
 verifica('cu butonul care duce la formular', true,
-    str_contains($pagina, 'href="adauga_eveniment.php"'));
+    str_contains($pagina, 'href="/adauga_eveniment.php"'));
 
 $pagina = cerere($baza . '/profil.php?m=organizat02', $strain)['corp'];
 verifica('pe profilul altuia, o constatare', true,
@@ -1236,7 +1236,7 @@ $slugul = static function (int $id): string {
     return (string) $q->fetchColumn();
 };
 
-$laEveniment = static fn(int $id): string => $baza . '/event.php?slug=' . urlencode($slugul($id));
+$laEveniment = static fn(int $id): string => $baza . urlEveniment($slugul($id));
 
 /* ------------------ un anunț publicat se vede de oricine ---------------- */
 
@@ -1263,7 +1263,7 @@ verifica('și fără caseta de confirmare', false, str_contains($r['corp'], 'id=
 // slug care nu există arată EXACT la fel: altfel s-ar putea afla, ghicind, ce
 // evenimente așteaptă la moderare.
 $rAsteptare  = cerere($laEveniment($idAsteapta), $anonim);
-$rInexistent = cerere($baza . '/event.php?slug=nu-exista-abc123', $anonim);
+$rInexistent = cerere($baza . '/eveniment/nu-exista-abc123', $anonim);
 verifica('nelogatul NU vede ce așteaptă moderarea', 302, $rAsteptare['stare']);
 verifica('nici ce a fost respins', 302, cerere($laEveniment($idRespins), $anonim)['stare']);
 verifica('slug inexistent: același răspuns', $rAsteptare['stare'], $rInexistent['stare']);
@@ -1291,7 +1291,7 @@ verifica('organizatorul nu vede ce așteaptă la altul', 302,
     cerere($laEveniment($idStrain), $c)['stare']);
 
 verifica('slug inexistent → prima pagină', 302,
-    cerere($baza . '/event.php?slug=nu-exista-abc123', $c)['stare']);
+    cerere($baza . '/eveniment/nu-exista-abc123', $c)['stare']);
 verifica('fără slug → prima pagină', 302, cerere($baza . '/event.php', $c)['stare']);
 
 foreach ([
@@ -1300,6 +1300,13 @@ foreach ([
     'majuscule'      => 'CURSA-APROBATA-ABC',
     'semne'          => '<script>alert(1)</script>',
 ] as $ce => $slugRau) {
+    /**
+     * Pe adresa VECHE, cu întrebare: acolo se scrie un slug de mână, și acolo
+     * ar încerca cineva. Adresa frumoasă nici nu se poate forma cu semnele
+     * astea — tiparul din .htaccess primește doar litere mici, cifre și
+     * cratime, deci un slug strâmb se oprește la serverul web, înainte de PHP.
+     * Aici se probează cealaltă ușă, care e tot deschisă.
+     */
     verifica('slug ' . $ce . ' → prima pagină', 302,
         cerere($baza . '/event.php?slug=' . urlencode($slugRau), $c)['stare']);
 }
@@ -1324,11 +1331,11 @@ verifica('fără vorbe despre sfârșitul care lipsește', false,
  * eveniment?" — după ce omul a citit despre ce e vorba.
  *
  * Adresa care pleacă spre Facebook și WhatsApp e ÎNTREAGĂ, cu url_site din
- * config: „event.php?slug=…" singur n-ar duce nicăieri de pe telefonul
+ * config: „/eveniment/…" singur n-ar duce nicăieri de pe telefonul
  * altcuiva.
  */
 $adresaIntreaga = rtrim((string) ($config['url_site'] ?? ''), '/')
-                . '/event.php?slug=' . $slugul($idAprobat);
+                . urlEveniment($slugul($idAprobat));
 
 verifica('are zona de distribuire', true, str_contains($pagina, 'post__share'));
 verifica('cu link de Facebook, pe adresa întreagă', true,
@@ -1397,7 +1404,7 @@ verifica('participanții, într-un singur rând', true,
 verifica('organizatorul primește butonul de editare', true,
     str_contains($pagina, 'post__editeaza'));
 verifica('și duce la formular, cu slugul lui', true,
-    str_contains($pagina, 'href="adauga_eveniment.php?slug=' . $slugul($idAprobat) . '"'));
+    str_contains($pagina, 'href="/adauga_eveniment.php?slug=' . $slugul($idAprobat) . '"'));
 
 $paginaAltul = cerere($laEveniment($idAprobat), $altul)['corp'];
 verifica('altcineva nu primește butonul de editare', false,
@@ -1592,7 +1599,7 @@ verifica('slugul rămâne cel dinainte', $slugDeSchimbat, $dupa['slug']);
  * deci formularul n-avea de unde să-l știe când s-a tipărit.
  */
 verifica('răspunsul spune și unde e evenimentul',
-    'event.php?slug=' . $slugDeSchimbat, $r['url'] ?? '');
+    urlEveniment($slugDeSchimbat), $r['url'] ?? '');
 
 /**
  * Orice schimbare trece din nou pe la moderare. Altfel s-ar putea publica
@@ -1764,7 +1771,7 @@ verifica('coperta rămâne pe disc, lângă rând', true, is_file($caleCoperta))
  * dacă n-au greșit ei ziua. Acum se deschide, cu banda ei și cu motivul scris
  * de organizator la vedere.
  */
-$rOrg = cerere($baza . '/event.php?slug=' . urlencode($slugDeAnulat), $c);
+$rOrg = cerere($baza . urlEveniment($slugDeAnulat), $c);
 verifica('organizatorul deschide pagina', 200, $rOrg['stare']);
 verifica('cu banda de anulat', true, str_contains($rOrg['corp'], 'stare-anunt--anulat'));
 
@@ -1775,7 +1782,7 @@ verifica('cu banda de anulat', true, str_contains($rOrg['corp'], 'stare-anunt--a
 verifica('cu mesajul de o singură dată', true,
     str_contains($rOrg['corp'], 'data-mesaj="Evenimentul a fost anulat."'));
 
-$rStrain = cerere($baza . '/event.php?slug=' . urlencode($slugDeAnulat), $altul);
+$rStrain = cerere($baza . urlEveniment($slugDeAnulat), $altul);
 verifica('și un alt membru, la fel', 200, $rStrain['stare']);
 verifica('cu motivul scris pe ea', true,
     str_contains($rStrain['corp'], 'Ne vedem la primăvară'));
@@ -1784,7 +1791,7 @@ verifica('rândurile motivului se păstrează', true,
 
 // Chiar și cine nu e conectat deloc: e o veste publică, nu o socoteală internă.
 verifica('și vizitatorul fără cont', 200,
-    cerere($baza . '/event.php?slug=' . urlencode($slugDeAnulat), $anonim)['stare']);
+    cerere($baza . urlEveniment($slugDeAnulat), $anonim)['stare']);
 
 /* Ce NU se mai poate acolo: nici editare, nici înscriere, nici comentarii. */
 verifica('formularul lui de editare rămâne închis', 302,
@@ -2095,7 +2102,7 @@ $idAprobat = pune($idOrg, 'Cursa aprobată', 'aprobat', 7);
 
 $pagina = cerere($baza . '/profil.php', $c)['corp'];
 verifica('cartonașele de pe profil trimit la event.php', true,
-    str_contains($pagina, 'href="event.php?slug=' . $slugul($idAprobat) . '"'));
+    str_contains($pagina, 'href="/eveniment/' . $slugul($idAprobat) . '"'));
 
 /* -------------- „+ Eveniment nou", pe profilul propriu ----------------- */
 
@@ -2105,19 +2112,19 @@ verifica('cartonașele de pe profil trimit la event.php', true,
  * tot numai pe profilul propriu, și tot unul singur.
  */
 verifica('cu evenimente în listă, butonul e acolo', 1,
-    substr_count($pagina, 'href="adauga_eveniment.php"'));
+    substr_count($pagina, 'href="/adauga_eveniment.php"'));
 verifica('și stă în capul secțiunii', true,
-    preg_match('/<div class="section-head">.*?href="adauga_eveniment\.php".*?<\/div>\s*<\/div>/s', $pagina) === 1);
+    preg_match('/<div class="section-head">.*?href="\/adauga_eveniment\.php".*?<\/div>\s*<\/div>/s', $pagina) === 1);
 
 verifica('pe profilul altcuiva, niciun buton', 0,
     substr_count($paginaDinAfara = cerere($baza . '/profil.php?m=organizat02', $altul)['corp'],
-                 'href="adauga_eveniment.php"'));
+                 'href="/adauga_eveniment.php"'));
 
 // Fără niciun eveniment rămâne invitația din locul gol — tot un buton, nu doi.
 db()->exec('DELETE FROM evenimente');
 $paginaGoala = cerere($baza . '/profil.php', $c)['corp'];
 verifica('fără evenimente, tot un singur buton', 1,
-    substr_count($paginaGoala, 'href="adauga_eveniment.php"'));
+    substr_count($paginaGoala, 'href="/adauga_eveniment.php"'));
 verifica('și e cel din invitație', true,
     str_contains($paginaGoala, 'Nu organizezi nimic'));
 
@@ -2285,7 +2292,7 @@ verifica('la un eveniment neaprobat nu se înscrie nimeni', false, $r['ok'] ?? t
 
 /* ------------------------ ce se vede în pagină ------------------------ */
 
-$pagina = cerere($baza . '/event.php?slug=' . urlencode($slugEv), $altul)['corp'];
+$pagina = cerere($baza . urlEveniment($slugEv), $altul)['corp'];
 
 verifica('pagina arată numerele adevărate', true,
     preg_match('/data-count-for="participant"[^>]*>2</', $pagina) === 1);
@@ -2310,13 +2317,13 @@ verifica('și cu chipuri, fără link', true,
 
 // La un eveniment fără nimeni, se spune altceva.
 $idPustiu = pune($idOrg, 'La care nu vine nimeni', 'aprobat', 16);
-$pustiu = cerere($baza . '/event.php?slug=' . urlencode($slugul($idPustiu)), $altul)['corp'];
+$pustiu = cerere($baza . urlEveniment($slugul($idPustiu)), $altul)['corp'];
 verifica('fără nimeni, o invitație', true,
     str_contains($pustiu, 'Fii primul interesat de această activitate!'));
 verifica('fără cercuri goale', false, str_contains($pustiu, 'class="facepile"'));
 
 // La unul neaprobat, secțiunea lipsește cu totul.
-$asteapta = cerere($baza . '/event.php?slug=' . urlencode($slugul($idAstept)), $c)['corp'];
+$asteapta = cerere($baza . urlEveniment($slugul($idAstept)), $c)['corp'];
 verifica('la un eveniment neaprobat, secțiunea nici nu apare', false,
     str_contains($asteapta, 'id="rsvp"'));
 // Nici butoanele de distribuire: n-are rost să dai mai departe un anunț pe
@@ -2347,14 +2354,14 @@ $og = static function (string $corp, string $cheie): string {
                     . '" content="([^"]*)"/', $corp, $m) === 1 ? $m[1] : '';
 };
 
-$paginaOg = cerere($baza . '/event.php?slug=' . urlencode($slugOg), $anonim)['corp'];
+$paginaOg = cerere($baza . urlEveniment($slugOg), $anonim)['corp'];
 $siteOg   = rtrim((string) ($config['url_site'] ?? ''), '/');
 
 verifica('og:title e titlul evenimentului', 'Un eveniment de dat mai departe',
     $og($paginaOg, 'og:title'));
 verifica('og:type e „article"', 'article', $og($paginaOg, 'og:type'));
 verifica('og:url e adresa întreagă a paginii',
-    $siteOg . '/event.php?slug=' . $slugOg, $og($paginaOg, 'og:url'));
+    $siteOg . urlEveniment($slugOg), $og($paginaOg, 'og:url'));
 verifica('og:image e adresa întreagă a copertei',
     $siteOg . '/' . COPERTA_DOSAR . '/' . $numeCopertaOg . '.jpg',
     $og($paginaOg, 'og:image'));
@@ -2373,7 +2380,7 @@ verifica('și fără etichete', false, str_contains(html_entity_decode($descrier
 // Fără copertă și fără imagine de categorie pe disc: mai bine nicio poză decât
 // una care duce la 404.
 db()->prepare('UPDATE evenimente SET coperta = NULL WHERE id = ?')->execute([$idOg]);
-$faraPoza = cerere($baza . '/event.php?slug=' . urlencode($slugOg), $anonim)['corp'];
+$faraPoza = cerere($baza . urlEveniment($slugOg), $anonim)['corp'];
 verifica('fără copertă, fără og:image', '', $og($faraPoza, 'og:image'));
 verifica('și twitter cere cartonașul mic', 'summary', $og($faraPoza, 'twitter:card'));
 
@@ -2394,7 +2401,7 @@ echo "\n=== UN EVENIMENT CARE S-A ÎNCHEIAT ===\n";
  */
 $idTrecut   = pune($idOrg, 'Ce a fost anul trecut', 'aprobat', -3);
 $slugTrecut = $slugul($idTrecut);
-$laTrecut   = $baza . '/event.php?slug=' . urlencode($slugTrecut);
+$laTrecut   = $baza . urlEveniment($slugTrecut);
 
 verifica('regula e aceeași ca la limita de postare', true,
     evenimentIncheiat(evenimentDupaSlug($slugTrecut)));
@@ -2478,7 +2485,7 @@ function incheie(array &$cookies, string $slug, ?string $token = null): array
 
 $idInch   = pune($idOrg, 'Unul pe care îl încheie el', 'aprobat', 12);
 $slugInch = $slugul($idInch);
-$laInch   = $baza . '/event.php?slug=' . urlencode($slugInch);
+$laInch   = $baza . urlEveniment($slugInch);
 $stareaLui = static fn(int $id): string => (string) db()->query(
     'SELECT stare_moderare FROM evenimente WHERE id = ' . $id)->fetchColumn();
 
@@ -2586,7 +2593,7 @@ $r = incheie($c, $slugInch);
 verifica('organizatorul îl poate încheia', true, $r['ok'] ?? false);
 verifica('cu mesajul cerut', 'Evenimentul a fost încheiat.', $r['mesaj'] ?? '');
 verifica('și e trimis înapoi pe pagina lui',
-    'event.php?slug=' . $slugInch, $r['redirect'] ?? '');
+    urlEveniment($slugInch), $r['redirect'] ?? '');
 verifica('starea din bază s-a schimbat', 'incheiat', $stareaLui($idInch));
 verifica('a doua oară n-are ce mai încheia', false, incheie($c, $slugInch)['ok'] ?? false);
 
@@ -2682,7 +2689,7 @@ $idViitor = pune($idOrg, 'Care încă urmează', 'aprobat', 20);
 salveazaInteres($idViitor, $idAltul, 'interesat');
 verifica('la unul activ, prezentul rămâne', true,
     preg_match('/este interesat(ă)? de această activitate\./u',
-        cerere($baza . '/event.php?slug=' . urlencode($slugul($idViitor)), $anonim)['corp']) === 1);
+        cerere($baza . urlEveniment($slugul($idViitor)), $anonim)['corp']) === 1);
 
 /* ============ ÎNCHEIAT DE MÂNĂ, CU ZIUA ÎNCĂ ÎN VIITOR ================
    Starea se poate pune și din phpMyAdmin, nu doar din buton. Atunci ieșea o
@@ -2697,7 +2704,7 @@ echo "\n=== ÎNCHEIAT DE MÂNĂ, CU ZIUA ÎN VIITOR ===\n";
 
 $idCiudat   = pune($idOrg, 'Încheiat înainte de vreme', 'aprobat', 9);
 $slugCiudat = $slugul($idCiudat);
-$laCiudat   = $baza . '/event.php?slug=' . urlencode($slugCiudat);
+$laCiudat   = $baza . urlEveniment($slugCiudat);
 
 salveazaInteres($idCiudat, $idOrg, 'participant');
 salveazaInteres($idCiudat, $idAltul, 'participant');
@@ -2776,6 +2783,103 @@ verifica('nici la înștiințare', true,
     str_contains($r['mesaj'] ?? '', 'am înștiințat-o') || !($r['instiintat'] ?? false));
 
 db()->prepare('UPDATE membri SET sex = \'M\' WHERE id = ?')->execute([$idAltul]);
+
+/* ------------------------- ADRESELE FRUMOASE --------------------------- */
+
+echo "\n--- adresele frumoase ---\n";
+
+/**
+ * `/eveniment/<slug>`, nu `event.php?slug=<slug>`.
+ *
+ * Adresa unui eveniment e singura de pe site pe care oamenii o pun în mesaje și
+ * o citesc unii altora la telefon. Rescrierea o face .htaccess pe găzduire și
+ * teste/router.php în dezvoltare — pentru event.php cererea arată la fel.
+ */
+verifica('urlEveniment scrie calea nouă', '/eveniment/un-slug-oarecare',
+    urlEveniment('un-slug-oarecare'));
+
+/**
+ * `rawurlencode`, nu `urlencode`: al doilea scrie spațiul ca „+", ceea ce
+ * într-o CALE înseamnă un plus adevărat, nu un spațiu. Slugurile n-au spații,
+ * dar regula asta n-are voie să atârne de altă regulă.
+ */
+verifica('și nu pune „+" în locul spațiului', '/eveniment/a%20b', urlEveniment('a b'));
+
+verifica('urlProfil rămâne cu întrebare', '/profil.php?m=abcdef1234',
+    urlProfil('abcdef1234'));
+
+/* Toate adresele scrise de site pornesc de la rădăcină, cu „/" în față. */
+verifica('adresa filtrată e absolută', '/index.php?categorie=sport',
+    adresaFiltrata('', 'sport'));
+verifica('și cea goală, la fel', '/index.php', adresaFiltrata('', ''));
+
+if ($baza !== '') {
+    // Un anunț al lui, făcut aici: cele de mai sus au fost șterse pe parcurs.
+    $idFrumos   = pune($idOrg, 'Un anunț cu adresă frumoasă', 'aprobat', 8);
+    $slugFrumos = $slugul($idFrumos);
+
+    /**
+     * ADRESA VECHE TRIMITE LA CEA NOUĂ, cu 301 — nu cu 302.
+     *
+     * Linkurile de pe WhatsApp dinainte de schimbare trebuie să meargă, dar nu
+     * ca a doua adresă a aceluiași lucru: Google numără două adrese cu același
+     * conținut drept conținut repetat.
+     */
+    $rVechi = cerere($baza . '/event.php?slug=' . urlencode($slugFrumos), $c);
+    verifica('adresa veche răspunde cu 301', 301, $rVechi['stare']);
+
+    /**
+     * Ce mai era în adresă se lipește la loc: un „?comentariu=12" venit dintr-un
+     * e-mail n-are voie să se piardă pe drum.
+     */
+    $rCuCoada = cerere($baza . '/event.php?slug=' . urlencode($slugFrumos) . '&comentariu=12', $c);
+    verifica('și duce mai departe și coada adresei', 301, $rCuCoada['stare']);
+
+    // Adresa nouă se deschide de-a dreptul.
+    verifica('adresa nouă se deschide', 200,
+        cerere($baza . urlEveniment($slugFrumos), $c)['stare']);
+
+    /**
+     * UN SLUG CARE NU DUCE NICĂIERI NU PRIMEȘTE 301.
+     *
+     * Redirecționarea se face ABIA după ce se știe că anunțul există și se
+     * poate vedea. Pusă înainte, ar fi trimis permanent — iar browserul ține
+     * minte un 301 — către o adresă care oricum n-are ce arăta.
+     */
+    verifica('un slug inexistent nu primește 301', 302,
+        cerere($baza . '/event.php?slug=nu-exista-nicicum-xyz', $c)['stare']);
+
+    /* Pagina desenată de pe adresa nouă poartă adresa nouă peste tot. */
+    $paginaFrumos = cerere($baza . urlEveniment($slugFrumos), $c)['corp'];
+
+    verifica('canonical arată spre adresa nouă', true,
+        str_contains($paginaFrumos,
+            '<link rel="canonical" href="' . h(urlIntreg(urlEveniment($slugFrumos))) . '">'));
+
+    verifica('și og:url la fel',
+        urlIntreg(urlEveniment($slugFrumos)), $og($paginaFrumos, 'og:url'));
+
+    /**
+     * NICIO ADRESĂ RELATIVĂ ÎN PAGINĂ.
+     *
+     * Pagina asta stă la adâncimea 1 (`/eveniment/…`), deci un „assets/…" sau
+     * un „profil.php" scrise fără „/" în față ar fi căutate în
+     * `/eveniment/assets/…`. E chiar felul în care se rupe un site la trecerea
+     * la adrese frumoase, și se rupe tăcut: pozele lipsesc, legăturile dau 404.
+     */
+    preg_match_all('/(?:href|src|action)="([^"]+)"/', $paginaFrumos, $adrese);
+
+    $relative = array_values(array_filter(
+        $adrese[1],
+        static fn(string $a): bool =>
+            $a !== ''
+            && !str_starts_with($a, '/')
+            && !str_starts_with($a, '#')
+            && preg_match('#^(https?:|mailto:|tel:|data:|javascript:)#i', $a) !== 1
+    ));
+
+    verifica('nicio adresă relativă în pagină', [], $relative);
+}
 
 /* ---------------------------- curățenie -------------------------------- */
 

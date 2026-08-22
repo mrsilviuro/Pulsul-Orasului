@@ -58,7 +58,7 @@ require __DIR__ . '/inc/antet.php';
             <div>
               <strong class="admin-mesaj__om">
                 <?php if ($m['permalink'] !== null && $m['stare_cont'] !== 'sters'): ?>
-                <a href="profil.php?m=<?= h(urlencode((string) $m['permalink'])) ?>"><?= h($nume) ?></a>
+                <a href="<?= h(urlProfil((string) $m['permalink'])) ?>"><?= h($nume) ?></a>
                 <?php else: ?>
                 <?= h($nume) ?>
                 <?php endif; ?>

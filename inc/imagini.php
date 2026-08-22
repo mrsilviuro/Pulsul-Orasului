@@ -101,8 +101,14 @@ const COPERTA_CALITATE = 80;
 
 const COPERTA_DOSAR = 'assets/img/evenimente';
 
-/** Silueta arătată celor care nu și-au pus poză. */
-const POZA_IMPLICITA = 'assets/img/avatars/implicit.svg';
+/**
+ * Silueta arătată celor care nu și-au pus poză.
+ *
+ * Adresa pornește de la RĂDĂCINA site-ului, cu „/" în față — ca toate cele pe
+ * care le scrie site-ul. Pagina unui eveniment stă la `/eveniment/<slug>`, iar
+ * o cale relativă de acolo ar fi căutat silueta în `/eveniment/assets/…`.
+ */
+const POZA_IMPLICITA = '/assets/img/avatars/implicit.svg';
 
 /* ============================ CĂI ȘI ADRESE ============================= */
 
@@ -126,7 +132,8 @@ function urlPoza(?string $poza, bool $mica = false): string
         return POZA_IMPLICITA;
     }
 
-    return POZA_DOSAR . '/' . $poza . ($mica ? '-mic' : '') . '.jpg';
+    // De la rădăcină, cu „/" în față: vezi lămurirea de la POZA_IMPLICITA.
+    return '/' . POZA_DOSAR . '/' . $poza . ($mica ? '-mic' : '') . '.jpg';
 }
 
 /** Numele din bază arată așa cum l-am scris noi? */
@@ -432,7 +439,8 @@ function urlCoperta(?string $coperta): string
         return '';
     }
 
-    return COPERTA_DOSAR . '/' . $coperta . '.jpg';
+    // De la rădăcină, ca urlPoza().
+    return '/' . COPERTA_DOSAR . '/' . $coperta . '.jpg';
 }
 
 /** Numele scris în bază e mereu 32 de caractere hexazecimale. Nimic altceva. */

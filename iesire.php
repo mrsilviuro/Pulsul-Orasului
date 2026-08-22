@@ -14,10 +14,10 @@ $token = isset($_GET['token']) && is_string($_GET['token']) ? $_GET['token'] : '
 
 if (esteLogat() && tokenCsrfValid($token)) {
     deconecteaza();
-    header('Location: login.php?iesit=1');
+    header('Location: /login.php?iesit=1');
     exit;
 }
 
 // Token lipsă sau greșit: nu deconectăm, doar trimitem omul acasă.
-header('Location: index.php');
+header('Location: /index.php');
 exit;

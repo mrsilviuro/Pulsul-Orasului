@@ -4,9 +4,15 @@ declare(strict_types=1);
 /**
  * PulsulOrasului.Ro — pagina unui eveniment.
  *
- * Adresa: event.php?slug=<slugul-evenimentului>. Slugul, nu id-ul: se poate
- * citi la telefon, spune despre ce e vorba și nu dă în vileag câte evenimente
- * are site-ul.
+ * Adresa: `/eveniment/<slugul-evenimentului>`. Slugul, nu id-ul: se poate citi
+ * la telefon, spune despre ce e vorba și nu dă în vileag câte evenimente are
+ * site-ul.
+ *
+ * Adresa frumoasă e o RESCRIERE din .htaccess: pentru fișierul ăsta cererea
+ * arată tot ca `event.php?slug=…`, exact ca înainte. De aceea forma veche
+ * merge mai departe fără nicio schimbare de cod — și de aceea, tot aici, e
+ * trimisă cu 301 spre cea nouă: un anunț trebuie să aibă o singură adresă
+ * adevărată, nu două care arată același lucru.
  */
 
 require_once __DIR__ . '/inc/evenimente.php';
@@ -49,7 +55,37 @@ $eveniment = evenimentDupaSlug($slug);
 $eStaff = esteStaff($membru);
 
 if ($eveniment === null || !poateVedeaEvenimentul($eveniment, $membruId, $eStaff)) {
-    header('Location: index.php');
+    header('Location: /index.php');
+    exit;
+}
+
+/**
+ * DE LA ADRESA VECHE LA CEA NOUĂ, o dată pentru totdeauna.
+ *
+ * Linkurile trimise pe WhatsApp înainte de schimbare arată `event.php?slug=x`
+ * și trebuie să meargă mai departe — dar nu ca a doua adresă a aceluiași
+ * lucru. Google numără două adrese cu același conținut drept conținut repetat
+ * și alege singur pe care s-o arate; 301 îi spune care e cea adevărată, și mută
+ * spre ea și ce a strâns cea veche.
+ *
+ * ABIA AICI, DUPĂ CE SE ȘTIE CĂ ANUNȚUL EXISTĂ ȘI SE POATE VEDEA. Pus mai sus,
+ * ar fi trimis cu 301 și un slug scris aiurea — adică o redirecționare
+ * PERMANENTĂ, pe care browserul o ține minte, către o adresă care dă 404. Așa,
+ * ce nu duce nicăieri sfârșește tot pe prima pagină, ca înainte.
+ *
+ * SE ÎNTREABĂ DE `REQUEST_URI`, nu de `$_GET`: după rescrierea din .htaccess,
+ * pentru PHP cele două cereri arată la fel. Doar adresa cerută de browser le
+ * deosebește.
+ */
+$caleCeruta = (string) parse_url((string) ($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PATH);
+
+if (str_ends_with($caleCeruta, '/event.php')) {
+    // Tot ce mai era în adresă, în afară de `slug` — el intră acum în cale.
+    parse_str((string) parse_url((string) ($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_QUERY), $restul);
+    unset($restul['slug']);
+
+    header('Location: ' . urlEveniment((string) $eveniment['slug'])
+        . ($restul === [] ? '' : '?' . http_build_query($restul)), true, 301);
     exit;
 }
 
@@ -358,7 +394,7 @@ require __DIR__ . '/inc/antet.php';
 
     <!-- Firimituri -->
     <nav class="crumbs" aria-label="Navigare">
-      <a href="index.php">Acasă</a>
+      <a href="/index.php">Acasă</a>
       <span aria-hidden="true">/</span>
       <span class="crumbs__current"><?= h(inceputDeText($eveniment['titlu'], 60)) ?></span>
     </nav>
@@ -584,13 +620,12 @@ require __DIR__ . '/inc/antet.php';
         Numai la un eveniment publicat: n-are rost să dai mai departe un anunț
         pe care nu-l poate deschide nimeni.
 
-        Adresa se scrie ÎNTREAGĂ, cu url_site din config. Facebook și WhatsApp
-        primesc un link, nu o cale — „event.php?slug=…" singur n-ar duce
-        nicăieri de pe telefonul altcuiva.
+        Adresa se scrie ÎNTREAGĂ, prin urlIntreg() (adică url_site din config).
+        Facebook și WhatsApp primesc un link, nu o cale — „/eveniment/…" singur
+        n-ar duce nicăieri de pe telefonul altcuiva.
       ================================================================== -->
       <?php
-        $adresaEveniment = rtrim((string) ($config['url_site'] ?? ''), '/')
-                         . '/' . urlEveniment((string) $eveniment['slug']);
+        $adresaEveniment = urlIntreg(urlEveniment((string) $eveniment['slug']));
 
         // Textul care pleacă pe WhatsApp și în clipboard. Scurt dinadins:
         // pe WhatsApp intră în căsuța de scris, iar omul îl termină cum vrea.
@@ -744,9 +779,17 @@ require __DIR__ . '/inc/antet.php';
             organizator. Acesta te va putea contacta sau îți va putea scrie pe WhatsApp. Daca nu vei fi de găsit, organizatorul își rezervă dreptul să te șteargă din lista de participanți pentru a elibera locul.
           </p>
 
+          <!--
+            Legătura e `href="#"`, ca toate celelalte spre termeni de pe site
+            (înregistrare, finalizare, subsol): pagina nu există încă. Trimitea
+            spre „tc.php", care nu e nici măcar în lista de pagini — adică
+            singura dintre ele care ducea la un 404 în loc să nu ducă nicăieri.
+            Când se scrie pagina, se caută `href="#"` și se schimbă toate
+            deodată.
+          -->
           <p class="rsvp__confirm-text">
             Confirmând această acțiune, declari în mod automat ca ai citit și ești de acord cu
-            <a href="tc.php">Termenii și condițiile</a> platformei PulsulOrasului.Ro
+            <a href="#">Termenii și condițiile</a> platformei PulsulOrasului.Ro
           </p>
 
           <?php if ($imiCereTelefon): ?>
@@ -761,7 +804,7 @@ require __DIR__ . '/inc/antet.php';
                    aria-describedby="err-rsvp-telefon rsvp-telefon-hint">
             <p class="field__hint" id="rsvp-telefon-hint">
               Se salvează automat în contul tău, ca să nu-l mai scrii din nou data viitoare.
-              Îl poți schimba oricând din <a href="setari.php">setări</a>.
+              Îl poți schimba oricând din <a href="/setari.php">setări</a>.
             </p>
             <p class="field__error" id="err-rsvp-telefon" hidden></p>
           </div>
@@ -1070,7 +1113,7 @@ require __DIR__ . '/inc/antet.php';
           -->
           <p class="comment-form__intra">
             <a class="btn btn--primary btn--sm"
-               href="login.php?redirect=<?= h(urlencode('/' . urlEveniment((string) $eveniment['slug']))) ?>">Intră în cont</a>
+               href="/login.php?redirect=<?= h(urlencode('/' . urlEveniment((string) $eveniment['slug']))) ?>">Intră în cont</a>
             <span>ca să lași un comentariu.</span>
           </p>
           <?php endif; ?>
@@ -1356,7 +1399,7 @@ require __DIR__ . '/inc/antet.php';
     <section class="related" aria-labelledby="related-title">
       <div class="section-head">
         <h2 class="section-title" id="related-title">Ar putea să te intereseze și ...</h2>
-        <a class="link-more" href="index.php">Prima pagină
+        <a class="link-more" href="/index.php">Prima pagină
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15"/><path d="m13 6 6 6-6 6"/></svg>
         </a>
       </div>

@@ -97,7 +97,7 @@ require __DIR__ . '/inc/antet.php';
               <?php if ($dupaTemporara): ?>
               <p class="auth__switch">
                 Nu ai cerut tu asta?
-                <a class="link-btn" href="iesire.php?token=<?= h(urlencode(tokenCsrf())) ?>">Ieși din cont</a>
+                <a class="link-btn" href="/iesire.php?token=<?= h(urlencode(tokenCsrf())) ?>">Ieși din cont</a>
               </p>
               <?php endif; ?>
             </form>
@@ -118,8 +118,8 @@ require __DIR__ . '/inc/antet.php';
             </p>
 
             <div class="done__actions">
-              <a class="btn btn--primary" href="index.php">Mergi pe prima pagină</a>
-              <a class="btn btn--ghost" href="profil.php">Vezi-ți profilul</a>
+              <a class="btn btn--primary" href="/index.php">Mergi pe prima pagină</a>
+              <a class="btn btn--ghost" href="/profil.php">Vezi-ți profilul</a>
             </div>
           </div>
 

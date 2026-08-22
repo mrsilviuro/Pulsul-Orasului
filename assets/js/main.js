@@ -128,14 +128,14 @@
   function currentUser() {
     return {
       name:   body.getAttribute('data-user-nume') || 'Utilizator',
-      avatar: body.getAttribute('data-user-poza') || 'assets/img/avatars/implicit.svg'
+      avatar: body.getAttribute('data-user-poza') || '/assets/img/avatars/implicit.svg'
     };
   }
 
   // Trimite spre login, păstrând pagina curentă ca destinație de întoarcere.
   function goToLogin() {
     var back = encodeURIComponent(window.location.pathname + window.location.search);
-    window.location.href = 'login.php?redirect=' + back;
+    window.location.href = '/login.php?redirect=' + back;
   }
 
   // Mesaj scurt jos, pe mijloc
@@ -787,7 +787,7 @@
       setError('dorinta-oras', 'err-dorinta-oras', '');
       setError('dorinta-text', 'err-dorinta-text', '');
 
-      fetch('api/dorinta.php', {
+      fetch('/api/dorinta.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -908,7 +908,7 @@
       if (categorieAleasa) p.set('categorie', categorieAleasa);
 
       var coada = p.toString();
-      history.replaceState(null, '', 'index.php' + (coada ? '?' + coada : ''));
+      history.replaceState(null, '', '/index.php' + (coada ? '?' + coada : ''));
     }
 
     /**
@@ -1097,7 +1097,7 @@
 
       evFixeaza.disabled = true;
 
-      fetch('api/fixeaza-eveniment.php', {
+      fetch('/api/fixeaza-eveniment.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'same-origin',
@@ -1193,7 +1193,7 @@
         evIncheieDa.textContent = textInitial;
       }
 
-      fetch('api/incheie-eveniment.php', {
+      fetch('/api/incheie-eveniment.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'same-origin',
@@ -1327,7 +1327,7 @@
 
         if (moderareEroare) { moderareEroare.hidden = true; }
 
-        fetch('api/modereaza-eveniment.php', {
+        fetch('/api/modereaza-eveniment.php', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'same-origin',
@@ -1524,7 +1524,7 @@
 
       Object.keys(extra || {}).forEach(function (k) { trup[k] = extra[k]; });
 
-      fetch('api/interes.php', {
+      fetch('/api/interes.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'same-origin',
@@ -1793,7 +1793,7 @@
       trup.csrf = panouComentarii.getAttribute('data-csrf') || '';
       trup.slug = slugComentarii;
 
-      fetch('api/comentarii.php', {
+      fetch('/api/comentarii.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'same-origin',
@@ -2534,7 +2534,7 @@
           buton.textContent = textInitial;
         }
 
-        fetch('api/exclude-participant.php', {
+        fetch('/api/exclude-participant.php', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'same-origin',
@@ -2644,7 +2644,7 @@
       if (doarText) { buton.textContent = textInitial; }
     }
 
-    fetch('api/evaluare.php', {
+    fetch('/api/evaluare.php', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'same-origin',
@@ -3212,7 +3212,7 @@
         if (eticheta) eticheta.textContent = textInitial;
       }
 
-      fetch('api/contact.php', {
+      fetch('/api/contact.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'same-origin',
@@ -3349,7 +3349,7 @@
     function afterAuth(message) {
       toast(message);
       setTimeout(function () {
-        window.location.href = backTo || 'index.php';
+        window.location.href = backTo || '/index.php';
       }, 1000);
     }
 
@@ -3437,7 +3437,7 @@
 
       var email = document.getElementById('lg-email').value;
 
-      fetch('api/autentificare.php', {
+      fetch('/api/autentificare.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'same-origin',
@@ -3458,7 +3458,7 @@
 
         if (c.ok) {
           toast(c.mesaj || 'Bine ai revenit!');
-          setTimeout(function () { window.location.href = c.redirect || 'index.php'; }, 700);
+          setTimeout(function () { window.location.href = c.redirect || '/index.php'; }, 700);
           return;
         }
 
@@ -3538,7 +3538,7 @@
         btnRetrimite.disabled = true;
         btnRetrimite.textContent = 'Se trimite…';
 
-        fetch('api/retrimite-confirmare.php', {
+        fetch('/api/retrimite-confirmare.php', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'same-origin',
@@ -3710,7 +3710,7 @@
           termeni:           document.getElementById('rg-terms').checked ? '1' : ''
         };
 
-        fetch('api/inregistrare.php', {
+        fetch('/api/inregistrare.php', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'same-origin',
@@ -3819,7 +3819,7 @@
       uitataButon.disabled = true;
       uitataButon.textContent = 'Se trimite…';
 
-      fetch('api/parola-uitata.php', {
+      fetch('/api/parola-uitata.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'same-origin',
@@ -3948,7 +3948,7 @@
       };
       if (areVeche) trimitem.parola_veche = document.getElementById('pn-veche').value;
 
-      fetch('api/parola-noua.php', {
+      fetch('/api/parola-noua.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'same-origin',
@@ -4067,7 +4067,7 @@
       buton.disabled = true;
       buton.textContent = 'Se creează…';
 
-      fetch('api/finalizare-google.php', {
+      fetch('/api/finalizare-google.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'same-origin',
@@ -4112,7 +4112,7 @@
         }
 
         toast(c.mesaj || 'Contul e gata.');
-        setTimeout(function () { window.location.href = c.redirect || 'index.php'; }, 900);
+        setTimeout(function () { window.location.href = c.redirect || '/index.php'; }, 900);
       })
       .catch(function () {
         buton.disabled = false;
@@ -4632,7 +4632,7 @@
       btnSalvez.disabled = true;
       blocheazaStergerea(true);
 
-      fetch('api/poza-profil.php', {
+      fetch('/api/poza-profil.php', {
         method: 'POST',
         body: date,
         headers: { 'X-Requested-With': 'fetch' },
@@ -4773,7 +4773,7 @@
 
     date.csrf = (form.querySelector('[name="csrf"]') || {}).value || '';
 
-    fetch('api/setari.php', {
+    fetch('/api/setari.php', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'same-origin',
@@ -4891,7 +4891,7 @@
       var trimitem = { csrf: (stergForm.querySelector('[name="csrf"]') || {}).value || '' };
       if (parola) trimitem.parola = parola.value;
 
-      fetch('api/stergere-cere.php', {
+      fetch('/api/stergere-cere.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'same-origin',
@@ -5035,7 +5035,7 @@
           evAnulareDa.textContent = textInitial;
         }
 
-        fetch('api/anuleaza-eveniment.php', {
+        fetch('/api/anuleaza-eveniment.php', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'same-origin',
@@ -5065,7 +5065,7 @@
           // apăsa încă o dată cât se face mutarea.
           toast(c.mesaj || 'Evenimentul a fost anulat.');
           setTimeout(function () {
-            window.location.href = c.redirect || 'profil.php';
+            window.location.href = c.redirect || '/profil.php';
           }, 700);
         })
         .catch(function () {
@@ -5401,7 +5401,7 @@
         date.append('l', String(t.l));
       }
 
-      fetch('api/eveniment.php', {
+      fetch('/api/eveniment.php', {
         method: 'POST',
         credentials: 'same-origin',
         body: date
@@ -5490,7 +5490,7 @@
         date.delete('coperta');
         date.append('coperta_noua', arePozaNoua ? '1' : '');
 
-        fetch('api/previzualizare.php', {
+        fetch('/api/previzualizare.php', {
           method: 'POST',
           credentials: 'same-origin',
           body: date
@@ -5524,7 +5524,7 @@
             var link = document.getElementById('ev-previz-link');
             var rand = document.getElementById('ev-previz-rand');
             if (link && rand) {
-              link.href = 'previzualizare.php?p=' + encodeURIComponent(c.cheie);
+              link.href = '/previzualizare.php?p=' + encodeURIComponent(c.cheie);
               rand.hidden = false;
             }
             toast('Deschide previzualizarea din linkul de sub buton.');
@@ -5690,7 +5690,7 @@
       vestiPleaca = true;
       if (vestiButon) { vestiButon.disabled = true; }
 
-      fetch('api/newsletter.php', {
+      fetch('/api/newsletter.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'same-origin',
@@ -6019,7 +6019,7 @@
       buton.disabled = true;
       if (rauCoduri) { rauCoduri.hidden = true; }
 
-      fetch('api/sterge-cod.php', {
+      fetch('/api/sterge-cod.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'same-origin',
@@ -6089,7 +6089,7 @@
     var faptaAdmin = function (zona, date) {
       date.csrf = zona.getAttribute('data-csrf') || '';
 
-      return fetch('api/admin.php', {
+      return fetch('/api/admin.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'same-origin',

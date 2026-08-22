@@ -177,7 +177,7 @@ $catreEveniment = '';
 if ($cod !== null
     && $cod['ev_slug'] !== null
     && in_array((string) $cod['stare_moderare'], ['aprobat', 'incheiat'], true)) {
-    $catreEveniment = 'event.php?slug=' . urlencode((string) $cod['ev_slug']);
+    $catreEveniment = urlEveniment((string) $cod['ev_slug']);
 }
 
 $titlu   = $v['titlu'] . ' — FindMe';
@@ -227,7 +227,7 @@ require __DIR__ . '/inc/antet.php';
       <div class="fm-card__butoane">
         <!-- Un singur buton: pagina de login are pe ea și „Creează unul", deci
              al doilea ar fi dus în același loc. -->
-        <a class="btn btn--primary" href="login.php?redirect=<?= h(urlencode($inapoi)) ?>">Intră în cont</a>
+        <a class="btn btn--primary" href="/login.php?redirect=<?= h(urlencode($inapoi)) ?>">Intră în cont</a>
       </div>
       <?php elseif ($catreEveniment !== ''): ?>
       <div class="fm-card__butoane">
@@ -238,7 +238,7 @@ require __DIR__ . '/inc/antet.php';
       <?php endif; ?>
       <?php else: ?>
       <div class="fm-card__butoane">
-        <a class="btn btn--ghost" href="index.php">Vezi ce se mai întâmplă în oraș</a>
+        <a class="btn btn--ghost" href="/index.php">Vezi ce se mai întâmplă în oraș</a>
       </div>
       <?php endif; ?>
     </section>

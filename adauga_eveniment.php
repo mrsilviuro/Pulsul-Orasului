@@ -81,7 +81,7 @@ if ($slug !== '') {
     $ev = evenimentDeEditat($slug, $membruId);
 
     if ($ev === null) {
-        header('Location: index.php');
+        header('Location: /index.php');
         exit;
     }
 
@@ -118,7 +118,7 @@ $refacut = ($eEditare || $deRefacut === '')
     : evenimentDeRefacut($deRefacut, $membruId);
 
 if (!$eEditare && $deRefacut !== '' && $refacut === null) {
-    header('Location: index.php');
+    header('Location: /index.php');
     exit;
 }
 
@@ -237,7 +237,7 @@ require __DIR__ . '/inc/antet.php';
   <div class="wrap wrap--ingust">
 
     <nav class="crumbs" aria-label="Navigare">
-      <a href="index.php">Acasă</a>
+      <a href="/index.php">Acasă</a>
       <span aria-hidden="true">/</span>
       <?php if ($eEditare): ?>
       <a href="<?= h(urlEveniment((string) $ev['slug'])) ?>"><?= h(inceputDeText((string) $ev['titlu'], 40)) ?></a>
@@ -305,7 +305,7 @@ require __DIR__ . '/inc/antet.php';
         history.back(); „href" rămâne prima pagină, pentru cine ajunge aici
         direct, cu un link, fără nimic în urmă.
       -->
-      <a class="btn btn--ghost" id="ev-inapoi" href="index.php">Înapoi</a>
+      <a class="btn btn--ghost" id="ev-inapoi" href="/index.php">Înapoi</a>
     </section>
 
     <?php else: ?>
@@ -384,7 +384,7 @@ require __DIR__ . '/inc/antet.php';
                    aria-describedby="err-ev-cod-qr ajutor-cod-qr">
             <p class="field__hint" id="ajutor-cod-qr">
               Cele <?= COD_QR_LUNGIME ?> semne de pe abțibildul pe care l-ai lipit
-              deja prin oraș. Îl iei de pe <a href="coduri.php">pagina codurilor</a>.
+              deja prin oraș. Îl iei de pe <a href="/coduri.php">pagina codurilor</a>.
               Vânătoarea începe în clipa în care publici anunțul.
             </p>
             <p class="field__error" id="err-ev-cod-qr" hidden></p>

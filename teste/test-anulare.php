@@ -424,7 +424,7 @@ if ($BAZA === '') {
         verifica('zona de anulare e pe formularul de editare', true,
             str_contains($pagEditare['corp'], 'data-anulare'));
 
-        $pagEveniment = cere('/event.php?slug=tst-anul-ev', null, $cookie);
+        $pagEveniment = cere('/eveniment/tst-anul-ev', null, $cookie);
         verifica('și pe pagina evenimentului', true,
             str_contains($pagEveniment['corp'], 'data-anulare'));
         verifica('cu slugul lui pe ea', true,
@@ -443,10 +443,10 @@ if ($BAZA === '') {
         $altCookie = $rAlt['cookie'];
 
         verifica('un alt membru nu vede zona de anulare', false,
-            str_contains(cere('/event.php?slug=tst-anul-ev', null, $altCookie)['corp'],
+            str_contains(cere('/eveniment/tst-anul-ev', null, $altCookie)['corp'],
                 'data-anulare'));
         verifica('nici vizitatorul fără cont', false,
-            str_contains(cere('/event.php?slug=tst-anul-ev')['corp'], 'data-anulare'));
+            str_contains(cere('/eveniment/tst-anul-ev')['corp'], 'data-anulare'));
 
         /**
          * Cât ține ceasul. La două ore după ora de început, butonul dispare de
@@ -456,7 +456,7 @@ if ($BAZA === '') {
             ->execute([date('Y-m-d'), date('H:i:s', time() - 2 * 3600), $evenimentId]);
 
         verifica('trecut ceasul, butonul dispare de pe eveniment', false,
-            str_contains(cere('/event.php?slug=tst-anul-ev', null, $cookie)['corp'],
+            str_contains(cere('/eveniment/tst-anul-ev', null, $cookie)['corp'],
                 'data-anulare'));
 
         /**
@@ -473,14 +473,14 @@ if ($BAZA === '') {
             str_contains($dupaCeas['corp'], 'id="eveniment-form"'));
         verifica('și trimite la pagina evenimentului', true,
             str_contains(strtolower(implode("\n", $dupaCeas['anteturi'])),
-                'location: event.php?slug=tst-anul-ev'));
+                'location: /eveniment/tst-anul-ev'));
 
         /* În fereastră, la douăzeci de minute după început, e la locul lui. */
         db()->prepare('UPDATE evenimente SET ora_inceput = ? WHERE id = ?')
             ->execute([date('H:i:s', time() - 20 * 60), $evenimentId]);
 
         verifica('la douăzeci de minute după început, butonul e acolo', true,
-            str_contains(cere('/event.php?slug=tst-anul-ev', null, $cookie)['corp'],
+            str_contains(cere('/eveniment/tst-anul-ev', null, $cookie)['corp'],
                 'data-anulare'));
 
         /* Înapoi în viitor, pentru restul probei. */
