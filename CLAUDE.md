@@ -173,7 +173,16 @@ inc/
                       GD — și nu e o portiță, fiindcă fișierul de plecare e
                       unul scris chiar de noi, pixel cu pixel, la prima
                       încărcare. O cere „Remake"-ul
-  evenimente.php    → categorii (categoriiEvenimente($cuAleStaffului) = LISTA DIN
+  evenimente.php    → PIUNEZA: esteFixat(), poateFiFixat(), fixeazaEveniment()
+                      și coloana `fixat_la` (sql/029). Un anunț fixat stă PRIMUL
+                      pe prima pagină și are chenar — cheia de sortare
+                      `(e.fixat_la IS NULL) ASC` stă ÎNAINTEA celei care
+                      desparte viitorul de trecut, altfel un anunț încheiat
+                      sau anulat, dar fixat, ar fi căzut oricum jos. Numai
+                      STAFF-UL o pune și o ia, de pe pagina evenimentului
+                      (api/fixeaza-eveniment.php), pe ORICE anunț care se vede
+                      pe site — aprobat, încheiat sau anulat. NU se stinge
+                      singură niciodată. TOT AICI: categorii (categoriiEvenimente($cuAleStaffului) = LISTA DIN
                       CARE SE ALEGE LA PUBLICARE — implicit FĂRĂ cele cu
                       `doar_staff = 1`, ca „FindMe": așa o funcție nouă care
                       uită să ceară lista întreagă arată prea puțin, nu prea
@@ -189,7 +198,12 @@ inc/
                       singura care se aduce din bază în teancuri, nu toată
                       deodată), pagina unui eveniment, salvarea ȘI cartonașul
                       unui eveniment (randeazaCartonasEveniment) — un singur
-                      loc pentru cum arată, oriunde ar fi pus; al patrulea
+                      loc pentru cum arată, oriunde ar fi pus. TOT ACOLO se
+                      scrie ORAȘUL, între dată și locul anume: se strânge
+                      dinspre larg spre îngust, iar cine intră de pe un mesaj
+                      n-a cernut nimic după oraș. Se cere `e.oras` în TOATE
+                      interogările care desenează cartonașe, altfel rândul iese
+                      gol tăcut; al patrulea
                       parametru al lui e starea
                       ('' | 'incheiat' | 'anulat' | 'live'), iar „Live" se
                       citește la fiecare afișare, nu se ține în bază. TOT AICI cele două întrebări de care atârnă ce se
@@ -422,7 +436,12 @@ inc/
                       și de api/newsletter.php, și de constructie.php (fără JS)
 
 api/                → endpoint-uri JSON apelate din JS (fetch); eveniment.php e
-                      singurul care primește multipart, fiindcă urcă un fișier
+                      singurul care primește multipart, fiindcă urcă un fișier.
+                      DOUĂ dintre cele de pe pagina evenimentului nu întreabă
+                      „e al tău?", ci „ești de-al casei?": modereaza-eveniment.php
+                      și fixeaza-eveniment.php (piuneza). Restul —
+                      incheie-eveniment.php, anuleaza-eveniment.php — sunt ale
+                      organizatorului
 cron/               → scripturi rulate din cron (doar CLI, .htaccess le blochează)
                       anonimizeaza-conturi.php      — o dată pe zi
                       multumeste-participantilor.php — din oră în oră
@@ -438,7 +457,7 @@ sql/                → schema.sql + migrări numerotate (002, 003, 004, 005-goo
                       022-evenimente-staff, 023-dorinte,
                       024-categorii-doar-staff, 025-coduri-qr,
                       026-corectura-eveniment, 027-instiintari-feedback,
-                      028-feedback-instiintat)
+                      028-feedback-instiintat, 029-eveniment-fixat)
                       Zona de administrare citește și schimbă, în cea mai mare
                       parte, ce era deja acolo. SINGURA coloană nouă a ei e
                       `evenimente.corectura_ceruta_la` (026): ștampila pusă la

@@ -820,6 +820,45 @@ main { padding-block: 46px 64px; }
   display: flex; align-items: center; gap: 6px;
   pointer-events: none;
 }
+
+/* ---------------------- ANUNȚUL FIXAT DE ECHIPĂ ------------------------
+   Piuneza stă jos-STÂNGA, singurul colț rămas liber pe poză: sus-stânga e
+   categoria, sus-dreapta e starea, jos-dreapta sunt cifrele. Toate patru
+   trebuie să încapă odată — un anunț fixat poate fi foarte bine unul anulat.
+
+   Doar semnul, fără cuvânt. „Fixat" scris lângă el n-ar spune nimic
+   cititorului obișnuit, care nu știe și nu trebuie să știe că există o unealtă
+   de casă: ce spune piuneza, spune prin locul din listă. */
+.card__pin {
+  position: absolute;
+  left: 10px; bottom: 10px;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px;
+  border-radius: var(--radius-pill);
+  background: var(--brand);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .28);
+}
+/* Conturul de 1,9px al iconițelor site-ului e făcut pentru 17px. Strâns la 15
+   într-un cerc plin, umple desenul și piuneza ajunge un ghemotoc; subțiat, se
+   văd și capul, și acul. */
+.card__pin .ico { width: 15px; height: 15px; stroke-width: 1.6; }
+
+/* Chenarul care-l scoate din rând.
+
+   Pe `.card__media`, nu pe tot cartonașul: acolo e deja un `border-radius` și
+   o umbră, deci inelul se așază pe conturul care există. `outline` în loc de
+   `border`, ca poza să nu se micșoreze cu doi pixeli și să nu se miște față de
+   celelalte din teanc.
+
+   Se pune PESTE stingere, nu în locul ei: un anunț încheiat, dar fixat, rămâne
+   stins ca oricare încheiat — doar că are chenar și stă primul. Altfel n-ar mai
+   fi „încheiat", ar fi „altceva". */
+.card--fixat .card__media {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+  box-shadow: 0 6px 20px color-mix(in srgb, var(--brand) 22%, transparent);
+}
 .card__cifra {
   display: inline-flex; align-items: center; gap: 5px;
   padding: 4px 9px;
@@ -4043,6 +4082,28 @@ body { overscroll-behavior-y: none; }
 
 .post__editeaza,
 .post__remake { flex: none; }
+
+/* Piuneza, în rândul de butoane de sub numele organizatorului — singurul de
+   acolo care nu e al lui, ci al omului casei.
+
+   Butonul COMUTĂ, deci trebuie să spună ce e acum: stins scrie „Fixează",
+   aprins scrie „Fixat" și se umple cu culoarea site-ului. Un buton care arată
+   la fel în amândouă stările l-ar fi pus pe omul casei să deschidă prima
+   pagină ca să afle ce a făcut.
+
+   Aprins nu e roșu de alarmă, e roșul mărcii: e o punere în față, nu o
+   pierdere. */
+.post__fixeaza { flex: none; }
+.post__fixeaza.is-on {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: #fff;
+}
+.post__fixeaza.is-on:hover:not(:disabled) {
+  background: var(--brand-link-hover);
+  border-color: var(--brand-link-hover);
+}
+.post__fixeaza.is-on .ico { color: currentColor; }
 
 .post__actiuni .incheiere-confirm {
   position: absolute;

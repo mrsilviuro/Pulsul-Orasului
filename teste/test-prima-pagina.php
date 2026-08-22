@@ -213,6 +213,94 @@ verifica('șapte cartonașe cu totul', 7, substr_count($html, '<article class="c
 /* Cifrele de pe poză: câți vin și câte comentarii. */
 verifica('fiecare cartonaș poartă cifrele', 7, substr_count($html, 'card__cifre'));
 
+/**
+ * ORAȘUL, PE TOATE CARTONAȘELE, între dată și locul anume.
+ *
+ * Se strânge dinspre larg spre îngust — când, în ce oraș, unde anume — iar
+ * cine intră de pe un mesaj primit, sau se uită pe profilul cuiva, n-a cernut
+ * nimic după oraș și n-are de unde ști unde e „Centru".
+ */
+$orasePuse = 0;
+
+foreach ($rezultat['evenimente'] as $ev) {
+    if (str_contains($html, '<span>' . h((string) $ev['oras']) . '</span>')) { $orasePuse++; }
+}
+
+verifica('toate cartonașele au orașul scris', 7, $orasePuse);
+verifica('și stă înaintea locului anume', true,
+    strpos($html, '<span>Roman</span>') < strpos($html, '<span>Centru</span>'));
+
+/* ==================== 3b. ANUNȚUL FIXAT DE ECHIPĂ ================== */
+
+echo "\n=== PIUNEZA ===\n";
+
+/**
+ * Cel mai îndepărtat eveniment din listă, fixat, trebuie să sară în capul ei —
+ * peste tot ce urmează mai devreme ȘI peste despărțirea dintre viitor și
+ * trecut. Dacă cheia de sortare ar fi pusă după aceea, un anunț încheiat, dar
+ * fixat, ar fi rămas oricum jos, iar piuneza n-ar fi făcut nimic.
+ */
+$inainte = aleNoastre(evenimenteDePePrima());
+verifica('la început, ordinea e cea obișnuită', 'viitor-aproape', $inainte[0]);
+
+$celIncheiat = evenimentDupaSlug(SEMN . 'incheiat-manual');
+verifica('un anunț încheiat se poate fixa', true, poateFiFixat($celIncheiat));
+verifica('și nu e fixat din capul locului', false, esteFixat($celIncheiat));
+
+fixeazaEveniment($celIncheiat, true);
+
+$acum = evenimentDupaSlug(SEMN . 'incheiat-manual');
+verifica('piuneza s-a pus', true, esteFixat($acum));
+
+$dupa = aleNoastre(evenimenteDePePrima());
+verifica('ȘI UNUL ÎNCHEIAT SARE ÎN CAP', 'incheiat-manual', $dupa[0]);
+verifica('restul rămân în ordinea lor',
+    array_values(array_diff($inainte, ['incheiat-manual'])),
+    array_slice($dupa, 1));
+
+$htmlFixat = randeazaListaEvenimente(evenimenteDePePrima()['evenimente']);
+verifica('cartonașul poartă chenarul', 1, substr_count($htmlFixat, 'card--fixat'));
+verifica('și piuneza',                 1, substr_count($htmlFixat, 'card__pin'));
+
+// Piuneza se pune PESTE stingere, nu în locul ei.
+verifica('rămâne stins ca oricare încheiat', 4, substr_count($htmlFixat, 'card--incheiat'));
+
+/* Două fixate: cel mai proaspăt fixat stă deasupra. */
+$celAnulat = evenimentDupaSlug(SEMN . 'anulat');
+
+if ($celAnulat !== null) {
+    verifica('și un anunț anulat se poate fixa', true, poateFiFixat($celAnulat));
+
+    // O secundă mai încolo, ca ștampilele să nu iasă la fel.
+    db()->prepare('UPDATE evenimente SET fixat_la = ? WHERE id = ?')
+        ->execute([acumMinus(-1), (int) $celAnulat['id']]);
+
+    $doua = aleNoastre(evenimenteDePePrima());
+    verifica('cel fixat mai de curând e primul', 'anulat', $doua[0]);
+    verifica('celălalt fixat, imediat sub el',   'incheiat-manual', $doua[1]);
+
+    fixeazaEveniment($celAnulat, false);
+}
+
+/* Se ia înapoi, și totul se așază la loc. */
+fixeazaEveniment($acum, false);
+verifica('piuneza se ia', false, esteFixat(evenimentDupaSlug(SEMN . 'incheiat-manual')));
+verifica('și ordinea se întoarce', $inainte, aleNoastre(evenimenteDePePrima()));
+
+/**
+ * CE NU SE FIXEAZĂ: ce n-a trecut încă pe la nimeni și ce a fost respins.
+ * Acolo piuneza ar fi o unealtă care nu face nimic — anunțul nu e pe prima
+ * pagină deloc, deci n-are unde să stea primul.
+ */
+verifica('un anunț în așteptare nu se fixează', false,
+    poateFiFixat(['stare_moderare' => 'in_asteptare']));
+verifica('nici unul respins', false, poateFiFixat(['stare_moderare' => 'respins']));
+verifica('nici nimicul',      false, poateFiFixat(null));
+verifica('dar unul aprobat, da', true, poateFiFixat(['stare_moderare' => 'aprobat']));
+
+verifica('„e fixat?" pe nimic e „nu"', false, esteFixat(null));
+verifica('și pe un rând fără coloană', false, esteFixat(['titlu' => 'ceva']));
+
 /* ============================ 4. FILTRELE =========================== */
 
 echo "\n=== FILTRELE ===\n";
