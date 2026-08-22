@@ -5334,35 +5334,65 @@ Evenimentele **aprobate** de azi, în ordinea orei. Nu intră:
 Ordinea e a orei, nu a scrierii: cine deschide mesajul la prânz vrea să vadă
 întâi ce urmează, iar lista citită de sus în jos trebuie să fie ziua lui.
 
-### Poza care nu se încarcă
+### Cartonașele
 
-Gmail, Outlook și aproape toate celelalte **nu aduc pozele** până nu cere omul.
-Un mesaj gândit doar pentru cazul fericit se face praf la prima deschidere: ori
-rândurile se strâng la câțiva pixeli, ori alt-textul se rupe pe trei rânduri și
-face un rând de trei ori mai înalt decât vecinii lui.
+Fiecare eveniment e un **cartonaș ca pe prima pagină**: poza lată deasupra,
+apoi categoria, titlul, începutul textului și rândul cu ora și locul.
 
-Trei lucruri țin blocul întreg:
+Poza a stat o vreme **în stânga**, într-o casetă de 120px. Coperțile sunt 16:9,
+iar 120px lățime înseamnă 68px înălțime: pe telefon ieșea o dungă în care nu se
+vedea nimic din afiș — exact partea pentru care omul se uită la un anunț. Lată
+cât mesajul, are peste 500px pe calculator și 340 pe telefon.
 
-1. **Poza stă într-o celulă de lățime fixă** (120px), cu `width` scris și ca
-   atribut, nu doar în `style` — Outlook nu citește lățimile din CSS. Celula are
-   lățimea aia și când e goală.
-2. **`<img>` are `width` și `height` ca atribute.** Locul e rezervat înainte să
-   vină poza; fără înălțime, rândul se strânge și apoi sare când poza sosește.
-3. **`alt=""`, gol dinadins.** Un alt scris („Coperta evenimentului") s-ar arăta
-   în locul pozei, s-ar rupe într-o casetă de 120px și ar umfla rândul. Titlul e
-   oricum scris alături, deci poza n-are nimic de spus în plus: e decor.
-
-Celula are un fundal stins, ca locul gol să arate a loc gol *anume*, nu a ceva
-stricat. Un eveniment fără nicio poză primește exact aceeași casetă, deci toate
-rândurile rămân aliniate.
-
-Măsurat în Chromium, cu pozele lăsate să vină și cu ele oprite: **aceleași
-măsuri, aceeași înălțime totală a mesajului, pixel cu pixel.**
+Categoria stă **deasupra titlului**, nu peste poză ca pe site: așezarea în
+straturi (`position:absolute`) nu merge în Outlook, iar o etichetă căzută din
+colț peste titlu ar fi fost mai rea decât una mutată cu un rând.
 
 Poza e coperta anunțului, iar dacă n-are, imaginea categoriei — aceeași ordine
 ca pe cartonașele de pe prima pagină, prin aceleași două funcții. Adresele sunt
 **întregi**: într-un e-mail nu există „pagina de acum" față de care să se
 socotească o cale relativă.
+
+### Poza care nu se încarcă
+
+Gmail, Outlook și aproape toate celelalte **nu aduc pozele** până nu cere omul.
+Un mesaj gândit doar pentru cazul fericit se face praf la prima deschidere:
+caseta se strânge la câțiva pixeli și apoi sare când poza sosește, sau
+alt-textul se rupe pe trei rânduri și umflă cartonașul.
+
+Ce îl ține întreg:
+
+1. **`<img>` are `width` și `height` scrise ca ATRIBUTE**, nu doar în `style`.
+   Atributele sunt tot ce citesc programele când poza lipsește — ele rezervă
+   locul. Outlook nu se uită deloc la lățimile din CSS.
+2. **`width:100%;height:auto` în `style`**, pentru cine știe CSS: acolo poza se
+   strânge singură pe un ecran îngust, în loc să iasă din mesaj. Cele două nu se
+   ceartă — fiecare program îl ascultă pe cel pe care îl înțelege.
+3. **`alt=""`, gol dinadins.** Un alt scris („Coperta evenimentului") s-ar arăta
+   în locul pozei și ar umfla caseta cu două rânduri de text. Titlul e oricum
+   scris dedesubt, deci poza n-are nimic de spus în plus: e decor.
+
+Celula pozei are un fundal stins, ca locul gol să arate a loc gol *anume*, nu a
+ceva stricat.
+
+Un anunț **fără nicio poză** n-are casetă deloc — cartonașul începe de-a dreptul
+cu categoria, exact ca pe site. Cartonașele stau unul sub altul, nu unul lângă
+altul, deci nimic nu se strâmbă din asta: nu e nimic de aliniat.
+
+Măsurat în Chromium, cu pozele lăsate să vină și cu ele oprite, la 700px și la
+412px: **aceleași măsuri, aceeași înălțime totală a mesajului, pixel cu pixel.**
+
+### Mesajul se strânge pe telefon
+
+Tabelul exterior era `width:600px` fix. Gmail pe telefon micșorează singur tot
+mesajul până încape, deci se vedea bine — dar nu toate programele o fac, iar
+acolo unde nu se face, omul trebuie să miște mesajul în lături ca să citească un
+rând. Se vede mai ales de când cartonașele au poza lată deasupra.
+
+Acum e `width:100%` cu plafon de 600, iar `width="600"` rămâne ca atribut pentru
+Outlook, care nu citește CSS-ul și oricum desenează pe lat. Pe un ecran de 412px
+mesajul se strânge la 412. **Schimbarea e în șablonul comun, deci toate
+mesajele de pe site câștigă din ea**, nu doar newsletterul.
 
 ### Cel mult unul pe zi
 

@@ -308,6 +308,9 @@ function sablonEmail(string $titlu, array $blocuri): array
     $h[] = '@media only screen and (max-width:620px){';
     $h[] = '  .po-pad{padding-left:22px !important;padding-right:22px !important}';
     $h[] = '  .po-titlu{font-size:22px !important}';
+    // Cartonașele au marginile lor, mai strânse decât ale mesajului: pe un
+    // ecran de 360px, 18px de fiecare parte mănâncă o zecime din lățime.
+    $h[] = '  .po-pad-card{padding-left:14px !important;padding-right:14px !important}';
     $h[] = '}';
     $h[] = '</style>';
     $h[] = '</head>';
@@ -325,8 +328,22 @@ function sablonEmail(string $titlu, array $blocuri): array
          . 'style="background:' . $fundal . ';">';
     $h[] = '<tr><td align="center" style="padding:28px 12px;">';
 
+    /**
+     * Șase sute de pixeli, dar nu MAI MULT decât are ecranul.
+     *
+     * `width="600"` rămâne ca atribut, pentru Outlook, care nu citește CSS-ul
+     * și oricum desenează pe lat. În `style` însă e `width:100%` cu un plafon
+     * de 600: pe un telefon de 412px mesajul se strânge la 412, în loc să iasă
+     * cu două sute de pixeli în afara ecranului.
+     *
+     * Era `width:600px` fix. Gmail pe telefon micșorează singur tot mesajul
+     * până încape, deci se vedea bine — dar nu toate programele o fac, iar
+     * acolo unde nu se face, omul trebuie să miște mesajul în lături ca să
+     * citească un rând. Se vede mai ales de când cartonașele au poza lată
+     * deasupra.
+     */
     $h[] = '<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" '
-         . 'style="width:600px;max-width:600px;">';
+         . 'style="width:100%;max-width:600px;">';
 
     /* --------------------------- antetul ------------------------------ */
     // Numele site-ului, scris cu litere — nu o imagine cu logo, care ar fi
@@ -397,72 +414,106 @@ function sablonEmail(string $titlu, array $blocuri): array
     /* ------------------------- lista de anunțuri ---------------------- */
 
     /**
-     * Evenimentele zilei, unul sub altul, ca niște cartonașe mici.
+     * Evenimentele zilei, unul sub altul, ca niște CARTONAȘE — aceleași ca pe
+     * prima pagină a site-ului: poza lată deasupra, apoi categoria, titlul,
+     * începutul textului și rândul cu ora și locul.
      *
-     * Fiecare rând primește: ['titlu', 'cand', 'unde', 'poza', 'href'].
+     * Fiecare rând primește:
+     * ['titlu', 'cand', 'unde', 'poza', 'href', 'categorie', 'text'].
      *
-     * CE SE ÎNTÂMPLĂ CÂND POZELE NU SE ÎNCARCĂ — și asta e partea care
-     * hotărăște cum arată blocul. Gmail, Outlook și aproape toate celelalte NU
-     * aduc pozele până nu cere omul; un mesaj gândit doar pentru cazul fericit
-     * se face praf la prima deschidere.
+     * DE CE POZA DEASUPRA, ȘI NU ÎN STÂNGA. A stat o vreme în stânga, într-o
+     * casetă de 120px. Coperțile sunt 16:9, iar 120px lățime înseamnă 68px
+     * înălțime: pe telefon ieșea o dungă în care nu se vedea nimic din afiș —
+     * exact partea pentru care omul se uită la un anunț. Lată cât mesajul, are
+     * peste 500px și se vede ca pe site.
      *
-     * Trei lucruri îl țin întreg:
+     * CE SE ÎNTÂMPLĂ CÂND POZELE NU SE ÎNCARCĂ. Gmail, Outlook și aproape toate
+     * celelalte NU aduc pozele până nu cere omul; un mesaj gândit doar pentru
+     * cazul fericit se face praf la prima deschidere.
      *
-     *   1. POZA STĂ ÎNTR-O CELULĂ DE LĂȚIME FIXĂ (120px), cu `width` scris și
-     *      ca atribut, nu doar în `style` — Outlook nu citește lățimile din
-     *      CSS. Celula are lățimea aia și când e goală, deci textul de alături
-     *      nu se mută cu niciun pixel.
-     *   2. `<img>` are `width` ȘI `height` ca atribute, tot din același motiv:
-     *      locul e rezervat înainte să vină poza. Fără înălțime, rândul se
-     *      strânge la câțiva pixeli și apoi sare când poza sosește.
+     * Ce îl ține întreg:
+     *
+     *   1. `<img>` are `width` ȘI `height` scrise CA ATRIBUTE, nu doar în
+     *      `style`. Atributele sunt tot ce citesc programele când poza lipsește
+     *      — ele rezervă locul. Outlook nu se uită deloc la lățimile din CSS.
+     *   2. `width:100%;height:auto` în `style`, pentru cine ȘTIE CSS: acolo
+     *      poza se strânge singură pe un ecran îngust, în loc să iasă din
+     *      mesaj. Cele două nu se ceartă — fiecare program îl ascultă pe cel pe
+     *      care îl înțelege.
      *   3. `alt=""`, GOL DINADINS. Un alt scris („Coperta evenimentului") s-ar
-     *      arăta în locul pozei, s-ar rupe pe trei rânduri într-o casetă de
-     *      120px și ar face rândul de trei ori mai înalt decât vecinii lui.
-     *      Titlul e oricum scris alături, deci poza n-are nimic de spus în
+     *      arăta în locul pozei și ar umfla caseta cu două rânduri de text.
+     *      Titlul e oricum scris dedesubt, deci poza n-are nimic de spus în
      *      plus: e decor.
      *
-     * Iar celula are un fundal stins, ca locul gol să arate a loc gol anume,
-     * nu a ceva stricat. Un eveniment fără nicio poză primește exact aceeași
-     * casetă — toate rândurile rămân aliniate.
+     * Celula pozei are un fundal stins, ca locul gol să arate a loc gol anume,
+     * nu a ceva stricat.
+     *
+     * UN ANUNȚ FĂRĂ NICIO POZĂ n-are casetă deloc — cartonașul începe de-a
+     * dreptul cu titlul, exact ca pe site. Cartonașele stau unul sub altul, nu
+     * unul lângă altul, deci nimic nu se strâmbă din asta: nu e nimic de
+     * aliniat.
      */
     if (!empty($blocuri['lista'])) {
+        /**
+         * Lățimea pozei, în pixeli, pentru atributul `width`.
+         *
+         * Cartonașul stă în cardul mesajului, care are 600px și `padding:32px
+         * 36px` — rămân 528. Minus cele două linii ale chenarului: 526.
+         */
+        $latimePoza   = 526;
+        $inaltimePoza = (int) round($latimePoza * 9 / 16);   // 16:9, ca pe site
+
         $h[] = '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" '
-             . 'style="margin:6px 0 4px 0;">';
+             . 'style="margin:8px 0 4px 0;">';
 
         foreach ($blocuri['lista'] as $rand) {
             $titluRand = (string) ($rand['titlu'] ?? '');
             $href      = (string) ($rand['href'] ?? '');
             $poza      = (string) ($rand['poza'] ?? '');
+            $categorie = (string) ($rand['categorie'] ?? '');
+            $textRand  = (string) ($rand['text'] ?? '');
 
-            $h[] = '<tr><td style="padding:0 0 14px 0;">';
+            $h[] = '<tr><td style="padding:0 0 18px 0;">';
             $h[] = '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" '
-                 . 'style="border:1px solid ' . $margine . ';border-radius:10px;">';
-            $h[] = '<tr>';
+                 . 'style="border:1px solid ' . $margine . ';border-radius:12px;">';
 
-            /* --- caseta pozei: 120px, ocupați sau nu --- */
-            $h[] = '<td width="120" style="width:120px;background:#e9ecf2;'
-                 . 'border-radius:10px 0 0 10px;font-size:0;line-height:0;">';
-
+            /* --- poza, lată cât cartonașul --- */
             if ($poza !== '') {
-                $h[] = '<a href="' . h($href) . '" style="text-decoration:none;">'
-                     . '<img src="' . h($poza) . '" width="120" height="68" alt="" '
-                     . 'style="display:block;width:120px;height:68px;border:0;outline:none;'
-                     . 'border-radius:10px 0 0 10px;" /></a>';
-            } else {
-                // Fără poză deloc: aceeași casetă, ca rândurile să rămână
-                // aliniate. Un spațiu de netăiat ține celula deschisă în
-                // programele care strâng celulele goale.
-                $h[] = '<div style="width:120px;height:68px;">&nbsp;</div>';
+                $h[] = '<tr><td style="background:#e9ecf2;border-radius:12px 12px 0 0;'
+                     . 'font-size:0;line-height:0;">'
+                     . '<a href="' . h($href) . '" style="text-decoration:none;">'
+                     . '<img src="' . h($poza) . '" width="' . $latimePoza . '" '
+                     . 'height="' . $inaltimePoza . '" alt="" '
+                     . 'style="display:block;width:100%;max-width:' . $latimePoza . 'px;'
+                     . 'height:auto;border:0;outline:none;border-radius:12px 12px 0 0;" />'
+                     . '</a></td></tr>';
             }
 
-            $h[] = '</td>';
-
             /* --- textul --- */
-            $h[] = '<td style="padding:12px 16px;font-family:' . $font . ';">';
+            $h[] = '<tr><td class="po-pad-card" style="padding:16px 18px;font-family:' . $font . ';">';
 
-            $h[] = '<div style="font-size:16px;line-height:1.35;font-weight:bold;">'
+            /**
+             * Categoria, ca o etichetă mică deasupra titlului.
+             *
+             * Pe site stă peste poză, în colțul de sus-stânga. Aici nu se poate
+             * pune peste: așezarea în straturi („position:absolute") nu merge în
+             * Outlook, iar o etichetă căzută din colț peste titlu ar fi fost mai
+             * rea decât una mutată. Spune același lucru, cu un rând mai sus.
+             */
+            if ($categorie !== '') {
+                $h[] = '<div style="font-size:11.5px;font-weight:bold;letter-spacing:0.06em;'
+                     . 'text-transform:uppercase;color:' . $rosu . ';margin:0 0 7px 0;">'
+                     . h($categorie) . '</div>';
+            }
+
+            $h[] = '<div style="font-size:19px;line-height:1.3;font-weight:bold;">'
                  . '<a href="' . h($href) . '" style="color:' . $text . ';text-decoration:none;">'
                  . h($titluRand) . '</a></div>';
+
+            if ($textRand !== '') {
+                $h[] = '<div style="margin:8px 0 0 0;font-size:14.5px;line-height:1.5;'
+                     . 'color:' . $textMoale . ';">' . h($textRand) . '</div>';
+            }
 
             $subtitlu = array_filter([
                 (string) ($rand['cand'] ?? ''),
@@ -470,7 +521,7 @@ function sablonEmail(string $titlu, array $blocuri): array
             ], static fn(string $x): bool => $x !== '');
 
             if ($subtitlu !== []) {
-                $h[] = '<div style="margin-top:5px;font-size:13.5px;line-height:1.45;'
+                $h[] = '<div style="margin:10px 0 0 0;font-size:13px;line-height:1.45;'
                      . 'color:' . $textMoale . ';">' . h(implode(' · ', $subtitlu)) . '</div>';
             }
 
@@ -645,12 +696,17 @@ function sablonEmail(string $titlu, array $blocuri): array
             $t[] = '* ' . (string) ($rand['titlu'] ?? '');
 
             $subtitlu = array_filter([
+                (string) ($rand['categorie'] ?? ''),
                 (string) ($rand['cand'] ?? ''),
                 (string) ($rand['unde'] ?? ''),
             ], static fn(string $x): bool => $x !== '');
 
             if ($subtitlu !== []) {
                 $t[] = '  ' . implode(' · ', $subtitlu);
+            }
+
+            if (!empty($rand['text'])) {
+                $t[] = '  ' . wordwrap((string) $rand['text'], 68, "\n  ", false);
             }
 
             if (!empty($rand['href'])) {

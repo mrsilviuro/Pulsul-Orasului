@@ -2377,12 +2377,32 @@ verifica('og:description e din descrierea evenimentului', true,
 verifica('scurtată, nu întreagă', true, mb_strlen($descriereOg) <= 200);
 verifica('și fără etichete', false, str_contains(html_entity_decode($descriereOg), '<'));
 
-// Fără copertă și fără imagine de categorie pe disc: mai bine nicio poză decât
-// una care duce la 404.
+/**
+ * Fără copertă și fără imagine de categorie pe disc: mai bine nicio poză decât
+ * una care duce la 404.
+ *
+ * IMAGINEA CATEGORIEI SE STINGE ANUME pentru bucata asta, și se pune la loc
+ * după. Proba se uita înainte la categoria din bază așa cum era — iar aceleia
+ * i se poate pune oricând o imagine implicită de pe site. Atunci evenimentul
+ * primea poza categoriei, pe bună dreptate, iar proba pica deși codul era în
+ * regulă. Pe serverul adevărat, unde categoriile CHIAR au imagini, ar fi picat
+ * mereu.
+ */
+$catOg = (int) db()->query('SELECT categorie_id FROM evenimente WHERE id = ' . $idOg)
+                   ->fetchColumn();
+$imgCatOg = db()->query('SELECT imagine_default FROM categorii WHERE id = ' . $catOg)
+                ->fetchColumn();
+
+db()->prepare('UPDATE categorii SET imagine_default = NULL WHERE id = ?')->execute([$catOg]);
 db()->prepare('UPDATE evenimente SET coperta = NULL WHERE id = ?')->execute([$idOg]);
+
 $faraPoza = cerere($baza . urlEveniment($slugOg), $anonim)['corp'];
 verifica('fără copertă, fără og:image', '', $og($faraPoza, 'og:image'));
 verifica('și twitter cere cartonașul mic', 'summary', $og($faraPoza, 'twitter:card'));
+
+/* Imaginea categoriei, pusă la loc cum era. */
+db()->prepare('UPDATE categorii SET imagine_default = ? WHERE id = ?')
+    ->execute([$imgCatOg, $catOg]);
 
 // Restul paginilor primesc valorile obișnuite, fără să ceară nimic.
 $paginaDespre = cerere($baza . '/despre.php', $anonim)['corp'];
