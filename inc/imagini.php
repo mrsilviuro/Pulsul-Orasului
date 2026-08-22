@@ -102,6 +102,16 @@ const COPERTA_CALITATE = 80;
 const COPERTA_DOSAR = 'assets/img/evenimente';
 
 /**
+ * Dosarul cu imaginile implicite ale categoriilor.
+ *
+ * Ele NU trec prin inc/imagini.php: nu le urcă nimeni prin site, se pun de mână
+ * pe FTP, iar în bază stă doar numele fișierului (`categorii.imagine_default`).
+ * De aceea n-au nici numele random hex al celorlalte — se cheamă „sport.jpg",
+ * „socializare.jpg", ca să se poată pune la locul lor fără să te uiți în bază.
+ */
+const CATEGORIE_DOSAR = 'assets/img/categorii';
+
+/**
  * Silueta arătată celor care nu și-au pus poză.
  *
  * Adresa pornește de la RĂDĂCINA site-ului, cu „/" în față — ca toate cele pe
@@ -441,6 +451,40 @@ function urlCoperta(?string $coperta): string
 
     // De la rădăcină, ca urlPoza().
     return '/' . COPERTA_DOSAR . '/' . $coperta . '.jpg';
+}
+
+/**
+ * Adresa imaginii implicite a unei categorii — sau '' dacă n-are una.
+ *
+ * SE VERIFICĂ PE DISC, nu doar în bază: coloana `categorii.imagine_default`
+ * există de mult, fișierele se urcă de mână, iar unele lipsesc încă. O adresă
+ * care duce la 404 e mai rea decât niciuna — cartonașul ar avea o gaură în loc
+ * de poză, iar WhatsApp ar încerca s-o ia și ar arăta un cartonaș ciuntit.
+ *
+ * SCRISĂ ÎNTR-UN SINGUR LOC, ca urlPoza() și urlCoperta(). Erau trei — pagina
+ * evenimentului, cartonașul și caseta cu detalii — și toate trei o scriau
+ * relativ, „assets/img/categorii/…". De pe prima pagină mergea; de pe
+ * `/eveniment/<slug>` browserul o căuta în `/eveniment/assets/img/categorii/`
+ * și primea 404. Pozele urcate de oameni n-au pățit nimic, fiindcă ele treceau
+ * deja prin urlCoperta().
+ *
+ * Numele vine din bază, deci se cerne: doar litere mici, cifre, cratime și o
+ * extensie de imagine. Fără asta, un „../../inc/config.php" scris în coloană ar
+ * fi ieșit în pagină ca adresă.
+ */
+function urlImagineCategorie(?string $fisier): string
+{
+    if (!is_string($fisier) || $fisier === ''
+        || preg_match('/^[a-z0-9][a-z0-9._-]{0,60}\.(jpg|jpeg|png|webp|svg)$/i', $fisier) !== 1
+        || str_contains($fisier, '..')) {
+        return '';
+    }
+
+    if (!is_file(dirname(__DIR__) . '/' . CATEGORIE_DOSAR . '/' . $fisier)) {
+        return '';
+    }
+
+    return '/' . CATEGORIE_DOSAR . '/' . $fisier;
 }
 
 /** Numele scris în bază e mereu 32 de caractere hexazecimale. Nimic altceva. */

@@ -365,19 +365,16 @@ $ogDescriere = inceputDeText(strip_tags((string) $eveniment['descriere']), 180);
 /**
  * Coperta lui, iar dacă n-are, imaginea categoriei.
  *
- * Se verifică pe disc, nu doar în bază: coloana `categorii.imagine_default`
- * există de mult, fișierele nu s-au urcat încă (vezi roadmapul din CLAUDE.md).
- * O adresă care duce la 404 e mai rea decât niciuna — WhatsApp ar încerca s-o
- * ia, n-ar găsi-o, și ar arăta un cartonaș ciuntit în loc de unul curat.
+ * urlImagineCategorie() se uită și pe disc, nu doar în bază: coloana
+ * `categorii.imagine_default` există de mult, fișierele se urcă de mână și unele
+ * lipsesc încă (vezi roadmapul din CLAUDE.md). O adresă care duce la 404 e mai
+ * rea decât niciuna — WhatsApp ar încerca s-o ia, n-ar găsi-o, și ar arăta un
+ * cartonaș ciuntit în loc de unul curat.
  */
 $ogImagine = urlCoperta($eveniment['coperta'] ?? null);
 
-if ($ogImagine === '' && !empty($eveniment['imagine_default'])) {
-    $caleCategorie = 'assets/img/categorii/' . $eveniment['imagine_default'];
-
-    if (is_file(__DIR__ . '/' . $caleCategorie)) {
-        $ogImagine = $caleCategorie;
-    }
+if ($ogImagine === '') {
+    $ogImagine = urlImagineCategorie($eveniment['imagine_default'] ?? null);
 }
 
 $ogImagine = urlIntreg($ogImagine);

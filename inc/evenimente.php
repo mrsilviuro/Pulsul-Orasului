@@ -1108,10 +1108,11 @@ function randeazaCartonasEveniment(
 
     $coperta = urlCoperta($ev['coperta'] ?? null);
 
-    // Imaginea implicită a categoriei, când va exista. Coloana e deja în bază,
-    // fișierele se urcă de mână — vezi roadmap-ul din CLAUDE.md.
-    if ($coperta === '' && !empty($ev['imagine_default'])) {
-        $coperta = 'assets/img/categorii/' . $ev['imagine_default'];
+    // Imaginea implicită a categoriei, dacă anunțul n-are copertă a lui.
+    // urlImagineCategorie() se uită și pe disc: fișierele se urcă de mână, iar
+    // unele lipsesc încă (vezi roadmap-ul din CLAUDE.md).
+    if ($coperta === '') {
+        $coperta = urlImagineCategorie($ev['imagine_default'] ?? null);
     }
 
     $adresa = h(urlEveniment((string) $ev['slug']));
