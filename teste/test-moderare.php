@@ -624,6 +624,63 @@ if ($BAZA === '') {
             verifica('cu vestea bună', true, str_contains($nou, 'a fost aprobat'));
         }
 
+        /* ==================== PIUNEZA, TOT A CASEI ==================== */
+
+        /**
+         * `tst-mod-2` e acum aprobat, deci se poate fixa. Piuneza e a doua
+         * unealtă de pe pagina evenimentului care nu întreabă „e al tău?", ci
+         * „ești de-al casei?" — la fel ca moderarea de mai sus, și se păzește
+         * exact la fel.
+         */
+        $r = cere('/api/fixeaza-eveniment.php', [
+            'csrf' => $caOrg['token'], 'slug' => 'tst-mod-2', 'fixat' => '1',
+        ], $caOrg['cookie']);
+
+        verifica('organizatorul nu-și poate fixa anunțul', 403, $r['cod']);
+        verifica('și piuneza nu s-a pus', null,
+            evenimentDupaSlug('tst-mod-2')['fixat_la']);
+
+        $r = cere('/api/fixeaza-eveniment.php', [
+            'csrf' => 'orice', 'slug' => 'tst-mod-2', 'fixat' => '1',
+        ]);
+        verifica('fără cont, nici atât', true, in_array($r['cod'], [401, 419], true),
+            (string) $r['cod']);
+
+        /* Omul de casă poate. */
+        $r = cere('/api/fixeaza-eveniment.php', [
+            'csrf' => $caSef['token'], 'slug' => 'tst-mod-2', 'fixat' => '1',
+        ], $caSef['cookie']);
+
+        $corpFix = json_decode($r['corp'], true) ?: [];
+        verifica('staff-ul fixează', true, $corpFix['ok'] ?? false);
+        verifica('și răspunde cu starea nouă', true, $corpFix['fixat'] ?? false);
+        verifica('ștampila chiar s-a scris', true,
+            evenimentDupaSlug('tst-mod-2')['fixat_la'] !== null);
+
+        /* Și o ia înapoi, cu aceeași cerere. */
+        $r = cere('/api/fixeaza-eveniment.php', [
+            'csrf' => $caSef['token'], 'slug' => 'tst-mod-2', 'fixat' => '',
+        ], $caSef['cookie']);
+
+        verifica('și o ia înapoi', false, (json_decode($r['corp'], true) ?: [])['fixat'] ?? true);
+        verifica('ștampila s-a șters', null, evenimentDupaSlug('tst-mod-2')['fixat_la']);
+
+        /**
+         * Un anunț care încă așteaptă nu se fixează: n-are unde să stea primul,
+         * fiindcă nu e pe prima pagină deloc. Se face unul anume pentru proba
+         * asta — celelalte au trecut deja prin moderare mai sus, iar un test
+         * care se bizuie pe starea lăsată de altul se strică la prima
+         * rearanjare.
+         */
+        faEveniment('tst-mod-fix-astept', $org, 'in_asteptare');
+
+        $r = cere('/api/fixeaza-eveniment.php', [
+            'csrf' => $caSef['token'], 'slug' => 'tst-mod-fix-astept', 'fixat' => '1',
+        ], $caSef['cookie']);
+        verifica('unul în așteptare nu se fixează', 409, $r['cod']);
+        verifica('și rămâne nefixat', null,
+            evenimentDupaSlug('tst-mod-fix-astept')['fixat_la']);
+
         /* Respingerea unui anunț aprobat, cu motiv: răzgândirea merge. */
         $inainte = is_file($logEmail) ? (int) filesize($logEmail) : 0;
 

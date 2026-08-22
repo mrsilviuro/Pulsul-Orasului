@@ -440,6 +440,21 @@ require __DIR__ . '/inc/antet.php';
         $poateReface = $eOrganizatorul && poateFiRefacut($eveniment);
 
         /**
+         * PIUNEZA — singurul buton din rândul ăsta care nu e al
+         * organizatorului, ci al OMULUI CASEI, oricine ar fi scris anunțul.
+         *
+         * Stă aici, lângă celelalte, fiindcă e tot o hotărâre despre anunțul
+         * ăsta, luată de pe pagina lui, cu ochii pe el. Într-o listă de
+         * administrare ar fi însemnat să fixezi din titlu — iar ce merită
+         * capul primei pagini se vede citind, nu dintr-un rând de tabel.
+         *
+         * Se vede și la un anunț încheiat sau anulat: piuneza nu se stinge
+         * singură niciodată, deci trebuie să existe de unde s-o iei.
+         */
+        $poateFixa = $eStaff && poateFiFixat($eveniment);
+        $eFixat    = esteFixat($eveniment);
+
+        /**
          * Butoanele organizatorului, sus, lângă numele lui.
          *
          * „Editează" și „Încheie evenimentul" sunt amândouă ale lui și se
@@ -449,10 +464,36 @@ require __DIR__ . '/inc/antet.php';
          * pentru oricine.
          */
         afiseazaEveniment(evenimentDinBaza($eveniment), $banda,
-          ($poateEdita || $poateIncheia || $poateReface)
-            ? function () use ($eveniment, $poateEdita, $poateIncheia, $poateReface) {
+          ($poateEdita || $poateIncheia || $poateReface || $poateFixa)
+            ? function () use ($eveniment, $poateEdita, $poateIncheia, $poateReface,
+                              $poateFixa, $eFixat) {
             ?>
             <div class="post__actiuni">
+              <?php if ($poateFixa): ?>
+              <!--
+                Butonul comută, și SPUNE ce e acum: apăsat, scrie „Fixat" și e
+                aprins; neapăsat, scrie „Fixează" și e stins. Un buton care
+                arată la fel în amândouă stările l-ar fi pus pe omul casei să
+                deschidă prima pagină ca să afle ce a făcut.
+
+                `data-fixat` e starea de acum, citită de JS ca să trimită
+                OPUSUL ei. Se trimite ce se vrea, nu „schimbă": vezi
+                api/fixeaza-eveniment.php.
+              -->
+              <button class="btn btn--ghost btn--sm post__fixeaza<?= $eFixat ? ' is-on' : '' ?>"
+                      type="button" data-fixeaza
+                      data-slug="<?= h((string) $eveniment['slug']) ?>"
+                      data-csrf="<?= h(tokenCsrf()) ?>"
+                      data-fixat="<?= $eFixat ? '1' : '0' ?>"
+                      aria-pressed="<?= $eFixat ? 'true' : 'false' ?>"
+                      title="Ține anunțul primul pe prima pagină">
+                <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M9 3h6l-1 6 4 3v2H6v-2l4-3-1-6Z"/><path d="M12 14v7"/>
+                </svg>
+                <span data-fixeaza-vorba><?= $eFixat ? 'Fixat' : 'Fixează' ?></span>
+              </button>
+              <?php endif; ?>
+
               <?php if ($poateEdita): ?>
               <!-- Doar pentru cel care l-a scris. Slugul spune formularului ce
                    eveniment să încarce; acolo se verifică din nou al cui e. -->

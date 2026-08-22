@@ -1068,6 +1068,72 @@
     });
   }
 
+  /* --- PIUNEZA: anunțul care stă primul pe prima pagină -------------------
+     Doar omul casei îl vede — butonul nici nu se scrie în pagină pentru
+     ceilalți (vezi event.php), iar api/fixeaza-eveniment.php întreabă din nou
+     cine cere.
+
+     DINTR-O APĂSARE, fără confirmare: nu se pierde nimic și se ia înapoi cu
+     aceeași apăsare. Cele două trepte de la „Încheie" și „Anulează" sunt
+     pentru fapte care nu se mai iau înapoi; o întrebare pusă aici ar fi una pe
+     care omul învață s-o închidă fără să citească.
+
+     ȘI FĂRĂ REÎNCĂRCARE, tot pentru că se ia înapoi: pagina evenimentului nu
+     arată nimic despre piuneză în afară de butonul ăsta, deci n-are ce
+     redesena serverul. Ce se schimbă cu adevărat e prima pagină, iar acolo
+     omul ajunge oricum cu ochii lui.
+
+     Se trimite CE SE VREA (opusul stării de acum), nu „comută": cu o comutare,
+     două file deschise deodată ar fi apăsat una după alta și ar fi lăsat
+     piuneza exact cum era.
+  */
+  var evFixeaza = document.querySelector('[data-fixeaza]');
+
+  if (evFixeaza) {
+    var fixVorba = evFixeaza.querySelector('[data-fixeaza-vorba]');
+
+    evFixeaza.addEventListener('click', function () {
+      var vrem = evFixeaza.getAttribute('data-fixat') !== '1';
+
+      evFixeaza.disabled = true;
+
+      fetch('api/fixeaza-eveniment.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          csrf:  evFixeaza.getAttribute('data-csrf') || '',
+          slug:  evFixeaza.getAttribute('data-slug') || '',
+          fixat: vrem
+        })
+      })
+      .then(citesteRaspuns)
+      .then(function (rez) {
+        evFixeaza.disabled = false;
+
+        if (!rez.corp) { toast(mesajRaspunsNeasteptat(rez)); return; }
+        var c = rez.corp;
+
+        if (!c.ok) { toast(c.mesaj || 'N-a mers.'); return; }
+
+        // Butonul spune ce e ACUM, citit din răspunsul serverului — nu din ce
+        // am cerut noi. Cele două se potrivesc, dar adevărul e al lui.
+        var acum = !!c.fixat;
+
+        evFixeaza.setAttribute('data-fixat', acum ? '1' : '0');
+        evFixeaza.setAttribute('aria-pressed', acum ? 'true' : 'false');
+        evFixeaza.classList.toggle('is-on', acum);
+        if (fixVorba) { fixVorba.textContent = acum ? 'Fixat' : 'Fixează'; }
+
+        toast(c.mesaj || 'Gata.');
+      })
+      .catch(function () {
+        evFixeaza.disabled = false;
+        toast(mesajFaraLegatura());
+      });
+    });
+  }
+
   /* --- „Încheie evenimentul" ----------------------------------------------
      Doar organizatorul îl vede, și doar cât mai e ceva de încheiat. În două
      trepte, ca anularea: butonul își schimbă locul cu întrebarea. Confirmarea

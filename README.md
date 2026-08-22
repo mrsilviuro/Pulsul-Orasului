@@ -3504,13 +3504,67 @@ scrisă de mână ar fi putut cere zece mii deodată.
 
 ### Ordinea
 
-Întâi ce urmează, de la cel mai apropiat. Apoi ce s-a încheiat, de la cel mai
-proaspăt: dintre două seri trecute, cea de ieri interesează mai mult decât cea
-de acum trei luni.
+Întâi ce e **fixat de echipă** (vezi mai jos). Apoi ce urmează, de la cel mai
+apropiat. Apoi ce s-a încheiat, de la cel mai proaspăt: dintre două seri
+trecute, cea de ieri interesează mai mult decât cea de acum trei luni.
 
 Cele încheiate se văd din prima — poza se stinge, iar în colț scrie „Încheiat".
 Semnul e pus de pe prima pagină, nu din cartonaș: în tabul „Istoric" de pe
 profil totul e încheiat, iar un semn pe fiecare cartonaș ar fi doar zgomot.
+
+### Anunțul fixat de echipă
+
+Prima pagină se așază singură, după ceas. E ordinea bună în aproape toate
+zilele — dar nu în toate. Când orașul are un lucru care *chiar* contează (o
+sărbătoare, o strângere de ajutoare, o vânătoare pusă la cale de casă), el
+trebuie să stea sus, oricât de departe ar fi ziua lui și oricâte s-ar întâmpla
+mai devreme.
+
+Piuneza (`evenimente.fixat_la`, `sql/029`) face exact atât: anunțul stă primul
+și primește un chenar în culoarea site-ului, plus un semn în colțul de
+jos-stânga al pozei — singurul rămas liber, fiindcă sus-stânga e categoria,
+sus-dreapta e starea și jos-dreapta sunt cifrele. Toate patru trebuie să încapă
+odată: un anunț fixat poate fi foarte bine unul anulat.
+
+**Cheia de sortare stă înaintea tuturor**, și mai ales înaintea celei care
+desparte viitorul de trecut:
+
+```sql
+ORDER BY (e.fixat_la IS NULL) ASC,
+         e.fixat_la DESC,
+         <s-a încheiat?> ASC,
+         …
+```
+
+Altfel un anunț încheiat sau anulat, dar fixat, ar fi căzut oricum sub tot ce
+urmează — și tocmai atunci piuneza n-ar mai fi făcut nimic. Între două fixate,
+cel pus mai de curând stă deasupra: de aceea coloana e o **dată**, nu un 0/1 —
+ea ține și ordinea, și răspunde la „de când stă ăsta în cap?".
+
+**Numai omul casei** o pune și o ia, de pe pagina anunțului, cu butonul de lângă
+„Editează". Nu e o unealtă a organizatorului: dacă ar fi, ar apăsa-o toți, iar
+„primul în listă" n-ar mai însemna nimic — ar fi doar rândul obișnuit, scris cu
+alt cuvânt. Butonul stă acolo, și nu într-o listă de administrare, fiindcă ce
+merită capul primei pagini se vede citind anunțul, nu dintr-un rând de tabel.
+
+**Se pune pe orice anunț care se vede pe site** — aprobat, încheiat sau anulat.
+Un anunț anulat care rămâne fixat e chiar ce trebuie uneori: vestea că nu se mai
+ține ajunge la toți cei care o așteptau tocmai stând sus. Ce nu se fixează e ce
+n-a trecut încă pe la nimeni și ce a fost respins: acolo piuneza ar fi o unealtă
+care nu face nimic, fiindcă anunțul nu e pe prima pagină deloc.
+
+**Nu se stinge singură niciodată.** Se scoate cu mâna, de cine a pus-o.
+
+Piuneza se pune **peste** stingere, nu în locul ei: un anunț încheiat, dar
+fixat, rămâne stins ca oricare încheiat și păstrează „Încheiat" în colț — doar
+că are chenar și stă primul. Altfel n-ar mai fi „încheiat", ar fi „altceva".
+
+Butonul **comută și spune ce e acum**: stins scrie „Fixează", aprins scrie
+„Fixat". Dintr-o apăsare, fără confirmare și fără reîncărcare — nu se pierde
+nimic și se ia înapoi cu aceeași apăsare; cele două trepte de la „Încheie" și
+„Anulează" sunt pentru fapte definitive. Se trimite **ce se vrea**, nu „comută":
+cu o comutare, două file deschise deodată ar fi apăsat una după alta și ar fi
+lăsat piuneza exact cum era.
 
 ### „Live": ce se petrece chiar acum
 
@@ -4527,6 +4581,26 @@ diferite, iar același eveniment ar fi arătat „7" într-un loc și „8" în 
 Cifrele se scriu numai dacă rândul le-a adus din bază — un cartonaș desenat dintr-un
 rând care n-a cerut subcererile ar fi arătat „0 / 0", un neadevăr care pare o
 socoteală.
+
+### Rândul de sub cartonaș: când, unde, unde anume
+
+Sub fiecare cartonaș stau trei lucruri, în ordinea asta: **data, orașul, locul
+anume** — „30 aug 2026 · Roman · Piața Sfatului".
+
+Ordinea nu e întâmplătoare: se strânge dinspre larg spre îngust. Așa se citește
+ca o adresă spusă cu voce tare; invers, locul fără oraș te pune să te întrebi
+unde e Piața Sfatului.
+
+Orașul lipsea, și se simțea mai ales în afara primei pagini. Acolo se poate
+cerne după oraș, deci pare de prisos — dar cine intră de pe un mesaj primit, sau
+se uită pe profilul cuiva, sau la „Ar putea să te intereseze", n-a cernut nimic.
+Iar când orașele vor fi mai multe, o listă fără ele ar fi fost o listă din care
+lipsește tocmai ce alege omul.
+
+Se scrie la **toate** cartonașele, oriunde ar fi ele — ceea ce înseamnă că
+`e.oras` trebuie cerut în fiecare interogare care desenează un cartonaș. Două nu
+îl cereau (lista de pe profil și „Istoric"), iar acolo rândul ar fi ieșit tăcut
+fără oraș: cartonașul nu se plânge de o coloană lipsă, doar nu scrie nimic.
 
 ### Cine află
 

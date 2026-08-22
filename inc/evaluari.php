@@ -487,7 +487,8 @@ function istoricEvenimente(int $membruId): array
 
     $q = db()->prepare(
         'SELECT e.id, e.titlu, e.slug, e.coperta, e.data_eveniment, e.ora_inceput,
-                e.locatie, e.descriere, e.stare_moderare, e.participanti_max,
+                e.locatie, e.descriere, e.stare_moderare, e.oras, e.participanti_max,
+                e.fixat_la,
                 c.nume AS categorie, c.slug AS categorie_slug, c.imagine_default,
                 -- De el atârnă ce cifre se scriu în colțul cartonașului: la o
                 -- vânătoare „FindMe" participanții nu se arată deloc. Vezi

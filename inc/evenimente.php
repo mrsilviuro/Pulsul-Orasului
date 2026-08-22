@@ -236,6 +236,62 @@ function evenimentPublicat(array $eveniment): bool
     return in_array($eveniment['stare_moderare'] ?? '', ['aprobat', 'incheiat'], true);
 }
 
+/* ========================== ANUNȚUL FIXAT ============================ */
+
+/**
+ * Stă în capul primei pagini?
+ *
+ * O întrebare, un singur loc care o pune — ca la esteJocQr(). Coloana
+ * (`fixat_la`, sql/029) e o DATĂ, nu un 0/1: cine se uită la ea află și de când
+ * stă acolo, iar două anunțuri fixate se așază între ele după ea, fără să mai
+ * fie nevoie de o a doua coloană.
+ */
+function esteFixat(?array $eveniment): bool
+{
+    return $eveniment !== null && ($eveniment['fixat_la'] ?? null) !== null;
+}
+
+/**
+ * Cine poate umbla la piuneză.
+ *
+ * NUMAI OMUL CASEI, oricine ar fi scris anunțul. Nu e o unealtă a
+ * organizatorului: dacă ar fi, ar apăsa-o toți, iar „primul în listă" n-ar mai
+ * însemna nimic — ar fi doar rândul obișnuit, scris cu alt cuvânt.
+ *
+ * ORICE ANUNȚ CARE SE VEDE PE SITE, oricare i-ar fi starea: aprobat, încheiat
+ * sau anulat. Un anunț anulat care rămâne fixat e chiar ce trebuie uneori —
+ * vestea că nu se mai ține ajunge la toți cei care o așteptau tocmai stând sus.
+ *
+ * Ce NU se fixează: ce n-a trecut încă pe la nimeni (în așteptare) și ce a fost
+ * respins. Acolo n-ar avea unde să stea primul, fiindcă nu sunt pe prima pagină
+ * deloc — iar o piuneză pusă pe un anunț nevăzut de nimeni ar fi o unealtă care
+ * nu face nimic, adică una pe care cineva o va apăsa într-o zi și se va întreba
+ * de ce n-a mers.
+ */
+function poateFiFixat(?array $eveniment): bool
+{
+    return $eveniment !== null
+        && in_array($eveniment['stare_moderare'] ?? '', ['aprobat', 'incheiat', 'anulat'], true);
+}
+
+/**
+ * Pune sau ia piuneza.
+ *
+ * Nu verifică nimic: cine are voie se hotărăște în api/fixeaza-eveniment.php,
+ * unde se știe și cine cere. Aici e doar scrierea — aceeași împărțire ca la
+ * moderezaEveniment() și anuleazaEveniment().
+ *
+ * `actualizat_la` NU se atinge, spre deosebire de celelalte scrieri: piuneza nu
+ * e o schimbare a anunțului, e o hotărâre despre unde stă el în listă. Dacă ar
+ * atinge-o, un anunț fixat ar părea „editat acum" în lista de administrare, iar
+ * ștampila de corectură (sql/026) și-ar pierde înțelesul.
+ */
+function fixeazaEveniment(array $eveniment, bool $fixat): void
+{
+    $q = db()->prepare('UPDATE evenimente SET fixat_la = ? WHERE id = ?');
+    $q->execute([$fixat ? acum() : null, (int) $eveniment['id']]);
+}
+
 /* ============================== MODERAREA ============================ */
 
 /**
@@ -562,6 +618,7 @@ function evenimenteDePePrima(string $oras = '', string $categorie = '', int $deL
     $q = db()->prepare(
         'SELECT e.id, e.titlu, e.slug, e.coperta, e.data_eveniment, e.ora_inceput,
                 e.locatie, e.descriere, e.stare_moderare, e.oras, e.participanti_max,
+                e.fixat_la,
                 c.nume AS categorie, c.slug AS categorie_slug, c.imagine_default,
                 c.joc_qr AS categorie_joc_qr,
                 ' . CIFRE_CARTONAS . ',
@@ -569,7 +626,21 @@ function evenimenteDePePrima(string $oras = '', string $categorie = '', int $deL
            FROM evenimente e
            JOIN categorii c ON c.id = e.categorie_id
           WHERE ' . implode(' AND ', $unde) . '
-          ORDER BY ' . $eIncheiat . ' ASC,
+          -- CELE FIXATE, DEASUPRA TUTUROR — înaintea oricărei alte socoteli.
+          --
+          -- `fixat_la IS NULL` dă 0 pentru cele fixate și 1 pentru restul, iar
+          -- `ASC` le pune pe cele cu 0 în cap. Cheia asta stă ÎNAINTEA celei
+          -- care desparte trecutul de viitor, dinadins: altfel un anunț
+          -- încheiat sau anulat, dar fixat, ar fi căzut oricum sub tot ce
+          -- urmează, și tocmai atunci piuneza n-ar mai fi făcut nimic.
+          --
+          -- Între ele, cel fixat cel mai de curând stă primul: `fixat_la DESC`.
+          -- Fără rândul ăsta, două anunțuri fixate s-ar fi așezat după ziua
+          -- lor, iar omul casei n-ar fi avut niciun fel de a spune care
+          -- contează mai mult.
+          ORDER BY (e.fixat_la IS NULL) ASC,
+                   e.fixat_la DESC,
+                   ' . $eIncheiat . ' ASC,
                    CASE WHEN ' . $eIncheiat . ' THEN NULL ELSE e.data_eveniment END ASC,
                    e.data_eveniment DESC,
                    e.ora_inceput ASC,
@@ -661,6 +732,7 @@ function evenimenteSugerate(int $fara = 0, int $cate = EVENIMENTE_SUGERATE): arr
     $q = db()->prepare(
         'SELECT e.id, e.titlu, e.slug, e.coperta, e.data_eveniment, e.ora_inceput,
                 e.locatie, e.descriere, e.stare_moderare, e.oras, e.participanti_max,
+                e.fixat_la,
                 c.nume AS categorie, c.slug AS categorie_slug, c.imagine_default,
                 c.joc_qr AS categorie_joc_qr,
                 ' . CIFRE_CARTONAS . '
@@ -791,7 +863,8 @@ function evenimenteDePeProfil(int $membruId, bool $vedeSiCeleInAsteptare): array
 
     $q = db()->prepare(
         'SELECT e.id, e.titlu, e.slug, e.coperta, e.data_eveniment, e.ora_inceput,
-                e.locatie, e.descriere, e.stare_moderare, e.participanti_max,
+                e.locatie, e.descriere, e.stare_moderare, e.oras, e.participanti_max,
+                e.fixat_la,
                 c.nume AS categorie, c.slug AS categorie_slug, c.imagine_default,
                 c.joc_qr AS categorie_joc_qr,
                 ' . CIFRE_CARTONAS . '
@@ -985,12 +1058,18 @@ function randeazaCartonasEveniment(
     $anulat      = $stare === 'anulat';
     $live        = $stare === 'live';
 
+    $fixat = esteFixat($ev);
+
     $clase = 'card';
     if ($inAsteptare)          { $clase .= ' card--in-asteptare'; }
     // Aceeași clasă pentru amândouă: stingerea pozei e la fel, se schimbă doar
     // cuvântul din colț.
     if ($incheiat || $anulat)  { $clase .= ' card--incheiat'; }
     if ($live)                 { $clase .= ' card--live'; }
+    // Piuneza se pune PESTE stingere, nu în locul ei: un anunț încheiat, dar
+    // fixat, rămâne stins ca oricare încheiat — doar că are chenar și stă
+    // primul. Altfel n-ar mai fi „încheiat", ar fi „altceva".
+    if ($fixat)                { $clase .= ' card--fixat'; }
     if ($ascuns)               { $clase .= ' ascuns'; }
 
     $coperta = urlCoperta($ev['coperta'] ?? null);
@@ -1030,10 +1109,51 @@ function randeazaCartonasEveniment(
               . '<span class="pulse-dot" aria-hidden="true"></span>Live</span>';
     }
 
+    /**
+     * Piuneza, în colțul de JOS-STÂNGA — singurul rămas liber pe poză.
+     *
+     * Sus-stânga e categoria, sus-dreapta e starea („Încheiat", „Anulat",
+     * „Live"), jos-dreapta sunt cifrele. Toate patru trebuie să încapă odată:
+     * un anunț fixat poate fi foarte bine unul anulat, și tocmai atunci
+     * contează să se vadă și una, și alta.
+     *
+     * Fără cuvânt, doar semnul: „Fixat" scris lângă el n-ar spune nimic
+     * cititorului obișnuit, care nu știe și nu trebuie să știe că există o
+     * unealtă de casă. Ce spune piuneza, spune prin locul din listă. `title` e
+     * acolo pentru cine se întreabă totuși.
+     */
+    $piuneza = $fixat
+        ? '<span class="card__pin" title="Anunț fixat de echipă">'
+          . '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">'
+          . '<path d="M9 3h6l-1 6 4 3v2H6v-2l4-3-1-6Z"/><path d="M12 14v7"/>'
+          . '</svg></span>'
+        : '';
+
+    /**
+     * ORAȘUL, între dată și locul anume.
+     *
+     * Ordinea nu e întâmplătoare: se strânge dinspre larg spre îngust — când,
+     * în ce oraș, și abia apoi unde anume. „30 aug · Roman · Piața Sfatului" se
+     * citește ca o adresă spusă cu voce tare; invers, locul fără oraș te pune
+     * să te întrebi unde e Piața Sfatului.
+     *
+     * Se scrie la TOATE cartonașele, oriunde ar fi ele. Pe prima pagină se
+     * poate cerne după oraș, deci acolo pare de prisos — dar cine intră de pe
+     * un mesaj primit, sau se uită pe profilul cuiva, sau la „Ar putea să te
+     * intereseze", n-a cernut nimic. Iar când orașele vor fi mai multe, o listă
+     * fără ele ar fi fost o listă din care lipsește tocmai ce alege omul.
+     */
+    $oras = trim((string) ($ev['oras'] ?? ''));
+
+    $undeva = $oras !== ''
+        ? '<span class="dot" aria-hidden="true"></span><span>' . h($oras) . '</span>'
+        : '';
+
     return '<article class="' . $clase . '">'
          . '<a class="card__media" href="' . $adresa . '">'
          . $poza
          . '<span class="card__tag">' . h((string) ($ev['categorie'] ?? '')) . '</span>'
+         . $piuneza
          . $semn
          . $insigne
          . cifreleCartonasului($ev)
@@ -1044,6 +1164,7 @@ function randeazaCartonasEveniment(
          . '<div class="card__meta">'
          . '<time datetime="' . h((string) $ev['data_eveniment']) . '">'
          . h(dataScurta($ev['data_eveniment'])) . '</time>'
+         . $undeva
          . '<span class="dot" aria-hidden="true"></span>'
          . '<span>' . h(inceputDeText((string) $ev['locatie'], 48)) . '</span>'
          . '</div></div></article>';
