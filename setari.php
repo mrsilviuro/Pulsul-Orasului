@@ -28,7 +28,7 @@ if ($membru === null) {
  * Conturile deschise cu Google au parola_hash NULL — nu e o lipsă, e chiar
  * felul lor de a fi. Lor nu avem ce parolă veche să le cerem.
  */
-$q = db()->prepare('SELECT parola_hash, telefon, newsletter, email_comentarii
+$q = db()->prepare('SELECT parola_hash, telefon, newsletter, email_comentarii, email_feedback
                       FROM membri WHERE id = ? LIMIT 1');
 $q->execute([(int) $membru['id']]);
 $setari = $q->fetch() ?: [];
@@ -37,10 +37,11 @@ $areParola  = !empty($setari['parola_hash']);
 $telefon    = (string) ($setari['telefon'] ?? '');
 $newsletter = !isset($setari['newsletter']) || (int) $setari['newsletter'] === 1;
 
-// Ca la newsletter: lipsa coloanei înseamnă „pornit". Amândouă sunt pornite din
-// start (vezi sql/021), iar un rând citit dintr-o bază mai veche nu trebuie să
-// arate bifa stinsă cât timp serverul îi scrie oricum.
+// Ca la newsletter: lipsa coloanei înseamnă „pornit". Toate trei sunt pornite
+// din start (vezi sql/021 și sql/027), iar un rând citit dintr-o bază mai veche
+// nu trebuie să arate bifa stinsă cât timp serverul îi scrie oricum.
 $emailComentarii = !isset($setari['email_comentarii']) || (int) $setari['email_comentarii'] === 1;
+$emailFeedback   = !isset($setari['email_feedback'])   || (int) $setari['email_feedback']   === 1;
 
 $titlu     = 'Setările contului — PulsulOrasului.Ro';
 $descriere = 'Parola, telefonul și preferințele contului tău.';
@@ -201,6 +202,24 @@ require __DIR__ . '/inc/antet.php';
                    <?= $emailComentarii ? 'checked' : '' ?>>
             <span>Vreau să primesc e-mail când cineva comentează la evenimentul meu
                   sau îmi răspunde la un comentariu.</span>
+          </label>
+        </div>
+
+        <!--
+          A treia bifă, tot cu coloana ei (vezi sql/027). DOAR PENTRU CE E
+          SCRIS: stelele rămân anonime, deci despre ele nu pleacă niciodată
+          niciun mesaj — o înștiințare la fiecare stea ar fi însemnat cinci
+          e-mailuri după o ieșire cu cinci oameni, fiecare spunând „cineva
+          te-a notat, nu-ți spunem cine, nu-ți spunem cât". Scrie chiar în
+          rândul bifei, ca nimeni să nu se aștepte la altceva.
+        -->
+        <div class="field">
+          <label class="check">
+            <input type="checkbox" id="st-feedback" name="email_feedback"
+                   <?= $emailFeedback ? 'checked' : '' ?>>
+            <span>Doresc să fiu informat prin e-mail când cineva îmi lasă un feedback
+                  scris pe profilul meu. (Notele cu stele rămân anonime — despre
+                  ele nu-ți scriem.)</span>
           </label>
         </div>
 

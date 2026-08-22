@@ -443,7 +443,10 @@ db()->exec('DELETE FROM evenimente');
 
 echo "\n=== CE TREBUIE RESPINS ===\n";
 
-$scurt = str_repeat('a', 299);
+// Cu un caracter sub prag, oricare ar fi pragul: scris de mână, numărul ar fi
+// rămas în urmă la prima schimbare a lui DESCRIERE_MIN — și chiar a rămas, când
+// pragul a coborât de la 300 la 200.
+$scurt = str_repeat('a', DESCRIERE_MIN - 1);
 
 foreach ([
     ['titlu gol',            ['titlu' => ''],                                'titlu'],
@@ -469,7 +472,7 @@ foreach ([
     ['cost cu litere',       ['gratuit' => null, 'cost' => 'mult'],          'cost'],
     ['vârstă inventată',     ['varsta_minima' => '21'],                      'varsta_minima'],
     ['gen inventat',         ['gen_participanti' => 'altceva'],              'gen_participanti'],
-    ['descriere sub 300',    ['descriere' => $scurt],                        'descriere'],
+    ['descriere sub prag',   ['descriere' => $scurt],                        'descriere'],
     ['descriere goală',      ['descriere' => ''],                            'descriere'],
     ['participanți fără număr', ['fara_participanti_min' => null, 'participanti_min' => ''], 'participanti_min'],
     ['participanți cu litere',  ['fara_participanti_min' => null, 'participanti_min' => 'zece'], 'participanti_min'],
@@ -489,22 +492,24 @@ verifica('niciunul n-a ajuns în bază', 0, cateEvenimente());
 
 echo "\n=== DESCRIEREA: CARACTERE, NU OCTEȚI ===\n";
 
-// 300 de „ă" = 600 de octeți, dar exact 300 de caractere. Trebuie să treacă.
-$r = trimite($c, ['descriere' => str_repeat('ă', 300)]);
-verifica('300 de „ă" trec (600 de octeți)', true, $r['ok'] ?? false);
-verifica('și se salvează întregi', 300,
+// Fix cât pragul, în „ă": de două ori mai mulți octeți decât caractere. Cu
+// strlen() ar fi părut de ajuns cu mult înainte de a fi. Trebuie să treacă.
+$r = trimite($c, ['descriere' => str_repeat('ă', DESCRIERE_MIN)]);
+verifica('fix ' . DESCRIERE_MIN . ' de „ă" trec (dublu în octeți)', true, $r['ok'] ?? false);
+verifica('și se salvează întregi', DESCRIERE_MIN,
     mb_strlen((string) ultimulEveniment()['descriere'], 'UTF-8'));
 
 db()->exec('DELETE FROM evenimente');
 
-// 299 de „ă" = 598 de octeți. Cu strlen() ar fi trecut. Nu trebuie.
-$r = trimite($c, ['descriere' => str_repeat('ă', 299)]);
-verifica('299 de „ă" NU trec, deși au 598 de octeți', true, !empty($r['erori']['descriere']));
+// Cu unul mai puțin: în octeți ar fi trecut de mult, în caractere nu.
+$r = trimite($c, ['descriere' => str_repeat('ă', DESCRIERE_MIN - 1)]);
+verifica('unul mai puțin NU trece, deși are octeți destui', true,
+    !empty($r['erori']['descriere']));
 
 echo "\n=== TEXTUL RĂMÂNE CUM L-A SCRIS OMUL ===\n";
 
 $descriereCuParagrafe = "Primul paragraf, despre ce facem.\n\nAl doilea paragraf, cu detalii.\n\n"
-    . str_repeat('Mai scriem ceva ca să trecem de trei sute de caractere. ', 6);
+    . str_repeat('Mai scriem ceva ca să trecem de pragul de caractere. ', 6);
 
 $r = trimite($c, ['descriere' => $descriereCuParagrafe, 'titlu' => 'Meci Dinamo & Rapid <b>tare</b>']);
 verifica('trece', true, $r['ok'] ?? false);

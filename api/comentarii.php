@@ -91,17 +91,18 @@ if ($eveniment === null
 $evenimentId = (int) $eveniment['id'];
 
 /**
- * Discuția e a evenimentelor publicate.
+ * Discuția e a evenimentelor care au apucat să se vadă.
  *
- * Cât e în așteptare, respins sau anulat, pagina se deschide doar pentru
- * organizator sau pentru staff — n-are cine să discute acolo.
+ * Cât e în așteptare sau respins, pagina se deschide doar pentru organizator
+ * sau pentru staff — n-are cine să discute acolo.
  *
  * Un eveniment ÎNCHEIAT rămâne deschis la comentarii, spre deosebire de
  * listele de participanți. Acolo se închide o socoteală; aici oamenii spun cum
- * a fost, iar asta se întâmplă mai ales după. (evenimentPublicat() întoarce
- * adevărat și pentru „aprobat", și pentru „incheiat".)
+ * a fost, iar asta se întâmplă mai ales după. Un eveniment ANULAT, la fel: e
+ * tocmai momentul în care oamenii au ceva de zis. Vezi discutiaEDeschisa() din
+ * inc/comentarii.php, unde stă regula întreagă.
  */
-if (!evenimentPublicat($eveniment)) {
+if (!discutiaEDeschisa($eveniment)) {
     raspunsJson([
         'ok'    => false,
         'mesaj' => 'Evenimentul nu e publicat, deci nu are încă discuție.',

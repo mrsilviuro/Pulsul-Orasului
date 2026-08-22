@@ -2908,15 +2908,29 @@ body { overscroll-behavior-y: none; }
    din greșeală. Motivul stă în `title`. */
 .person__stele--stinse { opacity: .45; }
 
-/* „Lasă și câteva cuvinte" — apare după ce s-a dat o notă și duce pe profilul
-   omului, drept la formularul de evaluare. */
+/* „Lasă și câteva cuvinte" — apare după ce s-a dat o notă și deschide caseta
+   de scris chiar sub rândul omului.
+
+   E un <button>, nu o legătură: nu mai duce nicăieri. Arată mai departe ca un
+   link, fiindcă asta și face — deschide ceva — iar un al doilea buton plin
+   lângă stele ar fi îngreunat un rând care e, în fond, un nume. Resetul global
+   îi ia decorul nativ, deci fundalul și conturul se cer aici. */
 .person__parere {
+  padding: 0; border: 0; background: none;
+  font: inherit;
   font-size: 12.5px; font-weight: 600;
   color: var(--brand-link);
   text-decoration: underline; text-underline-offset: 2px;
+  cursor: pointer;
 }
 .person__parere:hover { color: var(--brand-link-hover); }
 [data-theme="dark"] .person__parere { color: var(--brand); }
+
+/* Caseta de scris e aceeași cu cea de la scoatere („.scoate-form"), fiindcă e
+   același fel de lucru: ceva ce se face în dreptul unui om anume, sub rândul
+   lui. Se deosebește doar prin ce N-are — nicio bifă, niciun roșu: aici nu se
+   ia nimic nimănui. */
+.parere-form .field__hint { margin-top: 6px; }
 
 /* „Neprezentat" — ce rămâne în locul stelelor după însemnarea organizatorului.
    O vede toată lumea, dar nu se apasă: e o informație, nu o unealtă. Aceleași

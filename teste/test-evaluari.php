@@ -155,9 +155,34 @@ salveazaEvaluare($trecutId, $organizator, $ana, 5);
 $notele = noteleMeleLaEveniment($trecutId, $ana);
 
 verifica('două note date', 2, count($notele));
-verifica('a lui Vlad', 3, $notele[$vlad] ?? 0);
-verifica('a organizatoarei', 5, $notele[$organizator] ?? 0);
+verifica('a lui Vlad', 3, $notele[$vlad]['stele'] ?? 0);
+verifica('a organizatoarei', 5, $notele[$organizator]['stele'] ?? 0);
 verifica('cine n-a notat nimic', [], noteleMeleLaEveniment($trecutId, $vlad));
+
+/**
+ * TEXTUL VINE ODATĂ CU STELELE, din același rând al aceleiași cereri: de el
+ * atârnă caseta de părere care se deschide pe pagina evenimentului, iar
+ * redeschisă trebuie să arate ce a scris omul, nu o casetă goală.
+ */
+verifica('textul vine odată cu stelele',
+    'Om de nădejde, a ajutat la strâns.', $notele[$vlad]['text'] ?? '');
+verifica('cine n-a primit vorbe are text gol', '', $notele[$organizator]['text'] ?? null);
+
+/**
+ * CASETA GOLITĂ ÎȘI RETRAGE VORBELE — dar numai când omul a apăsat „Trimite"
+ * pe un formular de părere ($eScriere). O stea apăsată pe pagina
+ * evenimentului nu trimite niciun text, iar acolo lipsa lui înseamnă „nu
+ * atinge ce scria", nu „șterge".
+ */
+salveazaEvaluare($trecutId, $vlad, $ana, 3);
+verifica('o stea nouă nu șterge vorbele', 'Om de nădejde, a ajutat la strâns.',
+    evaluareaMea($trecutId, $ana, $vlad)['text']);
+
+salveazaEvaluare($trecutId, $vlad, $ana, 3, null, false, true);
+verifica('caseta golită le retrage', null, evaluareaMea($trecutId, $ana, $vlad)['text']);
+verifica('dar nota rămâne', 3, (int) evaluareaMea($trecutId, $ana, $vlad)['stele']);
+
+salveazaEvaluare($trecutId, $vlad, $ana, 3, 'Om de nădejde, a ajutat la strâns.', false, true);
 
 /* ======================== 3. MEDIA DE PE PROFIL ==================== */
 
@@ -445,6 +470,47 @@ verifica('două cuvinte de înțeles trec', '',
 verifica('„ok" nu ajută pe nimeni', true, verificaTextEvaluare('ok')['eroare'] !== '');
 verifica('prea lung, respins', true,
     verificaTextEvaluare(str_repeat('a', EVALUARE_TEXT_MAX + 1))['eroare'] !== '');
+
+/* ============== CINE AFLĂ CĂ I S-A SCRIS CEVA ====================== */
+
+echo "\n=== ÎNȘTIINȚAREA LA FEEDBACK ===\n";
+
+/**
+ * Aici se verifică doar CINE ar trebui înștiințat. Trimiterea propriu-zisă e în
+ * api/evaluare.php și nu se cheamă de aici: testul ăsta nu pornește serverul,
+ * iar un e-mail plecat dintr-un test e exact felul de lucru care ajunge într-o
+ * zi în lume.
+ *
+ * NUMAI PENTRU CE E SCRIS. Stelele rămân anonime, deci despre ele nu pleacă
+ * nimic — regula aceea se ține în api/evaluare.php, unde vestea se cere doar la
+ * `fapta = scrie`; aici se verifică cine e în stare s-o primească.
+ */
+$cineAfla = static fn (?array $om): ?int => $om === null ? null : (int) $om['id'];
+
+verifica('cel notat află', $vlad, $cineAfla(omDeInstiintatLaFeedback($vlad, $ana)));
+verifica('și primește adresa lui', true,
+    ($cineAfla(omDeInstiintatLaFeedback($vlad, $ana)) !== null)
+    && (omDeInstiintatLaFeedback($vlad, $ana)['email'] ?? '') !== '');
+
+// Butonul din e-mail duce pe profilul LUI, deci permalinkul vine cu rândul.
+verifica('și permalinkul, pentru butonul din e-mail', true,
+    (omDeInstiintatLaFeedback($vlad, $ana)['permalink'] ?? '') !== '');
+
+verifica('nimeni nu-și scrie sieși', null, $cineAfla(omDeInstiintatLaFeedback($ana, $ana)));
+verifica('un id care nu există, nimic', null, $cineAfla(omDeInstiintatLaFeedback(999999, $ana)));
+verifica('și nici zero',               null, $cineAfla(omDeInstiintatLaFeedback(0, $ana)));
+
+/* Bifa din setări oprește vestea, dar nu și părerea: ea se scrie mai departe. */
+db()->prepare('UPDATE membri SET email_feedback = 0 WHERE id = ?')->execute([$vlad]);
+verifica('cine a stins bifa nu mai află', null, $cineAfla(omDeInstiintatLaFeedback($vlad, $ana)));
+db()->prepare('UPDATE membri SET email_feedback = 1 WHERE id = ?')->execute([$vlad]);
+
+/* Un cont care nu mai e activ n-are unde primi nimic. */
+db()->prepare('UPDATE membri SET stare = "suspendat" WHERE id = ?')->execute([$vlad]);
+verifica('un cont suspendat nu află', null, $cineAfla(omDeInstiintatLaFeedback($vlad, $ana)));
+db()->prepare('UPDATE membri SET stare = "activ" WHERE id = ?')->execute([$vlad]);
+
+verifica('iar acum află din nou', $vlad, $cineAfla(omDeInstiintatLaFeedback($vlad, $ana)));
 
 /* =========================== curățenie ============================= */
 

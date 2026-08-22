@@ -167,12 +167,16 @@ if ($stele === 0) {
 }
 
 /**
- * Textul, doar când vine din formularul de pe profil.
+ * Textul, doar când vine dintr-un formular de părere.
  *
- * De pe pagina evenimentului se dau stele dintr-o apăsare, fără vorbe — și
- * `null` înseamnă acolo „nu atinge ce scria înainte", nu „șterge". Cine a
- * scris un text pe profil și apoi schimbă stelele de pe eveniment nu are de
- * unde să știe că altfel și-ar șterge vorbele. Vezi salveazaEvaluare().
+ * De pe stelele din dreptul cuiva se dă o notă dintr-o apăsare, fără vorbe —
+ * și `null` înseamnă acolo „nu atinge ce scria înainte", nu „șterge". Cine a
+ * scris un text și apoi schimbă stelele nu are de unde să știe că altfel și-ar
+ * șterge vorbele. Vezi salveazaEvaluare().
+ *
+ * La `scrie`, dimpotrivă: acolo omul a apăsat „Trimite" pe o casetă pe care o
+ * vede, iar goală înseamnă „îmi retrag vorbele". De aceea pleacă mai jos cu
+ * $eScriere.
  */
 $text = null;
 
@@ -183,11 +187,55 @@ if ($fapta === 'scrie') {
         raspunsJson(['ok' => false, 'erori' => ['text' => $rezultat['eroare']]], 422);
     }
 
-    // Gol înseamnă „doar stele" și pe profil: caseta nu e obligatorie.
+    // Gol înseamnă „doar stele": caseta nu e obligatorie.
     $text = $rezultat['text'] !== '' ? $rezultat['text'] : null;
 }
 
-salveazaEvaluare($evenimentId, $tintaId, $membruId, $stele, $text);
+/**
+ * Ce scria ÎNAINTE — citit cât încă se mai poate.
+ *
+ * De el atârnă o singură hotărâre: pleacă sau nu vestea pe e-mail. Se trimite
+ * numai când textul e ALTUL decât cel de dinainte, ca îndreptarea unei virgule
+ * să nu ajungă a doua oară în cutia poștală a omului. O părere ștearsă nu
+ * vestește nimic: n-are cine să citească ce nu mai e.
+ */
+$textVechi = null;
+
+if ($fapta === 'scrie') {
+    $inainte   = evaluareaMea($evenimentId, $membruId, $tintaId);
+    $textVechi = $inainte !== null ? (string) ($inainte['text'] ?? '') : '';
+}
+
+salveazaEvaluare($evenimentId, $tintaId, $membruId, $stele, $text, false, $fapta === 'scrie');
+
+/**
+ * VESTEA CĂ I S-A SCRIS CEVA.
+ *
+ * Numai la o părere SCRISĂ, și numai la una nouă sau schimbată. Stelele rămân
+ * anonime și tăcute — vezi omDeInstiintatLaFeedback(), unde stă regula
+ * întreagă, și sql/027-instiintari-feedback.sql, unde stă bifa.
+ *
+ * Pleacă DUPĂ scriere: un e-mail care spune „ți-a scris cineva" pentru o
+ * părere care n-a intrat în bază e mai rău decât nimic. Iar dacă e-mailul nu
+ * pleacă, părerea rămâne scrisă — poșta n-are voie să întoarcă din drum ce a
+ * apucat omul să spună.
+ */
+if ($fapta === 'scrie' && $text !== null && $text !== $textVechi) {
+    $celNotat = omDeInstiintatLaFeedback($tintaId, $membruId);
+
+    if ($celNotat !== null) {
+        require_once __DIR__ . '/../inc/email.php';
+
+        emailFeedbackNou(
+            (string) $celNotat['email'],
+            (string) $celNotat['prenume'],
+            numeAfisat((string) $membru['nume'], (string) $membru['prenume']),
+            (string) $eveniment['titlu'],
+            $text,
+            urlIntreg('profil.php?m=' . urlencode((string) ($celNotat['permalink'] ?? '')))
+        );
+    }
+}
 
 /* ========================== 5. Ce se întoarce ======================= */
 

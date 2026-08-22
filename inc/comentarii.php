@@ -30,6 +30,34 @@ require_once __DIR__ . '/imagini.php';
  */
 const COMENTARII_DEODATA = 15;
 
+/**
+ * Se poate scrie sub anunțul ăsta?
+ *
+ * ÎNTREBARE DEOSEBITĂ DE evenimentPublicat(), dinadins, deși până acum era
+ * aceeași. Aceea răspunde la „se poartă lumea cu el ca și cu unul de pe site" —
+ * de ea atârnă înscrierile, scoaterile de pe listă, încheierea, indexarea la
+ * Google. Asta răspunde doar la „au oamenii unde vorbi".
+ *
+ * TREI STĂRI, nu două:
+ *
+ *   aprobat  — firește;
+ *   incheiat — mai ales: aici se spune cum a fost, iar asta se întâmplă după;
+ *   anulat   — ȘI EL. Comentariile erau închise, și era greșit. O ieșire
+ *              anulată e tocmai momentul în care oamenii au ceva de zis: „ce
+ *              păcat", „mai încercăm?", „eu tot mă duc". Închizându-le, îi
+ *              lăsam pe cei care se înscriseseră fără niciun loc în care să-și
+ *              răspundă unul altuia — iar organizatorul rămânea fără felul cel
+ *              mai firesc de a-și cere scuze.
+ *
+ * Ce NU se deschide odată cu ele: înscrierile. Nu poți spune „vin" la ceva ce
+ * nu se mai ține, iar api/interes.php cere mai departe evenimentPublicat().
+ */
+function discutiaEDeschisa(array $eveniment): bool
+{
+    return evenimentPublicat($eveniment)
+        || ($eveniment['stare_moderare'] ?? '') === 'anulat';
+}
+
 /* ============================== CITIREA ============================== */
 
 /**

@@ -624,6 +624,34 @@ verifica('șters de tot, rapoartele pleacă în cascadă', 0, numaraRapoarte($id
 
 /* ===================== 12. CINE AFLĂ PE E-MAIL ====================== */
 
+echo "\n=== CÂND E DESCHISĂ DISCUȚIA ===\n";
+
+/**
+ * ÎNTREBARE DEOSEBITĂ DE evenimentPublicat(), dinadins. Aceea răspunde la „se
+ * poartă lumea cu el ca și cu unul de pe site" — de ea atârnă înscrierile,
+ * scoaterile de pe listă, indexarea. Asta răspunde doar la „au oamenii unde
+ * vorbi", iar acolo ANULATUL intră și el.
+ *
+ * Comentariile la un anunț anulat au fost o vreme închise, și era greșit: o
+ * ieșire anulată e tocmai momentul în care oamenii au ceva de zis unul altuia,
+ * iar organizatorul rămânea fără felul cel mai firesc de a-și cere scuze.
+ */
+$cuStarea = static fn (string $stare): array => ['stare_moderare' => $stare];
+
+verifica('la unul aprobat, deschisă',   true,  discutiaEDeschisa($cuStarea('aprobat')));
+verifica('la unul încheiat, deschisă',  true,  discutiaEDeschisa($cuStarea('incheiat')));
+verifica('LA UNUL ANULAT, deschisă',    true,  discutiaEDeschisa($cuStarea('anulat')));
+verifica('cât așteaptă, închisă',       false, discutiaEDeschisa($cuStarea('in_asteptare')));
+verifica('respins, închisă',            false, discutiaEDeschisa($cuStarea('respins')));
+verifica('fără stare, închisă',         false, discutiaEDeschisa([]));
+
+/**
+ * Se deschide DOAR discuția. Nu poți spune „vin" la ceva ce nu se mai ține, iar
+ * api/interes.php cere mai departe evenimentPublicat() — cele două întrebări
+ * trebuie să răspundă altfel la „anulat", altfel n-avea rost să fie două.
+ */
+verifica('dar anulatul rămâne nepublicat', false, evenimentPublicat($cuStarea('anulat')));
+
 echo "\n=== ÎNȘTIINȚĂRILE ===\n";
 
 /**

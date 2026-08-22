@@ -164,7 +164,7 @@ function anonimizeazaMembru(int $id): bool
                 token_confirmare = NULL, token_expira = NULL,
                 token_stergere = NULL, token_stergere_expira = NULL,
                 ip_inregistrare = NULL,
-                newsletter = 0, email_comentarii = 0,
+                newsletter = 0, email_comentarii = 0, email_feedback = 0,
                 stare = ?, anonimizat_la = ?
           WHERE id = ?'
     );

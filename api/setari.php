@@ -103,36 +103,49 @@ if ($sectiune === 'newsletter') {
 
     $vrea      = $daLimpede('newsletter');
     $vreaComen = $daLimpede('email_comentarii');
+    $vreaFdb   = $daLimpede('email_feedback');
 
     /**
-     * Amândouă într-o singură scriere, fiindcă vin dintr-un singur formular:
-     * două UPDATE-uri ar fi putut lăsa una salvată și cealaltă nu, dacă pica
+     * Toate trei într-o singură scriere, fiindcă vin dintr-un singur formular:
+     * trei UPDATE-uri ar fi putut lăsa una salvată și celelalte nu, dacă pica
      * ceva la mijloc — iar omul ar fi văzut „salvat" pentru o hotărâre făcută
      * pe jumătate.
      */
-    db()->prepare('UPDATE membri SET newsletter = ?, email_comentarii = ? WHERE id = ?')
-        ->execute([$vrea ? 1 : 0, $vreaComen ? 1 : 0, (int) $membru['id']]);
+    db()->prepare('UPDATE membri SET newsletter = ?, email_comentarii = ?, email_feedback = ?
+                    WHERE id = ?')
+        ->execute([$vrea ? 1 : 0, $vreaComen ? 1 : 0, $vreaFdb ? 1 : 0, (int) $membru['id']]);
 
     /**
      * Mesajul spune ce s-a ales, nu doar „gata".
      *
-     * Cu două bife, un singur „Salvat" n-ar mai fi spus nimic: omul care a
-     * stins una și a lăsat-o pe cealaltă n-ar fi știut dacă s-a înțeles care.
+     * Cu mai multe bife, un singur „Salvat" n-ar mai spune nimic: omul care a
+     * stins una și le-a lăsat pe celelalte n-ar ști dacă s-a înțeles care.
+     *
+     * SE ÎNȘIRĂ CE E PORNIT, nu se scrie o frază pentru fiecare împerechere:
+     * cu trei bife ar fi fost opt fraze, iar la a patra bifă șaisprezece. Așa,
+     * o bifă nouă înseamnă un rând nou în tabloul de mai jos.
      */
-    if ($vrea && $vreaComen) {
-        $mesaj = 'Gata, primești și evenimentele noi, și răspunsurile la comentarii.';
-    } elseif ($vrea) {
-        $mesaj = 'Îți scriem când apar evenimente noi, dar nu și la comentarii.';
-    } elseif ($vreaComen) {
-        $mesaj = 'Îți scriem doar când cineva îți comentează sau îți răspunde.';
-    } else {
+    $aprinse = [];
+
+    if ($vrea)      { $aprinse[] = 'când apar evenimente noi'; }
+    if ($vreaComen) { $aprinse[] = 'când cineva îți comentează sau îți răspunde'; }
+    if ($vreaFdb)   { $aprinse[] = 'când cineva îți lasă un feedback scris'; }
+
+    if ($aprinse === []) {
         $mesaj = 'Gata, nu-ți mai trimitem niciun e-mail de felul ăsta.';
+    } elseif (count($aprinse) === 1) {
+        $mesaj = 'Îți scriem doar ' . $aprinse[0] . '.';
+    } else {
+        // „a, b și c" — virgulă între primele, „și" înaintea ultimului.
+        $ultimul = array_pop($aprinse);
+        $mesaj   = 'Îți scriem ' . implode(', ', $aprinse) . ' și ' . $ultimul . '.';
     }
 
     raspunsJson([
         'ok'               => true,
         'newsletter'       => $vrea,
         'email_comentarii' => $vreaComen,
+        'email_feedback'   => $vreaFdb,
         'mesaj'            => $mesaj,
     ]);
 }

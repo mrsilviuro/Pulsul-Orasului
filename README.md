@@ -811,28 +811,43 @@ Același număr poate fi scris în multe feluri: `0722 33 44 55`,
 
 ### E-mailurile de la noi
 
-Două bife, amândouă pornite din start. Coloanele sunt `NOT NULL DEFAULT 1`, deci
-și conturile care există deja se trezesc cu ele pornite, fără vreun `UPDATE` de
+Trei bife, toate pornite din start. Coloanele sunt `NOT NULL DEFAULT 1`, deci și
+conturile care există deja se trezesc cu ele pornite, fără vreun `UPDATE` de
 migrare.
 
 | Bifa | Coloana | Ce oprește |
 |---|---|---|
 | „…e-mail cu evenimente noi" | `newsletter` | trimiterea nu e făcută încă |
 | „…când cineva comentează sau îmi răspunde" | `email_comentarii` | înștiințările din `api/comentarii.php` |
+| „…când cineva îmi lasă un feedback scris" | `email_feedback` | înștiințările din `api/evaluare.php` |
 
-**Două coloane, nu una,** deși stau în același formular. `newsletter` înseamnă
-„trimiteți-mi ce se mai întâmplă prin oraș" — ceva ce n-am cerut anume.
-`email_comentarii` înseamnă „spuneți-mi când cineva îmi răspunde mie". Cine
-stinge reclamele nu cere prin asta să i se ascundă și răspunsurile la propriile
-vorbe.
+**Câte o coloană pentru fiecare, nu una singură,** deși stau în același
+formular. `newsletter` înseamnă „trimiteți-mi ce se mai întâmplă prin oraș" —
+ceva ce n-am cerut anume. `email_comentarii` înseamnă „spuneți-mi când cineva
+îmi răspunde mie", iar `email_feedback` „spuneți-mi când cineva scrie ceva
+despre mine". Cine stinge reclamele nu cere prin asta să i se ascundă și
+răspunsurile la propriile vorbe; cine stinge zgomotul discuțiilor nu cere să nu
+mai afle ce se scrie despre el.
 
-**Un singur buton, totuși:** amândouă răspund la aceeași întrebare și pleacă
-într-o singură cerere, cu un singur `UPDATE`. Două butoane alăturate ar fi pus
-omul să apese de două ori pentru o hotărâre. Ca peste tot, o bifă scoasă nu
+**A treia bifă spune, chiar în rândul ei, ce NU face:** stelele rămân anonime,
+deci despre ele nu pleacă niciodată niciun mesaj. O înștiințare la fiecare stea
+apăsată ar fi însemnat cinci e-mailuri după o ieșire cu cinci oameni, fiecare
+spunând „cineva te-a notat, nu-ți spunem cine, nu-ți spunem cât" — nefolositor
+în cel mai bun caz, apăsător în cel mai rău. Iar cu numele în el, mesajul ar fi
+spart tocmai anonimatul care ține notele cinstite.
+
+**Un singur buton, totuși:** toate trei răspund la aceeași întrebare și pleacă
+într-o singură cerere, cu un singur `UPDATE`. Trei butoane alăturate ar fi pus
+omul să apese de trei ori pentru o hotărâre. Ca peste tot, o bifă scoasă nu
 ajunge deloc în datele trimise de browser — absența ei **este** răspunsul „nu
 vreau".
 
-Anonimizarea contului le stinge pe amândouă (`inc/stergere.php`), deși adresa
+Mesajul de confirmare **înșiră ce a rămas pornit**, în loc să aibă o frază
+pentru fiecare împerechere: cu trei bife ar fi fost opt fraze, iar la a patra
+bifă șaisprezece. Așa, o bifă nouă înseamnă un rând nou în tabloul din
+`api/setari.php`.
+
+Anonimizarea contului le stinge pe toate trei (`inc/stergere.php`), deși adresa
 oricum nu mai e a nimănui.
 
 ### Ștergerea contului, cu răgaz de 30 de zile
@@ -1229,10 +1244,20 @@ nelegat de nimic.
 
 ### Descrierea
 
-Minimum 300 de caractere, **numărate ca litere, nu ca octeți**. În UTF-8, „ă"
-ocupă doi octeți, deci `strlen()` ar fi lăsat să treacă un text de 150 de
-caractere scris cu diacritice — cine scrie corect românește ar fi fost
-avantajat, ceea ce e o prostie. Server-side se numără cu `mb_strlen()`, iar
+Minimum **200** de caractere, **numărate ca litere, nu ca octeți**. În UTF-8,
+„ă" ocupă doi octeți, deci `strlen()` ar fi lăsat să treacă un text pe jumătate
+scris cu diacritice — cine scrie corect românește ar fi fost avantajat, ceea ce
+e o prostie.
+
+Pragul a fost 300, și s-a plâns lumea — pe drept. La o partidă de fotbal în parc
+sau la o cafea sâmbătă dimineață, trei sute de caractere înseamnă că trebuie să
+*inventezi* ceva ca să treci de contor. Un prag care cere umplutură nu aduce
+anunțuri mai bune, aduce anunțuri mai lungi, și îl trimite acasă tocmai pe omul
+care avea de spus puțin și limpede. Două sute e cât o vorbă întreagă: unde, ce
+se face, ce să-ți iei cu tine.
+
+Numărul stă o singură dată, în `DESCRIERE_MIN`; formularul, contorul din pagină
+și mesajele de eroare îl citesc toate de acolo. Server-side se numără cu `mb_strlen()`, iar
 contorul din pagină cu `[...text].length`, nu cu `.length`, care numără tot
 unități UTF-16.
 
@@ -2198,6 +2223,47 @@ lumea, întrebarea „e joc?" trebuie să rămână la fel.
 Steagul călătorește cu rândul evenimentului (`categorie_joc_qr`), ca `esteJocQr()`
 să poată fi întrebat oriunde a ajuns rândul, fără încă o interogare.
 
+### Formularul de publicare se subțiază
+
+La o vânătoare, jumătate din întrebările formularului n-au răspuns. Nu există
+„până la": ora de început **e** capătul, clipa în care căutarea se închide. Nu
+se înscrie nimeni, deci nu există „de la câți" și „până la câți". Și nu se vinde
+niciun bilet.
+
+| Câmp | eveniment obișnuit | vânătoare |
+|---|---|---|
+| „Codul de pe abțibild" | — | **apare**, obligatoriu |
+| „Ora de sfârșit" + bifa ei | da | **pleacă** |
+| tot chenarul „Cine poate veni și cât costă?" | da | **pleacă** |
+| titlul „Când o să aibă loc?" | așa | **„Data și ora limită"** |
+| „Ora de început" | așa | **„Ora"** |
+
+**De ce se ascund, în loc să fie lămurite.** Un om de casă nou nu citește notele
+de subsol, dar completează orice câmp îi stă în față — și îl completează greșit,
+fiindcă întrebarea nu se potrivește cu ce publică. Un formular mai scurt e mai
+greu de greșit decât unul lung cu explicații.
+
+**Vorba se schimbă unde ar minți.** „Ora de început" la un concert e ora la care
+se începe; la o vânătoare e ora la care căutarea se **termină**. Cine citește
+„început" scrie exact pe dos.
+
+Trei atribute fac toată treaba, iar `main.js` le ascultă dintr-un singur loc:
+`data-fara-joc` (pleacă și se întoarce), `data-vorba-joc` (altă vorbă) și
+`data-vorba` (bucata care se schimbă, ca steluța de „obligatoriu" să rămână pe
+loc). Ce e ascuns **se și stinge** (`disabled`), ca un cost scris înainte de
+răzgândire să nu plece pe furiș odată cu anunțul — aceeași regulă ca la codul de
+abțibild.
+
+Serverul nu se bizuie pe asta. `verificaEveniment()` întreabă o dată dacă e o
+vânătoare — după **categorie**, nu după ce lipsește din cerere — și trece ora de
+sfârșit, costul și numărul de participanți drept nespecificate. Altfel oricine ar
+fi scăpat de reguli trimițând un formular ciuntit, iar noi am fi numit asta „a
+ales să nu completeze". Iar fără scutirile astea, un anunț de vânătoare ar fi
+fost oprit cu trei erori care arată spre bife pe care omul nu le mai vede — cea
+mai rea formă de refuz.
+
+Fără JS rămâne totul vizibil, cu vorbele obișnuite. E supărător, nu stricăcios.
+
 ### Pagina evenimentului arată altfel
 
 | | eveniment obișnuit | vânătoare |
@@ -2449,8 +2515,8 @@ Fișierul vechi se șterge de pe disc abia după ce rândul s-a schimbat cu bine
 evenimentul care se editează: omul cu un singur eveniment activ ar fi oprit
 tocmai de el, deci n-ar mai putea corecta niciodată nimic.
 
-**Verificările sunt aceleași.** Descrierea tot de 300 de caractere, titlul tot
-de minimum opt — la editare nu se cere mai puțin, altfel s-ar putea publica un
+**Verificările sunt aceleași.** Descrierea tot de `DESCRIERE_MIN` caractere,
+titlul tot de minimum opt — la editare nu se cere mai puțin, altfel s-ar putea publica un
 anunț bun și „edita" până rămâne gol.
 
 ### Anularea
@@ -3176,8 +3242,8 @@ care există.
 ### Două căi către aceeași notă
 
 De pe **pagina evenimentului**, dintr-o apăsare pe stele, în dreptul fiecărui
-participant. După apăsare apare „Lasă și câteva cuvinte", care duce în filă
-nouă pe profilul omului, drept la formular, cu nota deja aleasă.
+participant. După apăsare apare „Lasă și câteva cuvinte", care deschide caseta
+de scris **chiar acolo, sub rândul omului**.
 
 De pe **profil**, cu stele și text. Formularul apare doar cu `?ev=<slug>` în
 adresă — adică doar dacă omul a venit de pe pagina unui eveniment încheiat la
@@ -3187,6 +3253,58 @@ refuză la apăsare e mai rău decât unul care lipsește.
 Amândouă scriu în același rând (`INSERT ... ON DUPLICATE KEY UPDATE`). Textul
 se PĂSTREAZĂ când vin doar stele: cine schimbă nota de pe pagina evenimentului
 n-are de unde să știe că altfel și-ar șterge vorbele scrise pe profil.
+
+### Părerea se scrie unde stau stelele
+
+„Lasă și câteva cuvinte" a fost o vreme o legătură: deschidea profilul omului
+într-o filă nouă și derula până la formularul de acolo. Pierdea două lucruri
+deodată — **locul din listă** (cine tocmai notase trei oameni pleca de lângă al
+patrulea) și **firul gândului**, fiindcă pentru o propoziție ajungeai pe o
+pagină despre altcineva, printre păreri vechi.
+
+Acum e un `<button>` care deschide o casetă sub rândul lui. Nu e o unealtă
+nouă: e a treia folosire a aceleiași `deschideCaseta()` din `main.js`, după
+scoaterea de pe listă și „Nu s-a prezentat" — aceleași clase, același loc,
+același „a doua apăsare o închide". Șablonul stă în `event.php`, ca tot HTML-ul
+de pe site.
+
+**Se îndreaptă, nu se adaugă.** Redeschisă, caseta arată ce a scris omul data
+trecută. Textul vine în pagină odată cu stelele (`data-parere`, scris de
+`randeazaSteleParticipant()`), din același rând al aceleiași cereri —
+`noteleMeleLaEveniment()` aduce acum și `text`, nu doar `stele`. A doua
+întrebare pusă bazei pentru asta ar fi fost una degeaba. E textul **celui care
+se uită**, despre altcineva, nu părerile altora despre el: ajunge în pagină
+numai la cel care l-a scris.
+
+**Caseta golită își retrage vorbele.** Asta a cerut un semnal nou în
+`salveazaEvaluare()`: `$eScriere`. Fără el, `null` însemna peste tot „nu atinge
+ce scria înainte" — bun pentru o stea apăsată, care nu trimite niciun text, dar
+greșit pentru un formular pe care omul îl vede și îl trimite gol. Deosebirea nu
+se poate face din valoare, fiindcă amândouă ajung ca `null`; se face din **ce a
+apăsat omul**, iar asta o știe doar cel care cheamă funcția. Fără ea, cine își
+ștergea părerea o găsea rămasă acolo la reîncărcare, fără nicio vorbă — cea mai
+rea formă de „n-a mers": una care spune că a mers.
+
+### Cine află că i s-a scris ceva
+
+**Doar pentru părerile SCRISE.** Când cineva îți lasă câteva cuvinte pe profil,
+primești un e-mail cu numele lui, cu textul și cu un buton către profilul tău.
+`omDeInstiintatLaFeedback()` hotărăște cine îl primește; mesajul pleacă din
+`api/evaluare.php`, după scriere.
+
+**Niciodată pentru stele.** Ele rămân anonime, iar un mesaj despre ele ar fi
+fost ori inutil („cineva te-a notat, nu-ți spunem cine, nu-ți spunem cât"), ori
+o spargere a anonimatului care ține notele cinstite. Cinci oameni la o ieșire ar
+fi însemnat cinci astfel de mesaje.
+
+**Nici la fiecare virgulă îndreptată.** Vestea pleacă numai când textul e
+**altul** decât cel de dinainte — de aceea `api/evaluare.php` citește ce scria
+înainte de a scrie. O părere ștearsă nu vestește nimic: n-are cine să citească
+ce nu mai e. Și nici la „Nu s-a prezentat": textul acela nu e părerea nimănui,
+e scris de noi.
+
+Nu primesc nimic: omul însuși, cine a stins bifa `email_feedback` din setări, și
+un cont care nu mai e activ.
 
 ### „Nu s-a prezentat"
 
@@ -4266,9 +4384,34 @@ Sus e banda de „anulat", iar sub ea **motivul scris de organizator**, întocma
 l-a scris — e același text care a plecat prin e-mail, iar un rezumat făcut de noi
 ar fi spus altceva decât mesajul primit.
 
-Ce nu se mai poate acolo rămâne oprit de `evenimentPublicat()`, care întoarce „nu"
-pentru anulat: nimeni nu se mai înscrie și nimeni nu mai scrie comentarii. **Se
-citește tot, nu se mai face nimic.**
+Ce nu se mai poate acolo rămâne oprit de `evenimentPublicat()`, care întoarce
+„nu" pentru anulat: **nimeni nu se mai înscrie.** Nu poți spune „vin" la ceva ce
+nu se mai ține.
+
+**Discuția, în schimb, rămâne deschisă.** A fost și ea închisă o vreme, și era
+greșit. O ieșire anulată e tocmai momentul în care oamenii au ceva de zis — „ce
+păcat", „mai încercăm?", „eu tot mă duc" — iar cu comentariile închise cei care
+se înscriseseră rămâneau fără niciun loc în care să-și răspundă unul altuia, iar
+organizatorul fără felul cel mai firesc de a-și cere scuze.
+
+De aceea a apărut a doua întrebare, `discutiaEDeschisa()`, alături de
+`evenimentPublicat()`. Prima spune „au oamenii unde vorbi" (aprobat, încheiat,
+**anulat**), a doua „se poartă lumea cu el ca și cu unul de pe site" (aprobat,
+încheiat — de ea atârnă înscrierile, scoaterile de pe listă, indexarea la
+Google). Două întrebări care răspundeau la fel până acum, dar care nu erau
+aceeași întrebare; anulatul le-a despărțit.
+
+Se schimbă și **vorba din caseta goală**. „Fii primul care spune ceva" sub un
+anunț tocmai anulat ar suna a petrecere; acolo scrie „Evenimentul a fost anulat,
+dar discuția rămâne deschisă. Scrie, dacă ai ceva de spus." Înainte scria că
+„comentariile au fost închise", ceea ce era adevărat și era greșit deodată.
+
+Și **tabul își schimbă numele**: la un anunț anulat scrie „Ar fi participat", nu
+„Au participat". Oamenii aceia se înscriseseră la o seară care nu s-a mai ținut
+— „au participat" ar fi o minciună curată, iar „Participă", la prezent, i-ar
+trimite pe unii să-și ia haina de pe cuier. Anulatul se întreabă **înaintea**
+încheiatului: un anunț anulat pentru o zi care a trecut de-atunci e și una, și
+alta, iar anularea e vestea care contează.
 
 Anunțul rămâne și în liste — pe prima pagină și în tabul „Istoric" de pe profil —
 stins ca unul încheiat, dar cu **„Anulat"** scris în colț în loc de „Încheiat".
