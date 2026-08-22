@@ -3036,6 +3036,22 @@ body { overscroll-behavior-y: none; }
 .evaluare__eveniment { color: var(--text-faint); }
 .evaluare__eveniment:hover { color: var(--brand); }
 
+/* „×"-ul omului de casă, în dreptul unei păreri scrise.
+   Stă în antetul ei, lângă oră, ca steagul de raportare de la comentarii —
+   nu sub text, unde ar fi arătat ca un buton al cititorului. Se vede doar
+   pentru staff, și nici măcar nu ajunge în pagină pentru ceilalți. */
+.evaluare__sterge {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; margin-left: 2px; padding: 0;
+  border: 0; border-radius: var(--radius-pill);
+  background: transparent; color: var(--text-faint);
+  cursor: pointer; transition: background .18s var(--ease), color .18s var(--ease);
+}
+.evaluare__sterge .ico { width: 14px; height: 14px; }
+.evaluare__sterge:hover { background: rgba(224, 57, 59, .13); color: #c22b2d; }
+[data-theme="dark"] .evaluare__sterge:hover { color: #ff9b97; }
+.evaluare__sterge:disabled { opacity: .45; cursor: default; }
+
 /* Însemnarea organizatorului nu e o părere, e un fapt. O dungă în stânga o
    deosebește de notele anonime din jur, fără să strige. */
 .evaluare--automata {
@@ -5046,6 +5062,18 @@ a.admin-nav__link:hover { background: var(--bg-soft); color: var(--text); }
   font-weight: 800; text-align: center; font-variant-numeric: tabular-nums;
 }
 [data-theme="dark"] .admin-cifra-rea { color: #ff9b97; }
+
+/* Stelele din tabelul de evaluări: desenate ȘI scrise cu cifra.
+   Desenate singure, ochiul trebuie să le numere pe fiecare rând — iar într-un
+   tabel de două sute de rânduri asta e chiar munca pe care pagina ar trebui
+   s-o scutească. Cifra se citește dintr-o privire, stelele dau forma. */
+.admin-stele { display: inline-flex; align-items: center; gap: 7px; }
+.admin-stele__cifra { font-weight: 800; font-variant-numeric: tabular-nums; }
+
+/* Una sau două stele: singurele despre care poate veni cineva să se plângă.
+   Se colorează ca să sară în ochi la derulare, nu ca să fie osândite. */
+.admin-stele--mici .admin-stele__cifra { color: #c22b2d; }
+[data-theme="dark"] .admin-stele--mici .admin-stele__cifra { color: #ff9b97; }
 
 .admin-stare {
   display: inline-block; padding: 2px 9px; border-radius: var(--radius-pill);

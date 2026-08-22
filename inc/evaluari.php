@@ -166,7 +166,10 @@ function evaluarilePrimite(int $membruId): array
     }
 
     $q = db()->prepare(
-        'SELECT ev.stele, ev.text, ev.automat, ev.creat_la, ev.actualizat_la,
+        // `ev.id` se cere pentru butonul de ștergere al staff-ului: e singurul
+        // lucru din rândul ăsta care spune CARE notă anume, iar fără el butonul
+        // n-ar fi avut ce trimite la api/admin.php.
+        'SELECT ev.id, ev.stele, ev.text, ev.automat, ev.creat_la, ev.actualizat_la,
                 e.titlu AS eveniment_titlu, e.slug AS eveniment_slug,
                 m.permalink, m.nume, m.prenume, m.poza, m.stare AS stare_cont
            FROM evaluari ev
@@ -730,8 +733,15 @@ function randeazaRezumatEvaluari(array $rezumat): string
  *
  * Toate intră în pagină; ascunsul îl face main.js, ca la comentarii și la
  * listele din taburi.
+ *
+ * `$eStaff` pune un „×" la capătul fiecărei păreri. E singurul fel în care o
+ * vorbă nedreaptă poate pleca de pe profilul cuiva: notele nu se retrag, nu se
+ * raportează și nu se moderează nicăieri altundeva. Butonul NU se ascunde din
+ * CSS — pentru cine nu e de-al casei nici nu ajunge în pagină, iar api/admin.php
+ * întreabă din nou, fiindcă o legătură care nu se vede rămâne o cerere care se
+ * poate scrie de mână.
  */
-function randeazaEvaluari(array $evaluari): string
+function randeazaEvaluari(array $evaluari, bool $eStaff = false): string
 {
     if ($evaluari === []) {
         return '';
@@ -776,7 +786,26 @@ function randeazaEvaluari(array $evaluari): string
         $cand = (string) $ev['creat_la'];
         $text = trim((string) ($ev['text'] ?? ''));
 
-        $html .= '<li class="comment evaluare' . ($automat ? ' evaluare--automata' : '') . '">'
+        /**
+         * „×"-ul omului de casă. Stă în ANTETUL părerii, lângă ora ei — nu sub
+         * text, unde ar fi arătat ca un buton al cititorului. Aceeași
+         * așezare ca steagul de raportare de la comentarii.
+         *
+         * `data-rand` e pe `<li>`: blocul de administrare din main.js scoate
+         * rândul din care s-a apăsat, oricare ar fi el, iar aici rândul e chiar
+         * părerea.
+         */
+        $sterge = $eStaff
+            ? '<button class="evaluare__sterge" type="button"'
+              . ' data-fapta="sterge-evaluare" data-id="' . (int) $ev['id'] . '"'
+              . ' data-intreb="Ștergi părerea asta? Media se schimbă pe loc, iar nimeni nu află nimic."'
+              . ' aria-label="Șterge părerea" title="Șterge părerea (doar staff)">'
+              . '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">'
+              . '<path d="m7 7 10 10M17 7 7 17"/></svg></button>'
+            : '';
+
+        $html .= '<li class="comment evaluare' . ($automat ? ' evaluare--automata' : '') . '"'
+               . ($eStaff ? ' data-rand' : '') . '>'
                . '<article class="comment__body">'
                . '<img class="comment__avatar" src="' . h($poza) . '" alt=""'
                . ' width="96" height="96" loading="lazy" decoding="async">'
@@ -786,6 +815,7 @@ function randeazaEvaluari(array $evaluari): string
                . '<div class="comment__cand">'
                . '<time datetime="' . h(str_replace(' ', 'T', $cand)) . '">' . h(timpRelativ($cand)) . '</time>'
                . '<span class="dot" aria-hidden="true"></span>' . $undeva
+               . $sterge
                . '</div></div>'
                . '<div class="rating__stars rating__stars--sm" data-stars="' . $stele . '"></div>'
                . ($text !== '' ? '<p class="comment__text">' . nl2br(h($text), false) . '</p>' : '')

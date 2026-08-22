@@ -276,11 +276,25 @@ verifica('și fără ștampilă de publicare', true,
 
 /**
  * Regula „o singură dorință" se ține LA SCRIERE, nu în butonul de pe ecran.
- * Două file deschise deodată ar fi trimis amândouă.
+ *
+ * Iar întrebarea și scrierea stau sub același lacăt, pe rândul omului: două
+ * SESIUNI deosebite ale aceluiași om — laptopul și telefonul — trimiteau
+ * amândouă în aceeași clipă, întrebau amândouă înainte ca vreuna să scrie, și
+ * intrau amândouă. (Două file ale ACELUIAȘI browser nu erau de ajuns ca să se
+ * vadă: PHP ține un lacăt pe fișierul sesiunii, deci se așteptau oricum una pe
+ * alta.)
  */
 $r = puneODorinta($scrie, ['oras' => $orasBun, 'dorinta' => 'TSTDOR și încă una']);
 verifica('a doua nu trece', false, $r['ok']);
 verifica('cu 409, nu cu 422', 409, $r['cod']);
+
+/**
+ * Și tranzacția s-a închis în urma ei. Un refuz care ar fi ieșit din funcție
+ * lăsând lacătul pus ar fi ținut rândul omului încuiat până la sfârșitul
+ * cererii — iar la o cerere lungă, toate celelalte scrieri pe el ar fi
+ * așteptat degeaba.
+ */
+verifica('și nu rămâne nicio tranzacție deschisă', false, db()->inTransaction());
 
 $q = db()->prepare('SELECT COUNT(*) FROM dorinte WHERE membru_id = ?');
 $q->execute([$scrie]);

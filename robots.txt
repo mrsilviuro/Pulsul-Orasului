@@ -1,0 +1,68 @@
+# =========================================================================
+#  PulsulOrasului.Ro — ce au voie roboții de căutare să citească.
+#
+#  Fișierul ăsta e o RUGĂMINTE, nu un lacăt: îl ascultă Google, Bing și
+#  ceilalți de bună-credință, dar oricine îl poate ignora. Ce chiar trebuie
+#  închis se închide din .htaccess sau din cod — vezi cerePazaDeStaff() și
+#  cereIntrare().
+#
+#  De aceea nu se scriu aici căi „secrete": o listă de locuri interzise e o
+#  hartă a lor, iar fișierul se citește de oricine deschide /robots.txt.
+# =========================================================================
+
+User-agent: *
+
+# --- Zona de administrare ---
+# Are pază adevărată în cod, dar n-are de ce să fie nici măcar cerută.
+Disallow: /admin.php
+Disallow: /admin-
+Disallow: /coduri.php
+
+# --- Uneltele contului ---
+# Pagini care nu spun nimic cuiva care nu e conectat, și care n-au ce căuta
+# în rezultatele căutării.
+Disallow: /setari.php
+Disallow: /poza.php
+Disallow: /stergere.php
+Disallow: /adauga_eveniment.php
+Disallow: /previzualizare.php
+Disallow: /finalizare.php
+Disallow: /confirma.php
+Disallow: /parola-noua.php
+Disallow: /parola-uitata.php
+Disallow: /iesire.php
+Disallow: /google.php
+
+# --- Profilurile membrilor ---
+# NU se indexează, dinadins. Pe un profil scriu numele omului, chipul lui,
+# notele primite și pe unde a fost — date pe care le-a dat ca să meargă la
+# ieșiri prin oraș, nu ca să fie găsit după nume în Google. Paginile rămân
+# publice pentru cine primește linkul: nu se ascund, doar nu se caută.
+Disallow: /profil.php
+
+# --- „FindMe" ---
+# Adresa poartă un cod care înseamnă un câștig. Un robot care ar trece pe-acolo
+# ar deschide-o exact ca un om — iar codurile ajunse în rezultatele căutării ar
+# face jocul de prisos. Pagina are și `noindex`; asta e a doua plasă.
+Disallow: /findme.php
+
+# --- Unealta de diagnostic ---
+# Fără cheie nu spune nimic, dar n-are de ce să stea în vitrină. Oricum,
+# regula adevărată e s-o ștergi de pe server după ce ai terminat cu ea.
+Disallow: /verifica.php
+
+# --- API-urile ---
+# Răspund JSON, deci n-au nimic de citit pentru un motor de căutare. Fără
+# rândul ăsta, roboții le-ar fi cerut pe toate și ar fi primit „Metodă
+# nepermisă" de fiecare dată.
+Disallow: /api/
+
+# --- Ce se caută prin filtrele de pe prima pagină ---
+# Aceleași evenimente, așezate altfel. Fiecare filtru ar fi fost o pagină
+# aproape la fel cu prima, iar Google le numără pe astea drept conținut
+# repetat. Evenimentele în sine sunt fiecare la adresa lui, în hartă.
+Disallow: /*?oras=
+Disallow: /*?categorie=
+Disallow: /index.php?
+
+Sitemap: https://pulsulorasului.ro/sitemap.xml

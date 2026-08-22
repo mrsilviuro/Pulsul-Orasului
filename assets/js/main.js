@@ -6207,6 +6207,20 @@
 
           if (fapta === 'modereaza-dorinta') { window.location.reload(); return; }
 
+          /**
+           * O NOTĂ ȘTEARSĂ SCHIMBĂ ȘI CIFRELE DE DEASUPRA.
+           *
+           * Amândouă paginile de unde se poate apăsa au un rezumat care se
+           * socotește din note: profilul are media și barele din capul
+           * secțiunii, iar admin-evaluari.php are tabelul „cine împarte note".
+           * Scos doar rândul, media ar fi rămas cea veche pe ecran — exact
+           * cifra despre care toastul tocmai a spus că s-a schimbat.
+           *
+           * Redesenată din JS, ar fi fost al doilea loc care știe cum se
+           * socotește o medie. Deci se cere pagina din nou.
+           */
+          if (fapta === 'sterge-evaluare') { window.location.reload(); return; }
+
           var deScos = randulLui(buton);
           if (deScos) { deScos.remove(); }
         }).catch(function () {

@@ -16,6 +16,7 @@ declare(strict_types=1);
  *   curata-rapoarte   — „e în regulă": raportările se șterg, comentariul rămâne
  *   marcheaza-mesaj   — un mesaj de contact, citit sau necitit
  *   sterge-mesaj      — un mesaj de contact, de tot
+ *   sterge-evaluare   — o notă dintre participanți, de tot
  *   sterge-dorinta    — o dorință, oricare i-ar fi starea
  *   modereaza-dorinta — aprobă sau respinge o dorință care așteaptă
  *   sterge-poza       — poza de profil a cuiva
@@ -265,6 +266,44 @@ case 'sterge-mesaj':
     }
 
     raspunsJson(['ok' => true, 'mesaj' => 'Mesajul a fost șters.']);
+    break;
+
+/* ============================= o notă ================================ */
+
+case 'sterge-evaluare':
+    $nota = evaluareaDupaId($idCerut('id'));
+
+    if ($nota === null) {
+        raspunsJson(['ok' => false, 'mesaj' => 'Nota nu mai există.'], 404);
+    }
+
+    /**
+     * ȘTERGERE ADEVĂRATĂ, nu golire.
+     *
+     * Un comentariu cu răspunsuri sub el se golește, fiindcă de el atârnă
+     * discuția. De o notă nu atârnă nimic în afară de o cifră care intră într-o
+     * medie — iar o cifră „golită" ar fi rămas tot o cifră. Deci pleacă.
+     *
+     * NU PLEACĂ NICIUN E-MAIL, dinadins. Nici către cel care a dat-o: dacă a
+     * pus-o din răutate, o veste i-ar spune doar că merită încercat de pe alt
+     * cont, iar dacă a pus-o cinstit, i-ar spune că cineva i-a citit părerea și
+     * a hotărât s-o șteargă — mai rău decât tăcerea. Nici către cel notat:
+     * pentru el media a fost mereu doar o cifră care se mișcă, iar „ți-am
+     * șters o notă de una" înseamnă „cineva ți-a dat una și n-ai știut".
+     *
+     * De aceea butonul nici nu cere un motiv: n-ar avea cine să-l citească.
+     */
+    if (!stergeEvaluarea((int) $nota['id'])) {
+        raspunsJson(['ok' => false, 'mesaj' => 'N-a putut fi ștearsă. Reîncarcă pagina.'], 409);
+    }
+
+    raspunsJson([
+        'ok'    => true,
+        'mesaj' => 'Nota a fost ștearsă. Media lui '
+                 . ($nota['tinta_prenume'] !== null && $nota['tinta_prenume'] !== ''
+                    ? $nota['tinta_prenume'] : 'cel notat')
+                 . ' s-a schimbat pe loc.',
+    ]);
     break;
 
 /* =========================== o dorință =============================== */

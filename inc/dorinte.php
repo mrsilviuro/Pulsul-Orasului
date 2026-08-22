@@ -220,7 +220,53 @@ function puneODorinta(int $membruId, array $date): array
      * două file deschise deodată ar fi trimis amândouă. Regula „o singură
      * dorință" se ține aici, la scriere, nu în butonul de pe ecran — acela e
      * doar politețe.
+     *
+     * ÎNTREBAREA ȘI SCRIEREA, ÎNTR-O SINGURĂ MIȘCARE.
+     *
+     * „Politețea" de mai sus n-a fost totuși de ajuns. Între „ai deja una?" și
+     * „scrie-o pe asta" încape o clipă, iar în clipa aia încape a doua cerere:
+     * două file trimise în aceeași secundă întrebau amândouă înainte ca vreuna
+     * să apuce să scrie, amândouă auzeau „n-are", și amândouă scriau. Omul
+     * ajungea cu două dorințe în așteptare, iar moderarea cu două rânduri de
+     * hotărât în loc de unul.
+     *
+     * SE ÎNCUIE RÂNDUL OMULUI din `membri`: regula e a lui, deci acolo e locul
+     * firesc de făcut rândul la coadă. Al doilea venit așteaptă la ușă și abia
+     * apoi întreabă — găsind, de data asta, dorința pe care tocmai a scris-o
+     * primul. Doi oameni deosebiți nu se așteaptă unul pe altul.
+     *
+     * Aceeași croială ca la ultimul loc de la un eveniment (api/interes.php).
      */
+    $pdo = db();
+    $pdo->beginTransaction();
+
+    try {
+        $pdo->prepare('SELECT id FROM membri WHERE id = ? FOR UPDATE')->execute([$membruId]);
+
+        $raspuns = scrieDorintaSubLacat($membruId, $rezultat['curat']);
+
+        $pdo->commit();
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) { $pdo->rollBack(); }
+        throw $e;
+    }
+
+    return $raspuns;
+}
+
+/**
+ * Partea din puneODorinta() care se petrece cu rândul omului încuiat:
+ * întrebarea „mai poate?" și scrierea.
+ *
+ * E o funcție separată doar ca tranzacția de deasupra să aibă un singur drum
+ * de ieșire. Scrisă la locul ei, fiecare `return` de refuz ar fi trebuit să-și
+ * amintească să și încheie tranzacția — iar unul dintre ele n-ar fi făcut-o.
+ *
+ * NU se cheamă de nicăieri altundeva: fără lacătul de deasupra, e chiar
+ * socoteala pe care o repară el.
+ */
+function scrieDorintaSubLacat(int $membruId, array $curat): array
+{
     $voie = poatePuneODorinta($membruId);
 
     if ($voie['stare'] === 'asteapta') {
@@ -253,8 +299,8 @@ function puneODorinta(int $membruId, array $date): array
     );
     $i->execute([
         $membruId,
-        $rezultat['curat']['oras'],
-        $rezultat['curat']['dorinta'],
+        $curat['oras'],
+        $curat['dorinta'],
         'in_asteptare',
         acum(),
     ]);

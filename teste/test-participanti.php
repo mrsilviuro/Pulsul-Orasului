@@ -338,7 +338,7 @@ echo "\n=== OPRELIȘTILE LA PARTICIPARE ===\n";
  * s-ar ajunge iar la un buton viu care duce la un refuz.
  */
 $omul = static function (int $id): array {
-    $q = db()->prepare('SELECT id, sex FROM membri WHERE id = ?');
+    $q = db()->prepare('SELECT id, sex, data_nasterii FROM membri WHERE id = ?');
     $q->execute([$id]);
     return $q->fetch();
 };
@@ -389,6 +389,97 @@ $doarBarbatiSiInterzis = $doarBarbati;
 verifica('ușa închisă se spune prima',
     'Nu te mai poți înscrie la această activitate.',
     motivBlocajParticipare($doarBarbatiSiInterzis, $omul($vlad)));
+
+/* ----------------------- vârsta minimă ---------------------------- */
+
+/**
+ * Coloana `varsta_minima` exista de mult și nu se uita nimeni la ea: site-ul
+ * scria „18+" pe pagina evenimentului și lăsa înăuntru pe oricine. Acum
+ * regula e ținută în același loc cu toate celelalte.
+ *
+ * SE SOCOTEȘTE LA ZIUA EVENIMENTULUI, nu la ziua de azi — cine împlinește anii
+ * între înscriere și eveniment îi are acolo, și asta cere organizatorul.
+ */
+
+/** Un om născut fix acum `$ani` ani și `$zile` zile. */
+$deVarsta = static function (int $ani, int $zile = 0): array {
+    return [
+        'id'            => -1,          // nu e nimeni anume: nu e organizator, nu e scos
+        'sex'           => 'M',
+        'data_nasterii' => date('Y-m-d', strtotime("-$ani years -$zile days")),
+    ];
+};
+
+/** Evenimentul de probă, cu o vârstă cerută și o zi anume. */
+$cuVarsta = static function (array $ev, ?int $ani, string $zi): array {
+    $ev['varsta_minima']  = $ani;
+    $ev['data_eveniment'] = $zi;
+    return $ev;
+};
+
+$peste10 = date('Y-m-d', strtotime('+10 days'));
+$ev16    = $cuVarsta($eveniment, 16, $peste10);
+
+$prea = 'Organizatorul cere cel puțin 16 ani împliniți pentru evenimentul ăsta.';
+
+verifica('la 16 ani ceruți, cel de 15 nu intră', $prea,
+    motivBlocajParticipare($ev16, $deVarsta(15)));
+
+verifica('cel de exact 16 intră', '',
+    motivBlocajParticipare($ev16, $deVarsta(16)));
+
+verifica('și cel de 40, la fel', '',
+    motivBlocajParticipare($ev16, $deVarsta(40)));
+
+/**
+ * PRAGUL, ZI CU ZI. Cel care împlinește 16 ani chiar în ziua evenimentului
+ * intră; cel care îi împlinește a doua zi, nu. Aici se vede că socoteala se
+ * face la ziua evenimentului și nu la cea de azi: amândoi au 15 ani ACUM.
+ */
+verifica('împlinește anii chiar în ziua aia → intră', '',
+    motivBlocajParticipare($ev16, ['id' => -1, 'sex' => 'M',
+        'data_nasterii' => date('Y-m-d', strtotime($peste10 . ' -16 years'))]));
+
+verifica('îi împlinește a doua zi → nu', $prea,
+    motivBlocajParticipare($ev16, ['id' => -1, 'sex' => 'M',
+        'data_nasterii' => date('Y-m-d', strtotime($peste10 . ' -16 years +1 day'))]));
+
+// Fără vârstă cerută, nimeni nu e oprit — așa sunt aproape toate anunțurile.
+verifica('fără vârstă cerută, copilul intră', '',
+    motivBlocajParticipare($cuVarsta($eveniment, null, $peste10), $deVarsta(12)));
+
+/**
+ * ORGANIZATORUL TRECE, ca și la regula de gen: el e omul de care se leagă
+ * evenimentul, iar un anunț „18+" pus de cineva de 17 ani e o greșeală de
+ * moderare, nu ceva de reparat scoțându-l de pe propria listă.
+ */
+verifica('organizatorul nu e oprit de vârstă', '',
+    motivBlocajParticipare($ev16, ['id' => (int) $eveniment['membru_id'], 'sex' => 'M',
+                                   'data_nasterii' => date('Y-m-d', strtotime('-14 years'))]));
+
+// Ușa închisă se spune tot prima, înaintea vârstei.
+verifica('ușa închisă bate vârsta',
+    'Nu te mai poți înscrie la această activitate.',
+    motivBlocajParticipare($ev16, $omul($vlad)));
+
+/* ------------- socoteala anilor, luată deoparte ------------------- */
+
+verifica('fix la aniversare',        16, varstaLaZiua('2010-08-24', '2026-08-24'));
+verifica('cu o zi înainte',          15, varstaLaZiua('2010-08-25', '2026-08-24'));
+verifica('cu o zi după',             16, varstaLaZiua('2010-08-23', '2026-08-24'));
+
+/**
+ * 29 FEBRUARIE. Cine s-a născut într-un an bisect n-are aniversare în anii
+ * ceilalți, iar o scădere făcută cu mâna („anul ăsta minus anul ăla") l-ar fi
+ * îmbătrânit cu o zi mai devreme. DateTime știe: pe 28 februarie 2026 încă are
+ * 17, pe 1 martie are 18.
+ */
+verifica('născut 29 feb, pe 28 feb are 17',  17, varstaLaZiua('2008-02-29', '2026-02-28'));
+verifica('iar pe 1 martie are 18',           18, varstaLaZiua('2008-02-29', '2026-03-01'));
+
+verifica('fără dată de naștere, nu se ghicește', null, varstaLaZiua('', '2026-08-24'));
+verifica('fără ziua evenimentului, la fel',      null, varstaLaZiua('2010-01-01', ''));
+verifica('o dată strâmbă nu dă eroare',          null, varstaLaZiua('nu-i o dată', '2026-08-24'));
 
 /* ====================== 4e. RĂSPUNSUL PENTRU JS =================== */
 
