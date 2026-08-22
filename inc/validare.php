@@ -28,7 +28,18 @@ const TITLU_EVENIMENT_MIN = 8;
 const TITLU_EVENIMENT_MAX = 140;
 const LOCATIE_MIN         = 4;
 const LOCATIE_MAX         = 160;
-const DESCRIERE_MIN       = 300;   // caractere, nu octeți — vezi verificaEveniment()
+/**
+ * Cât de lung trebuie să fie „Detalii".
+ *
+ * A fost 300. S-a plâns lumea, și pe drept: la o partidă de fotbal în parc sau
+ * la o cafea sâmbătă dimineață, trei sute de caractere înseamnă că trebuie să
+ * INVENTEZI ceva ca să treci de contor. Un prag care cere umplutură nu aduce
+ * anunțuri mai bune, aduce anunțuri mai lungi — și îl trimite acasă tocmai pe
+ * omul care avea de spus puțin și limpede.
+ *
+ * Două sute e cât o vorbă întreagă: unde, ce se face, ce să-ți iei cu tine.
+ */
+const DESCRIERE_MIN       = 200;   // caractere, nu octeți — vezi verificaEveniment()
 const DESCRIERE_MAX       = 8000;
 const COST_MAX            = 99999.99;
 const PARTICIPANTI_MAX    = 65535; // cât încape în SMALLINT UNSIGNED
@@ -531,7 +542,19 @@ function verificaEveniment(array $date, array $categoriiValide, array $oraseVali
      * completat în formular când omul s-a răzgândit; se lasă pe dinafară, tăcut,
      * fiindcă în `curat` nu intră decât ce chiar se salvează.
      */
-    if (isset($curat['categorie_id']) && in_array($categorie, $categoriiJocQr, true)) {
+    /**
+     * E o vânătoare? De răspunsul ăsta atârnă TREI lucruri mai jos, nu doar
+     * codul: ora de sfârșit și costul nu se mai cer deloc, fiindcă la o
+     * vânătoare nu există nici una, nici alta.
+     *
+     * Se hotărăște o dată, aici, după CATEGORIE — nu după ce lipsește din
+     * cerere. Altfel oricine ar fi scăpat de reguli trimițând un formular
+     * ciuntit, iar noi am fi numit asta „a ales să nu completeze".
+     */
+    $eVanatoare = isset($curat['categorie_id'])
+               && in_array($categorie, $categoriiJocQr, true);
+
+    if ($eVanatoare) {
         $scris  = trim($citeste('cod_qr'));
         $codQr  = curataCodQr($scris);
 
@@ -588,8 +611,18 @@ function verificaEveniment(array $date, array $categoriiValide, array $oraseVali
      *
      * De aceea are bifa lui: altfel n-am putea deosebi „nu se știe cât ține"
      * de „am uitat să completez".
+     *
+     * LA O VÂNĂTOARE „FINDME", ÎNSĂ, NU E NICI UNA, NICI ALTA: acolo pur și
+     * simplu nu există „până la". Ora de mai sus E capătul — clipa în care
+     * căutarea se închide — iar formularul nici nu mai arată câmpul (vezi
+     * `data-fara-joc` din adauga_eveniment.php). Fără rândul ăsta, un anunț de
+     * vânătoare ar fi fost oprit cu „scrie ora de sfârșit, sau bifează…",
+     * arătând spre o bifă care nu mai e pe ecran.
+     *
+     * $eVanatoare se hotărăște mai sus, după CATEGORIE, nu după ce lipsește
+     * din cerere.
      */
-    $faraSfarsit = !empty($date['fara_ora_sfarsit']);
+    $faraSfarsit = $eVanatoare || !empty($date['fara_ora_sfarsit']);
 
     if ($faraSfarsit) {
         $curat['ora_sfarsit'] = null;
@@ -683,7 +716,13 @@ function verificaEveniment(array $date, array $categoriiValide, array $oraseVali
     }
 
     /* ------------------------------ Costul ---------------------------- */
-    if (!empty($date['gratuit'])) {
+    /**
+     * O vânătoare e gratuită prin firea ei: nu se vinde niciun bilet, iar tot
+     * chenarul „Cine poate veni și cât costă?" nici nu mai e pe ecran. Fără
+     * rândul ăsta, anunțul ar fi fost oprit cu „scrie cât costă, sau bifează
+     * «Gratuit»" — arătând spre o bifă pe care omul n-o mai vede.
+     */
+    if ($eVanatoare || !empty($date['gratuit'])) {
         $curat['cost'] = null;
     } else {
         // Oamenii scriu „25,50" la fel de des ca „25.50".
@@ -712,12 +751,19 @@ function verificaEveniment(array $date, array $categoriiValide, array $oraseVali
     }
 
     /* ------------------------- Participanții -------------------------- */
+    /**
+     * LA O VÂNĂTOARE NU SE ÎNSCRIE NIMENI, deci nu există nici „de la câți",
+     * nici „până la câți" — caseta de participare nici nu se desenează pe
+     * pagina anunțului (vezi randeazaCasetaFindMe). Ca și la cost și la ora de
+     * sfârșit, întrebarea nu se pune: $eVanatoare le trece pe amândouă drept
+     * nespecificate, fără să ceară vreo bifă pe care omul n-o mai vede.
+     */
     foreach ([
         ['participanti_min', 'fara_participanti_min', 'Numărul minim'],
         ['participanti_max', 'fara_participanti_max', 'Numărul maxim'],
     ] as [$camp, $bifa, $eticheta]) {
 
-        if (!empty($date[$bifa])) {
+        if ($eVanatoare || !empty($date[$bifa])) {
             $curat[$camp] = null;
             continue;
         }

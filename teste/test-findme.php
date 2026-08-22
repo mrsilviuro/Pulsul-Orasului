@@ -234,6 +234,59 @@ $r = verificaEveniment($campuri($idCat), $idBune, $orase);
 verifica('fără lista de jocuri, nu se cere', [], $r['erori']);
 
 /* ==================================================================== */
+sectiune('formularul se subțiază');
+
+/**
+ * LA O VÂNĂTOARE, TREI ÎNTREBĂRI NU SE MAI PUN: ora de sfârșit, costul și
+ * numărul de participanți. Nu e o îngăduință, e o potrivire cu adevărul —
+ * acolo nu există „până la", nu se vinde nimic și nu se înscrie nimeni, iar
+ * formularul nici nu mai desenează câmpurile (vezi `data-fara-joc` din
+ * adauga_eveniment.php).
+ *
+ * Fără scutirile astea, anunțul ar fi fost oprit cu trei erori care arată spre
+ * bife pe care omul nu le mai vede — cea mai rea formă de refuz.
+ *
+ * Aici se trimite un formular CIUNTIT, cum vine el de la un câmp stins: fără
+ * `fara_ora_sfarsit`, fără `gratuit`, fără bifele de participanți.
+ */
+$ciuntit = static fn(int $categorie): array => [
+    'titlu'          => 'Vânătoare prin centrul vechi',
+    'categorie_id'   => (string) $categorie,
+    'cod_qr'         => 'K3M7P',
+    'oras'           => oraseDisponibile()[0] ?? 'Roman',
+    'locatie'        => 'Undeva prin oraș',
+    'data_eveniment' => date('d-m-Y', strtotime('+10 days')),
+    'ora_inceput'    => '19:00',
+    'gen_participanti' => 'nespecificat',
+    'descriere'      => str_repeat('Povestea vânătorii de probă. ', 12),
+];
+
+$r = verificaEveniment($ciuntit($idCat), $idBune, $orase, null, null, $jocuri);
+verifica('un formular fără cele trei câmpuri trece', [], $r['erori']);
+
+// `??` n-ar merge aici: null e chiar răspunsul căutat, iar el l-ar citi ca
+// „lipsește". Se întreabă de CHEIE, care trebuie să fie acolo și goală.
+$goalaSiScrisa = static fn(string $cheie): bool =>
+    array_key_exists($cheie, $r['curat']) && $r['curat'][$cheie] === null;
+
+verifica('ora de sfârșit iese goală', true, $goalaSiScrisa('ora_sfarsit'));
+verifica('costul, la fel',            true, $goalaSiScrisa('cost'));
+verifica('și numărul minim',          true, $goalaSiScrisa('participanti_min'));
+verifica('și cel maxim',              true, $goalaSiScrisa('participanti_max'));
+
+/**
+ * LA ORICE ALTĂ CATEGORIE, ACELEAȘI TREI SE CER MAI DEPARTE. Scutirea ține de
+ * ce fel de eveniment e, nu de ce lipsește din cerere: altfel oricine ar fi
+ * scăpat de reguli trimițând un formular ciuntit, iar noi am fi numit asta
+ * „a ales să nu completeze".
+ */
+$r = verificaEveniment($ciuntit(1), $idBune, $orase, null, null, $jocuri);
+verifica('la o categorie obișnuită, ora de sfârșit se cere', true,
+    isset($r['erori']['ora_sfarsit']));
+verifica('și costul',        true, isset($r['erori']['cost']));
+verifica('și participanții', true, isset($r['erori']['participanti_min']));
+
+/* ==================================================================== */
 sectiune('facerea codurilor');
 
 $cod1 = faCodQrNou($gazda);

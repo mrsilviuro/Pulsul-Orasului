@@ -2640,7 +2640,7 @@
         stele:  valoare
       }, null, null, function (c) {
         cutie.setAttribute('data-nota', String(c.stele));
-        aratInvitatia(cutie, permalink, c.stele);
+        aratInvitatia(cutie, permalink);
         toast(c.mesaj || 'Nota ta a fost trimisă.');
       });
     });
@@ -2648,42 +2648,117 @@
     // Nota dată data trecută: invitația la scris rămâne la vedere, ca omul să
     // poată adăuga vorbe și mai târziu, nu doar în clipa apăsării.
     var nota = parseInt(cutie.getAttribute('data-nota'), 10) || 0;
-    if (nota > 0) aratInvitatia(cutie, permalink, nota);
+    if (nota > 0) aratInvitatia(cutie, permalink);
   });
 
   /**
    * „Lasă și câteva cuvinte" — invitația de sub stele, după ce s-a dat o notă.
    *
-   * Duce pe profilul omului, drept la formularul de evaluare, cu nota deja
-   * aleasă. Nu deschide o casetă aici: textul se scrie pe profilul cuiva, unde
-   * stă lângă celelalte păreri despre el, nu într-un rând de listă.
+   * E un BUTON, nu o legătură. A fost o legătură: deschidea profilul omului
+   * într-o filă nouă și derula până la formularul de acolo. Se pierdeau două
+   * lucruri deodată — locul din listă (cine tocmai notase trei oameni pleca de
+   * lângă al patrulea) și firul gândului, fiindcă omul se trezea pe o pagină
+   * despre altcineva, printre păreri vechi, ca să scrie o propoziție.
    *
-   * Se deschide în filă nouă: cine tocmai a notat trei oameni nu vrea să
-   * piardă lista de sub degete pentru al patrulea.
+   * Acum caseta se deschide chiar sub rândul lui. Vezi „părerea scrisă în
+   * pagină", mai jos, unde e legată apăsarea.
+   *
+   * `data-nume` îl cere deschideCaseta(), ca să scrie despre cine e vorba în
+   * capul casetei; se ia din rândul omului, fiindcă acolo e scris o dată.
    */
-  function aratInvitatia(cutie, permalink, stele) {
+  function aratInvitatia(cutie, permalink) {
     if (!permalink) return;
+    if (cutie.querySelector('[data-scrie-parere]')) return;
 
-    var link = cutie.querySelector('[data-scrie-parere]');
+    var rand = cutie.closest('.person');
+    var nume = rand ? rand.querySelector('.person__name') : null;
 
-    if (!link) {
-      link = document.createElement('a');
-      link.className = 'person__parere';
-      link.setAttribute('data-scrie-parere', '');
-      link.target = '_blank';
-      link.rel = 'noopener';
-      link.textContent = 'Lasă și câteva cuvinte';
-      cutie.appendChild(link);
-    }
+    var buton = document.createElement('button');
+    buton.type = 'button';
+    buton.className = 'person__parere';
+    buton.setAttribute('data-scrie-parere', '');
+    buton.setAttribute('aria-expanded', 'false');
+    buton.setAttribute('data-nume', nume ? nume.textContent.trim() : '');
+    buton.textContent = 'Lasă și câteva cuvinte';
 
-    var panou = cutie.closest('[data-oameni]');
-    var slug  = panou ? (panou.getAttribute('data-slug') || '') : '';
-
-    link.href = 'profil.php?m=' + encodeURIComponent(permalink)
-              + '&ev=' + encodeURIComponent(slug)
-              + '&stele=' + encodeURIComponent(stele)
-              + '#review-form';
+    cutie.appendChild(buton);
   }
+
+  /* ----------------- părerea scrisă, tot în pagină --------------------
+     „Lasă și câteva cuvinte" deschide o casetă sub rândul omului — a treia
+     folosire a aceleiași deschideCaseta(), după scoatere și „Nu s-a
+     prezentat".
+
+     A fost o legătură către profilul lui, cu derulare până la formularul de
+     acolo. Pierdea locul din listă și firul gândului: ca să scrii o
+     propoziție despre cineva ajungeai pe o pagină despre el, printre păreri
+     vechi, într-o filă nouă.
+
+     SE ÎNDREAPTĂ, NU SE ADAUGĂ. Caseta se deschide cu ce s-a scris data
+     trecută (`data-parere`, pus de randeazaSteleParticipant), iar salvarea
+     trece prin același rând din bază: un om are o singură părere despre altul
+     la un eveniment, oricât ar apăsa. După trimitere, `data-parere` se
+     împrospătează, ca redeschiderea să arate ce e acum, nu ce era la
+     încărcarea paginii.
+
+     Stelele NU se ating de aici: sunt deja alese în rândul de deasupra, iar
+     invitația nici nu apare până nu se apasă una. Se trimit odată cu textul
+     fiindcă api/evaluare.php le cere pe amândouă — o părere fără notă n-ar
+     avea unde să stea.
+  ------------------------------------------------------------------------ */
+
+  document.querySelectorAll('[data-oameni]').forEach(function (panou) {
+    var sablonParere = panou.querySelector('#sablon-parere');
+    if (!sablonParere) return;
+
+    panou.addEventListener('click', function (e) {
+      var buton = e.target.closest('[data-scrie-parere]');
+      if (!buton || !panou.contains(buton)) return;
+
+      var cutie = buton.closest('[data-stele-participant]');
+      if (!cutie) return;
+
+      var caseta = deschideCaseta(panou, buton, sablonParere, '[data-parere-nume]');
+      if (!caseta) return;
+
+      var form  = caseta.querySelector('form');
+      var scris = caseta.querySelector('textarea');
+      var eroare = caseta.querySelector('[id^="err-parere"]');
+
+      // Ce era scris, ca omul să îndrepte. Cursorul la capăt, nu la început:
+      // cine redeschide vrea de obicei să adauge, nu să taie de la cap.
+      if (scris) {
+        scris.value = cutie.getAttribute('data-parere') || '';
+        scris.focus();
+        scris.setSelectionRange(scris.value.length, scris.value.length);
+      }
+
+      form.addEventListener('submit', function (ev) {
+        ev.preventDefault();
+
+        var text = scris ? scris.value : '';
+
+        trimiteNota({
+          csrf:   panou.getAttribute('data-csrf') || '',
+          slug:   panou.getAttribute('data-slug') || '',
+          fapta:  'scrie',
+          membru: cutie.getAttribute('data-stele-participant'),
+          stele:  parseInt(cutie.getAttribute('data-nota'), 10) || 0,
+          text:   text
+        }, form.querySelector('button[type="submit"]'), eroare, function (c) {
+          // Ce s-a salvat, ca redeschiderea să arate adevărul — inclusiv
+          // atunci când omul a golit caseta și și-a retras vorbele.
+          cutie.setAttribute('data-parere', text.trim());
+          if (c && c.stele) { cutie.setAttribute('data-nota', String(c.stele)); }
+
+          inchideCaseta(panou);
+          toast(text.trim() === ''
+            ? 'Gata, ți-am șters vorbele. Nota rămâne.'
+            : 'Feedback-ul tău a fost salvat.');
+        });
+      });
+    });
+  });
 
   /* --------------------- „Nu s-a prezentat" --------------------------
      Se confirmă ÎN PAGINĂ, într-o casetă de sub omul pe care s-a apăsat —
@@ -4690,13 +4765,15 @@
 
       var bifa    = document.getElementById('st-newsletter');
       var bifaCom = document.getElementById('st-comentarii');
+      var bifaFdb = document.getElementById('st-feedback');
 
       trimiteSetare(newsForm, newsForm.querySelector('button[type=submit]'),
         {
           sectiune: 'newsletter',
           newsletter: bifa && bifa.checked ? '1' : '',
-          // Bifa a doua e citită la fel: netrimisă înseamnă „nu vreau".
-          email_comentarii: bifaCom && bifaCom.checked ? '1' : ''
+          // Celelalte două sunt citite la fel: netrimisă înseamnă „nu vreau".
+          email_comentarii: bifaCom && bifaCom.checked ? '1' : '',
+          email_feedback:   bifaFdb && bifaFdb.checked ? '1' : ''
         },
         function (c) {
           if (!c.ok) { toast(c.mesaj || 'Nu am putut salva preferințele.'); return; }
@@ -5581,19 +5658,40 @@
   }
 
   /* ======================================================================
-     „FINDME" — CÂMPUL CU CODUL DE ABȚIBILD
+     „FINDME" — FORMULARUL SE SUBȚIAZĂ
 
-     Se arată numai când categoria aleasă e un joc cu abțibilde. Care sunt
-     acelea nu ghicim după nume: fiecare <option> poartă `data-joc-qr="1"`,
-     scris din `categorii.joc_qr` (vezi sql/025-coduri-qr.sql).
+     Când categoria aleasă e un joc cu abțibilde, formularul de publicare
+     arată altfel. Care categorii sunt acelea nu ghicim după nume: fiecare
+     <option> poartă `data-joc-qr="1"`, scris din `categorii.joc_qr` (vezi
+     sql/025-coduri-qr.sql).
 
-     JS-ul pune și `required`, nu HTML-ul. Un `required` pe un câmp ascuns
-     oprește trimiterea formularului cu o bulă pe care browserul n-o poate
-     arăta, fiindcă n-are unde s-o pună — iar omul rămâne cu un buton care nu
-     face nimic și fără nicio vorbă de ce.
+     TREI LUCRURI SE ÎNTÂMPLĂ DEODATĂ, și toate din bucata asta:
 
-     Fără JS, câmpul rămâne vizibil tot timpul. E supărător, nu stricăcios: la
-     orice altă categorie serverul nici nu-l citește.
+       1. APARE câmpul cu codul de pe abțibild (`[data-camp-qr]`).
+       2. PLEACĂ ce n-are ce căuta la o vânătoare (`[data-fara-joc]`): ora de
+          sfârșit cu bifa ei, și tot chenarul „Cine poate veni și cât costă?".
+          Acolo nu se înscrie nimeni, nu se ține nicio listă, nu costă nimic.
+       3. SE SCHIMBĂ vorba unde ea ar minți (`[data-vorba-joc]`): „Când o să
+          aibă loc?" devine „Data și ora limită", iar „Ora de început" devine
+          „Ora". La un concert e ora la care se începe; la o vânătoare e ora la
+          care căutarea se TERMINĂ, iar cine citește „început" scrie pe dos.
+
+     DE CE SE ASCUND, ÎN LOC SĂ FIE LĂMURITE: un om de casă nou nu citește
+     notele de subsol, dar completează orice câmp îi stă în față. Un formular
+     mai scurt e mai greu de greșit decât unul lung cu explicații.
+
+     CE E ASCUNS SE ȘI STINGE (`disabled`), ca un cost scris înainte de
+     răzgândire să nu plece pe furiș odată cu anunțul. Serverul primește atunci
+     câmpurile lipsă și le citește ca nespecificate — vezi verificaEveniment(),
+     unde fiecare dintre ele are un „gol înseamnă nimic".
+
+     JS-ul pune și `required` pe codul de abțibild, nu HTML-ul. Un `required`
+     pe un câmp ascuns oprește trimiterea formularului cu o bulă pe care
+     browserul n-o poate arăta, fiindcă n-are unde s-o pună — iar omul rămâne
+     cu un buton care nu face nimic și fără nicio vorbă de ce.
+
+     Fără JS rămâne totul vizibil, cu vorbele obișnuite. E supărător, nu
+     stricăcios: regula adevărată e pe server, la fiecare câmp în parte.
      ====================================================================== */
 
   var campQr     = document.querySelector('[data-camp-qr]');
@@ -5601,6 +5699,23 @@
 
   if (campQr && alegeCateg) {
     var casutaQr = campQr.querySelector('input[name="cod_qr"]');
+
+    var deAscunsLaJoc = document.querySelectorAll('[data-fara-joc]');
+    var deRescris     = document.querySelectorAll('[data-vorba-joc]');
+
+    /**
+     * Vorba de zi cu zi se ține minte ACUM, la pornire, ca schimbarea să poată
+     * fi luată înapoi. Scrisă a doua oară în HTML, s-ar fi despărțit de cea
+     * dintâi la prima corectură.
+     *
+     * `[data-vorba]` e bucata care se schimbă, când elementul mai are ceva pe
+     * lângă ea — steluța de „obligatoriu", de pildă, care trebuie să rămână.
+     */
+    Array.prototype.forEach.call(deRescris, function (el) {
+      var loc = el.querySelector('[data-vorba]') || el;
+      el.__loc   = loc;
+      el.__vorba = loc.textContent;
+    });
 
     var potrivesteQr = function () {
       var aleasa = alegeCateg.options[alegeCateg.selectedIndex];
@@ -5616,6 +5731,36 @@
         // odată cu un anunț care n-are nicio treabă cu el.
         casutaQr.disabled = !eJoc;
       }
+
+      Array.prototype.forEach.call(deAscunsLaJoc, function (zona) {
+        zona.hidden = eJoc;
+
+        // Aceeași regulă ca la codul de abțibild: ce nu se vede nu se trimite.
+        Array.prototype.forEach.call(
+          zona.querySelectorAll('input, select, textarea'),
+          function (camp) { camp.disabled = eJoc; }
+        );
+      });
+
+      /**
+       * „Fără oră de sfârșit" stinge singură câmpul de lângă ea, din altă
+       * bucată de cod. Aprinderea de mai sus tocmai i-a călcat pe hotărâre:
+       * cine avea bifa pusă, trecea prin „FindMe" și se întorcea, rămânea cu
+       * un câmp de oră aprins sub o bifă care spune că nu se știe ora.
+       *
+       * Nu-i luăm noi treaba — o punem să și-o facă din nou. Fiecare regulă
+       * rămâne stăpână pe câmpul ei; a doua scrisă aici s-ar fi despărțit de
+       * cea dintâi la prima corectură.
+       */
+      var faraSfarsit = document.getElementById('ev-fara-sfarsit');
+
+      if (!eJoc && faraSfarsit) {
+        faraSfarsit.dispatchEvent(new Event('change'));
+      }
+
+      Array.prototype.forEach.call(deRescris, function (el) {
+        el.__loc.textContent = eJoc ? el.getAttribute('data-vorba-joc') : el.__vorba;
+      });
     };
 
     potrivesteQr();

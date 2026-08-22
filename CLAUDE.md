@@ -312,7 +312,20 @@ inc/
                       prezentat". STELELE SINGURE sunt anonime și nici nu se
                       arată pe profil; doar părerile SCRISE ajung în listă, iar
                       acelea vin semnate. Cine e însemnat neprezentat nu se mai
-                      notează de nimeni (esteNeprezentat). TOT AICI: cifrele de
+                      notează de nimeni (esteNeprezentat). PĂREREA SE SCRIE PE
+                      PAGINA EVENIMENTULUI, într-o casetă sub rândul omului
+                      (main.js + șablonul din event.php) — nu pe profilul lui,
+                      ca înainte. De aceea noteleMeleLaEveniment() aduce ȘI
+                      textul, nu doar stelele: caseta redeschisă arată ce a
+                      scris omul, ca să ÎNDREPTE. Golită, își retrage vorbele —
+                      dar numai când vine dintr-un formular ($eScriere din
+                      salveazaEvaluare); o stea apăsată nu șterge niciodată un
+                      text. TOT AICI omDeInstiintatLaFeedback(): cine află pe
+                      e-mail că i s-a scris ceva — DOAR pentru părerile SCRISE,
+                      niciodată pentru stele, care rămân anonime (bifa
+                      `email_feedback`, sql/027). Mesajul îl trimite
+                      api/evaluare.php, și numai la un text NOU sau SCHIMBAT.
+                      TOT AICI: cifrele de
                       pe profil și tabul „Istoric" (istoricEvenimente) — pe
                       unde a fost omul, DOAR evenimente încheiate, cu
                       „Organizator" și „Absent" pe cartonașe
@@ -327,6 +340,16 @@ inc/
   comentarii.php    → discuția de sub eveniment: cele două niveluri,
                       aprecierile, ștergerea cu piatră de mormânt, ȘI cum
                       arată pe ecran (HTML-ul se scrie doar aici). TOT AICI
+                      discutiaEDeschisa() — ÎNTREBARE DEOSEBITĂ de
+                      evenimentPublicat(), dinadins: aceea spune dacă lumea se
+                      poartă cu anunțul ca și cu unul de pe site (înscrieri,
+                      scoateri, indexare), asta doar dacă oamenii au unde
+                      vorbi. Se deschide și la ANULAT — o ieșire anulată e
+                      tocmai momentul în care oamenii au ceva de zis, iar
+                      organizatorul rămânea fără felul cel mai firesc de a-și
+                      cere scuze. Numai discuția, nu și înscrierile:
+                      api/interes.php cere mai departe evenimentPublicat().
+                      TOT AICI
                       raportarea: poateRaporta() (oricine e conectat, în afară
                       de autorul comentariului — lui nu i se scrie steagul
                       deloc) și comutaRaport() (apasă = raportează, apasă iar =
@@ -408,7 +431,7 @@ sql/                → schema.sql + migrări numerotate (002, 003, 004, 005-goo
                       021-instiintari-comentarii,
                       022-evenimente-staff, 023-dorinte,
                       024-categorii-doar-staff, 025-coduri-qr,
-                      026-corectura-eveniment)
+                      026-corectura-eveniment, 027-instiintari-feedback)
                       Zona de administrare citește și schimbă, în cea mai mare
                       parte, ce era deja acolo. SINGURA coloană nouă a ei e
                       `evenimente.corectura_ceruta_la` (026): ștampila pusă la
@@ -537,9 +560,11 @@ assets/css/style.css, assets/js/main.js, assets/img/
 - Înștiințările pe e-mail care pleacă azi: mulțumirea de după eveniment
   (cron/multumeste-participantilor.php), vestea că cineva a fost scos de pe
   listă, vestea că un eveniment s-a anulat (api/anuleaza-eveniment.php),
-  hotărârea moderării (api/modereaza-eveniment.php) și comentariile noi
+  hotărârea moderării (api/modereaza-eveniment.php), comentariile noi
   (api/comentarii.php → instiinteazaDeComentariu, cu bifa `email_comentarii`
-  din setări). PLUS CELE PATRU ALE ZONEI DE ADMINISTRARE, toate cu motiv care
+  din setări) și PĂRERILE SCRISE pe profil (api/evaluare.php →
+  omDeInstiintatLaFeedback, cu bifa `email_feedback`; stelele singure NU
+  vestesc nimic, fiindcă sunt anonime). PLUS CELE PATRU ALE ZONEI DE ADMINISTRARE, toate cu motiv care
   poate lipsi (api/admin.php): comentariul șters, poza ștearsă, contul
   suspendat și hotărârea unei dorințe. NU pleacă nimic când cineva se înscrie
   la un eveniment, când se apreciază un comentariu sau când se raportează ceva

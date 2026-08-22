@@ -502,8 +502,31 @@ require __DIR__ . '/inc/antet.php';
         </section>
 
         <!-- ----------------------- Când ------------------------- -->
+        <!--
+          LA O VÂNĂTOARE „FINDME", FORMULARUL SE SUBȚIAZĂ.
+
+          Trei atribute fac toată treaba, iar JS-ul le ascultă pe toate trei
+          dintr-un singur loc (vezi „FINDME — CÂMPUL CU CODUL" din main.js):
+
+            data-fara-joc  — pleacă de tot cât e aleasă o categorie de joc, și
+                             se întoarce dacă omul se răzgândește. Câmpurile
+                             dinăuntru se și STING (`disabled`), ca un cost
+                             scris înainte de răzgândire să nu plece pe furiș
+                             odată cu anunțul;
+            data-vorba-joc — altă vorbă pentru același câmp. „Ora de început"
+                             la un concert e ora la care se începe; la o
+                             vânătoare e ora la care se TERMINĂ căutarea, iar
+                             cine citește „început" scrie exact pe dos;
+            data-vorba     — bucata de text care se schimbă, ca steluța de
+                             „obligatoriu" de lângă ea să rămână pe loc.
+
+          DE CE, ȘI NU O NOTĂ SCRISĂ UNDEVA: la o vânătoare n-are cine să vină,
+          nu se ține nimeni de listă și nu costă nimic. Fiecare câmp rămas pe
+          ecran e o întrebare fără răspuns pusă unui om de casă nou — iar el o
+          va completa, fiindcă e acolo.
+        -->
         <section class="card-set">
-          <h2 class="card-set__titlu">Când o să aibă loc?</h2>
+          <h2 class="card-set__titlu" data-vorba-joc="Data și ora limită">Când o să aibă loc?</h2>
 
           <!--
             Data se scrie ZZ-LL-AAAA, cum se scrie o dată în România. De ce nu
@@ -528,7 +551,7 @@ require __DIR__ . '/inc/antet.php';
 
           <div class="field-row">
             <div class="field">
-              <label for="ev-ora-inceput">Ora de început <span class="req" aria-hidden="true">*</span></label>
+              <label for="ev-ora-inceput" data-vorba-joc="Ora"><span data-vorba>Ora de început</span> <span class="req" aria-hidden="true">*</span></label>
               <!--
                 Câmp de text, nu `type="time"`.
 
@@ -550,7 +573,8 @@ require __DIR__ . '/inc/antet.php';
               <p class="field__error" id="err-ev-ora-inceput" hidden></p>
             </div>
 
-            <div class="field">
+            <!-- La o vânătoare nu există „până la": ora de mai sus E capătul. -->
+            <div class="field" data-fara-joc>
               <label for="ev-ora-sfarsit">Ora de sfârșit</label>
               <input type="text" id="ev-ora-sfarsit" name="ora_sfarsit"
                      class="camp-ora" inputmode="numeric" autocomplete="off"
@@ -571,7 +595,9 @@ require __DIR__ . '/inc/antet.php';
         </section>
 
         <!-- -------------------- Cine și cât --------------------- -->
-        <section class="card-set">
+        <!-- Tot chenarul pleacă la o vânătoare: acolo nu se înscrie nimeni, nu
+             se ține nicio listă și nu costă nimic. Vezi lămurirea de la „Când". -->
+        <section class="card-set" data-fara-joc>
           <h2 class="card-set__titlu">Cine poate veni și cât costă?</h2>
 
           <div class="field">

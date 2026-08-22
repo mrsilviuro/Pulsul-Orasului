@@ -1122,6 +1122,45 @@ function emailComentariuNou(
     return trimiteEmail($catre, $subiect, $blocuri);
 }
 
+/**
+ * Vestea că cineva ți-a scris o părere pe profil.
+ *
+ * NUMAI PENTRU CE E SCRIS. Stelele rămân anonime și tăcute — vezi
+ * omDeInstiintatLaFeedback() din inc/evaluari.php, unde stă regula întreagă.
+ * Aici, dimpotrivă, numele se spune limpede: o părere scrisă vine semnată, iar
+ * un mesaj care ar ascunde cine a scris-o n-ar face decât să trimită omul pe
+ * profil ca să afle ceea ce oricum scrie acolo.
+ *
+ * TEXTUL SE PUNE ÎN MESAJ, ca la un comentariu nou. E ceva ce cineva a ales să
+ * spună despre om, în văzul tuturor; ascunzându-l în spatele unui buton l-am fi
+ * făcut să pară mai grav decât e. Cine vrea să răspundă are butonul.
+ *
+ * Butonul duce pe PROFILUL LUI, nu pe al celui care a scris: acolo stă părerea,
+ * lângă celelalte, iar de acolo se vede și cum arată pentru toată lumea.
+ */
+function emailFeedbackNou(
+    string $catre,
+    string $prenume,
+    string $numeAutor,
+    string $titluEveniment,
+    string $textParerii,
+    string $adresaProfil
+): bool {
+    return trimiteEmail($catre, $numeAutor . ' ți-a lăsat un feedback', [
+        'salut'     => 'Bună, ' . $prenume . '!',
+        'paragrafe' => [
+            $numeAutor . ' ți-a scris câteva cuvinte pe profil, după „'
+            . $titluEveniment . '".',
+        ],
+        'citat'     => ['cine' => $numeAutor, 'text' => $textParerii],
+        'buton'     => ['text' => 'Vezi-ți profilul', 'href' => $adresaProfil],
+        'link_gol'  => $adresaProfil,
+        'incheiere' => 'Stelele rămân anonime — despre ele nu-ți scriem niciodată. '
+                     . 'Dacă nu mai vrei nici mesajele astea, le poți stinge din '
+                     . 'setările contului.',
+    ]);
+}
+
 /* ================== VEȘTILE DIN ZONA DE ADMINISTRARE ================= */
 
 /**

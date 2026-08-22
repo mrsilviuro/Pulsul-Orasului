@@ -63,6 +63,13 @@ $ePublicat      = evenimentPublicat($eveniment);
 $eAnulat        = $eveniment['stare_moderare'] === 'anulat';
 
 /**
+ * Discuția e deschisă și la un anunț ANULAT — vezi discutiaEDeschisa() din
+ * inc/comentarii.php. E singurul lucru care rămâne deschis acolo: nu poți
+ * spune „vin" la ceva ce nu se mai ține, dar poți spune „ce păcat".
+ */
+$discutieDeschisa = discutiaEDeschisa($eveniment);
+
+/**
  * Ziua lui a trecut.
  *
  * Nu-l ascunde și nu-l închide: un eveniment de acum două luni rămâne o
@@ -269,7 +276,7 @@ $contextComentarii = [
     'organizator_id' => (int) $eveniment['membru_id'],
     'membru_id'      => $membruId,
     'e_staff'        => $eStaff,
-    'poate_scrie'    => $ePublicat,
+    'poate_scrie'    => $discutieDeschisa,
     'nume'           => numeleComentatorilor($randuriComentarii),
 ];
 
@@ -936,7 +943,22 @@ require __DIR__ . '/inc/antet.php';
             <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
               <circle cx="12" cy="12" r="9"/><path d="m8.2 12.3 2.6 2.6 5-5.2"/>
             </svg>
-            <span><?= $eIncheiat ? 'Au participat' : 'Participă' ?></span>
+            <!--
+              Trei vorbe, fiindcă lista înseamnă trei lucruri deosebite:
+
+                anulat   → „Ar fi participat". Oamenii ăștia se înscriseseră la
+                           o seară care nu s-a mai ținut. „Au participat" ar fi
+                           o minciună curată — n-au fost nicăieri — iar
+                           „Participă", la prezent, i-ar fi trimis pe unii să-și
+                           ia haina de pe cuier;
+                încheiat → „Au participat", ce a fost;
+                restul   → „Participă", ce urmează.
+
+              Anulatul se întreabă ÎNAINTEA încheiatului: un anunț anulat pentru
+              o zi care a trecut de-atunci e și una, și alta, iar anularea e
+              vestea care contează.
+            -->
+            <span><?= $eAnulat ? 'Ar fi participat' : ($eIncheiat ? 'Au participat' : 'Participă') ?></span>
             <span class="tab__count" data-count-for="participant"><?= (int) $numarInterese['participant'] ?></span>
           </button>
 
@@ -978,7 +1000,7 @@ require __DIR__ . '/inc/antet.php';
              data-deodata="<?= COMENTARII_DEODATA ?>"
              <?= $eLogat ? 'data-csrf="' . h(tokenCsrf()) . '"' : '' ?>>
 
-          <?php if ($eLogat && $ePublicat): ?>
+          <?php if ($eLogat && $discutieDeschisa): ?>
           <!--
             Formularul de comentariu nou. Numai pentru cine e conectat: mai jos
             e varianta pentru vizitatori, care nu are unde să scrie, ci unde să
@@ -999,7 +1021,7 @@ require __DIR__ . '/inc/antet.php';
               </div>
             </div>
           </form>
-          <?php elseif ($ePublicat): ?>
+          <?php elseif ($discutieDeschisa): ?>
           <!--
             Vizitatorul nu primește o casetă în care să scrie degeaba: ar fi
             aflat abia la apăsarea butonului că trebuie cont, cu textul scris
@@ -1032,23 +1054,26 @@ require __DIR__ . '/inc/antet.php';
             aprindă la loc, fără să lipească text din cod.
           -->
           <!--
-            Trei stări, trei vorbe — fiindcă „nu se poate scrie" are trei
-            înțelesuri diferite, iar unul singur pentru toate mințea:
+            Trei stări, trei vorbe — fiindcă golul are trei înțelesuri
+            deosebite, iar unul singur pentru toate mințea:
 
               publicat → nu s-a scris nimic încă, e o invitație;
-              anulat   → s-a scris cândva sau nu, dar acum e închis, și se
-                         spune DE CE. Aici scria „discuția se deschide după ce
-                         evenimentul e publicat", ceea ce era de-a dreptul
-                         neadevărat: anunțul FUSESE publicat, tocmai de-aia
-                         avusese ce să se anuleze;
+              anulat   → discuția e DESCHISĂ și aici (vezi discutiaEDeschisa),
+                         dar invitația nu poate fi aceeași: „fii primul care
+                         spune ceva" sub un anunț tocmai anulat sună a
+                         petrecere. Se spune ce s-a întâmplat, și că se poate
+                         vorbi mai departe. Aici a scris o vreme „comentariile
+                         au fost închise" — era adevărat și era greșit: o
+                         ieșire anulată e tocmai momentul în care oamenii au
+                         ceva de zis unul altuia;
               restul   → anunțul chiar n-a trecut încă pe la nimeni.
           -->
           <p class="comments__gol" data-comentarii-gol <?= $fireComentarii === [] ? '' : 'hidden' ?>>
-            <?php if ($ePublicat): ?>
+            <?php if ($eAnulat): ?>
+            Evenimentul a fost anulat, dar discuția rămâne deschisă. Scrie, dacă
+            ai ceva de spus.
+            <?php elseif ($ePublicat): ?>
             Niciun comentariu încă. Fii primul care spune ceva.
-            <?php elseif ($eAnulat): ?>
-            Acest eveniment a fost anulat de organizator, motiv pentru care
-            comentariile au fost închise.
             <?php else: ?>
             Discuția se deschide după ce evenimentul e publicat.
             <?php endif; ?>
@@ -1184,6 +1209,57 @@ require __DIR__ . '/inc/antet.php';
 
               <div class="scoate-form__actiuni">
                 <button class="btn btn--primary btn--xs" type="submit">Da, nu s-a prezentat</button>
+                <button class="btn btn--text" type="button" data-renunta>Renunță</button>
+              </div>
+            </form>
+            </li>
+          </template>
+          <?php endif; ?>
+
+          <?php if ($contextEvaluare !== null): ?>
+          <!--
+            „LASĂ ȘI CÂTEVA CUVINTE" — caseta se deschide AICI, sub rândul
+            omului.
+
+            Până acum, apăsarea deschidea profilul lui într-o filă nouă și
+            derula până la formularul de acolo. Se pierdeau două lucruri
+            deodată: locul din listă (cine tocmai notase trei oameni pleca de
+            lângă al patrulea) și firul gândului — omul se trezea pe o pagină
+            despre altcineva, printre păreri vechi, ca să scrie o propoziție.
+
+            Acum e aceeași casetă ca la scoatere și la „Nu s-a prezentat":
+            aceleași clase, același loc, aceeași deschideCaseta(). Nu e altă
+            unealtă, e a treia folosire a uneia care exista.
+
+            SE ÎNDREAPTĂ, NU SE ADAUGĂ. Redeschisă, caseta arată ce a scris
+            omul data trecută (`data-parere` de pe stelele lui), iar salvarea
+            trece prin același ON DUPLICATE KEY UPDATE ca înainte — un om nu
+            poate lăsa două păreri la același eveniment, oricât ar apăsa.
+
+            Stelele nu se aleg de aici: sunt deja alese în rândul de deasupra,
+            iar caseta se arată numai după ce s-a apăsat una. Formularul de pe
+            profil rămâne cum era — la el se ajunge tot cu „?ev=…", și tot
+            acolo se scrie pentru cine deschide profilul de-a dreptul.
+          -->
+          <template id="sablon-parere">
+            <li class="scoate-rand" data-caseta>
+            <form class="scoate-form parere-form">
+              <p class="scoate-form__titlu">
+                Ce ai de spus despre <strong data-parere-nume></strong>?
+              </p>
+
+              <label class="sr-only" for="parere-text">Părerea ta</label>
+              <textarea id="parere-text" rows="3" maxlength="<?= EVALUARE_TEXT_MAX ?>"
+                        placeholder="Spune pe scurt cum a fost…"
+                        aria-describedby="parere-hint err-parere"></textarea>
+              <p class="field__hint" id="parere-hint">
+                Textul apare SEMNAT pe profilul lui, spre deosebire de stele,
+                care rămân anonime. Îl poți schimba oricând.
+              </p>
+              <p class="field__error" id="err-parere" hidden></p>
+
+              <div class="scoate-form__actiuni">
+                <button class="btn btn--primary btn--xs" type="submit">Trimite</button>
                 <button class="btn btn--text" type="button" data-renunta>Renunță</button>
               </div>
             </form>

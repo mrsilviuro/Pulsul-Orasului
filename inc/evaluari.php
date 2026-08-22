@@ -63,6 +63,14 @@ function evaluareaMea(int $evenimentId, int $evaluatorId, int $evaluatId): ?arra
  * O singură cerere pentru toată lista de participanți, nu una per rând: la un
  * eveniment cu treizeci de oameni, ar fi fost treizeci de întrebări în care
  * răspunsul se știe dintr-o dată.
+ *
+ * Întoarce `id => ['stele' => int, 'text' => string]`. TEXTUL VINE ODATĂ CU
+ * STELELE, fiindcă e cerut de același rând al aceleiași cereri: formularul de
+ * părere de pe pagina evenimentului se deschide cu ce a scris omul data
+ * trecută, iar a doua întrebare pusă bazei pentru asta ar fi fost una degeaba.
+ *
+ * E textul MEU despre altcineva, nu al altcuiva despre mine: ajunge în pagină
+ * numai la cel care l-a scris, în dreptul rândului lui.
  */
 function noteleMeleLaEveniment(int $evenimentId, int $evaluatorId): array
 {
@@ -71,7 +79,7 @@ function noteleMeleLaEveniment(int $evenimentId, int $evaluatorId): array
     }
 
     $q = db()->prepare(
-        'SELECT evaluat_id, stele FROM evaluari
+        'SELECT evaluat_id, stele, text FROM evaluari
           WHERE eveniment_id = ? AND evaluator_id = ?'
     );
     $q->execute([$evenimentId, $evaluatorId]);
@@ -79,7 +87,10 @@ function noteleMeleLaEveniment(int $evenimentId, int $evaluatorId): array
     $note = [];
 
     foreach ($q->fetchAll() as $rand) {
-        $note[(int) $rand['evaluat_id']] = (int) $rand['stele'];
+        $note[(int) $rand['evaluat_id']] = [
+            'stele' => (int) $rand['stele'],
+            'text'  => (string) ($rand['text'] ?? ''),
+        ];
     }
 
     return $note;
@@ -230,6 +241,16 @@ function motivBlocajEvaluare(array $eveniment, int $evaluatorId, int $evaluatId)
  * $text null înseamnă „doar stele, fără vorbe". La o a doua trecere fără text,
  * textul de dinainte se PĂSTREAZĂ: cine schimbă stelele de pe pagina
  * evenimentului n-are de unde să știe că șterge cu asta ce scrisese pe profil.
+ *
+ * $eScriere RUPE regula aceea, și numai pentru un caz: cererea vine dintr-un
+ * FORMULAR DE PĂRERE trimis de om — caseta de sub rândul lui, sau cea de pe
+ * profil — iar acolo caseta golită înseamnă „îmi retrag vorbele", nu „n-am
+ * atins textul". Deosebirea nu se poate face din valoare, fiindcă amândouă
+ * ajung aici ca null; se face din CE A APĂSAT OMUL, iar asta o știe doar cel
+ * care cheamă funcția.
+ *
+ * Fără ea, cine își ștergea părerea o vedea rămasă acolo la reîncărcare, fără
+ * nicio vorbă — cea mai rea formă de „n-a mers": una care spune că a mers.
  */
 function salveazaEvaluare(
     int $evenimentId,
@@ -237,16 +258,21 @@ function salveazaEvaluare(
     int $evaluatorId,
     int $stele,
     ?string $text = null,
-    bool $automat = false
+    bool $automat = false,
+    bool $eScriere = false
 ): void {
     $acum = acum();
+
+    // Singura deosebire e ce se întâmplă cu textul la a doua trecere: îl
+    // scriem așa cum vine (chiar gol), sau îl lăsăm pe cel de dinainte.
+    $cumVineTextul = $eScriere ? 'VALUES(text)' : 'COALESCE(VALUES(text), text)';
 
     $q = db()->prepare(
         'INSERT INTO evaluari
                 (eveniment_id, evaluat_id, evaluator_id, stele, text, automat, creat_la, actualizat_la)
          VALUES (?,?,?,?,?,?,?,?)
          ON DUPLICATE KEY UPDATE stele         = VALUES(stele),
-                                 text          = COALESCE(VALUES(text), text),
+                                 text          = ' . $cumVineTextul . ',
                                  automat       = VALUES(automat),
                                  actualizat_la = VALUES(actualizat_la)'
     );
@@ -255,6 +281,51 @@ function salveazaEvaluare(
         $evenimentId, $evaluatId, $evaluatorId, $stele, $text,
         $automat ? 1 : 0, $acum, $acum,
     ]);
+}
+
+/**
+ * Cine află pe e-mail că i s-a scris o părere, și cine nu.
+ *
+ * NUMAI PENTRU CE E SCRIS. Stelele rămân anonime și tăcute: o înștiințare la
+ * fiecare stea apăsată ar fi însemnat cinci mesaje după o ieșire cu cinci
+ * oameni, fiecare spunând „cineva te-a notat, nu-ți spunem cine, nu-ți spunem
+ * cât". Nefolositor în cel mai bun caz; apăsător în cel mai rău. Iar cu numele
+ * în el, mesajul ar fi spart tocmai anonimatul care ține notele cinstite.
+ *
+ * CINE NU PRIMEȘTE NICIODATĂ:
+ *
+ *   - omul însuși, dacă cumva ar ajunge să-și scrie sieși;
+ *   - cine a stins bifa din setări (`email_feedback`);
+ *   - un cont care nu mai e activ — suspendat sau anonimizat. La cel
+ *     anonimizat adresa nici nu mai e a cuiva (vezi inc/stergere.php).
+ *
+ * NICI LA O ÎNSEMNARE AUTOMATĂ („Nu s-a prezentat"): textul acela nu e părerea
+ * nimănui, e scris de noi. Cine cheamă funcția are grijă să n-o cheme atunci —
+ * regula stă scrisă în api/evaluare.php, lângă apăsare.
+ *
+ * Întoarce rândul omului (id, email, prenume) sau null. NU trimite nimic:
+ * e-mailul pleacă din api/evaluare.php, ca la comentarii. Aici e stratul care
+ * atinge baza.
+ */
+function omDeInstiintatLaFeedback(int $evaluatId, int $evaluatorId): ?array
+{
+    if ($evaluatId <= 0 || $evaluatId === $evaluatorId) {
+        return null;
+    }
+
+    // `permalink` vine odată cu restul: butonul din e-mail duce pe profilul
+    // LUI, unde stă părerea — nu pe al celui care a scris-o.
+    $q = db()->prepare(
+        'SELECT id, email, prenume, permalink
+           FROM membri
+          WHERE id = ? AND stare = \'activ\' AND email_feedback = 1
+          LIMIT 1'
+    );
+    $q->execute([$evaluatId]);
+
+    $om = $q->fetch();
+
+    return $om === false ? null : $om;
 }
 
 /**

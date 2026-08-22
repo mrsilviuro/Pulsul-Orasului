@@ -596,8 +596,18 @@ function candSAInscris(array $om, string $stare): string
  * și `data-stars`: aici se scriu doar starea și motivul.
  *
  * `data-nota` e nota deja dată, ca stelele să se aprindă la încărcarea paginii.
+ *
+ * `data-parere` e ce a SCRIS omul data trecută despre cel din dreptul căruia
+ * stau stelele. De el atârnă formularul de părere care se deschide chiar aici,
+ * sub rând: redeschis, trebuie să arate ce era, ca omul să ÎNDREPTE, nu să
+ * scrie a doua oară. Fără el ar fi trebuit o a doua cerere la server, la
+ * fiecare apăsare.
+ *
+ * E textul CELUI CARE SE UITĂ, despre altcineva — nu părerile altora despre
+ * el. Ajunge în pagină numai la cel care l-a scris.
  */
-function randeazaSteleParticipant(int $evaluatId, int $nota, string $blocaj, string $permalink): string
+function randeazaSteleParticipant(int $evaluatId, int $nota, string $blocaj,
+                                  string $permalink, string $parere = ''): string
 {
     /**
      * Cine n-are dreptul să noteze vede stelele stinse, cu motivul în `title`.
@@ -612,6 +622,7 @@ function randeazaSteleParticipant(int $evaluatId, int $nota, string $blocaj, str
 
     return '<div class="person__stele" data-stele-participant="' . $evaluatId . '"'
          . ' data-permalink="' . h($permalink) . '"'
+         . ' data-parere="' . h($parere) . '"'
          . ' data-nota="' . $nota . '">'
          . '<div class="stars-input stars-input--sm" data-stele-input'
          . ' data-chosen="' . ($nota > 0 ? $nota : '') . '"></div>'
@@ -695,8 +706,13 @@ function randeazaOm(
     $stele = '';
 
     if ($evaluare !== null) {
-        $euId    = (int) $evaluare['eu'];
-        $notaLui = (int) ($evaluare['notele_mele'][$id] ?? 0);
+        $euId = (int) $evaluare['eu'];
+
+        // Nota mea despre el, și ce i-am scris: vin din același rând al
+        // aceleiași cereri (noteleMeleLaEveniment), nu din două.
+        $aMea       = $evaluare['notele_mele'][$id] ?? null;
+        $notaLui    = (int) ($aMea['stele'] ?? 0);
+        $parereaMea = (string) ($aMea['text'] ?? '');
 
         // Harta vine gata făcută din absentiiEvenimentului(), ca să nu fie
         // nevoie de constantele din inc/evaluari.php aici — altfel cele două
@@ -725,7 +741,8 @@ function randeazaOm(
             // Pe tine nu te notezi. Nici stele stinse: n-are ce să însemne.
             $stele = '';
         } elseif (!empty($evaluare['pot_nota'])) {
-            $stele = randeazaSteleParticipant($id, $notaLui, '', (string) ($om['permalink'] ?? ''));
+            $stele = randeazaSteleParticipant($id, $notaLui, '',
+                (string) ($om['permalink'] ?? ''), $parereaMea);
         } else {
             $stele = randeazaSteleParticipant($id, $notaLui,
                 'Poți nota doar dacă ai fost și tu pe lista de participanți.', '');
