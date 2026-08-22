@@ -118,7 +118,18 @@ parola-uitata.php, parola-noua.php, google.php, finalizare.php, confirma.php,
 stergere.php, iesire.php, verifica.php, constructie.php,
 findme.php, admin.php, admin-evenimente.php, admin-comentarii.php,
 admin-contact.php, admin-useri.php, admin-evaluari.php, admin-dorinte.php,
-coduri.php, sitemap.php, robots.txt
+coduri.php, sitemap.php, robots.txt, dezabonare.php
+
+  dezabonare.php → ieșirea de la newsletterul zilnic, FĂRĂ CONT: cine s-a
+                săturat de un mesaj n-are chef să-și amintească parola ca să
+                scape de el, iar dacă nu scapă în două secunde apasă „Spam".
+                Semnătura din adresă ține loc de dovadă (HMAC din id + o cheie
+                a site-ului, vezi cheieDezabonare). DESCHIDEREA DOAR ÎNTREABĂ;
+                stinsul se face cu un buton, prin POST — multe programe de
+                e-mail deschid singure toate linkurile dintr-un mesaj, iar cu
+                un GET care stinge, oamenii s-ar fi trezit scoși de pe listă
+                fără să fi apăsat nimic. De aceea nu se trimite nici
+                „List-Unsubscribe-Post" în mesaj
 
   event.php   → ADRESA LUI E `/eveniment/<slug>`, nu `event.php?slug=`.
                 Rescrierea o face .htaccess-ul din rădăcină (și
@@ -428,6 +439,28 @@ inc/
                       pe profil și tabul „Istoric" (istoricEvenimente) — pe
                       unde a fost omul, DOAR evenimente încheiate, cu
                       „Organizator" și „Absent" pe cartonașe
+  newsletter.php    → NEWSLETTERUL ZILNIC: „ce se întâmplă azi în oraș". O dată
+                      pe zi, la 12, către cine are bifa `membri.newsletter`.
+                      DACĂ AZI NU E NIMIC, NU PLEACĂ NIMIC — un mesaj care
+                      spune „azi nu se întâmplă nimic" e cel mai bun fel de
+                      a-l învăța pe om să nu-l mai deschidă, iar peste o lună,
+                      când chiar e ceva, ajunge tot necitit. Intră numai
+                      evenimentele APROBATE de azi, în ordinea orei: cele
+                      anulate au pagina lor mai departe pe site, dar a le
+                      trimite dimineața ca pe ceva ce urmează ar fi o
+                      minciună. Ștampila (`newsletter_trimis_la`, sql/031) se
+                      pune ÎNAINTE de trimitere și hotărârea e în `WHERE`, ca
+                      la revendicarea unui abțibild: dintre „a plecat de două
+                      ori" și „n-a plecat pentru că a căzut curentul între
+                      ștampilă și poștă", se alege a doua — un e-mail plecat
+                      nu se ia înapoi. TOT AICI DEZABONAREA:
+                      cheieDezabonare() / semnaturaDezabonare() /
+                      linkDezabonare() — un HMAC din id-ul omului și o cheie a
+                      site-ului, NU un token ținut în bază. Un token scris la
+                      fiecare trimitere ar fi însemnat că linkul de ieri moare
+                      azi, iar cine caută peste trei luni un mesaj vechi ca să
+                      se dezaboneze ar da peste „link expirat" și ar apăsa
+                      „Spam" în schimb
   multumiri.php     → e-mailul de mulțumire de după eveniment: cine îl
                       primește, când, și semnul că a plecat o singură dată
                       (evenimente.multumiri_trimise_la). Îl cheamă doar
@@ -539,6 +572,7 @@ api/                → endpoint-uri JSON apelate din JS (fetch); eveniment.php 
 cron/               → scripturi rulate din cron (doar CLI, .htaccess le blochează)
                       anonimizeaza-conturi.php      — o dată pe zi
                       multumeste-participantilor.php — din oră în oră
+                      newsletter-zilnic.php         — o dată pe zi, la 12:00
 sql/                → schema.sql + migrări numerotate (002, 003, 004, 005-google,
                       006-tine-minte, 007-setari, 008-mesaje-contact,
                       009-evenimente, 010-limita-evenimente,
@@ -552,7 +586,12 @@ sql/                → schema.sql + migrări numerotate (002, 003, 004, 005-goo
                       024-categorii-doar-staff, 025-coduri-qr,
                       026-corectura-eveniment, 027-instiintari-feedback,
                       028-feedback-instiintat, 029-eveniment-fixat,
-                      030-incercari-qr)
+                      030-incercari-qr, 031-newsletter-zilnic)
+                      `membri.newsletter_trimis_la` (031) e singurul lucru care
+                      ține „cel mult unul pe zi": fără el, un cron pornit de
+                      două ori trimite de două ori, iar o rulare de mână ca să
+                      se vadă dacă merge ajunge la toată lumea. Se pune ÎNAINTE
+                      de trimitere, nu după — un e-mail plecat nu se ia înapoi
                       `incercari_qr` (030) ține minte scanările de abțibild care
                       N-AU NIMERIT nimic, ca să se poată număra: fără ea, un
                       program care încearcă coduri de pe canapea nimerea unul
@@ -580,6 +619,15 @@ teste/              → router.php: serverul de probă cu ADRESE FRUMOASE.
                       restul tablei)
                       test-comentarii.php, test-participanti.php,
                       test-evaluari.php, test-multumiri.php
+                      test-newsletter.php (newsletterul zilnic; cere baza, iar
+                      pagina de dezabonare cere și serverul — se sare singură.
+                      ATENȚIE: stinge bifa de newsletter la toți membrii din
+                      bază pe durata ei, ca să servească doar oamenii ei, și o
+                      pune la loc la sfârșit. Se uită DOAR la evenimentele ei,
+                      după slug: una care ar număra rândurile din
+                      evenimenteleDeAzi() ar pica în orice zi în care se
+                      întâmplă ceva în oraș, adică tocmai în zilele care
+                      contează)
                       (toate patru cer baza de date, nu și serverul)
                       test-admin.php (zona de administrare; cere baza, iar
                       partea de HTTP cere și serverul — se sare singură. Păzește
@@ -744,7 +792,11 @@ assets/css/style.css, assets/js/main.js, assets/img/
   omDeInstiintatLaFeedback, cu bifa `email_feedback`; stelele singure NU
   vestesc nimic, fiindcă sunt anonime). PLUS CELE PATRU ALE ZONEI DE ADMINISTRARE, toate cu motiv care
   poate lipsi (api/admin.php): comentariul șters, poza ștearsă, contul
-  suspendat și hotărârea unei dorințe. NU pleacă nimic când cineva se înscrie
+  suspendat și hotărârea unei dorințe. PLUS NEWSLETTERUL ZILNIC
+  (cron/newsletter-zilnic.php, cu bifa `newsletter`) — SINGURUL mesaj de pe
+  site care vine nechemat, și de aceea singurul cu link de dezabonare și cu
+  antetul `List-Unsubscribe`. Celelalte sunt răspunsuri la ceva ce a făcut
+  omul, iar alea nu se „dezabonează". NU pleacă nimic când cineva se înscrie
   la un eveniment, când se apreciază un comentariu sau când se raportează ceva
 - Tabla cu dorințe se moderează din `admin-dorinte.php`. Fiecare dorință intră
   cu `stare_moderare = 'in_asteptare'` și nu se vede nicăieri până nu e
