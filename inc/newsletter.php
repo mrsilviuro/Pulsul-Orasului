@@ -57,7 +57,7 @@ const NEWSLETTER_MAX_EVENIMENTE = 12;
 function evenimenteleDeAzi(int $celMult = NEWSLETTER_MAX_EVENIMENTE): array
 {
     $q = db()->prepare(
-        'SELECT e.id, e.titlu, e.slug, e.coperta, e.oras, e.locatie,
+        'SELECT e.id, e.titlu, e.slug, e.coperta, e.oras, e.locatie, e.descriere,
                 e.data_eveniment, e.ora_inceput,
                 c.nume AS categorie, c.imagine_default
            FROM evenimente e
@@ -102,6 +102,11 @@ function randuriPentruNewsletter(array $evenimente): array
          */
         $ora = substr((string) $ev['ora_inceput'], 0, 5);
 
+        /**
+         * Orașul, apoi locul anume, despărțite cu „·" — ca pe cartonașele de pe
+         * site. Se strânge dinspre larg spre îngust: când, în ce oraș, și abia
+         * apoi unde anume.
+         */
         $unde = array_filter([
             (string) ($ev['oras'] ?? ''),
             (string) ($ev['locatie'] ?? ''),
@@ -110,9 +115,16 @@ function randuriPentruNewsletter(array $evenimente): array
         $randuri[] = [
             'titlu' => (string) $ev['titlu'],
             'cand'  => $ora === '' ? '' : 'de la ' . $ora,
-            'unde'  => implode(', ', $unde),
+            'unde'  => implode(' · ', $unde),
             'poza'  => $poza === '' ? '' : urlIntreg($poza),
             'href'  => urlIntreg(urlEveniment((string) $ev['slug'])),
+
+            // Categoria și începutul descrierii, ca pe cartonașul de pe site.
+            // Textul e tăiat scurt dinadins: într-un mesaj cu patru evenimente,
+            // patru paragrafe întregi ar fi însemnat un ecran de derulat până
+            // la primul lucru de apăsat.
+            'categorie' => (string) ($ev['categorie'] ?? ''),
+            'text'      => inceputDeText(strip_tags((string) ($ev['descriere'] ?? '')), 110),
         ];
     }
 

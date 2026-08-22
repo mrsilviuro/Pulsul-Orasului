@@ -441,6 +441,16 @@ inc/
                       „Organizator" și „Absent" pe cartonașe
   newsletter.php    → NEWSLETTERUL ZILNIC: „ce se întâmplă azi în oraș". O dată
                       pe zi, la 12, către cine are bifa `membri.newsletter`.
+                      Evenimentele se scriu ca niște CARTONAȘE ca pe prima
+                      pagină — poza lată DEASUPRA, apoi categoria, titlul, un
+                      început de text și rândul cu ora și locul. Poza a stat o
+                      vreme în stânga, într-o casetă de 120px: la 16:9 asta
+                      înseamnă 68px înălțime, adică o dungă în care nu se vede
+                      nimic din afiș. Blocul „lista" din inc/email.php e cel
+                      care le desenează; acolo scrie și de ce `<img>` poartă
+                      `width`/`height` CA ATRIBUTE (singurul lucru pe care îl
+                      citesc programele când poza e blocată) și de ce `alt` e
+                      GOL.
                       DACĂ AZI NU E NIMIC, NU PLEACĂ NIMIC — un mesaj care
                       spune „azi nu se întâmplă nimic" e cel mai bun fel de
                       a-l învăța pe om să nu-l mai deschidă, iar peste o lună,

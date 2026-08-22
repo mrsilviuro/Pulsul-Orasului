@@ -42,17 +42,38 @@ function sectiune(string $nume): void
        . str_repeat('-', 60) . "\n";
 }
 
-const SEMN = 'tstnews-';
+const SEMN     = 'tstnews-';
+const SLUG_CAT = 'tstnews-categorie';
 
 /** Cine avea bifa pornită înainte de probă, ca să le-o punem la loc. */
 $aveauBifa = [];
 
-/** Oamenii și evenimentele probei, șterse. Atât — fără nimic altceva. */
+/** Oamenii, evenimentele și categoria probei, șterse. Atât — nimic altceva. */
 function stergeOameniiProbei(): void
 {
     db()->prepare('DELETE e FROM evenimente e JOIN membri m ON m.id = e.membru_id
                     WHERE m.permalink LIKE ?')->execute([SEMN . '%']);
     db()->prepare('DELETE FROM membri WHERE permalink LIKE ?')->execute([SEMN . '%']);
+    db()->prepare('DELETE FROM categorii WHERE slug = ?')->execute([SLUG_CAT]);
+}
+
+/**
+ * O categorie a probei, FĂRĂ imagine implicită.
+ *
+ * Evenimentele foloseau `(SELECT MIN(id) FROM categorii)`, adică prima
+ * categorie din bază — iar aceleia i se poate pune oricând o imagine de pe
+ * site. Atunci proba „fără poză, câmpul e gol" pica, deși codul era în
+ * regulă. O categorie a ei înseamnă că proba spune același lucru pe orice
+ * bază.
+ */
+function faCategoriaProbei(): int
+{
+    db()->prepare(
+        'INSERT INTO categorii (nume, slug, ordine, doar_staff, joc_qr, imagine_default)
+         VALUES (?,?,?,0,0,NULL)'
+    )->execute(['Probă newsletter', SLUG_CAT, 96]);
+
+    return (int) db()->lastInsertId();
 }
 
 /**
@@ -106,14 +127,15 @@ function faMembru(string $cheie, string $prenume, bool $abonat,
 function faEveniment(int $cine, string $slug, string $titlu, string $zi,
                      string $ora, string $stare = 'aprobat'): int
 {
+    global $CATEGORIA;
+
     db()->prepare(
         'INSERT INTO evenimente (membru_id, categorie_id, titlu, slug, oras, locatie,
                                  descriere, data_eveniment, ora_inceput, stare_moderare,
                                  creat_la, actualizat_la)
-         VALUES (?, (SELECT MIN(id) FROM categorii), ?, ?, ?, \'Centrul vechi\',
-                 ?, ?, ?, ?, ?, ?)'
+         VALUES (?,?,?,?,?,\'Centrul vechi\',?,?,?,?,?,?)'
     )->execute([
-        $cine, $titlu, $slug, oraseDisponibile()[0] ?? 'Roman',
+        $cine, $CATEGORIA, $titlu, $slug, oraseDisponibile()[0] ?? 'Roman',
         str_repeat('Povestea lui. ', 30), $zi, $ora, $stare, acum(), acum(),
     ]);
 
@@ -124,7 +146,8 @@ $azi   = date('Y-m-d');
 $maine = date('Y-m-d', strtotime('+1 day'));
 $ieri  = date('Y-m-d', strtotime('-1 day'));
 
-$gazda = faMembru('gazda', 'Silviu', true);
+$CATEGORIA = faCategoriaProbei();
+$gazda     = faMembru('gazda', 'Silviu', true);
 
 /* ==================================================================== */
 sectiune('ce intră în mesaj');
@@ -193,8 +216,20 @@ verifica('cu titlul lui', 'Cafea de dimineață', $randuri[0]['titlu']);
 
 /** Ora fără secunde, cum se scrie între oameni: „08:30", nu „08:30:00". */
 verifica('ora scrisă scurt', 'de la 08:30', $randuri[0]['cand']);
-verifica('cu orașul și locul', (oraseDisponibile()[0] ?? 'Roman') . ', Centrul vechi',
+/* Orașul, apoi locul anume, despărțite cu „·" — ca pe cartonașele de pe site. */
+verifica('cu orașul și locul', (oraseDisponibile()[0] ?? 'Roman') . ' · Centrul vechi',
     $randuri[0]['unde']);
+
+/* Categoria și începutul textului, ca pe cartonaș. */
+verifica('cu categoria lui', 'Probă newsletter', $randuri[0]['categorie']);
+verifica('și cu un început de text', true,
+    str_starts_with($randuri[0]['text'], 'Povestea lui.'));
+
+/**
+ * Textul e TĂIAT scurt: într-un mesaj cu patru evenimente, patru paragrafe
+ * întregi ar fi însemnat un ecran de derulat până la primul lucru de apăsat.
+ */
+verifica('tăiat scurt', true, mb_strlen($randuri[0]['text'], 'UTF-8') <= 115);
 
 /**
  * ADRESELE SUNT ÎNTREGI. Într-un e-mail nu există „pagina de acum" față de care
