@@ -2908,6 +2908,33 @@ body { overscroll-behavior-y: none; }
   line-height: 0;
   flex: none;
 }
+
+/* LOCUL STELELOR SE ȚINE DIN CSS, NU SE AȘTEAPTĂ JS-UL.
+
+   Elementul vine din server GOL — `<span data-stars="5"></span>` — iar cele
+   zece SVG-uri i le pune main.js (deseneazaStele) după ce pagina s-a așezat o
+   dată. Până atunci are ZERO pixeli lățime.
+
+   Într-un tabel asta nu e o zero-pixeli oarecare: `table-layout: auto` împarte
+   lățimile ATUNCI, iar coloana primește doar cât cere titlul din capul ei.
+   Când vin stelele, ele nu mai încap și dau peste coloana de alături — cifra
+   notei ajunge scrisă peste primul cuvânt din coloana următoare.
+
+   Măsurat pe „Ultimele 200" din admin-evaluari.php: coloana primea 65px la
+   prima așezare, iar conținutul cerea 93px. Unele browsere reașază tabelul și
+   scapă, altele nu — de aceea nu se poate lăsa pe seama reașezării.
+
+   Cinci stele plus cele patru spații de 2px dintre ele. `--star-size` e aceeași
+   variabilă din care își iau SVG-urile mărimea, deci cele două nu se pot
+   despărți: o stea mai mare împinge singură și locul rezervat. */
+[data-stars] {
+  /* `inline-block` de pe acum, nu abia când JS-ul pune clasa `.stars`:
+     `min-width` nu se aplică pe un element inline, iar în pagină elementul e
+     scris ca `<span>`. Fără rândul ăsta, locul s-ar fi rezervat abia după ce
+     stelele erau deja desenate — adică prea târziu. */
+  display: inline-block;
+  min-width: calc(var(--star-size, 18px) * 5 + 8px);
+}
 .stars__row { display: flex; gap: 2px; white-space: nowrap; }
 .stars__row--full {
   position: absolute;
@@ -5067,7 +5094,11 @@ a.admin-nav__link:hover { background: var(--bg-soft); color: var(--text); }
    Desenate singure, ochiul trebuie să le numere pe fiecare rând — iar într-un
    tabel de două sute de rânduri asta e chiar munca pe care pagina ar trebui
    s-o scutească. Cifra se citește dintr-o privire, stelele dau forma. */
-.admin-stele { display: inline-flex; align-items: center; gap: 7px; }
+/* `nowrap` pe toată bucata: stelele și cifra sunt un singur lucru, iar celula
+   n-are voie să fie strânsă sub ei. Regula de mai sus care pune `nowrap` pe
+   ultimele trei coloane nu ajunge aici — tabelul ăsta are șapte, iar „Stele" e
+   a treia. */
+.admin-stele { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
 .admin-stele__cifra { font-weight: 800; font-variant-numeric: tabular-nums; }
 
 /* Una sau două stele: singurele despre care poate veni cineva să se plângă.
