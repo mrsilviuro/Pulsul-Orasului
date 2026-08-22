@@ -263,7 +263,7 @@ function evenimentDinBaza(array $rand): array
         'coperta_url'      => $coperta,
         'organizator'      => numeAfisat((string) ($rand['org_nume'] ?? ''), (string) ($rand['org_prenume'] ?? '')),
         'organizator_url'  => !empty($rand['org_permalink'])
-            ? 'profil.php?m=' . urlencode((string) $rand['org_permalink'])
+            ? urlProfil((string) $rand['org_permalink'])
             : '',
         'organizator_poza' => $rand['org_poza'] ?? null,
         'creat_la'         => $rand['creat_la'] ?? null,

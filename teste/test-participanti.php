@@ -222,7 +222,7 @@ salveazaInteres($evenimentId, $staff, 'participant');
 $html = randeazaListaOameni($evenimentId, 'participant', $organizator, true);
 
 verifica('numele e prescurtat: „R. Ioana"', true, str_contains($html, '>R. Ioana<'));
-verifica('și duce la profil', true, str_contains($html, 'href="profil.php?m=tstpar-org"'));
+verifica('și duce la profil', true, str_contains($html, 'href="/profil.php?m=tstpar-org"'));
 verifica('organizatorul poartă insigna lui', true,
     str_contains($html, '<span class="person__badge">Organizator</span>'));
 

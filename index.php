@@ -74,7 +74,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['dorinta'])) {
          * omul, ca să nu-l punem să scrie din nou.
          */
         if ($rezultat['ok']) {
-            header('Location: index.php?dorinta=trimisa#dorinta-formular');
+            header('Location: /index.php?dorinta=trimisa#dorinta-formular');
             exit;
         }
 
@@ -142,8 +142,8 @@ require __DIR__ . '/inc/antet.php';
     -->
     <div class="hero__butoane">
       <a class="btn btn--primary hero__cta" href="<?= $logat
-            ? 'adauga_eveniment.php'
-            : 'login.php?redirect=' . h(urlencode('/adauga_eveniment.php')) ?>">
+            ? '/adauga_eveniment.php'
+            : '/login.php?redirect=' . h(urlencode('/adauga_eveniment.php')) ?>">
         <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
           <path d="M12 5v14"/><path d="M5 12h14"/>
         </svg>
@@ -224,7 +224,7 @@ require __DIR__ . '/inc/antet.php';
       <div class="tabla__cutie<?= ($dorintaRau !== '' || $dorintaGata) ? ' e-deschis' : '' ?>"
            id="dorinta-formular">
 
-        <form class="dorinta-form" method="post" action="index.php#dorinta-formular"
+        <form class="dorinta-form" method="post" action="/index.php#dorinta-formular"
               data-dorinta-form <?= $dorintaGata ? 'hidden' : '' ?>>
           <input type="hidden" name="csrf" value="<?= h(tokenCsrf()) ?>">
 
@@ -337,7 +337,7 @@ require __DIR__ . '/inc/antet.php';
       JS, se deschide în filă nouă cu clic pe mijloc și se poate da mai
       departe. Butoanele de dinainte nu făceau nimic.
     ============================================================== -->
-    <form class="filtre" id="filtre" method="get" action="index.php"
+    <form class="filtre" id="filtre" method="get" action="/index.php"
           data-filtre aria-label="Filtrează evenimentele">
 
       <!-- ORAȘUL. `.field select` e caseta de selectare a site-ului, cu
@@ -420,8 +420,8 @@ require __DIR__ . '/inc/antet.php';
         <h2>Vrei să ieși afară dar n-ai cu cine?</h2>
         <p class="cta__text">De la jocuri de weekend până la drumeții sau ieșiri cu motoarele. Adaugă activitatea ta pe site și cunoaște oameni faini din oraș.</p>
         <div class="cta__actions">
-          <a class="btn btn--primary" href="adauga_eveniment.php">Propune o ieșire</a>
-          <a class="btn btn--outline" href="despre.php">Despre Pulsul Orașului</a>
+          <a class="btn btn--primary" href="/adauga_eveniment.php">Propune o ieșire</a>
+          <a class="btn btn--outline" href="/despre.php">Despre Pulsul Orașului</a>
         </div>
       </div>
     </section>

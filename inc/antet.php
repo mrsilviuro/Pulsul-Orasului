@@ -78,19 +78,19 @@ antetedeSiguranta();
 $meniu = [
     [
         'cheie' => 'acasa',
-        'href'  => 'index.php',
+        'href'  => '/index.php',
         'text'  => 'Acasă',
         'ico'   => '<path d="M3 10.5 12 3l9 7.5"/><path d="M5.5 9.5V20h13V9.5"/><path d="M10 20v-5.5h4V20"/>',
     ],
     [
         'cheie' => 'despre',
-        'href'  => 'despre.php',
+        'href'  => '/despre.php',
         'text'  => 'Despre',
         'ico'   => '<circle cx="12" cy="12" r="9"/><path d="M12 11v5.5"/><path d="M12 7.6v.1"/>',
     ],
     [
         'cheie' => 'contact',
-        'href'  => 'contact.php',
+        'href'  => '/contact.php',
         'text'  => 'Contact',
         'ico'   => '<rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m3.8 7 8.2 5.6L20.2 7"/>',
     ],
@@ -117,7 +117,7 @@ $meniu = [
 if ($logat && esteStaff($membru)) {
     $meniu[] = [
         'cheie' => 'admin',
-        'href'  => 'admin.php',
+        'href'  => '/admin.php',
         'text'  => 'Admin',
         'ico'   => '<path d="M12 3.2 4.5 6.2v5.4c0 4.4 3.1 8.2 7.5 9.2 4.4-1 7.5-4.8 7.5-9.2V6.2L12 3.2Z"/>'
                  . '<path d="m9 12 2.2 2.2L15.2 10"/>',
@@ -128,7 +128,7 @@ if ($logat && esteStaff($membru)) {
 if ($logat) {
     $meniu[] = [
         'cheie' => 'iesire',
-        'href'  => 'iesire.php?token=' . urlencode(tokenCsrf()),
+        'href'  => '/iesire.php?token=' . urlencode(tokenCsrf()),
         'text'  => 'Deloghează-te',
         'clasa' => 'nav__link--iesire',
         'ico'   => '<path d="M15 16.5v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v2"/>'
@@ -137,7 +137,7 @@ if ($logat) {
 } else {
     $meniu[] = [
         'cheie' => 'cont',
-        'href'  => 'login.php#inregistrare',
+        'href'  => '/login.php#inregistrare',
         'text'  => 'Alătură-te și tu',
         'clasa' => 'nav__link--alatura',
         'ico'   => '<circle cx="9.5" cy="8.5" r="3.5"/><path d="M3 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/>'
@@ -188,11 +188,19 @@ if ($logat) {
      poza mare în loc de o miniatură lipită în stânga. -->
 <meta name="twitter:card" content="<?= $ogImagine !== '' ? 'summary_large_image' : 'summary' ?>">
 
-<link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+<!-- Care e adresa ADEVĂRATĂ a paginii ăsteia.
+     Aceeași pe care o poartă și og:url, fiindcă e același lucru spus la două
+     urechi deosebite: Facebook citește og:url, Google citește asta. Se scrie
+     pe orice pagină, nu doar pe cele cu două adrese — un filtru („?oras=…")
+     sau un „?fbclid=" lipit de Facebook la sfârșitul unui link fac, altfel,
+     tot atâtea pagini deosebite în ochii lui Google. -->
+<link rel="canonical" href="<?= h($ogUrl) ?>">
+
+<link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/css/style.css?v=89">
+<link rel="stylesheet" href="/assets/css/style.css?v=89">
 
 <!-- Setează tema ÎNAINTE de randare, ca să nu apară un flash alb pe dark mode.
      Singurul script scris în pagină de pe tot site-ul, de aceea singurul care
@@ -223,7 +231,7 @@ if ($logat) {
 <header class="site-header">
   <div class="nav">
 
-    <a class="logo" href="index.php" aria-label="PulsulOrasului.Ro — Acasă">
+    <a class="logo" href="/index.php" aria-label="PulsulOrasului.Ro — Acasă">
       <span class="logo__mark" aria-hidden="true">
         <svg viewBox="0 0 32 32" fill="none">
           <path d="M2 16h6.2l2.6-7.4a1 1 0 0 1 1.9.05l4.1 14.2a1 1 0 0 0 1.9.04L21.4 16H30"
@@ -256,7 +264,7 @@ if ($logat) {
 
     <div class="nav__actions">
       <?php if ($logat): ?>
-      <a class="nav__eu" href="profil.php" title="Profilul tău">
+      <a class="nav__eu" href="/profil.php" title="Profilul tău">
         <span class="nav__eu-nume"><?= h(numeAfisat($membru['nume'], $membru['prenume'])) ?></span>
         <!-- Cine are poză o vede aici; ceilalți văd inițiala prenumelui. -->
         <span class="nav__eu-avatar" aria-hidden="true"><?php
@@ -273,7 +281,7 @@ if ($logat) {
       <!-- Rotița stă doar pentru cine e conectat: n-are ce seta un vizitator.
            Ca și creionul de pe poza de profil, nu e ascunsă din CSS, ci pur și
            simplu nu ajunge în pagină pentru ceilalți. -->
-      <a class="nav__btn nav__setari" href="setari.php"
+      <a class="nav__btn nav__setari" href="/setari.php"
          title="Setările contului" aria-label="Setările contului">
         <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
           <circle cx="12" cy="12" r="3.2"/>

@@ -38,13 +38,13 @@ $membruId = (int) $membru['id'];
  */
 if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
     if (!tokenCsrfValid(is_string($_POST['csrf'] ?? null) ? $_POST['csrf'] : '')) {
-        header('Location: coduri.php?e=sesiune');
+        header('Location: /coduri.php?e=sesiune');
         exit;
     }
 
     $codNou = faCodQrNou($membruId);
 
-    header('Location: coduri.php' . ($codNou !== '' ? '?nou=' . urlencode($codNou) : '?e=nereusit'));
+    header('Location: /coduri.php' . ($codNou !== '' ? '?nou=' . urlencode($codNou) : '?e=nereusit'));
     exit;
 }
 
@@ -101,7 +101,7 @@ require __DIR__ . '/inc/antet.php';
     </section>
     <?php endif; ?>
 
-    <form class="cod-form" method="post" action="coduri.php">
+    <form class="cod-form" method="post" action="/coduri.php">
       <input type="hidden" name="csrf" value="<?= h(tokenCsrf()) ?>">
       <button class="btn btn--primary" type="submit">Fă un cod nou</button>
     </form>
@@ -167,7 +167,7 @@ require __DIR__ . '/inc/antet.php';
 
               <td>
                 <?php if ($c['ev_slug'] !== null): ?>
-                <a href="event.php?slug=<?= h(urlencode((string) $c['ev_slug'])) ?>"><?= h((string) $c['ev_titlu']) ?></a>
+                <a href="<?= h(urlEveniment((string) $c['ev_slug'])) ?>"><?= h((string) $c['ev_titlu']) ?></a>
                 <?php else: ?>
                 <span class="cod-rand__mic">—</span>
                 <?php endif; ?>

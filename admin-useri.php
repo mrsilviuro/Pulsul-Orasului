@@ -75,13 +75,13 @@ require __DIR__ . '/inc/antet.php';
       </p>
     </header>
 
-    <form class="admin-cauta" method="get" action="admin-useri.php" role="search">
+    <form class="admin-cauta" method="get" action="/admin-useri.php" role="search">
       <label class="sr-only" for="cauta-om">Caută un om</label>
       <input type="search" id="cauta-om" name="q" value="<?= h($cauta) ?>"
              placeholder="Nume, e-mail sau telefon…" autocomplete="off">
       <button class="btn btn--primary" type="submit">Caută</button>
       <?php if ($cauta !== ''): ?>
-      <a class="btn btn--text" href="admin-useri.php">Arată-i pe toți</a>
+      <a class="btn btn--text" href="/admin-useri.php">Arată-i pe toți</a>
       <?php endif; ?>
     </form>
 

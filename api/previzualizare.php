@@ -175,7 +175,7 @@ $_SESSION['previzualizari'][$cheie] = [
         'coperta_url'      => $coperta,
         'coperta_fel'      => $copertaFel,
         'organizator'      => numeAfisat($membru['nume'], $membru['prenume']),
-        'organizator_url'  => 'profil.php?m=' . urlencode((string) $membru['permalink']),
+        'organizator_url'  => urlProfil((string) $membru['permalink']),
         'organizator_poza' => $membru['poza'] ?? null,
         // Fără dată de publicare: încă nu e publicat nimic.
         'creat_la'         => null,

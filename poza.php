@@ -35,9 +35,9 @@ require __DIR__ . '/inc/antet.php';
   <div class="wrap">
 
     <nav class="crumbs" aria-label="Navigare">
-      <a href="index.php">Acasă</a>
+      <a href="/index.php">Acasă</a>
       <span aria-hidden="true">/</span>
-      <a href="profil.php">Profilul tău</a>
+      <a href="/profil.php">Profilul tău</a>
       <span aria-hidden="true">/</span>
       <span class="crumbs__current">Poza de profil</span>
     </nav>
@@ -127,7 +127,7 @@ require __DIR__ . '/inc/antet.php';
 
       <!-- ========================= BUTOANELE ========================== -->
       <div class="poza-actiuni">
-        <a class="btn btn--ghost" href="profil.php">Înapoi la profil</a>
+        <a class="btn btn--ghost" href="/profil.php">Înapoi la profil</a>
         <button class="btn btn--primary" type="button" id="poza-salveaza" disabled>
           Salvează poza
         </button>

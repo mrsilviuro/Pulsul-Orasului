@@ -39,8 +39,7 @@ $randComentariu = static function (array $c, bool $cuRapoarte): string {
      * fișier care o folosește — dacă se schimbă vreodată acolo, se schimbă și
      * aici, iar testul care păzește ancora e în teste/test-comentarii.php.
      */
-    $ancora = 'event.php?slug=' . urlencode((string) $c['ev_slug'])
-            . '#c' . (int) $c['id'];
+    $ancora = urlEveniment((string) $c['ev_slug']) . '#c' . (int) $c['id'];
 
     $text = (int) $c['sters'] === 1
         ? '<span class="admin-tabel__gol">(golit)</span>'

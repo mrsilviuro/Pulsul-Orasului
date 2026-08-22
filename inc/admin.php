@@ -41,7 +41,7 @@ function cerePazaDeStaff(string $cale): array
     }
 
     if (!esteStaff($membru)) {
-        header('Location: index.php');
+        header('Location: /index.php');
         exit;
     }
 
@@ -63,7 +63,7 @@ function sectiuniAdmin(): array
     return [
         [
             'cheie'  => 'coduri',
-            'href'   => 'coduri.php',
+            'href'   => '/coduri.php',
             'titlu'  => 'Abțibilduri',
             'vorba'  => 'Codurile QR „FindMe": fă unele noi, vezi care sunt în joc.',
             'cifra'  => 'coduri',
@@ -75,7 +75,7 @@ function sectiuniAdmin(): array
         ],
         [
             'cheie'  => 'evenimente',
-            'href'   => 'admin-evenimente.php',
+            'href'   => '/admin-evenimente.php',
             'titlu'  => 'Evenimente',
             'vorba'  => 'Anunțurile care așteaptă o hotărâre și cele respinse.',
             'cifra'  => 'evenimente',
@@ -85,7 +85,7 @@ function sectiuniAdmin(): array
         ],
         [
             'cheie'  => 'comentarii',
-            'href'   => 'admin-comentarii.php',
+            'href'   => '/admin-comentarii.php',
             'titlu'  => 'Comentarii',
             'vorba'  => 'Ce s-a scris de curând, și tot ce a fost raportat.',
             'cifra'  => 'rapoarte',
@@ -95,7 +95,7 @@ function sectiuniAdmin(): array
         ],
         [
             'cheie'  => 'contact',
-            'href'   => 'admin-contact.php',
+            'href'   => '/admin-contact.php',
             'titlu'  => 'Contact',
             'vorba'  => 'Mesajele primite prin formularul de contact.',
             'cifra'  => 'mesaje',
@@ -105,7 +105,7 @@ function sectiuniAdmin(): array
         ],
         [
             'cheie'  => 'useri',
-            'href'   => 'admin-useri.php',
+            'href'   => '/admin-useri.php',
             'titlu'  => 'Useri',
             'vorba'  => 'Caută pe cineva, schimbă-i starea sau limita de evenimente.',
             'cifra'  => 'suspendati',
@@ -117,7 +117,7 @@ function sectiuniAdmin(): array
         ],
         [
             'cheie'  => 'evaluari',
-            'href'   => 'admin-evaluari.php',
+            'href'   => '/admin-evaluari.php',
             'titlu'  => 'Evaluări',
             'vorba'  => 'Cine cui a dat stele, de la ce eveniment și când.',
             /**
@@ -137,7 +137,7 @@ function sectiuniAdmin(): array
         ],
         [
             'cheie'  => 'dorinte',
-            'href'   => 'admin-dorinte.php',
+            'href'   => '/admin-dorinte.php',
             'titlu'  => 'Dorințe',
             'vorba'  => 'Tabla cu dorințe: ce așteaptă aprobarea și ce e pe ea acum.',
             'cifra'  => 'dorinte',
@@ -206,7 +206,7 @@ function randeazaMeniulAdmin(string $acum): string
 {
     $cifre = cifreleAdmin();
     $html  = '<nav class="admin-nav" aria-label="Zona de administrare">'
-           . '<a class="admin-nav__acasa" href="admin.php">'
+           . '<a class="admin-nav__acasa" href="/admin.php">'
            . '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">'
            . '<path d="M14 6.5 8.5 12l5.5 5.5"/></svg>'
            . '<span>Admin</span></a><ul>';
@@ -270,7 +270,7 @@ function omulCuLegatura(?string $nume, ?string $prenume, ?string $permalink,
         return h($numeAfisat);
     }
 
-    return '<a href="profil.php?m=' . h(urlencode($permalink)) . '">' . h($numeAfisat) . '</a>';
+    return '<a href="' . h(urlProfil($permalink)) . '">' . h($numeAfisat) . '</a>';
 }
 
 /**

@@ -391,7 +391,7 @@ verifica('cu însemnul de absență', 1, substr_count($htmlIstoric, 'card__rol--
 verifica('fără „Organizator", că nu-s ale ei', 0,
     substr_count($htmlIstoric, 'card__rol--organizator'));
 verifica('duc la pagina evenimentului', true,
-    str_contains($htmlIstoric, 'href="event.php?slug=tsteva-trecut"'));
+    str_contains($htmlIstoric, 'href="/eveniment/tsteva-trecut"'));
 
 // Nimic nu vine ascuns din PHP: ascunsul îl face main.js, câte ISTORIC_DEODATA.
 verifica('și niciunul nu vine ascuns din PHP', 0, substr_count($htmlIstoric, 'ascuns'));

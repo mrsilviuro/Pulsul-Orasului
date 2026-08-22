@@ -463,7 +463,7 @@ function butonulDorintei(bool $eLogat, string $stare): string
 
     $unde = $eLogat
         ? '#dorinta-formular'
-        : 'login.php?redirect=' . h(urlencode('/index.php#dorinta-formular'));
+        : '/login.php?redirect=' . h(urlencode('/index.php#dorinta-formular'));
 
     return '<a class="btn btn--ghost hero__cta hero__cta--dorinta" href="' . $unde . '">'
          . stelutaDorinta() . '<span>Pune-ți o dorință</span></a>';

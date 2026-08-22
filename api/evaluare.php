@@ -229,7 +229,7 @@ if ($fapta === 'scrie' && $text !== null) {
             numeAfisat((string) $membru['nume'], (string) $membru['prenume']),
             (string) $eveniment['titlu'],
             $text,
-            urlIntreg('profil.php?m=' . urlencode((string) ($celNotat['permalink'] ?? '')))
+            urlIntreg(urlProfil((string) ($celNotat['permalink'] ?? '')))
         );
     }
 }

@@ -773,7 +773,7 @@ function randeazaEvaluari(array $evaluari, bool $eStaff = false): string
             $poza  = POZA_IMPLICITA;
         } else {
             $antet = ($activ && ($ev['permalink'] ?? '') !== '')
-                ? '<a class="comment__author" href="profil.php?m=' . h((string) $ev['permalink']) . '">' . $nume . '</a>'
+                ? '<a class="comment__author" href="' . h(urlProfil((string) $ev['permalink'])) . '">' . $nume . '</a>'
                 : '<span class="comment__author comment__author--sters">' . $nume . '</span>';
 
             $poza = $activ ? urlPoza($ev['poza'] ?? null, true) : POZA_IMPLICITA;

@@ -202,7 +202,7 @@ require __DIR__ . '/inc/antet.php';
              deja înscris i-ar spune să facă ceva ce a făcut demult. -->
         <div class="info-cta">
           <p>Vrei să publici tu evenimente pe site?</p>
-          <a class="btn btn--ghost btn--sm" href="login.php#inregistrare">Alătură-te și tu</a>
+          <a class="btn btn--ghost btn--sm" href="/login.php#inregistrare">Alătură-te și tu</a>
         </div>
         <?php endif; ?>
       </aside>

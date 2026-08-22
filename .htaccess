@@ -38,7 +38,52 @@
 
 
 # -------------------------------------------------------------------------
-#  2. TEXTUL PLEACĂ ÎMPACHETAT
+#  2. ADRESELE FRUMOASE
+#
+#  /eveniment/mergem-la-alergat   →   event.php?slug=mergem-la-alergat
+#  /sitemap.xml                   →   sitemap.php
+#
+#  DE CE. Adresa unui eveniment e singura de pe site pe care oamenii o pun în
+#  mesaje, o lipesc pe Facebook și o citesc unii altora la telefon. „Intră pe
+#  pulsulorasului.ro slash eveniment slash mergem la alergat" se poate spune;
+#  „event punct php întrebare slug egal" nu se poate. Iar în lista de rezultate
+#  a lui Google, adresa se vede sub titlu.
+#
+#  E O RESCRIERE, NU O REDIRECȚIONARE: browserul rămâne la adresa frumoasă, iar
+#  event.php primește cererea exact ca înainte și nu știe nimic despre asta.
+#  Drumul invers — de la adresa veche la cea nouă — îl face event.php însuși,
+#  cu un 301, ca să existe o singură adresă adevărată pentru fiecare anunț.
+#
+#  Alfabetul e cel al slugurilor (litere mici, cifre, cratime — vezi
+#  slugEveniment din inc/validare.php). Orice altceva nici nu intră în tipar și
+#  ajunge la 404, în loc să treacă mai departe cu un slug pe care baza n-are
+#  cum să-l aibă.
+#
+#  `QSA` păstrează ce mai e în adresă: „/eveniment/x?comentariu=12" trebuie să
+#  ajungă la event.php cu tot cu el.
+#
+#  Cele două rânduri cu `!-f` și `!-d` sunt paza obișnuită: dacă vreodată
+#  există chiar un fișier sau un dosar cu numele cerut, el are întâietate.
+#  Fără ele, un dosar numit „eveniment" pus vreodată pe server ar fi devenit
+#  invizibil.
+#
+#  FĂRĂ mod_rewrite site-ul merge mai departe, doar că adresele frumoase dau
+#  404. De aceea urlEveniment() e într-un singur loc: se schimbă înapoi la
+#  forma cu întrebare dintr-o singură linie.
+# -------------------------------------------------------------------------
+<IfModule mod_rewrite.c>
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule ^eveniment/([a-z0-9][a-z0-9-]*)/?$ event.php?slug=$1 [L,QSA]
+
+  # Harta site-ului se scrie din bază, la fiecare cerere (vezi sitemap.php),
+  # dar lumea — și robots.txt — o caută la numele obișnuit.
+  RewriteRule ^sitemap\.xml$ sitemap.php [L]
+</IfModule>
+
+
+# -------------------------------------------------------------------------
+#  3. TEXTUL PLEACĂ ÎMPACHETAT
 #
 #  `style.css` are vreo 180 KB, `main.js` vreo 230 KB — patru sute și ceva de
 #  kilobiți de text pe care fiecare om îi descarcă la prima vizită. Împachetate,
@@ -57,9 +102,9 @@
 
 
 # -------------------------------------------------------------------------
-#  3. CE NU SE SCHIMBĂ, SE ȚINE MINTE
+#  4. CE NU SE SCHIMBĂ, SE ȚINE MINTE
 #
-#  CSS-ul și JS-ul se cer cu `?v=88` la coadă (regula 2 din CLAUDE.md), iar
+#  CSS-ul și JS-ul se cer cu `?v=NN` la coadă (regula 2 din CLAUDE.md), iar
 #  numărul crește la fiecare modificare. Adresa fiind alta, browserul aduce
 #  fișierul nou oricum — deci îl poate ține minte oricât fără să rămână vreodată
 #  cu unul vechi.
@@ -103,7 +148,7 @@
 
 
 # -------------------------------------------------------------------------
-#  4. CE NU SE DESCARCĂ
+#  5. CE NU SE DESCARCĂ
 #
 #  Dosarele cu cod (inc/, sql/, cron/, private/) au fiecare .htaccess-ul lui.
 #  Aici rămân fișierele răzlețe care ar putea ajunge pe server dintr-o
@@ -130,7 +175,7 @@
 
 
 # -------------------------------------------------------------------------
-#  5. MĂRUNȚIȘURI
+#  6. MĂRUNȚIȘURI
 # -------------------------------------------------------------------------
 
 # Fără lista fișierelor dintr-un dosar fără index.

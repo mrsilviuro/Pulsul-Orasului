@@ -604,8 +604,8 @@ function randeazaCasetaFindMe(array $eveniment, ?array $cod): string
               . ' width="130" height="130" loading="lazy">';
 
         $cine = $areProfil
-            ? '<a class="findme__castigator" href="profil.php?m='
-              . h(urlencode((string) $cod['gasit_permalink'])) . '">' . h($nume) . '</a>'
+            ? '<a class="findme__castigator" href="'
+              . h(urlProfil((string) $cod['gasit_permalink'])) . '">' . h($nume) . '</a>'
             : '<span class="findme__castigator">Cineva</span>';
 
         $cand = '';

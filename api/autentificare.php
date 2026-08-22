@@ -187,7 +187,7 @@ if (siteInConstructie() && !esteStaff($membru)) {
     raspunsJson([
         'ok'       => false,
         'stare'    => 'in_constructie',
-        'redirect' => 'constructie.php',
+        'redirect' => '/constructie.php',
         'mesaj'    => 'Site-ul e în lucru. Îți dăm de veste imediat ce deschidem.',
     ], 503);
 }
@@ -224,14 +224,14 @@ autentifica($membru, $tineMinte && !$cuParolaTemporara, $cuParolaTemporara);
  * caleInterna() — și aici, și la login.php, și la google.php.
  */
 $cerut    = caleInterna($date['redirect'] ?? null);
-$redirect = $cerut !== '' ? $cerut : 'index.php';
+$redirect = $cerut !== '' ? $cerut : '/index.php';
 
 // Cine a intrat cu parola temporară merge direct la schimbarea ei, oriunde ar
 // fi vrut să ajungă.
 if ($cuParolaTemporara) {
     raspunsJson([
         'ok'       => true,
-        'redirect' => 'parola-noua.php',
+        'redirect' => '/parola-noua.php',
         'temporara' => true,
         'mesaj'    => 'Ai intrat cu parola temporară. Alege-ți acum una nouă.',
     ]);

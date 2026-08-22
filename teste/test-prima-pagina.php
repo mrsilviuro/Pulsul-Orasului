@@ -510,11 +510,11 @@ verifica('nici cererea de o mie nu trece de doisprezece', 3,
 
 echo "\n=== ADRESA ===\n";
 
-verifica('fără filtre, adresă curată', 'index.php', adresaFiltrata());
-verifica('numai categoria', 'index.php?categorie=sport', adresaFiltrata('', 'sport'));
-verifica('numai orașul', 'index.php?oras=Roman', adresaFiltrata('Roman'));
-verifica('amândouă', 'index.php?oras=Roman&categorie=sport', adresaFiltrata('Roman', 'sport'));
-verifica('diacriticele se scriu ca la carte', 'index.php?oras=Ia%C8%99i', adresaFiltrata('Iași'));
+verifica('fără filtre, adresă curată', '/index.php', adresaFiltrata());
+verifica('numai categoria', '/index.php?categorie=sport', adresaFiltrata('', 'sport'));
+verifica('numai orașul', '/index.php?oras=Roman', adresaFiltrata('Roman'));
+verifica('amândouă', '/index.php?oras=Roman&categorie=sport', adresaFiltrata('Roman', 'sport'));
+verifica('diacriticele se scriu ca la carte', '/index.php?oras=Ia%C8%99i', adresaFiltrata('Iași'));
 
 /* ============================= 7. API ============================== */
 

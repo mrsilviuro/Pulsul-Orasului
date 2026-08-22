@@ -218,7 +218,11 @@ verifica('miile despărțite', '1.200 lei', costScris('1200.00'));
 echo "\n=== CALEA DE ÎNTOARCERE DUPĂ INTRARE ===\n";
 
 verifica('o cale de-a noastră trece', '/setari.php', caleInterna('/setari.php'));
-verifica('cu parametri cu tot', '/event.php?slug=a-b-c', caleInterna('/event.php?slug=a-b-c'));
+verifica('o cale cu mai multe trepte trece', '/eveniment/a-b-c',
+    caleInterna('/eveniment/a-b-c'));
+// Cu întrebare cu tot: aici se întoarce omul după intrare, iar profilul și
+// filtrele de pe prima pagină au parametri.
+verifica('cu parametri cu tot', '/profil.php?m=a-b-c', caleInterna('/profil.php?m=a-b-c'));
 
 /**
  * Fiecare dintre astea a fost, la un moment dat, o cale de a scoate omul de pe

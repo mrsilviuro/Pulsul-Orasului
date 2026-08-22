@@ -786,7 +786,7 @@ if ($BAZA === '') {
 
     sectiune('pagina evenimentului');
 
-    $pagina = $ia('/event.php?slug=tstfm-limita');
+    $pagina = $ia('/eveniment/tstfm-limita');
     verifica('la o vânătoare, fără caseta de interes', false, str_contains($pagina, 'id="rsvp"'));
     verifica('în locul ei, caseta vânătorii',           true, str_contains($pagina, 'findme--cautare'));
     verifica('fără tabul „Participă"',                 false, str_contains($pagina, 'id="tab-going"'));
@@ -796,7 +796,7 @@ if ($BAZA === '') {
     verifica('și codul nu apare nicăieri',             false, str_contains($pagina, $cod4));
 
     // La un eveniment obișnuit, totul e la locul lui.
-    $pagina = $ia('/event.php?slug=tstfm-obisnuit');
+    $pagina = $ia('/eveniment/tstfm-obisnuit');
     verifica('la unul obișnuit, caseta de interes e acolo', true, str_contains($pagina, 'id="rsvp"'));
     verifica('și taburile la fel',                          true, str_contains($pagina, 'id="tab-going"'));
     verifica('fără nicio casetă de vânătoare',             false, str_contains($pagina, 'class="findme'));

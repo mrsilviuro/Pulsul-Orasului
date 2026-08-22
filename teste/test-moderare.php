@@ -549,7 +549,7 @@ if ($BAZA === '') {
 
     /* Un anunț proaspăt, în așteptare. */
     faEveniment('tst-mod-2', $org, 'in_asteptare');
-    $adresa = '/event.php?slug=tst-mod-2';
+    $adresa = '/eveniment/tst-mod-2';
 
     /* --- ce vede fiecare în PAGINĂ --- */
 
@@ -853,11 +853,11 @@ if ($BAZA === '') {
         verifica('nici unul încheiat nu se respinge', 409, $r['cod']);
 
         /* Și nici blocul nu se mai arată la ele. */
-        $pag = cere('/event.php?slug=tst-mod-anulat', null, $caSef['cookie']);
+        $pag = cere('/eveniment/tst-mod-anulat', null, $caSef['cookie']);
         verifica('la anulat, blocul nu se mai scrie', false,
             str_contains($pag['corp'], 'data-moderare'));
 
-        $pag = cere('/event.php?slug=tst-mod-incheiat', null, $caSef['cookie']);
+        $pag = cere('/eveniment/tst-mod-incheiat', null, $caSef['cookie']);
         verifica('nici la încheiat', false, str_contains($pag['corp'], 'data-moderare'));
 
         /* --- butonul stării de acum lipsește --- */
@@ -867,7 +867,7 @@ if ($BAZA === '') {
         // ceva despre ele.
         faEveniment('tst-mod-resp', $org, 'respins');
 
-        $pag = cere('/event.php?slug=tst-mod-resp', null, $caSef['cookie']);
+        $pag = cere('/eveniment/tst-mod-resp', null, $caSef['cookie']);
         verifica('la un anunț respins nu se mai oferă „Respinge"', false,
             str_contains($pag['corp'], 'data-modereaza="respins"'));
         verifica('dar „Aprobă" se oferă', true,
@@ -875,7 +875,7 @@ if ($BAZA === '') {
 
         // Iar la unul în așteptare se oferă amândouă.
         faEveniment('tst-mod-astept', $org, 'in_asteptare');
-        $pag = cere('/event.php?slug=tst-mod-astept', null, $caSef['cookie']);
+        $pag = cere('/eveniment/tst-mod-astept', null, $caSef['cookie']);
         verifica('la unul în așteptare, amândouă', true,
             str_contains($pag['corp'], 'data-modereaza="respins"')
             && str_contains($pag['corp'], 'data-modereaza="aprobat"'));
@@ -970,10 +970,16 @@ if ($BAZA === '') {
 
         /* --- ce ajunge în bază prin API --- */
 
-        /** Slugul din adresa întoarsă de API: „event.php?slug=…". */
+        /**
+         * Slugul din adresa întoarsă de API: „/eveniment/…".
+         *
+         * A fost „event.php?slug=…" până la adresele frumoase; se ia din CALE,
+         * nu din interogare. urlEveniment() scrie cu rawurlencode, deci se
+         * citește înapoi cu rawurldecode.
+         */
         $slugDinUrl = static function ($url): string {
-            parse_str((string) parse_url((string) $url, PHP_URL_QUERY), $parti);
-            return (string) ($parti['slug'] ?? '');
+            $cale = (string) parse_url((string) $url, PHP_URL_PATH);
+            return rawurldecode(basename($cale));
         };
 
         $anunt = static function (string $titlu, array $peste = []): array {
