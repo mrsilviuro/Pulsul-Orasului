@@ -39,7 +39,8 @@ require_once __DIR__ . '/bootstrap.php';
  * Întoarce true dacă mesajul a plecat (sau a fost scris în fișier, în modul
  * de dezvoltare).
  */
-function trimiteEmail(string $catre, string $subiect, array $blocuri): bool
+function trimiteEmail(string $catre, string $subiect, array $blocuri,
+                      array $anteturiInPlus = []): bool
 {
     global $config;
 
@@ -88,6 +89,27 @@ function trimiteEmail(string $catre, string $subiect, array $blocuri): bool
         'Auto-Submitted' => 'auto-generated',
         'X-Auto-Response-Suppress' => 'All',
     ];
+
+    /**
+     * Anteturile în plus, cerute de cine trimite. Azi doar „List-Unsubscribe",
+     * de la newsletterul zilnic: programele de e-mail îl citesc și pun ELE un
+     * buton „Dezabonează-te" lângă numele expeditorului. Butonul acela e cel
+     * mai apăsat dintre toate — și e mult mai bun pentru noi decât „Spam", care
+     * e vecinul lui pe ecran.
+     *
+     * Rândurile noi se taie din valoare, ca la adresa de e-mail: un antet e
+     * despărțit de următorul printr-un rând nou, deci o valoare care conține
+     * unul ar putea adăuga anteturi inventate. Aici valorile vin din codul
+     * nostru, dar regula se ține la scriere, nu la încredere.
+     */
+    foreach ($anteturiInPlus as $nume => $valoare) {
+        $nume    = preg_replace('/[^A-Za-z0-9-]/', '', (string) $nume);
+        $valoare = str_replace(["\r", "\n"], '', (string) $valoare);
+
+        if ($nume !== '' && $valoare !== '') {
+            $anteturi[$nume] = $valoare;
+        }
+    }
 
     $textAnteturi = '';
     foreach ($anteturi as $nume => $valoare) {
@@ -372,6 +394,93 @@ function sablonEmail(string $titlu, array $blocuri): array
         $h[] = '</td></tr></table>';
     }
 
+    /* ------------------------- lista de anunțuri ---------------------- */
+
+    /**
+     * Evenimentele zilei, unul sub altul, ca niște cartonașe mici.
+     *
+     * Fiecare rând primește: ['titlu', 'cand', 'unde', 'poza', 'href'].
+     *
+     * CE SE ÎNTÂMPLĂ CÂND POZELE NU SE ÎNCARCĂ — și asta e partea care
+     * hotărăște cum arată blocul. Gmail, Outlook și aproape toate celelalte NU
+     * aduc pozele până nu cere omul; un mesaj gândit doar pentru cazul fericit
+     * se face praf la prima deschidere.
+     *
+     * Trei lucruri îl țin întreg:
+     *
+     *   1. POZA STĂ ÎNTR-O CELULĂ DE LĂȚIME FIXĂ (120px), cu `width` scris și
+     *      ca atribut, nu doar în `style` — Outlook nu citește lățimile din
+     *      CSS. Celula are lățimea aia și când e goală, deci textul de alături
+     *      nu se mută cu niciun pixel.
+     *   2. `<img>` are `width` ȘI `height` ca atribute, tot din același motiv:
+     *      locul e rezervat înainte să vină poza. Fără înălțime, rândul se
+     *      strânge la câțiva pixeli și apoi sare când poza sosește.
+     *   3. `alt=""`, GOL DINADINS. Un alt scris („Coperta evenimentului") s-ar
+     *      arăta în locul pozei, s-ar rupe pe trei rânduri într-o casetă de
+     *      120px și ar face rândul de trei ori mai înalt decât vecinii lui.
+     *      Titlul e oricum scris alături, deci poza n-are nimic de spus în
+     *      plus: e decor.
+     *
+     * Iar celula are un fundal stins, ca locul gol să arate a loc gol anume,
+     * nu a ceva stricat. Un eveniment fără nicio poză primește exact aceeași
+     * casetă — toate rândurile rămân aliniate.
+     */
+    if (!empty($blocuri['lista'])) {
+        $h[] = '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" '
+             . 'style="margin:6px 0 4px 0;">';
+
+        foreach ($blocuri['lista'] as $rand) {
+            $titluRand = (string) ($rand['titlu'] ?? '');
+            $href      = (string) ($rand['href'] ?? '');
+            $poza      = (string) ($rand['poza'] ?? '');
+
+            $h[] = '<tr><td style="padding:0 0 14px 0;">';
+            $h[] = '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" '
+                 . 'style="border:1px solid ' . $margine . ';border-radius:10px;">';
+            $h[] = '<tr>';
+
+            /* --- caseta pozei: 120px, ocupați sau nu --- */
+            $h[] = '<td width="120" style="width:120px;background:#e9ecf2;'
+                 . 'border-radius:10px 0 0 10px;font-size:0;line-height:0;">';
+
+            if ($poza !== '') {
+                $h[] = '<a href="' . h($href) . '" style="text-decoration:none;">'
+                     . '<img src="' . h($poza) . '" width="120" height="68" alt="" '
+                     . 'style="display:block;width:120px;height:68px;border:0;outline:none;'
+                     . 'border-radius:10px 0 0 10px;" /></a>';
+            } else {
+                // Fără poză deloc: aceeași casetă, ca rândurile să rămână
+                // aliniate. Un spațiu de netăiat ține celula deschisă în
+                // programele care strâng celulele goale.
+                $h[] = '<div style="width:120px;height:68px;">&nbsp;</div>';
+            }
+
+            $h[] = '</td>';
+
+            /* --- textul --- */
+            $h[] = '<td style="padding:12px 16px;font-family:' . $font . ';">';
+
+            $h[] = '<div style="font-size:16px;line-height:1.35;font-weight:bold;">'
+                 . '<a href="' . h($href) . '" style="color:' . $text . ';text-decoration:none;">'
+                 . h($titluRand) . '</a></div>';
+
+            $subtitlu = array_filter([
+                (string) ($rand['cand'] ?? ''),
+                (string) ($rand['unde'] ?? ''),
+            ], static fn(string $x): bool => $x !== '');
+
+            if ($subtitlu !== []) {
+                $h[] = '<div style="margin-top:5px;font-size:13.5px;line-height:1.45;'
+                     . 'color:' . $textMoale . ';">' . h(implode(' · ', $subtitlu)) . '</div>';
+            }
+
+            $h[] = '</td></tr></table>';
+            $h[] = '</td></tr>';
+        }
+
+        $h[] = '</table>';
+    }
+
     /* --------------------------- codul -------------------------------- */
     if (!empty($blocuri['cod']['valoare'])) {
         $h[] = '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" '
@@ -459,6 +568,26 @@ function sablonEmail(string $titlu, array $blocuri): array
     $h[] = 'Ai primit mesajul ăsta pentru că cineva a folosit adresa ta pe '
          . '<a href="' . h($site) . '" style="color:' . $textMoale . ';">pulsulorasului.ro</a>.';
     $h[] = '<br />Evenimente locale, sport, cultură și tot ce mișcă în oraș.';
+
+    /**
+     * IEȘIREA DE LA NEWSLETTER, scrisă negru pe alb.
+     *
+     * Numai mesajele trimise în serie o primesc — cele pe care omul nu le-a
+     * cerut de fiecare dată. O confirmare de cont sau vestea că i s-a anulat un
+     * eveniment nu se „dezabonează": alea sunt răspunsuri la ceva ce a făcut el.
+     *
+     * Se scrie chiar în subsol, cu adresa întreagă alături: cine caută ieșirea o
+     * caută jos, iar dacă n-o găsește în două secunde apasă „Spam". Un singur om
+     * care face asta strică livrarea pentru toți ceilalți.
+     */
+    if (!empty($blocuri['dezabonare'])) {
+        $h[] = '<br /><br />Nu mai vrei mesajul ăsta zilnic? '
+             . '<a href="' . h($blocuri['dezabonare']) . '" '
+             . 'style="color:' . $textMoale . ';text-decoration:underline;">Dezabonează-te</a> '
+             . 'sau schimbă bifa din setările contului. Restul mesajelor de pe site '
+             . 'nu se opresc.';
+    }
+
     $h[] = '</td></tr>';
 
     $h[] = '</table>';
@@ -504,6 +633,34 @@ function sablonEmail(string $titlu, array $blocuri): array
         $t[] = '';
     }
 
+    /**
+     * Lista, în text simplu. Fiecare anunț: titlu, când și unde, apoi adresa.
+     *
+     * Adresa se scrie pe rândul ei, întreagă: în text simplu nu există legături
+     * ascunse sub cuvinte, iar o adresă tăiată de wordwrap nu se mai poate
+     * apăsa. De aceea rândul ăsta NU trece prin wordwrap.
+     */
+    if (!empty($blocuri['lista'])) {
+        foreach ($blocuri['lista'] as $rand) {
+            $t[] = '* ' . (string) ($rand['titlu'] ?? '');
+
+            $subtitlu = array_filter([
+                (string) ($rand['cand'] ?? ''),
+                (string) ($rand['unde'] ?? ''),
+            ], static fn(string $x): bool => $x !== '');
+
+            if ($subtitlu !== []) {
+                $t[] = '  ' . implode(' · ', $subtitlu);
+            }
+
+            if (!empty($rand['href'])) {
+                $t[] = '  ' . (string) $rand['href'];
+            }
+
+            $t[] = '';
+        }
+    }
+
     if (!empty($blocuri['cod']['valoare'])) {
         $t[] = ($blocuri['cod']['eticheta'] ?? 'Codul tău') . ':';
         $t[] = '';
@@ -533,6 +690,14 @@ function sablonEmail(string $titlu, array $blocuri): array
     $t[] = str_repeat('-', 60);
     $t[] = 'Ai primit mesajul ăsta pentru că cineva a folosit adresa ta pe';
     $t[] = $site;
+
+    if (!empty($blocuri['dezabonare'])) {
+        $t[] = '';
+        $t[] = 'Nu mai vrei mesajul ăsta zilnic? Deschide adresa de mai jos, sau';
+        $t[] = 'schimbă bifa din setările contului. Restul mesajelor de pe site';
+        $t[] = 'nu se opresc.';
+        $t[] = (string) $blocuri['dezabonare'];
+    }
 
     return [
         'html' => implode("\n", $h),
@@ -863,6 +1028,75 @@ function emailMultumireParticipare(
         : 'Mulțumim că ai fost la „' . $titluEveniment . '"';
 
     return trimiteEmail($catre, $subiect, $blocuri);
+}
+
+/**
+ * Newsletterul zilnic: ce se întâmplă azi în oraș.
+ *
+ * Pleacă doar când ARE ce spune — cronul nici nu ajunge aici dacă ziua e goală
+ * (vezi trimiteNewsletterulZilei din inc/newsletter.php).
+ *
+ * SINGURUL MESAJ DE PE SITE CU BUTON DE DEZABONARE. Celelalte sunt răspunsuri
+ * la ceva ce a făcut omul — o confirmare, vestea că i s-a anulat un eveniment —
+ * și alea nu se „dezabonează". Ăsta vine nechemat în fiecare zi, deci ieșirea
+ * trebuie să fie la vedere: cine n-o găsește în două secunde apasă „Spam", iar
+ * un singur om care face asta strică livrarea pentru toți ceilalți.
+ *
+ * `$randuri` vin gata pregătite din inc/newsletter.php, cu adrese întregi și
+ * poze care se pot lipsi — blocul „lista" din șablon ține locul gol de aceeași
+ * mărime, ca mesajul să arate la fel și cu pozele blocate.
+ */
+function emailNewsletterZilnic(
+    string $catre,
+    string $prenume,
+    array $randuri,
+    string $linkDezabonare
+): bool {
+    $cate = count($randuri);
+
+    /**
+     * „un eveniment" / „3 evenimente" / „21 de evenimente".
+     *
+     * numaratoare() știe regula lui „de" (21 DE evenimente), dar nu și
+     * singularul — ea primește substantivul gata ales. La unul singur se scrie
+     * „un eveniment", nu „1 eveniment": cifra singură sună a inventar.
+     */
+    $cateSpus = $cate === 1 ? 'un eveniment' : numaratoare($cate, 'evenimente');
+
+    $primul = $cate === 1
+        ? 'Uite ce se întâmplă azi în oraș — e un singur eveniment, dar poate '
+          . 'e chiar al tău.'
+        : 'Uite ce se întâmplă azi în oraș. Sunt ' . $cateSpus . ', în ordinea orei.';
+
+    $blocuri = [
+        'salut'      => 'Bună, ' . $prenume . '!',
+        'paragrafe'  => [$primul],
+        'lista'      => $randuri,
+        'incheiere'  => $cate === 1
+            ? 'Dacă te duci, apasă pe el și spune că vii — organizatorul știe pe '
+              . 'cine să aștepte.'
+            : 'Dacă te duci la vreunul, apasă pe el și spune că vii — '
+              . 'organizatorul știe pe cine să aștepte.',
+        'dezabonare' => $linkDezabonare,
+    ];
+
+    $subiect = $cate === 1
+        ? 'Azi în oraș: ' . $randuri[0]['titlu']
+        : 'Azi în oraș: ' . $cateSpus;
+
+    /**
+     * „List-Unsubscribe" e antetul pe care îl citesc Gmail, Outlook și
+     * celelalte ca să pună ELE un buton „Dezabonează-te" chiar lângă numele
+     * expeditorului. E cel mai apăsat buton dintre toate — și e mult mai bun
+     * pentru noi decât „Spam", care e vecinul lui pe ecran.
+     *
+     * Fără „List-Unsubscribe-Post", dinadins: acela le spune programelor să
+     * dezaboneze de-a dreptul, cu o cerere trimisă de ele. Aici linkul duce la
+     * o pagină cu un buton, iar apăsarea aia e a omului. Vezi dezabonare.php.
+     */
+    return trimiteEmail($catre, $subiect, $blocuri, [
+        'List-Unsubscribe' => '<' . $linkDezabonare . '>',
+    ]);
 }
 
 /**

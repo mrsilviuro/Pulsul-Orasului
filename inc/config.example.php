@@ -206,4 +206,22 @@ return [
      * și ȘTERGI fișierul de pe server după ce ai terminat.
      */
     'cheie_diagnostic' => '',
+
+    // -------------------------------------------------------- dezabonarea
+    /**
+     * Cheia cu care se semnează linkurile de dezabonare de la newsletterul
+     * zilnic.
+     *
+     * POATE RĂMÂNE GOALĂ. Când e goală, se face una din datele care există
+     * deja aici (vezi cheieDezabonare din inc/newsletter.php), deci
+     * newsletterul merge din prima, fără niciun pas de pregătire. Alegerea a
+     * fost între asta și „încă o setare pe care cineva o uită, iar mesajul
+     * pleacă fără ieșire" — iar un newsletter fără ieșire ajunge la „Spam", și
+     * de acolo strică livrarea pentru toate celelalte mesaje ale site-ului.
+     *
+     * Pune aici un șir lung și întâmplător dacă vrei o cheie a ta. Schimbând-o,
+     * linkurile din mesajele deja trimise nu mai merg — dar bifa din setări
+     * rămâne oricând la îndemână, deci nimeni nu rămâne prins.
+     */
+    'cheie_dezabonare' => '',
 ];

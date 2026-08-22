@@ -4207,7 +4207,7 @@ Ce nu se poate controla din CSS: formatul afișat în câmpul de dată
    Apoi **migrările, în ordinea numerelor**, de la `002` până la ultima. Sunt
    bucăți care adaugă coloane și tabele apărute după prima schemă; sărită una,
    pagina care are nevoie de ea dă eroare, iar celelalte merg — deci se vede
-   greu. Ultima de azi e `sql/030-incercari-qr.sql`.
+   greu. Ultima de azi e `sql/031-newsletter-zilnic.sql`.
 
 4. **Faci `inc/config.php` pe server**, pornind de la `inc/config.example.php`.
 
@@ -5298,3 +5298,132 @@ de pe prima pagină, care sunt aceleași evenimente așezate altfel.
 și pe unde a fost — date pe care le-a dat ca să meargă la ieșiri prin oraș, nu ca
 să fie găsit după nume în Google. Paginile rămân publice pentru cine primește
 linkul: nu se ascund, doar nu se caută.
+
+## Newsletterul zilnic
+
+O dată pe zi, la 12, pleacă un mesaj cu **ce se întâmplă azi în oraș** către
+cine are bifa „Vreau să primesc e-mail cu evenimente noi (cel mult unul pe zi)"
+din setări.
+
+```
+0 12 * * *  php /home/UTILIZATOR/public_html/cron/newsletter-zilnic.php
+```
+
+De ce la prânz și nu dimineața: la 12 se știe deja cum e ziua, iar pentru ceva
+de la 19:00 mai sunt șapte ore în care omul poate să-și facă un plan. Un mesaj
+la 7 dimineața se citește în autobuz și se uită până seara.
+
+### Dacă azi nu e nimic, nu pleacă nimic
+
+Nici măcar un „azi nu se întâmplă nimic". Un mesaj care nu spune nimic e cel mai
+bun fel de a-l învăța pe om să nu-l mai deschidă — iar peste o lună, când chiar
+e ceva, mesajul ajunge tot necitit.
+
+**Tăcerea e conținut:** dacă a venit mesajul, înseamnă că are ce spune.
+
+### Ce intră în el
+
+Evenimentele **aprobate** de azi, în ordinea orei. Nu intră:
+
+- cele de mâine sau de ieri — mesajul e despre ziua de azi;
+- cele **anulate**, deși ziua lor e azi. Pagina lor rămâne pe site, cu motivul
+  scris de organizator, dar a le trimite dimineața ca pe ceva ce urmează ar fi o
+  minciună;
+- cele care așteaptă moderarea, sau pe care organizatorul le-a încheiat deja.
+
+Ordinea e a orei, nu a scrierii: cine deschide mesajul la prânz vrea să vadă
+întâi ce urmează, iar lista citită de sus în jos trebuie să fie ziua lui.
+
+### Poza care nu se încarcă
+
+Gmail, Outlook și aproape toate celelalte **nu aduc pozele** până nu cere omul.
+Un mesaj gândit doar pentru cazul fericit se face praf la prima deschidere: ori
+rândurile se strâng la câțiva pixeli, ori alt-textul se rupe pe trei rânduri și
+face un rând de trei ori mai înalt decât vecinii lui.
+
+Trei lucruri țin blocul întreg:
+
+1. **Poza stă într-o celulă de lățime fixă** (120px), cu `width` scris și ca
+   atribut, nu doar în `style` — Outlook nu citește lățimile din CSS. Celula are
+   lățimea aia și când e goală.
+2. **`<img>` are `width` și `height` ca atribute.** Locul e rezervat înainte să
+   vină poza; fără înălțime, rândul se strânge și apoi sare când poza sosește.
+3. **`alt=""`, gol dinadins.** Un alt scris („Coperta evenimentului") s-ar arăta
+   în locul pozei, s-ar rupe într-o casetă de 120px și ar umfla rândul. Titlul e
+   oricum scris alături, deci poza n-are nimic de spus în plus: e decor.
+
+Celula are un fundal stins, ca locul gol să arate a loc gol *anume*, nu a ceva
+stricat. Un eveniment fără nicio poză primește exact aceeași casetă, deci toate
+rândurile rămân aliniate.
+
+Măsurat în Chromium, cu pozele lăsate să vină și cu ele oprite: **aceleași
+măsuri, aceeași înălțime totală a mesajului, pixel cu pixel.**
+
+Poza e coperta anunțului, iar dacă n-are, imaginea categoriei — aceeași ordine
+ca pe cartonașele de pe prima pagină, prin aceleași două funcții. Adresele sunt
+**întregi**: într-un e-mail nu există „pagina de acum" față de care să se
+socotească o cale relativă.
+
+### Cel mult unul pe zi
+
+Bifa promite „cel mult unul pe zi", iar `membri.newsletter_trimis_la`
+(`sql/031`) e singurul lucru care chiar o ține. Fără ea, un cron pornit din
+greșeală de două ori trimite de două ori, iar o rulare de mână ca să se vadă
+dacă merge ajunge la toată lumea.
+
+Ștampila se pune **înainte** de trimitere, nu după, iar hotărârea e în `WHERE`,
+ca la revendicarea unui abțibild: două rulări pornite în aceeași clipă ar
+întreba amândouă „i-a plecat azi?", ar auzi amândouă „nu", și ar trimite
+amândouă.
+
+Dintre cele două greșeli cu putință — „a plecat de două ori" și „n-a plecat
+pentru că a căzut curentul între ștampilă și poștă" — se alege a doua. **Un
+e-mail plecat nu se ia înapoi.**
+
+Dacă nu rulează o zi, ziua aceea se pierde, și e în regulă: nimeni nu vrea să
+afle mâine ce era ieri.
+
+Pentru încercare, fără să atingă nimic:
+
+```
+php cron/newsletter-zilnic.php --uscat
+```
+
+### Dezabonarea
+
+Singurul mesaj de pe site care vine **nechemat**, deci singurul cu ieșire la
+vedere: un link în subsol și antetul `List-Unsubscribe`, pe care Gmail îl
+citește și pune **el** un buton „Dezabonează-te" lângă numele expeditorului. E
+cel mai apăsat buton dintre toate — și e mult mai bun pentru noi decât „Spam",
+care e vecinul lui pe ecran.
+
+Celelalte mesaje sunt răspunsuri la ceva ce a făcut omul — o confirmare, vestea
+că i s-a anulat un eveniment — iar alea nu se „dezabonează".
+
+**Fără cont.** Cine s-a săturat de un mesaj n-are chef să-și amintească parola
+ca să scape de el; dacă nu scapă în două secunde, apasă „Spam", și un singur om
+care face asta strică livrarea pentru toți ceilalți. Semnătura din adresă ține
+loc de dovadă.
+
+**Semnătura nu e un token din bază**, ci un HMAC socotit din id-ul omului și o
+cheie a site-ului. Un token scris la fiecare trimitere ar fi însemnat că linkul
+de ieri moare azi — iar cine caută peste trei luni un mesaj vechi ca să se
+dezaboneze ar da peste „link expirat". Cheia se pune în `cheie_dezabonare` din
+config; lăsată goală, se face una din datele care există deja acolo, deci
+newsletterul merge din prima, fără niciun pas de pregătire.
+
+**Deschiderea linkului doar întreabă; stinsul se face cu un buton, prin POST.**
+Multe programe de e-mail și multe filtre de siguranță deschid singure toate
+linkurile dintr-un mesaj, ca să vadă unde duc. Cu un GET care stinge, o parte
+dintre oameni s-ar fi trezit scoși de pe listă fără să fi apăsat nimic — și n-ar
+fi aflat niciodată de ce nu le mai vine nimic. Un scaner apasă linkuri, nu
+butoane. De aceea nu se trimite nici `List-Unsubscribe-Post`: acela le-ar spune
+programelor să dezaboneze ele, în numele omului.
+
+Se stinge **numai** bifa de newsletter. Cine se satură de mesajul zilnic n-a
+spus că nu mai vrea să afle că i s-a anulat un eveniment la care se înscrisese;
+un „dezabonează-mă de la tot" care oprește și vestea aceea e o capcană, nu o
+politețe.
+
+Verificările: `php teste/test-newsletter.php http://127.0.0.1:8099` (55 de
+cazuri; partea cu pagina de dezabonare cere serverul pornit).
