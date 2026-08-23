@@ -458,7 +458,18 @@ inc/
                       evenimentele APROBATE de azi, în ordinea orei: cele
                       anulate au pagina lor mai departe pe site, dar a le
                       trimite dimineața ca pe ceva ce urmează ar fi o
-                      minciună. Ștampila (`newsletter_trimis_la`, sql/031) se
+                      minciună. ȘI NUMAI CE N-A ÎNCEPUT ÎNCĂ: lista pornește
+                      de la CLIPA TRIMITERII, nu de la miezul nopții (al
+                      doilea parametru al lui evenimenteleDeAzi(), citit o
+                      singură dată pe rulare). Mesajul pleacă la 12 dinadins —
+                      până atunci apucă să se scrie și anunțurile de dimineață
+                      — dar prețul e că unele au și început: „azi la 10 e o
+                      alergare", spus la 12, nu e o veste, e o părere de rău.
+                      ORA SE TAIE LA MINUT, nu la secundă: cronul pus la 12:00
+                      pornește în fapt la 12:00:07, iar un eveniment scris fix
+                      la 12:00 n-are de ce să cadă pentru șapte secunde. Dacă
+                      tot ce era azi a trecut, nu pleacă nimic — la fel ca
+                      într-o zi goală. Ștampila (`newsletter_trimis_la`, sql/031) se
                       pune ÎNAINTE de trimitere și hotărârea e în `WHERE`, ca
                       la revendicarea unui abțibild: dintre „a plecat de două
                       ori" și „n-a plecat pentru că a căzut curentul între

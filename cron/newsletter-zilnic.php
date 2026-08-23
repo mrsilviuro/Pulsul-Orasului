@@ -4,13 +4,15 @@ declare(strict_types=1);
 /**
  * PulsulOrasului.Ro — newsletterul zilnic: „ce se întâmplă azi în oraș".
  *
- * Adună evenimentele de ASTĂZI și le trimite celor care au bifa „Vreau să
- * primesc e-mail cu evenimente noi (cel mult unul pe zi)" din setări.
+ * Adună evenimentele de ASTĂZI CARE N-AU ÎNCEPUT ÎNCĂ și le trimite celor care
+ * au bifa „Vreau să primesc e-mail cu evenimente noi (cel mult unul pe zi)" din
+ * setări.
  *
- * DACĂ AZI NU E NIMIC, NU PLEACĂ NIMIC — nici măcar un „azi nu se întâmplă
- * nimic". Un mesaj care nu spune nimic e cel mai bun fel de a-l învăța pe om să
- * nu-l mai deschidă, iar peste o lună, când chiar e ceva, mesajul ajunge tot
- * necitit.
+ * DACĂ NU E NIMIC, NU PLEACĂ NIMIC — nici măcar un „azi nu se întâmplă nimic".
+ * Un mesaj care nu spune nimic e cel mai bun fel de a-l învăța pe om să nu-l
+ * mai deschidă, iar peste o lună, când chiar e ceva, mesajul ajunge tot necitit.
+ * Asta se întâmplă și în ziua în care tot ce era a trecut deja: la 12 nu mai are
+ * rost să spui că la 10 a fost o alergare.
  *
  * DE MÂNĂ, pentru încercare:
  *     php cron/newsletter-zilnic.php
@@ -19,9 +21,15 @@ declare(strict_types=1);
  * DIN CRON (cPanel → Cron Jobs), O DATĂ PE ZI, LA 12:00:
  *     0 12 * * *  php /home/UTILIZATOR/public_html/cron/newsletter-zilnic.php
  *
- * De ce la prânz și nu dimineața: la 12 se știe deja cum e ziua, iar pentru
- * ceva de la 19:00 mai sunt șapte ore în care omul poate să-și facă un plan.
- * Un mesaj la 7 dimineața se citește în autobuz și se uită până seara.
+ * De ce la prânz și nu dimineața: la 12 se știe deja cum e ziua — au apucat să
+ * se scrie și anunțurile puse în cursul dimineții — iar pentru ceva de la 19:00
+ * mai sunt șapte ore în care omul poate să-și facă un plan. Un mesaj la 7
+ * dimineața se citește în autobuz și se uită până seara.
+ *
+ * PREȚUL orei ăsteia e că unele evenimente au și început până la 12. De aceea
+ * lista începe de la CLIPA TRIMITERII, nu de la miezul nopții: ce a pornit
+ * rămâne pe site, dar nu se mai bate la ușa nimănui. Un mesaj care la 12 spune
+ * „azi la 10 e o alergare" nu e o veste, e o părere de rău.
  *
  * SE TRIMITE O SINGURĂ DATĂ PE ZI, oricâte ori ar rula. Ștampila e
  * `membri.newsletter_trimis_la` (sql/031) și se pune ÎNAINTE de trimitere, nu
@@ -56,20 +64,48 @@ $uscat = in_array('--uscat', $argv ?? [], true);
 
 $inceput = time();
 
-echo '[' . date('Y-m-d H:i:s') . "] Mă uit ce se întâmplă azi…\n";
+/**
+ * O SINGURĂ CITIRE A CEASULUI, dusă mai departe peste tot.
+ *
+ * Lista începe de la clipa asta, iar rularea ține minute bune. Dacă ora s-ar
+ * lua din nou mai încolo, ce se scrie aici pe ecran și ce ajunge în mesaje ar
+ * putea fi liste deosebite — un eveniment fix la minutul care tocmai a trecut
+ * ar fi în prima și nu în a doua.
+ */
+$acum = time();
+
+echo '[' . date('Y-m-d H:i:s', $acum) . "] Mă uit ce urmează azi…\n";
 
 /** „1 eveniment", „3 evenimente", „21 de evenimente". */
 $cateEvenimente = static fn(int $cate): string =>
     numaratoare($cate, $cate === 1 ? 'eveniment' : 'evenimente');
 
-$evenimente = evenimenteleDeAzi();
+$evenimente = evenimenteleDeAzi(NEWSLETTER_MAX_EVENIMENTE, $acum);
 
+/**
+ * Lista goală înseamnă două lucruri deosebite, ca și „niciun abonat de servit"
+ * de mai jos: ori azi chiar nu e nimic, ori tot ce era a început deja. În
+ * amândouă cazurile nu pleacă nimic — dar cine rulează de mână, seara, ca să
+ * vadă dacă merge, trebuie să afle care din două e.
+ *
+ * Ziua întreagă se cere tot prin evenimenteleDeAzi(), doar că socotită de la
+ * miezul nopții: aceeași întrebare, alt punct de plecare.
+ */
 if ($evenimente === []) {
-    echo "  azi nu e programat nimic. Nu trimit nimic — și e bine așa.\n";
+    $toataZiua = evenimenteleDeAzi(200, strtotime('today', $acum));
+
+    if ($toataZiua === []) {
+        echo "  azi nu e programat nimic. Nu trimit nimic — și e bine așa.\n";
+    } else {
+        echo '  ' . $cateEvenimente(count($toataZiua))
+           . " azi, dar toate au început deja. Nu trimit nimic.\n";
+    }
+
     exit(0);
 }
 
-echo '  ' . $cateEvenimente(count($evenimente)) . " azi:\n";
+echo '  ' . $cateEvenimente(count($evenimente)) . ' de acum înainte (după '
+   . date('H:i', $acum) . "):\n";
 
 foreach ($evenimente as $ev) {
     echo '    ' . substr((string) $ev['ora_inceput'], 0, 5)
@@ -115,10 +151,10 @@ if ($uscat) {
     exit(0);
 }
 
-$r = trimiteNewsletterulZilei();
+$r = trimiteNewsletterulZilei(false, $acum);
 
 scrieInLogulNewsletterului(
-    $cateEvenimente($r['evenimente']) . ' azi, '
+    $cateEvenimente($r['evenimente']) . ' după ' . date('H:i', $acum) . ', '
     . $r['abonati'] . ' abonați de servit: '
     . $r['trimise'] . ' trimise, ' . $r['picate'] . ' picate, '
     . $r['sarite'] . ' sărite, în ' . (time() - $inceput) . 's'

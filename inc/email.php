@@ -1119,10 +1119,18 @@ function emailNewsletterZilnic(
      */
     $cateSpus = $cate === 1 ? 'un eveniment' : numaratoare($cate, 'evenimente');
 
+    /**
+     * „CE URMEAZĂ", nu „ce se întâmplă".
+     *
+     * Lista începe de la clipa în care pleacă mesajul: ce a pornit deja nu mai
+     * intră (vezi evenimenteleDeAzi din inc/newsletter.php). „Ce se întâmplă
+     * azi" ar fi promis ziua întreagă, iar omul care știa de o alergare de
+     * dimineață și n-o găsește în mesaj ar fi crezut că mesajul minte.
+     */
     $primul = $cate === 1
-        ? 'Uite ce se întâmplă azi în oraș — e un singur eveniment, dar poate '
+        ? 'Uite ce urmează azi în oraș — e un singur eveniment, dar poate '
           . 'e chiar al tău.'
-        : 'Uite ce se întâmplă azi în oraș. Sunt ' . $cateSpus . ', în ordinea orei.';
+        : 'Uite ce urmează azi în oraș. Sunt ' . $cateSpus . ', în ordinea orei.';
 
     $blocuri = [
         'salut'      => 'Bună, ' . $prenume . '!',

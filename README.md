@@ -5309,9 +5309,10 @@ din setări.
 0 12 * * *  php /home/UTILIZATOR/public_html/cron/newsletter-zilnic.php
 ```
 
-De ce la prânz și nu dimineața: la 12 se știe deja cum e ziua, iar pentru ceva
-de la 19:00 mai sunt șapte ore în care omul poate să-și facă un plan. Un mesaj
-la 7 dimineața se citește în autobuz și se uită până seara.
+De ce la prânz și nu dimineața: la 12 se știe deja cum e ziua — au apucat să se
+scrie și anunțurile puse în cursul dimineții — iar pentru ceva de la 19:00 mai
+sunt șapte ore în care omul poate să-și facă un plan. Un mesaj la 7 dimineața se
+citește în autobuz și se uită până seara.
 
 ### Dacă azi nu e nimic, nu pleacă nimic
 
@@ -5329,10 +5330,40 @@ Evenimentele **aprobate** de azi, în ordinea orei. Nu intră:
 - cele **anulate**, deși ziua lor e azi. Pagina lor rămâne pe site, cu motivul
   scris de organizator, dar a le trimite dimineața ca pe ceva ce urmează ar fi o
   minciună;
-- cele care așteaptă moderarea, sau pe care organizatorul le-a încheiat deja.
+- cele care așteaptă moderarea, sau pe care organizatorul le-a încheiat deja;
+- **cele care au început deja** — vezi mai jos.
 
 Ordinea e a orei, nu a scrierii: cine deschide mesajul la prânz vrea să vadă
 întâi ce urmează, iar lista citită de sus în jos trebuie să fie ziua lui.
+
+### Numai ce n-a început încă
+
+Ora de trimitere e aleasă dinadins târziu: la 12 au apucat să se scrie și
+anunțurile puse în cursul dimineții, deci lista e mai plină decât ar fi fost la
+7. **Prețul e că unele au și început până atunci.** Un mesaj care la 12 spune
+„azi la 10 e o alergare" nu e o veste, e o părere de rău: omul a pierdut-o
+oricum, iar tot ce face rândul acela e să-i arate asta.
+
+Așa că lista începe de la **clipa trimiterii**, nu de la miezul nopții. Ce a
+pornit rămâne pe site, cu pagina lui, dar nu se mai bate la ușa nimănui.
+
+Ora se taie **la minut, nu la secundă**. Cronul pus la 12:00 pornește în fapt la
+12:00:07, iar un eveniment scris fix la 12:00 n-are de ce să cadă din listă
+pentru șapte secunde: „începând cu ora la care pleacă mesajul" înseamnă
+*împreună cu ea*.
+
+Ceasul se citește **o singură dată pe rulare** și se duce mai departe peste tot
+(`trimiteNewsletterulZilei($uscat, $clipa)`). O rulare cu câteva sute de mesaje
+ține minute bune; dacă ora s-ar lua din nou pe parcurs, primii oameni și ultimii
+ar primi liste deosebite.
+
+De aici decurge un caz nou: **dacă tot ce era azi a trecut, nu pleacă nimic** —
+exact ca într-o zi în care nu e nimic. Cronul spune care din două e, fiindcă
+altfel cine rulează de mână seara, ca să vadă dacă merge, n-ar avea cum să știe:
+
+```
+1 eveniment azi, dar toate au început deja. Nu trimit nimic.
+```
 
 ### Cartonașele
 
