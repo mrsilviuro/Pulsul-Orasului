@@ -370,6 +370,28 @@ if ($BAZA === '') {
         str_contains($cspAfis, "default-src 'self'"));
     verifica('fără scripturi străine',  true, str_contains($cspAfis, "script-src 'self'"));
     verifica('și fără cadre',           true, str_contains($cspAfis, "frame-ancestors 'none'"));
+
+    /**
+     * POZELE AU VOIE ȘI DIN `blob:`, iar rândul ăsta e aici fiindcă lipsa lui a
+     * rupt deja site-ul în tăcere.
+     *
+     * Poza de profil (poza.php) și coperta de eveniment (adauga_eveniment.php)
+     * îi arată omului ce a ales, ca s-o potrivească în ramă înainte de a o
+     * trimite. Felul în care i-o arată e URL.createObjectURL() →
+     * `<img src="blob:…">`. Cu `img-src 'self' data:` — fără `blob:` — browserul
+     * refuza poza, `onerror` se aprindea, iar omul primea „Nu am putut deschide
+     * fișierul" și „Fișierul nu pare o poză" la ORICE poză, oricât de bună.
+     * Nimic nu ajungea pe server: se rupea în browser, înainte de trimitere.
+     *
+     * NU E O PORTIȚĂ CĂTRE AFARĂ: o adresă „blob:" nu se naște decât din
+     * scriptul nostru, pe fișierul pe care l-a ales omul însuși.
+     */
+    verifica('pozele alese de om (blob:) au voie', true,
+        preg_match('/img-src[^;]*\bblob:/', $cspAfis) === 1, $cspAfis);
+    verifica('și cele desenate în cod (data:)',   true,
+        preg_match('/img-src[^;]*\bdata:/', $cspAfis) === 1);
+    verifica('dar nu de pe orice server',         false,
+        preg_match('/img-src[^;]*\*/', $cspAfis) === 1);
     verifica('cu X-Frame-Options',   'DENY', $antetul($r['antete'], 'X-Frame-Options'));
     verifica('și cu nosniff',     'nosniff', $antetul($r['antete'], 'X-Content-Type-Options'));
 

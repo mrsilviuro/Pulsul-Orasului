@@ -237,7 +237,24 @@ inc/
                       primește `nonce="<?= h(nonceCsp()) ?>"`; mai bine îl pui
                       în assets/js/main.js, ca tot restul. `style-src` are
                       'unsafe-inline' dinadins: cifra nu merge pe atributele
-                      `style=`, iar site-ul are trei
+                      `style=`, iar site-ul are trei.
+                      `img-src` ARE ȘI `blob:`, ȘI NU SE SCOATE: poza de profil
+                      (poza.php) și coperta de eveniment (adauga_eveniment.php)
+                      îi arată omului ce a ales, prin URL.createObjectURL() →
+                      `<img src="blob:…">`, ca s-o potrivească în ramă înainte
+                      de a o trimite. Fără el, browserul refuză poza, `onerror`
+                      se aprinde, și omul primește „Nu am putut deschide
+                      fișierul" / „Fișierul nu pare o poză" la ORICE poză — se
+                      rupe în browser, nimic nu ajunge pe server, deci nu se
+                      vede nici în loguri. S-a întâmplat o dată. Nu e o portiță:
+                      o adresă „blob:" nu se naște decât din scriptul nostru, pe
+                      fișierul ales de om. Proba care păzește rândul e în
+                      teste/test-constructie.php. ATENȚIE, REGULA GENERALĂ: CSP
+                      rupe ÎN TĂCERE — nu dă 500, nu scrie în log, iar probele
+                      din PHP (curl) nu văd nimic, fiindcă un client care nu
+                      rulează JS n-are cum să fie oprit de el. Orice funcție
+                      nouă care aduce ceva în pagină pe altă cale (o adresă
+                      nouă, un `Worker`, un `<iframe>`) se probează ÎN BROWSER
   validare.php      → toate verificările server-side (fără atingere DB)
   imagini.php       → procesare/validare poze de profil ȘI coperți de eveniment.
                       TOT AICI copiazaCoperta(): singurul loc de pe site unde

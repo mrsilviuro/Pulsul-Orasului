@@ -435,8 +435,28 @@ function antetedeSiguranta(): void
         . "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
         // Fișierele de font vin de pe celălalt domeniu al Google.
         . "font-src 'self' https://fonts.gstatic.com; "
-        // Pozele: ale noastre, plus cele desenate în cod (`data:`).
-        . "img-src 'self' data:; "
+        /**
+         * Pozele: ale noastre, cele desenate în cod (`data:`) ȘI POZA PE CARE
+         * TOCMAI A ALES-O OMUL DE PE TELEFON (`blob:`).
+         *
+         * `blob:` NU E O PORTIȚĂ CĂTRE AFARĂ. O adresă „blob:" nu se poate
+         * naște decât din URL.createObjectURL(), chemat de un script de-al
+         * nostru, pe fișierul pe care omul l-a ales el însuși din formular.
+         * Nimeni nu poate aduce pe calea asta o poză de pe alt server: ea
+         * arată spre ceva ce stă deja în browserul lui, pus acolo de el.
+         *
+         * FĂRĂ EA SE RUP DOUĂ LUCRURI, și s-au rupt: poza de profil (poza.php)
+         * și coperta de eveniment (adauga_eveniment.php). Amândouă îi arată
+         * omului ce a ales, ca s-o poată potrivi în ramă înainte de a o
+         * trimite — iar felul în care i-o arată e exact `createObjectURL` →
+         * `<img src="blob:…">`. Cu poza oprită de CSP, `onerror` se aprindea,
+         * iar omul primea „Nu am putut deschide fișierul" și „Fișierul nu pare
+         * o poză" la ORICE poză, oricât de bună. Nimic nu ajungea pe server:
+         * se rupea în browser, înainte de trimitere.
+         *
+         * Vezi proba din teste/test-constructie.php, care păzește rândul ăsta.
+         */
+        . "img-src 'self' data: blob:; "
         // `fetch` din main.js merge doar spre api/-ul nostru.
         . "connect-src 'self'; "
         // Un formular strecurat în pagină n-are unde trimite ce a scris omul.
