@@ -146,6 +146,17 @@ $azi   = date('Y-m-d');
 $maine = date('Y-m-d', strtotime('+1 day'));
 $ieri  = date('Y-m-d', strtotime('-1 day'));
 
+/**
+ * CEASUL PROBEI: azi, la 06:00.
+ *
+ * Lista din newsletter începe de la clipa trimiterii, deci ce oră e chiar acum
+ * hotărăște ce intră în ea. O probă care ar folosi ceasul adevărat ar spune
+ * altceva la 7 dimineața decât la 8 seara — adică ar pica singură o dată pe zi,
+ * la o oră pe care n-o alege nimeni. Toate întrebările de mai jos se pun față de
+ * clipa asta, iar cutoff-ul își are secțiunea lui.
+ */
+$LA_SASE = strtotime($azi . ' 06:00:00');
+
 $CATEGORIA = faCategoriaProbei();
 $gazda     = faMembru('gazda', 'Silviu', true);
 
@@ -160,10 +171,10 @@ sectiune('ce intră în mesaj');
  * rândurile ar pica în orice zi în care se întâmplă ceva în oraș — adică
  * tocmai în zilele care contează.
  */
-$aleMele = static function (): array {
+$aleMele = static function (?int $clipa = null) use ($LA_SASE): array {
     $ale = [];
 
-    foreach (evenimenteleDeAzi(200) as $e) {
+    foreach (evenimenteleDeAzi(200, $clipa ?? $LA_SASE) as $e) {
         if (str_starts_with((string) $e['slug'], SEMN)) { $ale[] = $e; }
     }
 
@@ -205,6 +216,50 @@ verifica('nici cel de ieri',        false, in_array('Ceva de ieri', $titluri, tr
 verifica('nici cel anulat',         false, in_array('Ceva anulat azi', $titluri, true));
 verifica('nici cel neaprobat',      false, in_array('Ceva neaprobat azi', $titluri, true));
 verifica('nici cel deja încheiat',  false, in_array('Ceva încheiat azi', $titluri, true));
+
+/* ==================================================================== */
+sectiune('numai ce n-a început încă');
+
+/**
+ * MESAJUL PLEACĂ LA PRÂNZ, DINADINS — până atunci apucă să se scrie și
+ * anunțurile de dimineață. Prețul e că unele au și început deja, iar un mesaj
+ * care la 12 spune „azi la 10 e o alergare" nu e o veste, e o părere de rău.
+ *
+ * Deci lista începe de la clipa trimiterii. Pe masă sunt două evenimente ale
+ * probei: unul la 08:30 și unul la 19:00.
+ */
+$laOra = static fn(string $ora): array =>
+    array_map(static fn(array $e): string => (string) $e['titlu'],
+              $aleMele(strtotime($azi . ' ' . $ora)));
+
+verifica('la 06:00, amândouă',
+    ['Cafea de dimineață', 'Alergare de seară'], $laOra('06:00:00'));
+
+verifica('la 12:00, doar cel de seară',
+    ['Alergare de seară'], $laOra('12:00:00'));
+
+/**
+ * FIX LA ORA LUI, EVENIMENTUL INTRĂ. „Începând cu ora la care pleacă mesajul"
+ * înseamnă împreună cu ea, nu după ea.
+ */
+verifica('fix la 08:30, tot intră',
+    ['Cafea de dimineață', 'Alergare de seară'], $laOra('08:30:00'));
+
+/**
+ * ȘI CU SECUNDE CU TOT. Cronul pus la 12:00 pornește în fapt la 12:00:07, iar
+ * un eveniment scris fix la 12:00 n-are de ce să cadă din listă pentru șapte
+ * secunde: ora se taie la minut, nu la secundă.
+ */
+verifica('la 08:30:07, încă intră',
+    ['Cafea de dimineață', 'Alergare de seară'], $laOra('08:30:07'));
+
+verifica('la 08:31, nu mai intră', ['Alergare de seară'], $laOra('08:31:00'));
+
+/**
+ * DACĂ TOT CE ERA A TRECUT, LISTA E GOALĂ — și atunci nu pleacă nimic, exact
+ * ca într-o zi în care nu e nimic. Tăcerea spune același lucru.
+ */
+verifica('seara târziu, niciunul', [], $laOra('23:00:00'));
 
 /* ==================================================================== */
 sectiune('rândurile din mesaj');
@@ -295,7 +350,8 @@ verifica('cu ștampila de ieri, revine', true, in_array($abonat, $idAbonati(), t
 db()->prepare('UPDATE membri SET newsletter_trimis_la = NULL WHERE id = ?')->execute([$abonat]);
 db()->prepare('UPDATE membri SET newsletter_trimis_la = NULL WHERE id = ?')->execute([$gazda]);
 
-$r = trimiteNewsletterulZilei();
+/* Tot față de ceasul probei: la 06:00 amândouă evenimentele ei încă urmează. */
+$r = trimiteNewsletterulZilei(false, $LA_SASE);
 
 verifica('pleacă la amândoi abonații', 2, $r['trimise']);
 verifica('fără nicio picătură',        0, $r['picate']);
@@ -315,7 +371,7 @@ verifica('cu ștampila de azi pe primul', date('Y-m-d'), $stampila($gazda));
 verifica('și pe al doilea',              date('Y-m-d'), $stampila($abonat));
 verifica('iar cel fără bifă rămâne neștampilat', null, $stampila($fara));
 
-$dinNou = trimiteNewsletterulZilei();
+$dinNou = trimiteNewsletterulZilei(false, $LA_SASE);
 
 verifica('a doua rulare nu mai trimite nimic', 0, $dinNou['trimise']);
 verifica('și nu mai are pe cine servi',        0, $dinNou['abonati']);

@@ -237,7 +237,24 @@ inc/
                       primește `nonce="<?= h(nonceCsp()) ?>"`; mai bine îl pui
                       în assets/js/main.js, ca tot restul. `style-src` are
                       'unsafe-inline' dinadins: cifra nu merge pe atributele
-                      `style=`, iar site-ul are trei
+                      `style=`, iar site-ul are trei.
+                      `img-src` ARE ȘI `blob:`, ȘI NU SE SCOATE: poza de profil
+                      (poza.php) și coperta de eveniment (adauga_eveniment.php)
+                      îi arată omului ce a ales, prin URL.createObjectURL() →
+                      `<img src="blob:…">`, ca s-o potrivească în ramă înainte
+                      de a o trimite. Fără el, browserul refuză poza, `onerror`
+                      se aprinde, și omul primește „Nu am putut deschide
+                      fișierul" / „Fișierul nu pare o poză" la ORICE poză — se
+                      rupe în browser, nimic nu ajunge pe server, deci nu se
+                      vede nici în loguri. S-a întâmplat o dată. Nu e o portiță:
+                      o adresă „blob:" nu se naște decât din scriptul nostru, pe
+                      fișierul ales de om. Proba care păzește rândul e în
+                      teste/test-constructie.php. ATENȚIE, REGULA GENERALĂ: CSP
+                      rupe ÎN TĂCERE — nu dă 500, nu scrie în log, iar probele
+                      din PHP (curl) nu văd nimic, fiindcă un client care nu
+                      rulează JS n-are cum să fie oprit de el. Orice funcție
+                      nouă care aduce ceva în pagină pe altă cale (o adresă
+                      nouă, un `Worker`, un `<iframe>`) se probează ÎN BROWSER
   validare.php      → toate verificările server-side (fără atingere DB)
   imagini.php       → procesare/validare poze de profil ȘI coperți de eveniment.
                       TOT AICI copiazaCoperta(): singurul loc de pe site unde
@@ -458,7 +475,18 @@ inc/
                       evenimentele APROBATE de azi, în ordinea orei: cele
                       anulate au pagina lor mai departe pe site, dar a le
                       trimite dimineața ca pe ceva ce urmează ar fi o
-                      minciună. Ștampila (`newsletter_trimis_la`, sql/031) se
+                      minciună. ȘI NUMAI CE N-A ÎNCEPUT ÎNCĂ: lista pornește
+                      de la CLIPA TRIMITERII, nu de la miezul nopții (al
+                      doilea parametru al lui evenimenteleDeAzi(), citit o
+                      singură dată pe rulare). Mesajul pleacă la 12 dinadins —
+                      până atunci apucă să se scrie și anunțurile de dimineață
+                      — dar prețul e că unele au și început: „azi la 10 e o
+                      alergare", spus la 12, nu e o veste, e o părere de rău.
+                      ORA SE TAIE LA MINUT, nu la secundă: cronul pus la 12:00
+                      pornește în fapt la 12:00:07, iar un eveniment scris fix
+                      la 12:00 n-are de ce să cadă pentru șapte secunde. Dacă
+                      tot ce era azi a trecut, nu pleacă nimic — la fel ca
+                      într-o zi goală. Ștampila (`newsletter_trimis_la`, sql/031) se
                       pune ÎNAINTE de trimitere și hotărârea e în `WHERE`, ca
                       la revendicarea unui abțibild: dintre „a plecat de două
                       ori" și „n-a plecat pentru că a căzut curentul între

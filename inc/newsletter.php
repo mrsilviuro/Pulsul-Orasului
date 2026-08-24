@@ -6,8 +6,10 @@ declare(strict_types=1);
  *
  * O dată pe zi, la ora pusă în cron, pleacă un mesaj către cine are bifa
  * „Vreau să primesc e-mail cu evenimente noi (cel mult unul pe zi)" din setări
- * (`membri.newsletter`). Înăuntru: evenimentele de ASTĂZI, cu poză mică, oră și
- * loc.
+ * (`membri.newsletter`). Înăuntru: evenimentele de ASTĂZI CARE N-AU ÎNCEPUT ÎNCĂ,
+ * ca niște cartonașe ca pe prima pagină — poză, oră și loc. Lista pornește de la
+ * clipa trimiterii: ce a început deja rămâne pe site, dar nu se mai bate la ușa
+ * nimănui.
  *
  * DACĂ AZI NU E NIMIC, NU PLEACĂ NIMIC. Un mesaj care spune „azi nu se
  * întâmplă nimic" e cel mai bun fel de a-l învăța pe om să nu-l mai deschidă —
@@ -41,21 +43,42 @@ const NEWSLETTER_PE_RULARE = 400;
 /** Câte evenimente se scriu în mesaj. */
 const NEWSLETTER_MAX_EVENIMENTE = 12;
 
-/* ========================= CE SE ÎNTÂMPLĂ AZI ======================== */
+/* =========================== CE URMEAZĂ AZI ========================== */
 
 /**
- * Evenimentele de astăzi, în ordinea orei.
+ * Evenimentele de astăzi CARE N-AU ÎNCEPUT ÎNCĂ, în ordinea orei.
  *
  * NUMAI CELE APROBATE. Cele „încheiate" au fost deja oprite de organizator, iar
  * cele „anulate" nu se mai țin — pagina lor rămâne pe site, cu motivul, dar a le
  * trimite dimineața ca pe ceva ce urmează ar fi o minciună.
  *
- * Ziua se ia cu ceasul PHP (regula 5 din CLAUDE.md), nu cu CURDATE() din MySQL:
- * cele două pot fi în fusuri deosebite, iar la miezul nopții ar însemna zile
- * deosebite.
+ * NUMAI CE URMEAZĂ. Mesajul pleacă pe la prânz, dinadins: până atunci apucă să
+ * se scrie și anunțurile de dimineață, iar lista de la ora 12 e mai plină decât
+ * cea de la 7. Prețul e că unele au și început deja — iar un mesaj care spune la
+ * 12 „azi la 10 e o alergare" nu e o veste, e o părere de rău. Deci lista începe
+ * de la CLIPA TRIMITERII: ce a pornit rămâne pe site, dar nu se mai bate la ușa
+ * nimănui.
+ *
+ * DE AICI DECURGE: dacă tot ce era azi a trecut, lista e goală și NU PLEACĂ
+ * NIMIC — exact ca într-o zi în care nu e nimic. Tăcerea spune același lucru.
+ *
+ * Ceasul e cel al lui PHP (regula 5 din CLAUDE.md), nu CURDATE()/NOW() din
+ * MySQL: cele două pot fi în fusuri deosebite, iar la miezul nopții ar însemna
+ * zile deosebite, la prânz — ore deosebite.
+ *
+ * ORA SE TAIE LA MINUT, nu la secundă: cronul pus la 12:00 pornește în fapt la
+ * 12:00:07, iar un eveniment scris fix la 12:00 n-are de ce să cadă din listă
+ * pentru șapte secunde. „Începând cu ora la care pleacă mesajul" înseamnă
+ * împreună cu ea.
+ *
+ * @param int|null $clipa Momentul față de care se socotește (implicit, acum).
+ *                        Există pentru probe: altfel n-ai cum să spui „ia
+ *                        închipuie-ți că e 14:00" fără să muți ceasul mașinii.
  */
-function evenimenteleDeAzi(int $celMult = NEWSLETTER_MAX_EVENIMENTE): array
+function evenimenteleDeAzi(int $celMult = NEWSLETTER_MAX_EVENIMENTE, ?int $clipa = null): array
 {
+    $clipa = $clipa ?? time();
+
     $q = db()->prepare(
         'SELECT e.id, e.titlu, e.slug, e.coperta, e.oras, e.locatie, e.descriere,
                 e.data_eveniment, e.ora_inceput,
@@ -63,11 +86,12 @@ function evenimenteleDeAzi(int $celMult = NEWSLETTER_MAX_EVENIMENTE): array
            FROM evenimente e
            JOIN categorii c ON c.id = e.categorie_id
           WHERE e.data_eveniment = ?
+            AND e.ora_inceput   >= ?
             AND e.stare_moderare = \'aprobat\'
           ORDER BY e.ora_inceput ASC, e.id ASC
           LIMIT ' . max(1, $celMult)
     );
-    $q->execute([date('Y-m-d')]);
+    $q->execute([date('Y-m-d', $clipa), date('H:i:00', $clipa)]);
 
     return $q->fetchAll();
 }
@@ -303,10 +327,15 @@ function opresteNewsletterul(int $membruId): bool
  * `$uscat` arată ce s-ar trimite fără să atingă nimic — nici mesajele nu pleacă,
  * nici ștampilele nu se pun. E singurul fel omenesc de a proba un script care
  * scrie unor oameni adevărați.
+ *
+ * `$clipa` e momentul de la care începe lista: intră doar ce n-a pornit încă.
+ * Se citește O SINGURĂ DATĂ, aici — o rulare cu câteva sute de mesaje ține
+ * minute bune, iar dacă ora s-ar lua din nou pe parcurs, primii oameni și
+ * ultimii ar primi liste deosebite.
  */
-function trimiteNewsletterulZilei(bool $uscat = false): array
+function trimiteNewsletterulZilei(bool $uscat = false, ?int $clipa = null): array
 {
-    $evenimente = evenimenteleDeAzi();
+    $evenimente = evenimenteleDeAzi(NEWSLETTER_MAX_EVENIMENTE, $clipa ?? time());
 
     if ($evenimente === []) {
         return ['evenimente' => 0, 'abonati' => 0, 'trimise' => 0, 'picate' => 0, 'sarite' => 0];

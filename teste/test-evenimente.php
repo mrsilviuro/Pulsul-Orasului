@@ -2540,12 +2540,24 @@ verifica('dar nu și celelalte', [false, false, false],
 verifica('unul de peste cinci zile n-a început', false,
     evenimentAInceput(['data_eveniment' => date('Y-m-d', strtotime('+5 days')),
                        'ora_inceput'    => '19:00:00']));
-verifica('nici cel de azi, peste două ore', false,
-    evenimentAInceput(['data_eveniment' => date('Y-m-d'),
-                       'ora_inceput'    => date('H:i:00', strtotime('+2 hours'))]));
-verifica('dar cel de azi, de acum o oră, da', true,
-    evenimentAInceput(['data_eveniment' => date('Y-m-d'),
-                       'ora_inceput'    => date('H:i:00', strtotime('-1 hour'))]));
+/**
+ * ZIUA ȘI ORA SE IAU DIN ACEEAȘI CLIPĂ, nu fiecare din alta.
+ *
+ * Erau scrise `date('Y-m-d')` și `date('H:i:00', strtotime('+2 hours'))` —
+ * adică ziua de AZI lipită de o oră care, după 22:00, e de mâine. La 22:19,
+ * „peste două ore" ieșea „azi la 00:19", adică acum douăzeci și două de ore în
+ * URMĂ, iar proba pica în fiecare seară după zece. Un `strtotime` o dată, și
+ * amândouă câmpurile din el.
+ */
+$pesteDouaOre = strtotime('+2 hours');
+$acumOOra     = strtotime('-1 hour');
+
+verifica('nici cel de peste două ore', false,
+    evenimentAInceput(['data_eveniment' => date('Y-m-d', $pesteDouaOre),
+                       'ora_inceput'    => date('H:i:00', $pesteDouaOre)]));
+verifica('dar cel de acum o oră, da', true,
+    evenimentAInceput(['data_eveniment' => date('Y-m-d', $acumOOra),
+                       'ora_inceput'    => date('H:i:00', $acumOOra)]));
 verifica('și unul de ieri', true,
     evenimentAInceput(['data_eveniment' => date('Y-m-d', strtotime('-1 day')),
                        'ora_inceput'    => '23:00:00']));
