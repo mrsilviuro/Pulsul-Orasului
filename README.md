@@ -1537,7 +1537,22 @@ tocmai fiindcă era scrisă cu `NOW()` din MySQL, care aici e cu trei ore în
 urmă — exact capcana din CLAUDE.md, prinsă din nou.)
 
 Butonul „Încheie evenimentul" stă în dreapta iconițelor de distribuire, se vede
-doar organizatorului și doar cât mai e ceva de încheiat. Confirmarea e în două
+doar organizatorului și doar cât mai e ceva de încheiat.
+
+Întrebarea o pune `poateFiIncheiat()`, fratele care lipsea dintre `poateFiAnulat()`
+și `poateFiEditat()`. Trei condiții: anunțul e **publicat** (deci nu în așteptare,
+nu respins, **și nu anulat**), nu s-a încheiat deja, și a început.
+
+Lipsa lui s-a văzut. Întrebarea era scrisă de mână în `event.php` și avea doi
+termeni din trei — „e al lui" și „a început" — dar nu și pe cel care spune că
+anunțul mai e în picioare. Așa că pe pagina unui eveniment **anulat** butonul
+stătea mai departe acolo, viu. Apăsat, `api/incheie-eveniment.php` răspundea 409
+și bine făcea — dar un buton care nu poate face nimic n-are ce căuta pe ecran. Un
+eveniment anulat a încetat deja, altfel; cele două stări nu se pun una peste alta.
+
+Punctul de intrare cere aceleași trei lucruri, dar **despărțite**, fiindcă el
+trebuie să spună *care* din ele n-a mers („nu e publicat" / „s-a încheiat deja" /
+„n-a început încă"). Pagina cere doar da sau nu, pentru un buton. Confirmarea e în două
 trepte, desenată în pagină ca la anulare — dar nu roșie: încheierea nu e o
 pierdere, e un lucru firesc la capătul unui eveniment. După ce merge, pagina se
 reîncarcă; asta nu e lene, ci felul în care banda, butoanele stinse și textul
@@ -1879,7 +1894,8 @@ după ora de start oamenii sunt deja pe drum, iar o schimbare de loc sau de oră
 le-ar ajunge sub ochi prea târziu ca să mai folosească cuiva.
 
 Ce rămâne de făcut e chiar pe pagina evenimentului: **„Anulează evenimentul"**
-încă o oră (vezi mai jos) și **„Încheie evenimentul"** oricând.
+încă o oră (vezi mai jos) și **„Încheie evenimentul"** cât timp anunțul mai e în
+picioare.
 
 Întrebarea o pune `poateFiEditat()`, și e ALTA decât `poateFiAnulat()`:
 
@@ -1887,6 +1903,7 @@ Ce rămâne de făcut e chiar pe pagina evenimentului: **„Anulează evenimentu
 |---|---|
 | `poateFiEditat()` | ora de start, la minutul zero |
 | `poateFiAnulat()` | o oră după ora de start (`MINUTE_ANULARE_DUPA_INCEPUT`) |
+| `poateFiIncheiat()` | nu se stinge — se **aprinde** la ora de start |
 
 De aceea regula **nu** stă în `evenimentDeEditat()`: de acela atârnă și
 anularea (`api/anuleaza-eveniment.php` îl cheamă ca să afle al cui e anunțul).
@@ -2339,6 +2356,49 @@ coada rândului. Cad numai cele de la început: „2 ore, 0 min și 5 sec" răm�
 ora la care se strânge lumea. După ea, cine scanează află că vânătoarea s-a
 terminat fără câștigător, și tot i se cere să dezlipească abțibildul. Ceasul e al
 PHP-ului, ca peste tot pe site.
+
+#### Și atunci se și încheie
+
+Un eveniment obișnuit ține o zi: se încheie singur când trece ziua, iar asta se
+**socotește la citire**, fără să scrie nimeni nimic. O vânătoare nu ține o zi —
+ține până la clipa aceea. Termenul trecea la 18:00, numărătoarea ajungea la zero,
+caseta scria deja „Nu l-a găsit nimeni" — dar anunțul rămânea `aprobat` **până la
+miezul nopții**: stătea printre cele care urmează pe prima pagină și avea buton de
+încheiere. Singurul fel de a-l închide la vreme era ca omul de casă să apese.
+
+Acum se închide singur, la termen: `incheieVanatorileTrecute()`.
+
+**De ce se scrie în bază**, și nu se socotește la citire ca „i-a trecut ziua":
+fiindcă „încheiat" e scris în **patru locuri** — `evenimentIncheiat()` pentru un
+rând, `filtruNeincheiat()` pentru o interogare, plus condițiile din
+`istoricEvenimente()` și `evenimenteFaraMultumiri()`. O regulă nouă socotită la
+citire ar fi trebuit strecurată în toate patru, iar ziua în care una rămâne în
+urmă e ziua în care un anunț arată „încheiat" pe pagina lui și blochează în
+același timp postarea altuia. Scris în rând, adevărul e unul singur.
+
+**Și e chiar simetria celuilalt capăt.** O vânătoare se termină în două feluri: o
+găsește cineva, sau se scurge timpul. Primul scria deja starea în bază
+(`revendicaCodul`, sub aceeași tranzacție cu câștigul). Al doilea o scrie acum la
+fel.
+
+Hotărârea e în `WHERE` (`stare_moderare = 'aprobat'`), ca peste tot: două cereri
+venite în aceeași clipă nu se calcă, iar un anunț anulat între timp nu e atins.
+
+O cheamă două locuri:
+
+- `evenimenteDePePrima()` — deci și `index.php`, și `api/lista-evenimente.php`,
+  la fiecare apăsare pe „Vezi mai mult". Pusă în `index.php`, ar fi lipsit din
+  al doilea, iar teancul de jos ar fi arătat altceva decât cel de sus. Aceeași
+  rânduială ca la tabla cu dorințe, unde `stampileazaCeleAprobate()` e chemată
+  de `dorinteDePeTabla()`;
+- `event.php`, **țintit** pe anunțul cerut. Cine vine de pe un abțibild intră
+  de-a dreptul pe pagina lui, iar aceea trebuie să fie adevărată din prima
+  clipă — nu la primul vizitator al primei pagini.
+
+Un eveniment **obișnuit** nu se atinge, deși a început acum două ceasuri: el ține
+ziua întreagă, iar a-l încheia pentru că a trecut ora de început ar însemna să-l
+stingi tocmai când se petrece. Steagul care le desparte e `categorii.joc_qr`,
+niciodată numele sau slugul categoriei.
 
 ### `findme.php` schimbă starea printr-un GET
 

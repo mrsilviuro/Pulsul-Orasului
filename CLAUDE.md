@@ -313,7 +313,16 @@ inc/
                       api/anuleaza-eveniment.php răspunde 409; ce rămâne e
                       „Încheie evenimentul". Zona cu butonul se desenează
                       dintr-un singur loc: randeazaZonaAnulare() din
-                      inc/afisare-eveniment.php. LA CELĂLALT CAPĂT AL VIEȚII
+                      inc/afisare-eveniment.php. A TREIA DIN FAMILIE, și merge
+                      INVERS: poateFiIncheiat() nu se stinge la o oră, se
+                      APRINDE la ea — publicat (deci NU anulat) + neîncheiat +
+                      a început. Era scrisă de mână în event.php, cu doi termeni
+                      din trei, și de aceea butonul „Încheie evenimentul" stătea
+                      viu pe pagina unui anunț ANULAT: un eveniment anulat a
+                      încetat deja, altfel, iar cele două stări nu se pun una
+                      peste alta. api/incheie-eveniment.php cere aceleași trei
+                      lucruri, dar despărțite, fiindcă el trebuie să spună CARE
+                      din ele n-a mers. LA CELĂLALT CAPĂT AL VIEȚII
                       UNUI ANUNȚ: poateFiRefacut() și evenimentDeRefacut() —
                       butonul „Remake" de pe pagina evenimentului, care apare
                       DOAR după ce s-a încheiat sau s-a anulat, doar
@@ -418,7 +427,25 @@ inc/
                       pentru vorba din formular. TOT AICI caseta de pe pagina
                       evenimentului (randeazaCasetaFindMe), care ia locul lui
                       „Ce zici, te interesează?": ori numărătoarea inversă până
-                      la termen, ori câștigătorul. CODUL NU SE SCRIE NICIODATĂ
+                      la termen, ori câștigătorul. O VÂNĂTOARE SE TERMINĂ ÎN
+                      DOUĂ FELURI, și amândouă SCRIU starea în bază: o găsește
+                      cineva (revendicaCodul, sub tranzacție cu câștigul), ori
+                      se scurge timpul — incheieVanatorileTrecute(), care stă în
+                      inc/evenimente.php, lângă incheieEveniment(), fiindcă o
+                      cheamă evenimenteDePePrima() (două fișiere care se cer
+                      unul pe altul ar fi o buclă; steagul se citește de-a
+                      dreptul, `c.joc_qr`, ca la cifreleCartonasului). Un
+                      eveniment obișnuit ține o zi și se încheie SOCOTIT LA
+                      CITIRE, fără să scrie nimeni nimic; o vânătoare ține până
+                      la o CLIPĂ ANUME, și de aceea se scrie: „încheiat" e scris
+                      în PATRU locuri (evenimentIncheiat, filtruNeincheiat,
+                      istoricEvenimente, evenimenteFaraMultumiri), iar o regulă
+                      nouă socotită la citire ar fi trebuit strecurată în toate
+                      patru. O cheamă DOUĂ locuri: evenimenteDePePrima() (deci
+                      și index.php, și api/lista-evenimente.php) și event.php,
+                      țintit pe anunțul cerut, ca pagina să fie adevărată din
+                      prima clipă pentru cine vine de pe un abțibild.
+                      CODUL NU SE SCRIE NICIODATĂ
                       ÎN PAGINĂ — cine deschide anunțul ar câștiga fără să se
                       ridice de pe scaun. TOT AICI FRÂNA ÎMPOTRIVA GHICITULUI:
                       preaMulteIncercariQr() și insemneazaIncercareaQr(),

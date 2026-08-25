@@ -643,6 +643,102 @@ if ($ipVechi === null) { unset($_SERVER['REMOTE_ADDR']); }
 else                   { $_SERVER['REMOTE_ADDR'] = $ipVechi; }
 
 /* ==================================================================== */
+sectiune('vânătoarea se închide la termen');
+
+/**
+ * O vânătoare nu ține o zi, ține până la o CLIPĂ ANUME — cea din „Când o să
+ * aibă loc?", care la ea înseamnă ora în care se închide, nu ora la care se
+ * strânge lumea. Un eveniment obișnuit se încheie singur când trece ziua, iar
+ * asta se socotește la citire; o vânătoare al cărei termen a trecut la 18:00
+ * rămânea „aprobat" până la miezul nopții, cu numărătoarea inversă la zero,
+ * printre cele care urmează pe prima pagină și cu buton de încheiere.
+ *
+ * Acum se scrie în rând, ca la celălalt capăt al jocului: cine găsește
+ * abțibildul încheie evenimentul (revendicaCodul), iar timpul scurs îl încheie
+ * la fel.
+ */
+$stareaLui = static fn(int $id): string => (string) db()->query(
+    'SELECT stare_moderare FROM evenimente WHERE id = ' . $id)->fetchColumn();
+
+/**
+ * ÎNTÂI SE FACE CURAT. Secțiunile de mai sus au lăsat în urmă vânători cu
+ * termenul trecut, iar proba de aici numără câte închide o chemare — ar fi
+ * numărat și pe ale lor. Se închid acum, ca de aici încolo să rămână numai ce
+ * face secțiunea asta.
+ */
+incheieVanatorileTrecute();
+
+/* Termenul a trecut acum două ceasuri. */
+$evGata = faEveniment($gazda, $idCat, 'tstfm-gata', '-2 hours');
+
+/* Termenul e peste două ceasuri — vânătoarea e în toi. */
+$evInToi = faEveniment($gazda, $idCat, 'tstfm-intoi', '+2 hours');
+
+/* Un eveniment OBIȘNUIT, început acum două ceasuri: nu-l atinge nimeni. */
+$evObisnuitInceput = faEveniment($gazda, 1, 'tstfm-obisnuit-inceput', '-2 hours');
+
+verifica('până se cheamă, toate trei sunt „aprobat"',
+    ['aprobat', 'aprobat', 'aprobat'],
+    [$stareaLui($evGata), $stareaLui($evInToi), $stareaLui($evObisnuitInceput)]);
+
+$cate = incheieVanatorileTrecute();
+
+verifica('vânătoarea cu termenul trecut s-a încheiat', 'incheiat', $stareaLui($evGata));
+verifica('cea în toi rămâne cum era',                  'aprobat',  $stareaLui($evInToi));
+
+/**
+ * EVENIMENTUL OBIȘNUIT NU SE ATINGE, deși a început acum două ceasuri. El ține
+ * ziua întreagă: la 20:00 e încă în toi, iar a-l încheia pentru că a trecut ora
+ * de început ar însemna să-l stingi tocmai când se petrece. Steagul care le
+ * desparte e `categorii.joc_qr`, niciodată numele sau slugul categoriei.
+ */
+verifica('cel obișnuit rămâne neatins', 'aprobat', $stareaLui($evObisnuitInceput));
+
+/**
+ * A DOUA CHEMARE NU MAI GĂSEȘTE NIMIC. Hotărârea e în `WHERE`
+ * (`stare_moderare = 'aprobat'`), nu într-un `SELECT` de dinainte: două cereri
+ * venite în aceeași clipă nu se calcă, iar prima pagină o cheamă la fiecare
+ * încărcare.
+ */
+verifica('a găsit una singură', 1, $cate);
+verifica('a doua oară, niciuna', 0, incheieVanatorileTrecute());
+
+/**
+ * UN ANUNȚ ANULAT NU SE ATINGE, oricât i-ar fi trecut termenul: a încetat deja,
+ * altfel. Tot `WHERE`-ul îl ține deoparte.
+ */
+$evAnulat = faEveniment($gazda, $idCat, 'tstfm-gata-anulat', '-2 hours', 'anulat');
+incheieVanatorileTrecute();
+verifica('anulatul rămâne anulat', 'anulat', $stareaLui($evAnulat));
+
+/* Nici cel care așteaptă moderarea: n-a fost niciodată o vânătoare pornită. */
+$evAsteapta = faEveniment($gazda, $idCat, 'tstfm-gata-astept', '-2 hours', 'in_asteptare');
+incheieVanatorileTrecute();
+verifica('nici cel în așteptare', 'in_asteptare', $stareaLui($evAsteapta));
+
+/**
+ * ȚINTIT, cu id: pagina unui eveniment o închide pe a ei, fără să le mai
+ * cerceteze pe toate. Aceeași regulă, același `WHERE` — doar o condiție în plus.
+ */
+$evUnu = faEveniment($gazda, $idCat, 'tstfm-tintit-unu', '-2 hours');
+$evDoi = faEveniment($gazda, $idCat, 'tstfm-tintit-doi', '-2 hours');
+
+verifica('chemată cu un id, închide una', 1, incheieVanatorileTrecute($evUnu));
+verifica('și chiar pe aceea',      'incheiat', $stareaLui($evUnu));
+verifica('cealaltă rămâne cum era', 'aprobat', $stareaLui($evDoi));
+
+/**
+ * ȘI ATUNCI PAGINA O VEDE ÎNCHEIATĂ. Proba de până aici se uită în bază; asta
+ * întreabă ce ar spune site-ul despre rândul citit după aceea — fiindcă tot ce
+ * se desenează pe pagina unui eveniment atârnă de întrebările astea două.
+ */
+$randInchis = evenimentDupaSlug('tstfm-tintit-unu');
+
+verifica('și se citește ca încheiat',        true, evenimentIncheiat($randInchis));
+verifica('deci fără buton de încheiere',    false, poateFiIncheiat($randInchis));
+verifica('dar cu „Remake", ca orice sfârșit', true, poateFiRefacut($randInchis));
+
+/* ==================================================================== */
 if ($BAZA === '') {
     echo "\n(sar peste HTTP: dă adresa serverului ca argument, "
        . "ex. php teste/test-findme.php http://127.0.0.1:8099)\n";
