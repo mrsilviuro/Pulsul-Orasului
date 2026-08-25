@@ -573,14 +573,105 @@ button { cursor: pointer; border: 0; background: none; }
 .tabla__punct.is-activ { background: var(--brand); transform: scale(1.35); }
 
 /* ---- rândul de sub tablă ---- */
+/* Vorba („Ai două dorințe în lucru") deasupra, „Dorințele mele" dedesubt.
+   Erau una lângă alta cât timp sub tablă nu stătea decât o propoziție; cu
+   tabelul care se deschide din buton, pe telefon ar fi ieșit două lucruri
+   înghesuite pe același rând. */
 .tabla__unelte {
-  display: flex; align-items: center; flex-wrap: wrap; gap: 10px 16px;
+  display: flex; flex-direction: column; align-items: flex-start;
+  gap: 10px;
   margin-top: 14px;
 }
 .tabla__stare {
   margin: 0;
   font-size: 13.5px;
   color: var(--text-soft);
+}
+
+/* ---- „Dorințele mele": butonul de sub tablă și tabelul lui ----
+
+   E un <details>, nu un panou deschis de JS. Se deschide și se închide
+   singur, în orice browser, FĂRĂ o linie de JavaScript — restul tablei se
+   sprijină pe `:target` ca să meargă cu JS-ul stins, aici n-a fost nevoie
+   nici de atât. */
+.dorintele { width: 100%; }
+
+.dorintele__buton {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 7px 14px 7px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  font-size: 13.5px; font-weight: 600; color: var(--text-soft);
+  cursor: pointer;
+  list-style: none;                 /* fără triunghiul browserului */
+  transition: border-color .15s var(--ease), color .15s var(--ease);
+}
+/* Safari desenează triunghiul altfel decât ceilalți. */
+.dorintele__buton::-webkit-details-marker { display: none; }
+
+.dorintele__buton:hover  { border-color: var(--text-faint); color: var(--text); }
+.dorintele__buton .ico   { width: 15px; height: 15px; }
+.dorintele[open] .dorintele__buton { border-color: var(--text-faint); color: var(--text); }
+
+.dorintele__lista {
+  list-style: none;
+  margin: 10px 0 0; padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.dorintele__rand {
+  display: flex; align-items: center; gap: 12px;
+  padding: 11px 8px 11px 14px;
+  border-top: 1px solid var(--border-soft);
+}
+.dorintele__rand:first-child { border-top: 0; }
+
+/* Textul poate fi lung; „×"-ul nu se lasă împins afară. */
+.dorintele__ce   { flex: 1 1 auto; min-width: 0; }
+.dorintele__text {
+  margin: 0;
+  font-size: 14px; line-height: 1.4; color: var(--text);
+  overflow-wrap: anywhere;
+}
+.dorintele__amanunt {
+  margin: 3px 0 0;
+  font-size: 12.5px; color: var(--text-faint);
+}
+
+.dorintele__sterg { flex: 0 0 auto; margin: 0; }
+
+/* „×"-ul e roșu de la bun început, nu doar la hover: e singurul lucru de
+   apăsat din rând, iar omul trebuie să vadă din prima ce face. Roșul de
+   avertizare, nu cel de brand — ca la .btn--rau. */
+.dorintele__x {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px;
+  border: 1px solid rgba(224, 57, 59, .35);
+  border-radius: 50%;
+  background: rgba(224, 57, 59, .08);
+  color: #c22b2d;
+  cursor: pointer;
+  transition: background-color .15s var(--ease), border-color .15s var(--ease);
+}
+.dorintele__x:hover {
+  background: rgba(224, 57, 59, .18);
+  border-color: rgba(224, 57, 59, .7);
+}
+.dorintele__x .ico { width: 15px; height: 15px; }
+[data-theme="dark"] .dorintele__x { color: #ff9b97; }
+
+/* Rândul care tocmai a plecat: se stinge, nu dispare dintr-o dată. Cu
+   „mișcare redusă" pornită, sare peste — vezi și tabla de mai sus. */
+.dorintele__rand.e-plecat {
+  opacity: .35;
+  transition: opacity .2s var(--ease);
+}
+@media (prefers-reduced-motion: reduce) {
+  .dorintele__rand.e-plecat { transition: none; }
 }
 
 /* ---- cutia cu formularul ---- */

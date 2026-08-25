@@ -75,13 +75,26 @@ Tot codul stă în `inc/dorinte.php`; tabelul, în `sql/023-dorinte.sql`.
 | | |
 |---|---|
 | lungime | cel mult **100 de caractere** (`DORINTA_MAX`), numărate cu `mb_strlen` |
-| câte deodată | **una** de om. O dorință respinsă nu-l oprește să încerce din nou; una în așteptare sau una încă pe tablă, da |
+| câte deodată | **trei** de om (`DORINTE_DEODATA`) |
 | cât stă | **7 zile** (`ZILE_PE_TABLA`), numărate **de la aprobare**, nu de la trimitere |
-| după aceea | iese de pe tablă și omul poate pune alta. Rândul NU se șterge |
-| se poate schimba? | nu. Nici șterge. Omul e înștiințat în formular, înainte să apese |
+| după aceea | iese de pe tablă și se face loc pentru alta. Rândul NU se șterge |
+| se poate schimba? | nu — dar **se poate șterge**, oricând, din „Dorințele mele" |
 
-Regula „o singură dorință" se ține **la scriere** (`puneODorinta`), nu în
-butonul de pe ecran: două file deschise deodată ar fi trimis amândouă.
+**„În lucru"** înseamnă că ocupă unul din cele trei locuri: cele care așteaptă
+să fie citite (una netrecută pe la nimeni ține un loc la fel de bine, altfel
+omul ar fi putut trimite zece deodată și le-ar fi găsit moderarea pe toate) și
+cele publicate care n-au împlinit șapte zile. **Nu** țin niciun loc: una
+respinsă (cine a scris ceva nepotrivit trebuie să poată încerca altfel), una
+ieșită de pe tablă, și una ștearsă de el.
+
+Regula celor trei se ține **la scriere** (`puneODorinta`), nu în butonul de pe
+ecran: două file deschise deodată ar fi trimis amândouă.
+
+A fost **una singură**, și pentru totdeauna. Amândouă erau prea strâmte: cine
+se gândește la trei lucruri deosebite trebuia să aleagă unul și să aștepte o
+săptămână pentru al doilea, iar cine scria ceva în grabă n-avea ce face. Trei e
+câte încap fără ca tabla să devină a unui singur om — la zece locuri, trei
+de-ale aceluiași ar fi deja o treime.
 
 ### Unde stă butonul
 
@@ -89,22 +102,84 @@ butonul de pe ecran: două file deschise deodată ar fi trimis amândouă.
 acolo se hotărăște omul ce vrea să facă: ori pune la cale o ieșire, ori spune
 doar ce i-ar plăcea. Îl desenează `butonulDorintei()`.
 
-Butonul **dispare** pentru cine are deja o dorință în lucru: ar fi dus la un
-formular pe care serverul îl refuză oricum. Ce-i rămâne de aflat scrie sub
-tablă, prin `randeazaZonaDorinte()`:
+Butonul **dispare** doar pentru cine le are pe toate trei: ar fi dus la un
+formular pe care serverul îl refuză oricum. Sub tablă, `randeazaZonaDorinte()`
+scrie câte are și câte mai încap:
 
-| starea lui | ce se vede în fereastră | ce scrie sub tablă |
+| are în lucru | ce se vede în fereastră | ce scrie sub tablă |
 |---|---|---|
-| n-are niciuna | butonul | nimic |
-| a trimis una, se citește | — | „Dorința ta așteaptă să fie citită." |
-| e pe tablă | — | „Dorința ta e pe tablă până joi, 27 august." |
+| niciuna | butonul | nimic |
+| una | butonul | „Ai o dorință în lucru. Mai poți pune 2." |
+| două | butonul | „Ai 2 dorințe în lucru. Mai poți pune una." |
+| trei | — | „Ai 3 dorințe în lucru — atâtea se pot deodată. Șterge una ca să faci loc alteia." |
 
-Data e scrisă cu ziua săptămânii și **fără an** (`dataLunga($d, false)`): ziua
+`poatePuneODorinta()` are acum **două** stări, nu trei (`'poate'` /
+`'prea_multe'`). Erau `'asteapta'` și `'e_pe_tabla'` cât timp omul avea o
+singură dorință și tot ce se putea spune despre el era povestea aceleia. Cu
+trei, nu mai există „starea omului" — există starea fiecărei dorințe în parte,
+iar aceea se scrie în tabelul de dedesubt.
+
+Când tabla nu se desenează (n-are nicio dorință aprobată), vorba trece în capul
+listei, lângă „Ce facem zilele astea?".
+
+### „Dorințele mele" și „×"-ul roșu
+
+Sub vorbă stă un buton — **„Dorințele mele (2)"** — care deschide un tabel cu
+dorințele omului: textul, orașul, ce se întâmplă cu ea („Așteaptă să fie
+citită" / „Pe tablă până marți, 1 septembrie"), și un **„×" roșu** în dreapta.
+
+Data e scrisă cu ziua săptămânii și **fără an** (`dataScrisaMic()`): ziua
 săptămânii e ce caută omul întâi („mai am până joi"), iar anul, la șapte zile
 depărtare, nu spune nimic. În mijlocul frazei intră cu literă mică.
 
-Când tabla nu se desenează (n-are nicio dorință), vorba trece în capul listei,
-lângă „Ce facem zilele astea?".
+**E un `<details>`, nu un panou deschis de JS.** Se deschide și se închide
+singur, în orice browser, fără o linie de JavaScript — restul tablei se
+sprijină pe `:target` ca să meargă cu JS-ul stins; aici n-a fost nevoie nici de
+atât.
+
+**Fiecare „×" e butonul unui `<form method="post">` adevărat**, spre
+`/index.php`. Fără JavaScript, apăsarea ajunge acolo și șterge; cu JavaScript,
+`main.js` îi ia locul, cheamă `api/sterge-dorinta.php` și scoate rândul pe loc,
+fără reîncărcare. Amândouă drumurile cheamă aceeași funcție
+(`stergeDorintaOmului`) — scrise de două ori, s-ar fi despărțit la prima
+schimbare.
+
+**Fără confirmare**, dinadins. O dorință e un rând de o sută de caractere, iar
+omul care apasă „×" în dreptul propriei fraze știe ce face. O fereastră „ești
+sigur?" la fiecare apăsare e o piedică pusă tuturor pentru greșeala unuia, iar
+ce se pierde e o frază pe care o poate scrie din nou.
+
+Când pleacă și ultimul rând, se duce tot butonul: un „Dorințele mele (0)" care
+deschide un tabel gol e mai rău decât niciun buton.
+
+### Ștergerea e moale
+
+Se scrie `dorinte.sters_la` (`sql/032`); **rândul rămâne**. Motivul e mai vechi
+decât butonul și e scris în antetul lui `sql/023`: rândurile din `dorinte` se
+păstrează ca mai târziu să se poată spune câte dorințe și-au pus oamenii de-a
+lungul timpului. O ștergere adevărată ar fi luat din numărătoarea aceea tocmai
+dorințele la care cineva chiar s-a gândit.
+
+Pentru cel care apasă înseamnă însă tot ce trebuie: dispare de pe tablă, iese
+din tabelul lui, și face loc alteia.
+
+Totul se hotărăște **în `WHERE`**, nu într-un `SELECT` de dinainte:
+
+- `membru_id = ?` — a lui, nu a altuia. „Nu există" și „nu e a ta" primesc
+  același răspuns, ca peste tot pe site: altfel numerele încercate pe rând ar
+  spune cine ce a scris, iar o dorință netrecută încă pe la moderare n-a
+  văzut-o nimeni în afară de autor;
+- `sters_la IS NULL` — nu se șterge de două ori. Două apăsări în aceeași clipă,
+  sau o filă lăsată deschisă, nu mută ștampila.
+
+**Nu se confundă cu ștergerea staff-ului** din `admin-dorinte.php`: aceea e un
+`DELETE` adevărat și rămâne așa, fiindcă e pentru ce n-are ce căuta în
+numărătoare — o înjurătură, un test. Omul care se răzgândește n-a greșit cu
+nimic, iar dorința lui a fost o dorință adevărată.
+
+O dorință **retrasă de autor** se vede mai departe în tabelul staff-ului,
+însemnată „retrasă", dar nu mai are butoane de moderare și nu mai aprinde cifra
+de pe panou: omul și-a luat vorbele înapoi, deci nu mai e nimic de hotărât.
 
 ### Cum se aprobă o dorință
 

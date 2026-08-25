@@ -839,6 +839,101 @@
   }
 
 
+  /* --- „Dorințele mele": „×"-ul care șterge o dorință ---
+
+     FĂRĂ JS MERGE SINGUR. Fiecare „×" e butonul unui `<form method="post">`
+     adevărat, iar index.php primește apăsarea și șterge (vezi
+     randeazaDorinteleMele din inc/dorinte.php). Ce se face aici e doar să nu
+     mai fie nevoie de o reîncărcare a paginii.
+
+     NU SE CERE NICIO CONFIRMARE, dinadins: o dorință e un rând de o sută de
+     caractere, iar omul care apasă „×" în dreptul propriei fraze știe ce
+     face. Ce pierde e o frază pe care o poate scrie din nou.
+
+     Ascultarea e pusă pe LISTĂ, nu pe fiecare buton: rândurile pleacă unul
+     câte unul, iar un ascultător pe listă nu are de ce să afle. */
+
+  var listaDorintelorMele = document.querySelector('.dorintele__lista');
+
+  if (listaDorintelorMele) {
+    listaDorintelorMele.addEventListener('submit', function (e) {
+      var form = e.target.closest('[data-sterge-dorinta]');
+      if (!form) return;
+
+      e.preventDefault();
+
+      var buton = form.querySelector('button');
+      if (buton && buton.disabled) return;
+      if (buton) buton.disabled = true;
+
+      var rand = form.closest('.dorintele__rand');
+
+      fetch('/api/sterge-dorinta.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          csrf: (form.querySelector('[name="csrf"]') || {}).value || '',
+          id:   parseInt(form.getAttribute('data-sterge-dorinta'), 10) || 0
+        })
+      })
+        .then(citesteRaspuns)
+        .then(function (rez) {
+          /**
+           * 404 înseamnă „nu mai există sau nu e a ta" — iar pentru omul care
+           * tocmai a apăsat, amândouă arată la fel: rândul n-are ce căuta
+           * acolo. Se scoate și atunci, ca o a doua apăsare pe o filă veche
+           * să nu lase pe ecran ceva ce în bază nu mai e.
+           */
+          if (rez.corp && (rez.corp.ok || rez.stare === 404)) {
+            scoateRandulDorintei(rand);
+            return;
+          }
+
+          if (buton) buton.disabled = false;
+
+          /* Orice altceva (sesiune expirată, server căzut): se trimite
+             formularul ca lumea, iar pagina se reîncarcă cu adevărul de pe
+             server. Mai bine o reîncărcare decât un rând care minte. */
+          form.submit();
+        })
+        .catch(function () {
+          if (buton) buton.disabled = false;
+          form.submit();
+        });
+    });
+  }
+
+  /**
+   * Scoate rândul din listă și ține numărul din buton la zi.
+   *
+   * Când pleacă și ultimul, se duce tot `<details>`-ul: un „Dorințele mele
+   * (0)" care deschide un tabel gol e mai rău decât niciun buton.
+   */
+  function scoateRandulDorintei(rand) {
+    if (!rand) { window.location.reload(); return; }
+
+    var lista = rand.parentNode;
+    rand.classList.add('e-plecat');
+
+    setTimeout(function () {
+      rand.remove();
+
+      var ramase = lista.querySelectorAll('.dorintele__rand').length;
+      var cutia  = lista.closest('.dorintele');
+
+      if (ramase === 0) {
+        /* Fără dorințe nu mai are ce spune nici vorba de deasupra. */
+        var unelte = cutia && cutia.closest('.tabla__unelte');
+        if (unelte) { unelte.remove(); } else if (cutia) { cutia.remove(); }
+        return;
+      }
+
+      var numar = cutia && cutia.querySelector('.dorintele__buton span');
+      if (numar) numar.textContent = 'Dorințele mele (' + ramase + ')';
+    }, 180);
+  }
+
+
   /* ---------------------------- PRIMA PAGINĂ ----------------------------
      Filtrele de sus și „Vezi mai mult" de la coada listei.
 

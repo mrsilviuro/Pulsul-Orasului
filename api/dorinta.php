@@ -5,7 +5,7 @@ declare(strict_types=1);
  * PulsulOrasului.Ro — o dorință nouă pe tablă.
  *
  * Tot ce face: verifică cine cere, apoi cheamă puneODorinta() din
- * inc/dorinte.php. Verificarea textului, regula „o singură dorință" și
+ * inc/dorinte.php. Verificarea textului, regula celor trei dorințe și
  * scrierea stau acolo — aceeași funcție pe care o cheamă și index.php când
  * pagina n-are JavaScript. Scrise în amândouă, s-ar fi despărțit la prima
  * schimbare.

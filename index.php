@@ -84,6 +84,36 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['dorinta'])) {
 }
 
 /**
+ * ȘTERGEREA UNEI DORINȚE, FĂRĂ JAVASCRIPT.
+ *
+ * „×"-ul din „Dorințele mele" e un formular adevărat (randeazaDorinteleMele
+ * din inc/dorinte.php). Cu JavaScript, main.js îi ia locul și cheamă
+ * api/sterge-dorinta.php; fără el, apăsarea ajunge aici.
+ *
+ * Aceeași funcție în amândouă drumurile — stergeDorintaOmului(), care ține și
+ * regula „a lui, și încă în viață", scrisă în `WHERE`. Aici nu se întreabă
+ * nimic, doar se cheamă.
+ *
+ * SE ÎNTOARCE PRINTR-O REDIRECȚIONARE, ca și punerea: altfel adresa ar rămâne
+ * la un POST, iar o apăsare pe „reîncarcă" ar trimite ștergerea din nou. A
+ * doua oară nu strică nimic (`sters_la IS NULL` n-o mai prinde), dar omul ar
+ * fi văzut întrebarea browserului „retrimiți datele?" pentru nimic.
+ *
+ * NICIUN MESAJ DE GREȘEALĂ. Dacă id-ul nu era al lui, nu se întâmplă nimic și
+ * pagina arată exact ce arăta — ca peste tot pe site, „nu există" și „nu e a
+ * ta" se poartă la fel.
+ */
+if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['sterge_dorinta'])) {
+    if ($membruAcum !== null
+        && tokenCsrfValid(is_string($_POST['csrf'] ?? null) ? $_POST['csrf'] : '')) {
+        stergeDorintaOmului((int) $membruAcum['id'], (int) $_POST['sterge_dorinta']);
+    }
+
+    header('Location: /index.php#dorintele-mele');
+    exit;
+}
+
+/**
  * Ce se vede pe tablă și ce scrie pe buton.
  *
  * Amândouă se citesc DUPĂ trimitere, nu înainte: cine tocmai și-a pus o
@@ -93,7 +123,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['dorinta'])) {
 $dorinteleDePeTabla = dorinteDePeTabla();
 
 $voieLaDorinta = $membruAcum === null
-    ? ['stare' => '', 'dorinta' => null]
+    ? ['stare' => '', 'dorinte' => [], 'cate' => 0]
     : poatePuneODorinta((int) $membruAcum['id']);
 
 require __DIR__ . '/inc/antet.php';
@@ -198,8 +228,13 @@ require __DIR__ . '/inc/antet.php';
      * asta, adresa scrisă de mână ar fi arătat oricui un „am primit-o" pentru
      * ceva ce n-a trimis nimeni.
      */
-    $dorintaGata = ($_GET['dorinta'] ?? '') === 'trimisa'
-                && $voieLaDorinta['stare'] === 'asteapta';
+    $areUnaNecitita = false;
+
+    foreach ($voieLaDorinta['dorinte'] as $aMea) {
+        if ((string) $aMea['stare_moderare'] === 'in_asteptare') { $areUnaNecitita = true; break; }
+    }
+
+    $dorintaGata = ($_GET['dorinta'] ?? '') === 'trimisa' && $areUnaNecitita;
 
     /* Formularul se desenează pentru cine mai poate pune o dorință — sau
        pentru cine tocmai a trimis una, ca să vadă mulțumirea. */
@@ -208,7 +243,7 @@ require __DIR__ . '/inc/antet.php';
     /* Vorba despre dorința lui, dacă are una în lucru. Poate fi '' — atunci
        nu se desenează nici casa în care ar fi stat. */
     $zonaDorinte = randeazaZonaDorinte($logat, $voieLaDorinta['stare'],
-                                       $voieLaDorinta['dorinta']);
+                                       $voieLaDorinta['dorinte']);
     ?>
 
     <?php if ($areTabla || $poateDori): ?>
@@ -268,13 +303,16 @@ require __DIR__ . '/inc/antet.php';
                <?= isset($dorintaErori['dorinta']) ? '' : 'hidden' ?>><?= h($dorintaErori['dorinta'] ?? '') ?></p>
           </div>
 
-          <!-- Ce trebuie să știe omul ÎNAINTE să apese, nu după. Toate trei
-               sunt lucruri pe care nu le mai poate lua înapoi. -->
+          <!-- Ce trebuie să știe omul ÎNAINTE să apese, nu după: că nu apare
+               pe loc, câte poate avea deodată, și că textul nu se mai schimbă.
+               Al treilea rând spunea până acum că nici nu se mai poate șterge;
+               de când se poate, e tocmai vestea bună de dat aici. -->
           <ul class="dorinta-form__reguli">
             <li>O citim înainte de a o pune pe tablă — nu apare pe loc.</li>
-            <li>Stă pe tablă <?= ZILE_PE_TABLA ?> zile. Poți avea o singură dorință
-                o dată; după ce iese a ta, poți pune alta.</li>
-            <li>Odată publicată, nu se mai poate schimba și nu se mai poate șterge.</li>
+            <li>Stă pe tablă <?= ZILE_PE_TABLA ?> zile. Poți avea cel mult
+                <?= DORINTE_DEODATA ?> deodată; după ce iese una, se face loc pentru alta.</li>
+            <li>Odată publicată nu se mai poate schimba — dar o poți șterge oricând,
+                din „Dorințele mele", de sub tablă.</li>
           </ul>
 
           <div class="dorinta-form__butoane">

@@ -264,22 +264,35 @@ $candva = static function (string $data, string $ora): array {
     ];
 };
 
+/**
+ * Un eveniment la CLIPA cerută — ziua ȘI ora luate din același număr.
+ *
+ * Erau scrise de mână, `date('Y-m-d')` lipit de `date('H:i:s', time() + 3600)`:
+ * adică ziua de AZI cu o oră care, după 23:00, e de mâine. La 23:05, „peste un
+ * ceas" ieșea „azi la 00:05", adică acum douăzeci și trei de ore în URMĂ, iar
+ * probele picau în fiecare noapte după unsprezece. Un singur `time()`, și
+ * amândouă câmpurile din el.
+ */
+$laClipa = static function (int $t) use ($candva): array {
+    return $candva(date('Y-m-d', $t), date('H:i:s', $t));
+};
+
 verifica('unul de peste o săptămână se poate anula', true,
     poateFiAnulat($candva(date('Y-m-d', strtotime('+7 days')), '18:00:00')));
 
 verifica('și unul de azi, dar de peste un ceas', true,
-    poateFiAnulat($candva(date('Y-m-d'), date('H:i:s', time() + 3600))));
+    poateFiAnulat($laClipa(time() + 3600)));
 
 /* --- fereastra de o oră, de o parte și de alta a ei --- */
 
 verifica('cel care tocmai a început SE POATE ÎNCĂ', true,
-    poateFiAnulat($candva(date('Y-m-d'), date('H:i:s', time() - 60))));
+    poateFiAnulat($laClipa(time() - 60)));
 
 verifica('și la 59 de minute după, tot se poate', true,
-    poateFiAnulat($candva(date('Y-m-d'), date('H:i:s', time() - 59 * 60))));
+    poateFiAnulat($laClipa(time() - 59 * 60)));
 
 verifica('la 61 de minute, nu mai merge', false,
-    poateFiAnulat($candva(date('Y-m-d'), date('H:i:s', time() - 61 * 60))));
+    poateFiAnulat($laClipa(time() - 61 * 60)));
 
 verifica('nici cel de ieri', false,
     poateFiAnulat($candva(date('Y-m-d', strtotime('-1 day')), '18:00:00')));
@@ -322,9 +335,9 @@ verifica('unul de peste o săptămână se editează', true,
     poateFiEditat($candva(date('Y-m-d', strtotime('+7 days')), '18:00:00')));
 
 verifica('și unul de azi, dar de peste un ceas', true,
-    poateFiEditat($candva(date('Y-m-d'), date('H:i:s', time() + 3600))));
+    poateFiEditat($laClipa(time() + 3600)));
 
-$tocmaiAInceput = $candva(date('Y-m-d'), date('H:i:s', time() - 60));
+$tocmaiAInceput = $laClipa(time() - 60);
 
 verifica('cel care tocmai a început NU se mai editează', false,
     poateFiEditat($tocmaiAInceput));
@@ -349,7 +362,7 @@ verifica('unul de peste o săptămână NU se încheie', false,
     poateFiIncheiat($candva(date('Y-m-d', strtotime('+7 days')), '18:00:00')));
 
 verifica('nici cel de azi, de peste un ceas', false,
-    poateFiIncheiat($candva(date('Y-m-d'), date('H:i:s', time() + 3600))));
+    poateFiIncheiat($laClipa(time() + 3600)));
 
 verifica('cel care tocmai a început, da', true, poateFiIncheiat($tocmaiAInceput));
 
