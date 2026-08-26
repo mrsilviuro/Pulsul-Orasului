@@ -466,6 +466,12 @@ const ISTORIC_DEODATA = 6;
  * participanți ca oricare altul (vezi faOrganizatorulParticipant). Ca să se
  * poată scrie „Organizator" pe ele, se întoarce și `e_organizator`.
  *
+ * DAR NU LA CELE ȚINUTE DEOPARTE DE PROFIL. La un anunț cu `ascuns_pe_profil`,
+ * omul de casă nu e trecut singur pe listă (organizatorulVineSingur) — dacă
+ * ajunge acolo, e fiindcă a apăsat el „Particip", ca oricare altul. Atunci
+ * `e_organizator` iese 0 și cartonașul n-are insignă: a fost la ceva, n-a pus
+ * la cale nimic.
+ *
  * Cele care n-au ajuns niciodată publice lipsesc: n-avea cum să se înscrie
  * cineva la ele.
  *
@@ -475,12 +481,20 @@ const ISTORIC_DEODATA = 6;
  * „Anulat" scris în colț; nu se numără însă în „a participat la", fiindcă
  * n-a participat la nimic (vezi laCateEvenimenteAFost).
  *
- * Anunțurile însemnate `ascuns_pe_profil` (vezi sql/022) lipsesc și ele — DAR
- * numai de pe profilul celui care le-a pus. Pentru oricine altcineva rămân la
- * locul lor: e o seară adevărată, la care omul chiar a fost, iar bifa aceea
- * spune „nu e o ieșire de-a MEA", nu „ștergeți evenimentul din viețile
- * tuturor". Fără jumătatea cu `e.membru_id`, un anunț al orașului ar fi
- * dispărut din istoricul a cincizeci de oameni care au fost la el.
+ * ANUNȚURILE ÎNSEMNATE `ascuns_pe_profil` (vezi sql/022) INTRĂ ȘI ELE, inclusiv
+ * pe profilul celui care le-a pus. Lipseau, și era greșit.
+ *
+ * Bifa aceea spune „nu e o ieșire de-a MEA" — atât. Ea ține anunțul deoparte de
+ * „Ieșiri organizate" (evenimenteDePeProfil, cateEvenimenteOrganizate), și
+ * acolo e locul ei: de obicei e un eveniment al primăriei sau al altcuiva, pe
+ * care omul de casă doar îl scrie pe site. Dar dacă pe urmă apasă „Particip",
+ * a fost acolo ca oricare altul, iar istoricul spune pe unde a fost omul, nu ce
+ * a organizat. Scos de aici, ieșea o pagină care se contrazicea singură: pe
+ * lista de participanți a evenimentului scria numele lui, iar în istoricul lui
+ * seara aceea nu existase niciodată.
+ *
+ * Ce rămâne din bifă, aici: NU se scrie „Organizator" pe cartonaș — vezi
+ * `e_organizator` din interogare.
  */
 function istoricEvenimente(int $membruId): array
 {
@@ -498,7 +512,13 @@ function istoricEvenimente(int $membruId): array
                 -- cifreleCartonasului() din inc/evenimente.php.
                 c.joc_qr AS categorie_joc_qr,
                 ' . CIFRE_CARTONAS . ',
-                (e.membru_id = i.membru_id) AS e_organizator,
+                -- „Organizator" — dar NU la anunțurile ținute deoparte de
+                -- profil. Acolo omul de casă n-a pus la cale o ieșire de-a lui:
+                -- a scris pe site una a orașului, a primăriei, a altcuiva.
+                -- Bifa aceea spune tocmai „nu e a mea", iar o insignă care ar
+                -- spune contrariul, chiar pe cartonașul din istoricul lui, ar
+                -- fi fost singura vorbă neadevărată de pe pagină.
+                (e.membru_id = i.membru_id AND e.ascuns_pe_profil = 0) AS e_organizator,
                 EXISTS (
                   SELECT 1 FROM evaluari ev
                    WHERE ev.eveniment_id = i.eveniment_id
@@ -510,9 +530,10 @@ function istoricEvenimente(int $membruId): array
            JOIN categorii  c ON c.id = e.categorie_id
           WHERE i.membru_id = ?
             AND i.stare = \'participant\'
-            -- Ținut deoparte de profil, dar numai de al ORGANIZATORULUI: vezi
-            -- explicația de deasupra funcției.
-            AND NOT (e.ascuns_pe_profil = 1 AND e.membru_id = i.membru_id)
+            -- `ascuns_pe_profil` NU mai scoate nimic de aici: dacă omul de
+            -- casă a apăsat „Particip", a fost acolo, iar istoricul spune pe
+            -- unde a fost. Vezi explicația de deasupra funcției; ce se stinge
+            -- e doar insigna „Organizator", în SELECT-ul de mai sus.
             AND e.stare_moderare IN (\'aprobat\', \'incheiat\', \'anulat\')
             -- Un eveniment anulat intră în istoric oricare i-ar fi ziua: nu mai
             -- urmează, oricât ar arăta calendarul.
@@ -606,9 +627,11 @@ function laCateEvenimenteAFost(int $membruId): int
            JOIN evenimente e ON e.id = i.eveniment_id
           WHERE i.membru_id = ?
             AND i.stare = \'participant\'
-            -- Aceeași scoatere ca la lista de dedesubt (istoricEvenimente), ca
-            -- cifra să numere exact cartonașele care se văd sub ea.
-            AND NOT (e.ascuns_pe_profil = 1 AND e.membru_id = i.membru_id)
+            -- `ascuns_pe_profil` nu scoate nimic nici de aici, ca și la lista
+            -- de dedesubt (istoricEvenimente): cifra trebuie să numere exact
+            -- cartonașele care se văd sub ea. Cât timp scotea, omul de casă
+            -- care spusese „particip" la un anunț al orașului avea zero scris
+            -- sus și niciun cartonaș jos — deși fusese acolo.
             AND e.stare_moderare IN (\'aprobat\', \'incheiat\')
             AND NOT EXISTS (
                   SELECT 1 FROM evaluari ev

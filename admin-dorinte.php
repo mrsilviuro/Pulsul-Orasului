@@ -89,8 +89,16 @@ require __DIR__ . '/inc/antet.php';
           </thead>
           <tbody>
             <?php foreach ($dorinte as $d):
-              $asteapta = $d['stare_moderare'] === 'in_asteptare';
-              $iese     = $panaCand($d);
+              /**
+               * ȘTEARSĂ DE AUTOR. Rândul rămâne — rândurile din `dorinte` nu
+               * se șterg niciodată, ca mai târziu să se poată spune câte
+               * dorințe și-au pus oamenii — dar nu mai e nimic de hotărât la
+               * ea, iar butoanele de moderare n-ar face decât să pună înapoi
+               * pe tablă ceva ce omul a retras.
+               */
+              $retrasa  = $d['sters_la'] !== null;
+              $asteapta = $d['stare_moderare'] === 'in_asteptare' && !$retrasa;
+              $iese     = $retrasa ? '' : $panaCand($d);
             ?>
             <tr data-rand class="admin-rand--<?= h((string) $d['stare_moderare']) ?>">
               <td><?= h((string) $d['dorinta']) ?></td>
@@ -99,11 +107,16 @@ require __DIR__ . '/inc/antet.php';
               <td><?= h((string) $d['oras']) ?></td>
 
               <td>
+                <?php if ($retrasa): ?>
+                <span class="admin-stare admin-stare--respins">retrasă</span>
+                <span class="admin-tabel__mic">de autor, <?= h(clipaScurta($d['sters_la'])) ?></span>
+                <?php else: ?>
                 <span class="admin-stare admin-stare--<?= h((string) $d['stare_moderare']) ?>">
                   <?= h($vorbeStare[$d['stare_moderare']] ?? (string) $d['stare_moderare']) ?>
                 </span>
                 <?php if ($iese !== ''): ?>
                 <span class="admin-tabel__mic">până <?= h($iese) ?></span>
+                <?php endif; ?>
                 <?php endif; ?>
               </td>
 

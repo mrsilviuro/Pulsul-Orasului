@@ -182,8 +182,16 @@ function cifreleAdmin(): array
 
         'mesaje'     => $numara('SELECT COUNT(*) FROM mesaje_contact WHERE citit_la IS NULL'),
         'suspendati' => $numara('SELECT COUNT(*) FROM membri WHERE stare = \'suspendat\''),
+        /**
+         * FĂRĂ CELE PE CARE LE-A ȘTERS AUTORUL. De când omul își poate lua
+         * dorința înapoi (sql/032), una scrisă și retrasă înainte de a fi
+         * citită nu mai are nimic de hotărât — iar o cifră aprinsă pe panou
+         * pentru așa ceva ar fi trimis omul de casă la un tabel în care nu-l
+         * așteaptă nimic. Aceeași cernere ca în lista de mai jos.
+         */
         'dorinte'    => $numara('SELECT COUNT(*) FROM dorinte
-                                  WHERE stare_moderare = \'in_asteptare\''),
+                                  WHERE stare_moderare = \'in_asteptare\'
+                                    AND sters_la IS NULL'),
 
         /**
          * Notele aspre, singurele despre care poate veni cineva să se plângă.
@@ -504,7 +512,10 @@ function cautaMembri(string $cauta, int $cate = ADMIN_USERI): array
  *
  * Ordinea nu e întâmplătoare: în capul listei stă ce are nevoie de o hotărâre.
  * Un tabel așezat numai după dată ar fi ținut dorința netrecută pe la nimeni la
- * mijloc, între alte douăzeci.
+ * mijloc, între alte douăzeci. CELE ȘTERSE DE AUTOR nu urcă în cap, oricât ar
+ * scrie „așteaptă" în ele: omul și-a luat vorbele înapoi, deci nu mai e nimic
+ * de hotărât. Rămân în tabel, însemnate — e singurul loc unde se vede tot ce
+ * s-a scris vreodată.
  *
  * FĂRĂ TĂIETURĂ, spre deosebire de celelalte liste. Rândurile din `dorinte` nu
  * se șterg niciodată — nici după ce ies de pe tablă — tocmai ca mai târziu să
@@ -519,11 +530,12 @@ function toateDorintele(): array
 {
     $q = db()->prepare(
         'SELECT d.id, d.oras, d.dorinta, d.stare_moderare, d.creat_la, d.publicat_la,
+                d.sters_la,
                 m.id AS membru_id, m.email, m.nume, m.prenume, m.permalink,
                 m.stare AS stare_cont
            FROM dorinte d
            JOIN membri m ON m.id = d.membru_id
-          ORDER BY (d.stare_moderare = \'in_asteptare\') DESC,
+          ORDER BY (d.stare_moderare = \'in_asteptare\' AND d.sters_la IS NULL) DESC,
                    d.creat_la DESC, d.id DESC'
     );
     $q->execute();

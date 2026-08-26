@@ -313,7 +313,16 @@ inc/
                       api/anuleaza-eveniment.php răspunde 409; ce rămâne e
                       „Încheie evenimentul". Zona cu butonul se desenează
                       dintr-un singur loc: randeazaZonaAnulare() din
-                      inc/afisare-eveniment.php. LA CELĂLALT CAPĂT AL VIEȚII
+                      inc/afisare-eveniment.php. A TREIA DIN FAMILIE, și merge
+                      INVERS: poateFiIncheiat() nu se stinge la o oră, se
+                      APRINDE la ea — publicat (deci NU anulat) + neîncheiat +
+                      a început. Era scrisă de mână în event.php, cu doi termeni
+                      din trei, și de aceea butonul „Încheie evenimentul" stătea
+                      viu pe pagina unui anunț ANULAT: un eveniment anulat a
+                      încetat deja, altfel, iar cele două stări nu se pun una
+                      peste alta. api/incheie-eveniment.php cere aceleași trei
+                      lucruri, dar despărțite, fiindcă el trebuie să spună CARE
+                      din ele n-a mers. LA CELĂLALT CAPĂT AL VIEȚII
                       UNUI ANUNȚ: poateFiRefacut() și evenimentDeRefacut() —
                       butonul „Remake" de pe pagina evenimentului, care apare
                       DOAR după ce s-a încheiat sau s-a anulat, doar
@@ -367,6 +376,10 @@ inc/
                       cale vine la el, DAR nu la un anunț ținut deoparte de
                       profil: acolo omul de casă n-a scris o ieșire de-a lui, ci
                       una a orașului, deci nu se trece pe lista de participanți.
+                      Se poate însă înscrie SINGUR, ca oricare altul — și atunci
+                      anunțul îi intră în „Istoric" și în „Prezent la
+                      activități", doar fără însemnul „Organizator" (vezi
+                      istoricEvenimente din inc/evaluari.php).
                       Întrebarea se pune în două locuri: salveazaEveniment() și
                       api/modereaza-eveniment.php (la aprobare)
   interese.php      → „Mergi la acest eveniment?" — cine e interesat, cine
@@ -418,7 +431,25 @@ inc/
                       pentru vorba din formular. TOT AICI caseta de pe pagina
                       evenimentului (randeazaCasetaFindMe), care ia locul lui
                       „Ce zici, te interesează?": ori numărătoarea inversă până
-                      la termen, ori câștigătorul. CODUL NU SE SCRIE NICIODATĂ
+                      la termen, ori câștigătorul. O VÂNĂTOARE SE TERMINĂ ÎN
+                      DOUĂ FELURI, și amândouă SCRIU starea în bază: o găsește
+                      cineva (revendicaCodul, sub tranzacție cu câștigul), ori
+                      se scurge timpul — incheieVanatorileTrecute(), care stă în
+                      inc/evenimente.php, lângă incheieEveniment(), fiindcă o
+                      cheamă evenimenteDePePrima() (două fișiere care se cer
+                      unul pe altul ar fi o buclă; steagul se citește de-a
+                      dreptul, `c.joc_qr`, ca la cifreleCartonasului). Un
+                      eveniment obișnuit ține o zi și se încheie SOCOTIT LA
+                      CITIRE, fără să scrie nimeni nimic; o vânătoare ține până
+                      la o CLIPĂ ANUME, și de aceea se scrie: „încheiat" e scris
+                      în PATRU locuri (evenimentIncheiat, filtruNeincheiat,
+                      istoricEvenimente, evenimenteFaraMultumiri), iar o regulă
+                      nouă socotită la citire ar fi trebuit strecurată în toate
+                      patru. O cheamă DOUĂ locuri: evenimenteDePePrima() (deci
+                      și index.php, și api/lista-evenimente.php) și event.php,
+                      țintit pe anunțul cerut, ca pagina să fie adevărată din
+                      prima clipă pentru cine vine de pe un abțibild.
+                      CODUL NU SE SCRIE NICIODATĂ
                       ÎN PAGINĂ — cine deschide anunțul ar câștiga fără să se
                       ridice de pe scaun. TOT AICI FRÂNA ÎMPOTRIVA GHICITULUI:
                       preaMulteIncercariQr() și insemneazaIncercareaQr(),
@@ -455,7 +486,19 @@ inc/
                       TOT AICI: cifrele de
                       pe profil și tabul „Istoric" (istoricEvenimente) — pe
                       unde a fost omul, DOAR evenimente încheiate, cu
-                      „Organizator" și „Absent" pe cartonașe
+                      „Organizator" și „Absent" pe cartonașe. BIFA
+                      `ascuns_pe_profil` NU SCOATE NIMIC DE AICI, nici măcar de
+                      pe profilul celui care a pus anunțul: istoricul spune pe
+                      unde a fost omul, nu ce a organizat. Dacă omul de casă a
+                      apăsat „Particip" la un anunț al orașului, a fost acolo ca
+                      oricare altul, iar cartonașul intră în istoric și se
+                      numără la „Prezent la activități" (laCateEvenimenteAFost —
+                      aceeași socoteală, ca cifra să numere fix cartonașele de
+                      sub ea). Ce face bifa AICI e un singur lucru: stinge
+                      însemnul „Organizator" (`e_organizator` iese 0 în
+                      interogare), fiindcă el n-a pus nimic la cale. Restul
+                      bifei rămâne unde-i e rostul: „Ieșiri organizate"
+                      (evenimenteDePeProfil, cateEvenimenteOrganizate)
   newsletter.php    → NEWSLETTERUL ZILNIC: „ce se întâmplă azi în oraș". O dată
                       pe zi, la 12, către cine are bifa `membri.newsletter`.
                       Evenimentele se scriu ca niște CARTONAȘE ca pe prima
@@ -554,33 +597,59 @@ inc/
                       codul, într-un singur loc (stampileazaCeleAprobate,
                       chemată de dorinteDePeTabla), tot cu ceasul PHP: ca să
                       publici o dorință din phpMyAdmin e de ajuns să-i schimbi
-                      `stare_moderare` în „aprobat". O SINGURĂ DORINȚĂ o dată
-                      de om — regula se ține la SCRIERE (puneODorinta), nu în
-                      butonul de pe ecran, fiindcă două file deschise deodată
-                      ar fi trimis amândouă. ȘI SUB LACĂT: întrebarea „mai
-                      poate?" și scrierea stau într-o tranzacție, cu
+                      `stare_moderare` în „aprobat". TREI DORINȚE DEODATĂ de
+                      om (DORINTE_DEODATA) — a fost UNA singură, și era prea
+                      strâmt. „În lucru" înseamnă cele care așteaptă să fie
+                      citite ȘI cele publicate care n-au împlinit șapte zile
+                      (dorinteleInLucru); una respinsă, una ieșită de pe tablă
+                      și una ștearsă de el nu țin niciun loc. Regula se ține la
+                      SCRIERE (puneODorinta), nu în butonul de pe ecran, fiindcă
+                      două file deschise deodată ar fi trimis amândouă. ȘI SUB
+                      LACĂT: întrebarea „mai încape una?" și scrierea stau
+                      într-o tranzacție, cu
                       `SELECT … FOR UPDATE` pe rândul omului din `membri`
                       (scrieDorintaSubLacat). Fără el, două SESIUNI deosebite
                       ale aceluiași om — laptopul și telefonul — intrau
                       amândouă; două file ale ACELUIAȘI browser nu erau de
                       ajuns ca să se vadă, fiindcă PHP ține un lacăt pe
-                      fișierul sesiunii. O dorință RESPINSĂ nu-l oprește
-                      să încerce din nou; una în așteptare sau una încă pe
-                      tablă, da (poatePuneODorinta → 'poate' | 'asteapta' |
-                      'e_pe_tabla'). Rândurile NU se șterg niciodată, nici
-                      după ce ies de pe tablă: mai târziu vrem să putem spune
-                      câte dorințe și-au pus oamenii de-a lungul timpului.
+                      fișierul sesiunii. poatePuneODorinta() are acum DOUĂ
+                      stări, nu trei ('poate' | 'prea_multe'): de când sunt trei
+                      dorințe, nu mai există „starea omului", ci starea fiecărei
+                      dorințe în parte, iar aceea se scrie în tabelul de sub
+                      tablă. AUTORUL ÎȘI POATE ȘTERGE O DORINȚĂ
+                      (stergeDorintaOmului), și atunci se face loc pentru alta.
+                      ȘTERGEREA E MOALE: se scrie `sters_la` (sql/032), rândul
+                      rămâne — rândurile NU se șterg niciodată, nici după ce ies
+                      de pe tablă, fiindcă mai târziu vrem să putem spune câte
+                      dorințe și-au pus oamenii de-a lungul timpului. Totul se
+                      hotărăște în `WHERE`: `membru_id = ?` (a lui, nu a altuia)
+                      și `sters_la IS NULL` (nu se șterge de două ori). NU se
+                      confundă cu ștergerea staff-ului din admin-dorinte.php,
+                      care rămâne un DELETE adevărat, pentru ce n-are ce căuta
+                      în numărătoare.
                       TOT AICI cum arată: randeazaTablaDorinte(),
                       butonulDorintei() — butonul „Pune-ți o dorință", care stă
                       în FEREASTRA DE BUN VENIT, lângă „Propune o ieșire", și
-                      DISPARE pentru cine are deja una în lucru — și
-                      randeazaZonaDorinte(), vorba despre dorința lui („e pe
-                      tablă până joi, 27 august"), care se desenează în DOUĂ
+                      DISPARE doar pentru cine le are pe toate trei — și
+                      randeazaZonaDorinte(), vorba despre dorințele lui („Ai
+                      două dorințe în lucru. Mai poți pune una."), care se
+                      desenează în DOUĂ
                       locuri (sub tablă și, când nu e nicio dorință, în capul
                       listei de evenimente), de aceea e o funcție, nu HTML
-                      scris de două ori. Data se scrie cu dataLunga($d, false):
-                      cu ziua săptămânii, fără an. puneODorinta() e chemată și de
-                      api/dorinta.php (cu JS), și de index.php (fără)
+                      scris de două ori. SUB EA, randeazaDorinteleMele():
+                      butonul „Dorințele mele (2)" și tabelul care se deschide
+                      din el, cu un „×" roșu în dreptul fiecărei dorințe. E un
+                      `<details>`, nu un panou de JS — se deschide singur, în
+                      orice browser, FĂRĂ o linie de JavaScript. Fiecare „×" e
+                      un `<form method="post">` adevărat spre /index.php, ca să
+                      meargă și cu JS-ul stins; cu JS, main.js îi ia locul și
+                      cheamă api/sterge-dorinta.php. FĂRĂ CONFIRMARE, dinadins:
+                      o dorință e un rând de o sută de caractere, iar ce se
+                      pierde e o frază pe care omul o poate scrie din nou.
+                      Data se scrie cu dataScrisaMic():
+                      cu ziua săptămânii, fără an, cu literă mică. puneODorinta()
+                      și stergeDorintaOmului() sunt chemate amândouă din DOUĂ
+                      locuri: api/ (cu JS) și index.php (fără)
   constructie.php   → LACĂTUL de pe site (`in_constructie` din config.php):
                       cine trece (doar staff), ce uși rămân deschise
                       (usileDeschiseInConstructie) și oprirea propriu-zisă
@@ -624,7 +693,13 @@ sql/                → schema.sql + migrări numerotate (002, 003, 004, 005-goo
                       024-categorii-doar-staff, 025-coduri-qr,
                       026-corectura-eveniment, 027-instiintari-feedback,
                       028-feedback-instiintat, 029-eveniment-fixat,
-                      030-incercari-qr, 031-newsletter-zilnic)
+                      030-incercari-qr, 031-newsletter-zilnic,
+                      032-dorinte-mai-multe)
+                      `dorinte.sters_la` (032) e tot ce trebuie ca omul să-și
+                      poată lua o dorință înapoi: ștergerea e MOALE, rândul
+                      rămâne pentru numărătoarea de mai târziu. Cele TREI
+                      dorințe deodată NU au coloană — se numără rândurile în
+                      lucru ale omului (dorinteleInLucru)
                       `membri.newsletter_trimis_la` (031) e singurul lucru care
                       ține „cel mult unul pe zi": fără el, un cron pornit de
                       două ori trimite de două ori, iar o rulare de mână ca să
@@ -848,15 +923,21 @@ assets/css/style.css, assets/js/main.js, assets/img/
   codul, cu ceasul PHP, la prima încărcare a primei pagini
   (stampileazaCeleAprobate) — tocmai ca să nu intre `NOW()`-ul lui MySQL, din
   alt fus, în ceva ce se numără în zile
-- Autorul nu poate șterge o dorință publicată (i se spune asta în formular,
-  înainte să apese). Staff-ul poate, din `admin-dorinte.php` — și e SINGURA
-  ștergere adevărată de pe site, tocmai fiindcă rândurile astea nu se șterg
-  niciodată altfel: butonul e pentru ce n-are ce căuta în numărătoare, o
-  înjurătură sau un test
+- Autorul ÎȘI POATE ȘTERGE dorințele, din „Dorințele mele", de sub tablă — un
+  „×" roșu în dreptul fiecăreia, fără confirmare. Ștergerea e MOALE: se scrie
+  `dorinte.sters_la` (sql/032), rândul rămâne pentru numărătoarea de mai
+  târziu, dar dorința dispare de pe tablă și face loc alteia dintre cele trei.
+  Ștergerea staff-ului din `admin-dorinte.php` e ALTCEVA și rămâne un DELETE
+  adevărat — singura ștergere adevărată de pe site: e pentru ce n-are ce căuta
+  în numărătoare, o înjurătură sau un test. O dorință retrasă de autor se vede
+  mai departe în tabelul staff-ului, însemnată „retrasă", dar nu mai are
+  butoane de moderare și nu mai aprinde cifra de pe panou: omul și-a luat
+  vorbele înapoi, deci nu mai e nimic de hotărât
 - Dorințele nu se numără nicăieri. Rândurile rămân în `dorinte` pentru
-  totdeauna, și după ce ies de pe tablă, tocmai ca mai târziu să se poată
-  arăta câte dorințe și-au pus oamenii de-a lungul timpului — dar pagina care
-  s-o spună nu există încă
+  totdeauna — și după ce ies de pe tablă, și după ce le șterge autorul (atunci
+  au doar `sters_la` scris) — tocmai ca mai târziu să se poată arăta câte
+  dorințe și-au pus oamenii de-a lungul timpului. Pagina care s-o spună nu
+  există încă
 - Comentariile raportate se adună în `admin-comentarii.php`, cel mai raportat
   în cap. Două butoane, nu unul: „Șterge" (cu motiv, care îi pleacă autorului pe
   e-mail) și „E în regulă", care ȘTERGE RAPOARTELE, nu comentariul — se

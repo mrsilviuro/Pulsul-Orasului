@@ -75,13 +75,26 @@ Tot codul stă în `inc/dorinte.php`; tabelul, în `sql/023-dorinte.sql`.
 | | |
 |---|---|
 | lungime | cel mult **100 de caractere** (`DORINTA_MAX`), numărate cu `mb_strlen` |
-| câte deodată | **una** de om. O dorință respinsă nu-l oprește să încerce din nou; una în așteptare sau una încă pe tablă, da |
+| câte deodată | **trei** de om (`DORINTE_DEODATA`) |
 | cât stă | **7 zile** (`ZILE_PE_TABLA`), numărate **de la aprobare**, nu de la trimitere |
-| după aceea | iese de pe tablă și omul poate pune alta. Rândul NU se șterge |
-| se poate schimba? | nu. Nici șterge. Omul e înștiințat în formular, înainte să apese |
+| după aceea | iese de pe tablă și se face loc pentru alta. Rândul NU se șterge |
+| se poate schimba? | nu — dar **se poate șterge**, oricând, din „Dorințele mele" |
 
-Regula „o singură dorință" se ține **la scriere** (`puneODorinta`), nu în
-butonul de pe ecran: două file deschise deodată ar fi trimis amândouă.
+**„În lucru"** înseamnă că ocupă unul din cele trei locuri: cele care așteaptă
+să fie citite (una netrecută pe la nimeni ține un loc la fel de bine, altfel
+omul ar fi putut trimite zece deodată și le-ar fi găsit moderarea pe toate) și
+cele publicate care n-au împlinit șapte zile. **Nu** țin niciun loc: una
+respinsă (cine a scris ceva nepotrivit trebuie să poată încerca altfel), una
+ieșită de pe tablă, și una ștearsă de el.
+
+Regula celor trei se ține **la scriere** (`puneODorinta`), nu în butonul de pe
+ecran: două file deschise deodată ar fi trimis amândouă.
+
+A fost **una singură**, și pentru totdeauna. Amândouă erau prea strâmte: cine
+se gândește la trei lucruri deosebite trebuia să aleagă unul și să aștepte o
+săptămână pentru al doilea, iar cine scria ceva în grabă n-avea ce face. Trei e
+câte încap fără ca tabla să devină a unui singur om — la zece locuri, trei
+de-ale aceluiași ar fi deja o treime.
 
 ### Unde stă butonul
 
@@ -89,22 +102,84 @@ butonul de pe ecran: două file deschise deodată ar fi trimis amândouă.
 acolo se hotărăște omul ce vrea să facă: ori pune la cale o ieșire, ori spune
 doar ce i-ar plăcea. Îl desenează `butonulDorintei()`.
 
-Butonul **dispare** pentru cine are deja o dorință în lucru: ar fi dus la un
-formular pe care serverul îl refuză oricum. Ce-i rămâne de aflat scrie sub
-tablă, prin `randeazaZonaDorinte()`:
+Butonul **dispare** doar pentru cine le are pe toate trei: ar fi dus la un
+formular pe care serverul îl refuză oricum. Sub tablă, `randeazaZonaDorinte()`
+scrie câte are și câte mai încap:
 
-| starea lui | ce se vede în fereastră | ce scrie sub tablă |
+| are în lucru | ce se vede în fereastră | ce scrie sub tablă |
 |---|---|---|
-| n-are niciuna | butonul | nimic |
-| a trimis una, se citește | — | „Dorința ta așteaptă să fie citită." |
-| e pe tablă | — | „Dorința ta e pe tablă până joi, 27 august." |
+| niciuna | butonul | nimic |
+| una | butonul | „Ai o dorință în lucru. Mai poți pune 2." |
+| două | butonul | „Ai 2 dorințe în lucru. Mai poți pune una." |
+| trei | — | „Ai 3 dorințe în lucru — atâtea se pot deodată. Șterge una ca să faci loc alteia." |
 
-Data e scrisă cu ziua săptămânii și **fără an** (`dataLunga($d, false)`): ziua
+`poatePuneODorinta()` are acum **două** stări, nu trei (`'poate'` /
+`'prea_multe'`). Erau `'asteapta'` și `'e_pe_tabla'` cât timp omul avea o
+singură dorință și tot ce se putea spune despre el era povestea aceleia. Cu
+trei, nu mai există „starea omului" — există starea fiecărei dorințe în parte,
+iar aceea se scrie în tabelul de dedesubt.
+
+Când tabla nu se desenează (n-are nicio dorință aprobată), vorba trece în capul
+listei, lângă „Ce facem zilele astea?".
+
+### „Dorințele mele" și „×"-ul roșu
+
+Sub vorbă stă un buton — **„Dorințele mele (2)"** — care deschide un tabel cu
+dorințele omului: textul, orașul, ce se întâmplă cu ea („Așteaptă să fie
+citită" / „Pe tablă până marți, 1 septembrie"), și un **„×" roșu** în dreapta.
+
+Data e scrisă cu ziua săptămânii și **fără an** (`dataScrisaMic()`): ziua
 săptămânii e ce caută omul întâi („mai am până joi"), iar anul, la șapte zile
 depărtare, nu spune nimic. În mijlocul frazei intră cu literă mică.
 
-Când tabla nu se desenează (n-are nicio dorință), vorba trece în capul listei,
-lângă „Ce facem zilele astea?".
+**E un `<details>`, nu un panou deschis de JS.** Se deschide și se închide
+singur, în orice browser, fără o linie de JavaScript — restul tablei se
+sprijină pe `:target` ca să meargă cu JS-ul stins; aici n-a fost nevoie nici de
+atât.
+
+**Fiecare „×" e butonul unui `<form method="post">` adevărat**, spre
+`/index.php`. Fără JavaScript, apăsarea ajunge acolo și șterge; cu JavaScript,
+`main.js` îi ia locul, cheamă `api/sterge-dorinta.php` și scoate rândul pe loc,
+fără reîncărcare. Amândouă drumurile cheamă aceeași funcție
+(`stergeDorintaOmului`) — scrise de două ori, s-ar fi despărțit la prima
+schimbare.
+
+**Fără confirmare**, dinadins. O dorință e un rând de o sută de caractere, iar
+omul care apasă „×" în dreptul propriei fraze știe ce face. O fereastră „ești
+sigur?" la fiecare apăsare e o piedică pusă tuturor pentru greșeala unuia, iar
+ce se pierde e o frază pe care o poate scrie din nou.
+
+Când pleacă și ultimul rând, se duce tot butonul: un „Dorințele mele (0)" care
+deschide un tabel gol e mai rău decât niciun buton.
+
+### Ștergerea e moale
+
+Se scrie `dorinte.sters_la` (`sql/032`); **rândul rămâne**. Motivul e mai vechi
+decât butonul și e scris în antetul lui `sql/023`: rândurile din `dorinte` se
+păstrează ca mai târziu să se poată spune câte dorințe și-au pus oamenii de-a
+lungul timpului. O ștergere adevărată ar fi luat din numărătoarea aceea tocmai
+dorințele la care cineva chiar s-a gândit.
+
+Pentru cel care apasă înseamnă însă tot ce trebuie: dispare de pe tablă, iese
+din tabelul lui, și face loc alteia.
+
+Totul se hotărăște **în `WHERE`**, nu într-un `SELECT` de dinainte:
+
+- `membru_id = ?` — a lui, nu a altuia. „Nu există" și „nu e a ta" primesc
+  același răspuns, ca peste tot pe site: altfel numerele încercate pe rând ar
+  spune cine ce a scris, iar o dorință netrecută încă pe la moderare n-a
+  văzut-o nimeni în afară de autor;
+- `sters_la IS NULL` — nu se șterge de două ori. Două apăsări în aceeași clipă,
+  sau o filă lăsată deschisă, nu mută ștampila.
+
+**Nu se confundă cu ștergerea staff-ului** din `admin-dorinte.php`: aceea e un
+`DELETE` adevărat și rămâne așa, fiindcă e pentru ce n-are ce căuta în
+numărătoare — o înjurătură, un test. Omul care se răzgândește n-a greșit cu
+nimic, iar dorința lui a fost o dorință adevărată.
+
+O dorință **retrasă de autor** se vede mai departe în tabelul staff-ului,
+însemnată „retrasă", dar nu mai are butoane de moderare și nu mai aprinde cifra
+de pe panou: omul și-a luat vorbele înapoi, deci nu mai e nimic de hotărât.
 
 ### Cum se aprobă o dorință
 
@@ -1537,7 +1612,22 @@ tocmai fiindcă era scrisă cu `NOW()` din MySQL, care aici e cu trei ore în
 urmă — exact capcana din CLAUDE.md, prinsă din nou.)
 
 Butonul „Încheie evenimentul" stă în dreapta iconițelor de distribuire, se vede
-doar organizatorului și doar cât mai e ceva de încheiat. Confirmarea e în două
+doar organizatorului și doar cât mai e ceva de încheiat.
+
+Întrebarea o pune `poateFiIncheiat()`, fratele care lipsea dintre `poateFiAnulat()`
+și `poateFiEditat()`. Trei condiții: anunțul e **publicat** (deci nu în așteptare,
+nu respins, **și nu anulat**), nu s-a încheiat deja, și a început.
+
+Lipsa lui s-a văzut. Întrebarea era scrisă de mână în `event.php` și avea doi
+termeni din trei — „e al lui" și „a început" — dar nu și pe cel care spune că
+anunțul mai e în picioare. Așa că pe pagina unui eveniment **anulat** butonul
+stătea mai departe acolo, viu. Apăsat, `api/incheie-eveniment.php` răspundea 409
+și bine făcea — dar un buton care nu poate face nimic n-are ce căuta pe ecran. Un
+eveniment anulat a încetat deja, altfel; cele două stări nu se pun una peste alta.
+
+Punctul de intrare cere aceleași trei lucruri, dar **despărțite**, fiindcă el
+trebuie să spună *care* din ele n-a mers („nu e publicat" / „s-a încheiat deja" /
+„n-a început încă"). Pagina cere doar da sau nu, pentru un buton. Confirmarea e în două
 trepte, desenată în pagină ca la anulare — dar nu roșie: încheierea nu e o
 pierdere, e un lucru firesc la capătul unui eveniment. După ce merge, pagina se
 reîncarcă; asta nu e lene, ci felul în care banda, butoanele stinse și textul
@@ -1879,7 +1969,8 @@ după ora de start oamenii sunt deja pe drum, iar o schimbare de loc sau de oră
 le-ar ajunge sub ochi prea târziu ca să mai folosească cuiva.
 
 Ce rămâne de făcut e chiar pe pagina evenimentului: **„Anulează evenimentul"**
-încă o oră (vezi mai jos) și **„Încheie evenimentul"** oricând.
+încă o oră (vezi mai jos) și **„Încheie evenimentul"** cât timp anunțul mai e în
+picioare.
 
 Întrebarea o pune `poateFiEditat()`, și e ALTA decât `poateFiAnulat()`:
 
@@ -1887,6 +1978,7 @@ Ce rămâne de făcut e chiar pe pagina evenimentului: **„Anulează evenimentu
 |---|---|
 | `poateFiEditat()` | ora de start, la minutul zero |
 | `poateFiAnulat()` | o oră după ora de start (`MINUTE_ANULARE_DUPA_INCEPUT`) |
+| `poateFiIncheiat()` | nu se stinge — se **aprinde** la ora de start |
 
 De aceea regula **nu** stă în `evenimentDeEditat()`: de acela atârnă și
 anularea (`api/anuleaza-eveniment.php` îl cheamă ca să afle al cui e anunțul).
@@ -2339,6 +2431,49 @@ coada rândului. Cad numai cele de la început: „2 ore, 0 min și 5 sec" răm�
 ora la care se strânge lumea. După ea, cine scanează află că vânătoarea s-a
 terminat fără câștigător, și tot i se cere să dezlipească abțibildul. Ceasul e al
 PHP-ului, ca peste tot pe site.
+
+#### Și atunci se și încheie
+
+Un eveniment obișnuit ține o zi: se încheie singur când trece ziua, iar asta se
+**socotește la citire**, fără să scrie nimeni nimic. O vânătoare nu ține o zi —
+ține până la clipa aceea. Termenul trecea la 18:00, numărătoarea ajungea la zero,
+caseta scria deja „Nu l-a găsit nimeni" — dar anunțul rămânea `aprobat` **până la
+miezul nopții**: stătea printre cele care urmează pe prima pagină și avea buton de
+încheiere. Singurul fel de a-l închide la vreme era ca omul de casă să apese.
+
+Acum se închide singur, la termen: `incheieVanatorileTrecute()`.
+
+**De ce se scrie în bază**, și nu se socotește la citire ca „i-a trecut ziua":
+fiindcă „încheiat" e scris în **patru locuri** — `evenimentIncheiat()` pentru un
+rând, `filtruNeincheiat()` pentru o interogare, plus condițiile din
+`istoricEvenimente()` și `evenimenteFaraMultumiri()`. O regulă nouă socotită la
+citire ar fi trebuit strecurată în toate patru, iar ziua în care una rămâne în
+urmă e ziua în care un anunț arată „încheiat" pe pagina lui și blochează în
+același timp postarea altuia. Scris în rând, adevărul e unul singur.
+
+**Și e chiar simetria celuilalt capăt.** O vânătoare se termină în două feluri: o
+găsește cineva, sau se scurge timpul. Primul scria deja starea în bază
+(`revendicaCodul`, sub aceeași tranzacție cu câștigul). Al doilea o scrie acum la
+fel.
+
+Hotărârea e în `WHERE` (`stare_moderare = 'aprobat'`), ca peste tot: două cereri
+venite în aceeași clipă nu se calcă, iar un anunț anulat între timp nu e atins.
+
+O cheamă două locuri:
+
+- `evenimenteDePePrima()` — deci și `index.php`, și `api/lista-evenimente.php`,
+  la fiecare apăsare pe „Vezi mai mult". Pusă în `index.php`, ar fi lipsit din
+  al doilea, iar teancul de jos ar fi arătat altceva decât cel de sus. Aceeași
+  rânduială ca la tabla cu dorințe, unde `stampileazaCeleAprobate()` e chemată
+  de `dorinteDePeTabla()`;
+- `event.php`, **țintit** pe anunțul cerut. Cine vine de pe un abțibild intră
+  de-a dreptul pe pagina lui, iar aceea trebuie să fie adevărată din prima
+  clipă — nu la primul vizitator al primei pagini.
+
+Un eveniment **obișnuit** nu se atinge, deși a început acum două ceasuri: el ține
+ziua întreagă, iar a-l încheia pentru că a trecut ora de început ar însemna să-l
+stingi tocmai când se petrece. Steagul care le desparte e `categorii.joc_qr`,
+niciodată numele sau slugul categoriei.
 
 ### `findme.php` schimbă starea printr-un GET
 
@@ -4893,20 +5028,42 @@ lucrează în trei locuri, toate pe profil:
 | Unde | Ce se întâmplă |
 |---|---|
 | lista „Ieșiri organizate" | lipsește (`evenimenteDePeProfil`) |
-| cifra „Evenimente organizate" | nu-l numără (`cateEvenimenteOrganizate`) |
-| tabul „Istoric" | lipsește — **doar de pe profilul organizatorului** |
+| cifra „Ieșiri organizate" | nu-l numără (`cateEvenimenteOrganizate`) |
+| lista de participanți | nu se trece singur pe ea (`organizatorulVineSingur`) |
+| tabul „Istoric" | **intră normal, dacă s-a dus** — dar fără însemnul „Organizator" |
 
 Nicăieri altundeva. Anunțul rămâne întreg pe prima pagină, în filtre, în „Ar
 putea să te intereseze" și pe pagina lui, cu numele organizatorului la vedere.
 Nu e o coloană de anonimat — e una care spune „ăsta nu e o ieșire de-a mea".
 
-Jumătatea cu `e.membru_id` din condiția istoricului nu e de prisos: fără ea, un
-anunț al orașului ar fi dispărut din istoricul celor cincizeci de oameni care au
-fost la el. Pentru cine a fost acolo, seara aceea a existat.
-
 Lipsește **și de pe profilul lui, când și-l vede el însuși**. Dacă i s-ar arăta
 doar lui, ar crede de fiecare dată că bifa n-a mers, iar profilul lui ar arăta
 altfel pentru el decât pentru lume.
+
+#### Istoricul spune pe unde a fost, nu ce a organizat
+
+Anunțurile astea sunt de obicei ale primăriei sau ale altcuiva, iar omul de casă
+doar le scrie pe site — atunci nu e nici pe lista de participanți, deci nu apare
+nicăieri, și e corect.
+
+Dar uneori se duce și el, și apasă „Particip" ca oricare altul. **Atunci seara
+aceea intră în istoricul lui și se numără la „Prezent la activități".** Lipsea,
+și era greșit: ieșea o pagină care se contrazicea singură — pe lista de
+participanți a evenimentului scria numele lui, iar în istoricul lui seara aceea
+nu existase niciodată.
+
+Ce rămâne din bifă în istoric e un singur lucru: **nu se scrie „Organizator" pe
+cartonaș** (`e_organizator` iese 0 în interogare). N-a pus el nimic la cale; a
+fost acolo.
+
+Cele două merg **împreună**, dinadins: `laCateEvenimenteAFost()` numără exact
+cartonașele care se văd sub cifră. Cât timp amândouă scoteau anunțul, un om de
+casă care spusese „particip" la târgul de Crăciun avea **0** scris sus și niciun
+cartonaș jos — deși fusese acolo.
+
+Pentru **ceilalți** n-a fost niciodată o întrebare: pentru cine a fost acolo,
+seara aceea a existat, iar bifa spune „nu e o ieșire de-a MEA", nu „ștergeți
+evenimentul din viețile tuturor".
 
 **Ascultată numai de la staff.** `ascundePeProfil()` întoarce `false` pentru
 oricine altcineva, oricât ar scrie în cererea trimisă — caseta nici nu se
@@ -4927,7 +5084,8 @@ fi notat de participanți la sfârșit, ca și cum ar fi fost acolo cu ei.
 
 Poate să se înscrie oricând singur, de pe pagina evenimentului, ca oricine
 altcineva — dacă chiar se duce. Regula de gen nu-l oprește nici atunci: e
-evenimentul lui.
+evenimentul lui. Și atunci anunțul îi intră în „Istoric" și în „Prezent la
+activități", doar fără însemnul „Organizator" — vezi mai sus.
 
 Întrebarea se pune prin `organizatorulVineSingur()`, în două locuri depărtate —
 la salvare și la aprobarea unui anunț care așteptase

@@ -89,6 +89,28 @@ if (str_ends_with($caleCeruta, '/event.php')) {
     exit;
 }
 
+/**
+ * DACĂ E O VÂNĂTOARE ȘI I-A TRECUT TERMENUL, se încheie chiar acum.
+ *
+ * Prima pagină le închide pe toate, la fiecare încărcare a listei
+ * (evenimenteDePePrima); rândul ăsta o închide pe cea la care se uită omul,
+ * fără să aștepte ca cineva să treacă pe acasă. Cine vine de pe un abțibild
+ * intră de-a dreptul aici, iar pagina trebuie să fie adevărată din prima
+ * clipă — nu la primul vizitator al primei pagini.
+ *
+ * Se cere ANUME evenimentul ăsta, nu toate: e-o singură pagină, nu un teanc.
+ * Regula însăși stă în `WHERE`-ul funcției, într-un singur loc — aici nu se
+ * întreabă nimic, doar se cheamă.
+ *
+ * Când chiar s-a închis, se schimbă și rândul din mână: tot ce urmează în
+ * pagină se socotește din el, iar o pagină care ar arăta starea de acum o
+ * clipă și-ar contrazice singură caseta de dedesubt, unde numărătoarea e deja
+ * la zero.
+ */
+if (incheieVanatorileTrecute((int) $eveniment['id']) === 1) {
+    $eveniment['stare_moderare'] = 'incheiat';
+}
+
 $eOrganizatorul = $membruId > 0 && (int) $eveniment['membru_id'] === $membruId;
 /**
  * „Publicat" înseamnă aprobat SAU încheiat: două stări, o singură purtare față
@@ -138,13 +160,15 @@ $aInceput = evenimentAInceput($eveniment);
 /**
  * Poate organizatorul să-l încheie chiar acum?
  *
- * Doar după ce a început — ziua ȘI ora. Un eveniment care nu s-a petrecut încă
- * nu se „încheie": ce vrea omul atunci se cheamă anulare, are butonul lui în
- * formularul de editare și cere un motiv, fiindcă oamenii înscriși trebuie
- * înștiințați. Încheierea nu spune nimănui nimic, tocmai fiindcă evenimentul
- * a avut loc.
+ * Întrebarea o pune poateFiIncheiat(), din inc/evenimente.php — aici rămâne
+ * doar „e al lui?". Era scrisă de mână chiar aici și îi lipsea un termen: că
+ * anunțul mai e în picioare. Pe unul ANULAT, butonul „Încheie evenimentul"
+ * stătea mai departe acolo, viu — deși un eveniment anulat a încetat deja,
+ * altfel, iar cele două stări nu se pun una peste alta. Apăsat, api-ul răspundea
+ * cu 409 și bine făcea; dar un buton care nu poate să facă nimic n-are ce căuta
+ * pe ecran.
  */
-$poateIncheia = $eOrganizatorul && !$eIncheiat && evenimentAInceput($eveniment);
+$poateIncheia = $eOrganizatorul && poateFiIncheiat($eveniment);
 
 /**
  * Poate să-l anuleze chiar de pe pagina asta?

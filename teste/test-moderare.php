@@ -472,7 +472,13 @@ foreach ([$slugSef, $slugLaVedere] as $s) {
 $istoricSef = $slugurile(istoricEvenimente($sef));
 $istoricViz = $slugurile(istoricEvenimente($vizitator));
 
-verifica('din istoricul lui lipsește',          false, in_array($slugSef, $istoricSef, true));
+/**
+ * CÂND NU S-A DUS, NU APARE — și asta e situația obișnuită la un anunț al
+ * orașului: omul de casă îl scrie pe site, atât. Nu e trecut singur pe lista
+ * de participanți (organizatorulVineSingur), deci n-are cum să intre în
+ * istoric. Rândul din `interese_evenimente` a fost scos mai sus, dinadins.
+ */
+verifica('nedus, nu-i apare în istoric',        false, in_array($slugSef, $istoricSef, true));
 verifica('cel la vedere rămâne în istoricul lui', true, in_array($slugLaVedere, $istoricSef, true));
 
 /**
@@ -483,7 +489,56 @@ verifica('dar în al participantului e la locul lui', true,
     in_array($slugSef, $istoricViz, true));
 
 verifica('și cifra lui îl numără', 2, laCateEvenimenteAFost($vizitator));
-verifica('a organizatorului, nu',  1, laCateEvenimenteAFost($sef));
+verifica('a celui care nu s-a dus, nu',  1, laCateEvenimenteAFost($sef));
+
+/* --- DAR DACĂ SE DUCE, INTRĂ CA ORICARE ALTUL --- */
+
+/**
+ * De obicei anunțurile astea sunt ale primăriei sau ale altcuiva, iar omul de
+ * casă doar le scrie pe site. Uneori însă se duce și el — și atunci apasă
+ * „Particip", ca oricare altul.
+ *
+ * Din clipa aceea, seara aceea face parte din ce i s-a întâmplat: intră în
+ * istoric și se numără la „Prezent la activități". LIPSEA DE ACOLO, și ieșea o
+ * pagină care se contrazicea singură — pe lista de participanți a
+ * evenimentului scria numele lui, iar în istoricul lui seara aceea nu existase
+ * niciodată.
+ *
+ * CE RĂMÂNE DIN BIFĂ: anunțul nu urcă la „Ieșiri organizate" și nu i se scrie
+ * „Organizator" pe cartonaș. N-a pus el la cale nimic; a fost acolo.
+ */
+salveazaInteres((int) evenimentDupaSlug($slugSef)['id'], $sef, 'participant');
+
+$istoricSef = istoricEvenimente($sef);
+$dupaSlug   = [];
+
+foreach ($istoricSef as $e) { $dupaSlug[(string) $e['slug']] = $e; }
+
+verifica('dus la anunțul orașului, îi apare în istoric', true,
+    isset($dupaSlug[$slugSef]));
+verifica('dar FĂRĂ însemnul „Organizator"', 0,
+    (int) ($dupaSlug[$slugSef]['e_organizator'] ?? -1));
+verifica('pe al lui, în schimb, scrie', 1,
+    (int) ($dupaSlug[$slugLaVedere]['e_organizator'] ?? -1));
+
+/* Și cifra de deasupra se mișcă odată cu lista: două cartonașe, doi. */
+verifica('cifra numără acum două', 2, laCateEvenimenteAFost($sef));
+verifica('adică fix câte cartonașe sunt', count($istoricSef),
+    laCateEvenimenteAFost($sef));
+
+/**
+ * IAR „IEȘIRI ORGANIZATE" NU SE CLINTEȘTE. Acolo e rostul bifei, și acolo
+ * rămâne: anunțul orașului n-are ce căuta printre ieșirile puse la cale de el,
+ * oricâte ori s-ar duce la ele.
+ */
+verifica('„Ieșiri organizate" rămâne cum era', 1, cateEvenimenteOrganizate($sef));
+verifica('și lista de acolo, la fel', false,
+    in_array($slugSef, $slugurile(evenimenteDePeProfil($sef, true)), true));
+
+/* Cartonașul desenat nu poartă insigna — proba se uită la ce ajunge pe ecran. */
+$htmlIstoric = randeazaIstoric([$dupaSlug[$slugSef]]);
+verifica('nici pe cartonașul desenat nu scrie', false,
+    str_contains($htmlIstoric, 'Organizator'));
 
 /* ===================== 4. PRIN SERVER =============================== */
 

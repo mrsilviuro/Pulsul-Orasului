@@ -264,22 +264,35 @@ $candva = static function (string $data, string $ora): array {
     ];
 };
 
+/**
+ * Un eveniment la CLIPA cerută — ziua ȘI ora luate din același număr.
+ *
+ * Erau scrise de mână, `date('Y-m-d')` lipit de `date('H:i:s', time() + 3600)`:
+ * adică ziua de AZI cu o oră care, după 23:00, e de mâine. La 23:05, „peste un
+ * ceas" ieșea „azi la 00:05", adică acum douăzeci și trei de ore în URMĂ, iar
+ * probele picau în fiecare noapte după unsprezece. Un singur `time()`, și
+ * amândouă câmpurile din el.
+ */
+$laClipa = static function (int $t) use ($candva): array {
+    return $candva(date('Y-m-d', $t), date('H:i:s', $t));
+};
+
 verifica('unul de peste o săptămână se poate anula', true,
     poateFiAnulat($candva(date('Y-m-d', strtotime('+7 days')), '18:00:00')));
 
 verifica('și unul de azi, dar de peste un ceas', true,
-    poateFiAnulat($candva(date('Y-m-d'), date('H:i:s', time() + 3600))));
+    poateFiAnulat($laClipa(time() + 3600)));
 
 /* --- fereastra de o oră, de o parte și de alta a ei --- */
 
 verifica('cel care tocmai a început SE POATE ÎNCĂ', true,
-    poateFiAnulat($candva(date('Y-m-d'), date('H:i:s', time() - 60))));
+    poateFiAnulat($laClipa(time() - 60)));
 
 verifica('și la 59 de minute după, tot se poate', true,
-    poateFiAnulat($candva(date('Y-m-d'), date('H:i:s', time() - 59 * 60))));
+    poateFiAnulat($laClipa(time() - 59 * 60)));
 
 verifica('la 61 de minute, nu mai merge', false,
-    poateFiAnulat($candva(date('Y-m-d'), date('H:i:s', time() - 61 * 60))));
+    poateFiAnulat($laClipa(time() - 61 * 60)));
 
 verifica('nici cel de ieri', false,
     poateFiAnulat($candva(date('Y-m-d', strtotime('-1 day')), '18:00:00')));
@@ -322,9 +335,9 @@ verifica('unul de peste o săptămână se editează', true,
     poateFiEditat($candva(date('Y-m-d', strtotime('+7 days')), '18:00:00')));
 
 verifica('și unul de azi, dar de peste un ceas', true,
-    poateFiEditat($candva(date('Y-m-d'), date('H:i:s', time() + 3600))));
+    poateFiEditat($laClipa(time() + 3600)));
 
-$tocmaiAInceput = $candva(date('Y-m-d'), date('H:i:s', time() - 60));
+$tocmaiAInceput = $laClipa(time() - 60);
 
 verifica('cel care tocmai a început NU se mai editează', false,
     poateFiEditat($tocmaiAInceput));
@@ -335,6 +348,55 @@ verifica('nici cel de ieri nu se editează', false,
 
 verifica('ce e anulat nu se editează', false, poateFiEditat($anulatDeja));
 verifica('nici ce e încheiat',         false, poateFiEditat($incheiatDeja));
+
+/* ================ 3c. CEASUL DESCHIDE ÎNCHEIEREA ==================== */
+
+sectiune('ceasul deschide încheierea');
+
+/**
+ * „Încheie evenimentul" merge invers față de celelalte două: nu se stinge la o
+ * oră, se APRINDE la ea. Ce nu s-a petrecut încă nu se „încheie" — ar ieși un
+ * anunț care arată ca și cum ar fi avut loc, deși n-a fost nimeni nicăieri.
+ */
+verifica('unul de peste o săptămână NU se încheie', false,
+    poateFiIncheiat($candva(date('Y-m-d', strtotime('+7 days')), '18:00:00')));
+
+verifica('nici cel de azi, de peste un ceas', false,
+    poateFiIncheiat($laClipa(time() + 3600)));
+
+verifica('cel care tocmai a început, da', true, poateFiIncheiat($tocmaiAInceput));
+
+/**
+ * UN ANUNȚ ANULAT NU SE ÎNCHEIE — de aici a pornit tot.
+ *
+ * Întrebarea era scrisă de mână în event.php și avea doi termeni din trei: „e
+ * al lui" și „a început". Lipsea tocmai cel care spune că anunțul mai e în
+ * picioare, așa că pe pagina unui eveniment anulat butonul „Încheie
+ * evenimentul" stătea mai departe acolo, viu. Un eveniment anulat a încetat
+ * deja, altfel; cele două stări nu se pun una peste alta.
+ *
+ * ANULATUL DE PROBĂ E DE PESTE O SĂPTĂMÂNĂ, deci nici n-a început — și atunci
+ * proba ar fi trecut din alt motiv decât cel căutat. De aceea se ia unul care
+ * A ÎNCEPUT și e anulat: singurul termen care îl poate opri e starea.
+ */
+$anulatSiInceput = $tocmaiAInceput;
+$anulatSiInceput['stare_moderare'] = 'anulat';
+
+verifica('a început, dar e ANULAT: nu se încheie', false,
+    poateFiIncheiat($anulatSiInceput));
+verifica('iar dacă n-ar fi anulat, s-ar încheia', true,
+    poateFiIncheiat(['stare_moderare' => 'aprobat'] + $anulatSiInceput));
+
+/* Cele care n-au ajuns niciodată pe site n-au ce încheia. */
+verifica('nici cel în așteptare', false,
+    poateFiIncheiat(['stare_moderare' => 'in_asteptare'] + $anulatSiInceput));
+verifica('nici cel respins',      false,
+    poateFiIncheiat(['stare_moderare' => 'respins'] + $anulatSiInceput));
+
+/* Și nici de două ori. */
+verifica('nici cel deja încheiat', false, poateFiIncheiat($incheiatDeja));
+verifica('nici cel căruia i-a trecut ziua', false,
+    poateFiIncheiat($candva(date('Y-m-d', strtotime('-1 day')), '18:00:00')));
 
 /* ===================== 4. PRIN SERVER =============================== */
 

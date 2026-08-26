@@ -575,6 +575,20 @@ const EVENIMENTE_INCA = 4;
  */
 function evenimenteDePePrima(string $oras = '', string $categorie = '', int $deLa = 0, int $cate = EVENIMENTE_PRIMA_TURA): array
 {
+    /**
+     * Întâi se închid vânătorile cărora le-a trecut termenul, apoi se citește.
+     *
+     * Aceeași rânduială ca la tabla cu dorințe, unde stampileazaCeleAprobate()
+     * e chemată de dorinteDePeTabla(): ștampila o pune codul, într-un singur
+     * loc, chiar de cel care are nevoie ca rândurile să fie la zi. Pusă în
+     * index.php, ar fi lipsit din api/lista-evenimente.php, iar teancul de la
+     * „Vezi mai mult" ar fi arătat altceva decât primul.
+     *
+     * Fără rândul ăsta, o vânătoare cu termenul trecut la 18:00 stătea până la
+     * miezul nopții printre cele care urmează — cu numărătoarea la zero.
+     */
+    incheieVanatorileTrecute();
+
     $azi   = date('Y-m-d');
     $deLa  = max(0, $deLa);
     $cate  = max(1, min($cate, EVENIMENTE_PRIMA_TURA));
@@ -1714,7 +1728,9 @@ function poateFiAnulat(array $eveniment): bool
  * după ora de start, oamenii sunt deja pe drum, iar o schimbare de loc sau de
  * oră le-ar ajunge sub ochi prea târziu ca să mai folosească cuiva. Ce rămâne
  * de făcut atunci se face de pe pagina evenimentului: „Anulează evenimentul"
- * încă o oră (poateFiAnulat) și „Încheie evenimentul" oricând.
+ * încă o oră (poateFiAnulat) și „Încheie evenimentul" cât timp anunțul mai e
+ * în picioare (poateFiIncheiat — „oricând" scria aici, și tocmai de aceea
+ * butonul de încheiere a ajuns să stea și pe un anunț anulat).
  *
  * DE CE NU E PUSĂ ÎN evenimentDeEditat(). Fiindcă de acela atârnă și
  * anularea: api/anuleaza-eveniment.php îl cheamă ca să afle al cui e anunțul.
@@ -1732,6 +1748,39 @@ function poateFiEditat(array $eveniment): bool
     }
 
     return !evenimentAInceput($eveniment);
+}
+
+/**
+ * Se mai poate ÎNCHEIA evenimentul ăsta?
+ *
+ * Fratele care lipsea dintre poateFiAnulat() și poateFiEditat(), iar lipsa lui
+ * s-a văzut: pe pagina unui anunț ANULAT, butonul „Încheie evenimentul" stătea
+ * mai departe acolo, viu. Întrebarea era scrisă de mână în event.php și avea
+ * doi termeni din trei — „e al lui" și „a început" — dar nu și pe cel care
+ * spune că anunțul mai e în picioare. Un eveniment anulat nu se încheie: a
+ * încetat deja, altfel. Cele două stări nu se pun una peste alta.
+ *
+ * TREI CONDIȚII:
+ *
+ *   1. e PUBLICAT — deci nu în așteptare, nu respins, ȘI NU ANULAT;
+ *   2. nu s-a încheiat deja — nici prin apăsare, nici prin ziua trecută;
+ *   3. a început — ziua ȘI ora. Ce nu s-a petrecut încă nu se „încheie": ar
+ *      ieși un anunț care arată ca și cum ar fi avut loc, deși n-a fost nimeni
+ *      nicăieri. Ce vrea organizatorul atunci se cheamă anulare, are butonul
+ *      lui și cere un motiv, fiindcă oamenii înscriși trebuie înștiințați.
+ *
+ * PROPRIETATEA NU SE VERIFICĂ AICI, ca la poateFiAnulat() și poateFiRefacut():
+ * o pune cine cheamă. Așa funcția răspunde la o singură întrebare.
+ *
+ * api/incheie-eveniment.php cere aceleași trei lucruri, dar despărțite, fiindcă
+ * el trebuie să spună CARE din ele n-a mers („nu e publicat" / „s-a încheiat
+ * deja" / „n-a început încă"). Aici se cere doar da sau nu, pentru un buton.
+ */
+function poateFiIncheiat(array $eveniment): bool
+{
+    return evenimentPublicat($eveniment)
+        && !evenimentIncheiat($eveniment)
+        && evenimentAInceput($eveniment);
 }
 
 /**
@@ -1873,6 +1922,74 @@ function incheieEveniment(array $eveniment): void
     );
 
     $q->execute([acum(), (int) $eveniment['id']]);
+}
+
+/**
+ * Închide vânătorile „FindMe" cărora le-a trecut termenul. Întoarce câte.
+ *
+ * DE CE ARE NEVOIE DE FUNCȚIA ASTA. Un eveniment obișnuit ține o zi: se încheie
+ * singur când trece ziua, iar asta se socotește la citire, fără să scrie nimeni
+ * nimic (evenimentIncheiat). O vânătoare, în schimb, nu ține o zi — ține până
+ * la o CLIPĂ ANUME, cea din „Când o să aibă loc?", care la ea înseamnă ora în
+ * care se închide, nu ora la care se strânge lumea. La 18:00 termenul trecuse,
+ * numărătoarea inversă ajunsese la zero, caseta scria deja „Nu l-a găsit
+ * nimeni" — dar anunțul rămânea „aprobat" până la miezul nopții, cu tot ce ține
+ * de asta: stătea printre cele care urmează pe prima pagină și avea buton de
+ * încheiere. Singurul fel de a-l încheia la vreme era ca omul de casă să apese.
+ *
+ * DE CE SE SCRIE ÎN BAZĂ, și nu se socotește la citire ca „i-a trecut ziua".
+ * Fiindcă „încheiat" e scris în PATRU locuri deosebite — evenimentIncheiat()
+ * pentru un rând, filtruNeincheiat() pentru o interogare, plus condițiile din
+ * istoricEvenimente() și evenimenteFaraMultumiri(). O regulă nouă socotită la
+ * citire ar fi trebuit strecurată în toate patru, iar ziua în care una rămâne
+ * în urmă e ziua în care un anunț arată „încheiat" pe pagina lui și blochează
+ * în același timp postarea altuia. Scris în rând, adevărul e unul singur și
+ * toate patru îl citesc deopotrivă.
+ *
+ * ȘI E CHIAR SIMETRIA CELUILALT CAPĂT: o vânătoare se termină în două feluri —
+ * o găsește cineva, sau se scurge timpul. Primul scria deja starea în bază
+ * (revendicaCodul, în inc/coduri-qr.php, sub aceeași tranzacție cu câștigul).
+ * Al doilea o scrie acum la fel.
+ *
+ * HOTĂRÂREA E ÎN `WHERE`, ca peste tot: `stare_moderare = 'aprobat'` face ca
+ * două cereri venite în aceeași clipă să nu se calce, și ca un anunț anulat
+ * între timp să nu fie atins.
+ *
+ * CEASUL E AL LUI PHP (regula 5 din CLAUDE.md): `acum()` intră ca parametru,
+ * niciodată NOW(). MySQL e pe alt fus, iar aici se compară clipe, nu zile —
+ * două ore de diferență ar închide vânătorile cu două ore mai devreme.
+ *
+ * DE CE STĂ AICI, și nu în inc/coduri-qr.php, unde stă tot ce ține de joc:
+ * fiindcă o cheamă evenimenteDePePrima(), din fișierul ăsta, iar coduri-qr.php
+ * cere deja fișierul ăsta — două fișiere care se cer unul pe altul ar fi o
+ * buclă. Din același motiv steagul se citește de-a dreptul, `c.joc_qr`, fără
+ * esteJocQr(); e aceeași scutire ca la cifreleCartonasului(), scrisă tot lângă
+ * lămurirea ei.
+ *
+ * @param int|null $doarAsta Numai evenimentul ăsta, când se știe care e.
+ */
+function incheieVanatorileTrecute(?int $doarAsta = null): int
+{
+    $sql = 'UPDATE evenimente e
+              JOIN categorii c ON c.id = e.categorie_id
+               SET e.stare_moderare = \'incheiat\', e.actualizat_la = ?
+             WHERE c.joc_qr = 1
+               AND e.stare_moderare = \'aprobat\'
+               AND TIMESTAMP(e.data_eveniment, COALESCE(e.ora_inceput, \'00:00:00\')) <= ?';
+
+    // Ora lipsă e socotită miezul nopții, ca în momentulInceperii() și
+    // evenimentAInceput() — altfel un rând fără oră n-ar fi închis niciodată.
+    $valori = [acum(), acum()];
+
+    if ($doarAsta !== null) {
+        $sql .= ' AND e.id = ?';
+        $valori[] = $doarAsta;
+    }
+
+    $q = db()->prepare($sql);
+    $q->execute($valori);
+
+    return $q->rowCount();
 }
 
 /**

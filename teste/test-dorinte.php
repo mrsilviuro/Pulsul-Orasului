@@ -244,19 +244,141 @@ sectiune('cine mai poate pune una');
 
 $nou = faMembru('nou', 'Popa', 'Nicu');
 verifica('cine n-a scris nimic, poate', 'poate', poatePuneODorinta($nou)['stare']);
-verifica('cine are una aprobată și proaspătă, nu',
-    'e_pe_tabla', poatePuneODorinta($ana)['stare']);
-verifica('cine are una necitită, așteaptă',
-    'asteapta', poatePuneODorinta($radu)['stare']);
+verifica('și n-are niciuna în lucru',   0,       poatePuneODorinta($nou)['cate']);
+
+/**
+ * TREI DEODATĂ, nu una. Cine are UNA în lucru mai poate pune — asta s-a
+ * schimbat: până acum, una singură îl oprea de tot.
+ */
+verifica('cine are una aprobată și proaspătă, mai poate',
+    'poate', poatePuneODorinta($ana)['stare']);
+verifica('dar ea îi ține un loc', 1, poatePuneODorinta($ana)['cate']);
+verifica('cine are una necitită, mai poate',
+    'poate', poatePuneODorinta($radu)['stare']);
+verifica('și ea ține un loc',    1, poatePuneODorinta($radu)['cate']);
+
+/* Cele care NU țin niciun loc: respinsa și cea ieșită de pe tablă. */
 verifica('cui i-a fost respinsă, poate din nou',
     'poate', poatePuneODorinta($dan)['stare']);
+verifica('și n-are niciun loc luat', 0, poatePuneODorinta($dan)['cate']);
 verifica('cui i-a ieșit de pe tablă, poate din nou',
     'poate', poatePuneODorinta($vechi)['stare']);
+verifica('și nici el', 0, poatePuneODorinta($vechi)['cate']);
 
-$iese = dorintaIeseDePeTabla(dorintaMembrului($ana) ?? []);
-verifica('se știe și când iese a lui', true, $iese !== null && $iese > time());
+/**
+ * A TREIA UMPLE LOCURILE. Se pun încă două peste cea pe care o are deja Ana:
+ * una pe tablă și una necitită — amândouă felurile țin un loc.
+ */
+faDorinta($ana, 'TSTDOR a doua a Anei', 'aprobat', 30);
+verifica('cu două în lucru, tot mai poate', 'poate', poatePuneODorinta($ana)['stare']);
+verifica('și se numără două',                2,      poatePuneODorinta($ana)['cate']);
+
+$aTreiaAnei = faDorinta($ana, 'TSTDOR a treia a Anei', 'in_asteptare', null);
+verifica('cu trei, nu mai poate', 'prea_multe', poatePuneODorinta($ana)['stare']);
+verifica('și se numără trei',      3,           poatePuneODorinta($ana)['cate']);
+verifica('adică fix cât scrie în DORINTE_DEODATA', DORINTE_DEODATA,
+    poatePuneODorinta($ana)['cate']);
+
+/* Cea mai nouă stă prima în listă: aceea e la care se gândește omul. */
+verifica('cea mai nouă e prima în listă', $aTreiaAnei,
+    (int) poatePuneODorinta($ana)['dorinte'][0]['id']);
+
+$iese = dorintaIeseDePeTabla(poatePuneODorinta($ana)['dorinte'][2]);
+verifica('se știe și când iese cea dintâi', true, $iese !== null && $iese > time());
 verifica('adică peste vreo șapte zile', true,
     $iese !== null && abs($iese - (time() + ZILE_PE_TABLA * 24 * 3600 - 3600)) < 120);
+
+/* ==================================================================== */
+sectiune('ștergerea unei dorințe');
+
+/**
+ * ȘTERGEREA E MOALE: rândul rămâne în bază, cu `sters_la` scris. Rândurile din
+ * `dorinte` nu se șterg niciodată — mai târziu vrem să putem spune câte
+ * dorințe și-au pus oamenii de-a lungul timpului, iar o ștergere adevărată ar
+ * fi luat din numărătoarea aceea tocmai dorințele la care cineva chiar s-a
+ * gândit. Pentru cel care apasă, înseamnă însă tot ce trebuie: dispare de pe
+ * tablă, iese din tabelul lui, și face loc alteia.
+ */
+$cateRanduri = static function (int $cine): int {
+    $q = db()->prepare('SELECT COUNT(*) FROM dorinte WHERE membru_id = ?');
+    $q->execute([$cine]);
+    return (int) $q->fetchColumn();
+};
+
+$randuriAnei = $cateRanduri($ana);
+
+verifica('cu trei în lucru, nu mai poate pune', 'prea_multe',
+    poatePuneODorinta($ana)['stare']);
+
+verifica('ștergerea prinde', true, stergeDorintaOmului($ana, $aTreiaAnei));
+verifica('și face loc',      'poate', poatePuneODorinta($ana)['stare']);
+verifica('mai are două în lucru', 2,  poatePuneODorinta($ana)['cate']);
+
+/* Rândul e tot acolo — doar cu ștampila pusă. */
+verifica('rândul NU se șterge din bază', $randuriAnei, $cateRanduri($ana));
+
+$q = db()->prepare('SELECT sters_la FROM dorinte WHERE id = ?');
+$q->execute([$aTreiaAnei]);
+$stersLa = $q->fetchColumn();
+verifica('are ștampila de ștergere', true, is_string($stersLa) && $stersLa !== '');
+verifica('pusă cu ceasul PHP, nu al bazei', true,
+    abs(time() - (int) strtotime((string) $stersLa)) < 60);
+
+/**
+ * A DOUA APĂSARE NU MAI PRINDE. Hotărârea e în `WHERE` (`sters_la IS NULL`),
+ * nu într-un SELECT de dinainte: două apăsări în aceeași clipă, sau o filă
+ * lăsată deschisă, nu mută ștampila.
+ */
+verifica('a doua oară, nu', false, stergeDorintaOmului($ana, $aTreiaAnei));
+$q->execute([$aTreiaAnei]);
+verifica('și ștampila nu se mută', $stersLa, $q->fetchColumn());
+
+/**
+ * A ALTUIA, NU. Cererea poate veni de oriunde, cu orice id în ea — regula e
+ * tot în `WHERE` (`membru_id = ?`), nu în butonul de pe ecran.
+ */
+$dorintaLuiRadu = (int) poatePuneODorinta($radu)['dorinte'][0]['id'];
+verifica('dorința altuia nu se șterge', false, stergeDorintaOmului($ana, $dorintaLuiRadu));
+verifica('și a lui e neatinsă',         1,     poatePuneODorinta($radu)['cate']);
+
+/* Numere care nu duc nicăieri se poartă la fel — același răspuns. */
+verifica('un id care nu există, nu', false, stergeDorintaOmului($ana, 999999));
+verifica('zero, nu',                 false, stergeDorintaOmului($ana, 0));
+verifica('fără membru, nu',          false, stergeDorintaOmului(0, $aTreiaAnei));
+
+/* ȘI DISPARE DE PE TABLĂ — altfel ștergerea n-ar fi însemnat nimic. */
+$peTabla = faDorinta($ana, 'TSTDOR de pe tablă, până o șterg', 'aprobat', 5);
+
+/**
+ * TABLA IA ZECE LA ÎNTÂMPLARE din câte sunt (ORDER BY RAND), deci o singură
+ * trecere nu dovedește nimic: pe o bază cu douăzeci de dorințe proaspete, a
+ * noastră lipsește din jumătate din trageri, iar proba ar fi picat când și
+ * când — fără nicio legătură cu ce verifică. Se trag mai multe și se
+ * întreabă dacă a apărut MĂCAR O DATĂ.
+ *
+ * Numărul e ales pe partea sigură: la douăzeci de candidate, șansa să lipsească
+ * din patruzeci de trageri e sub o miime de miliardime. Iar la mai puțin de
+ * zece candidate, o găsește din prima.
+ */
+$TRAGERI = 40;
+
+$apareInTabla = static function (string $text) use ($TRAGERI): bool {
+    for ($i = 0; $i < $TRAGERI; $i++) {
+        foreach (dorinteDePeTabla() as $d) {
+            if ((string) $d['dorinta'] === $text) { return true; }
+        }
+    }
+    return false;
+};
+
+verifica('până s-o șteargă, e pe tablă', true,
+    $apareInTabla('TSTDOR de pe tablă, până o șterg'));
+
+stergeDorintaOmului($ana, $peTabla);
+
+/* Iar de aici încolo NU mai apare, în nicio tragere. */
+verifica('după ștergere, nu mai e', false,
+    $apareInTabla('TSTDOR de pe tablă, până o șterg'));
 
 /* ==================================================================== */
 sectiune('scrierea unei dorințe');
@@ -267,7 +389,7 @@ $r = puneODorinta($scrie, ['oras' => $orasBun, 'dorinta' => 'TSTDOR o seară de 
 verifica('o dorință bună se scrie', true, $r['ok']);
 verifica('și i se spune omului ce urmează', MESAJ_DORINTA_TRIMISA, $r['mesaj']);
 
-$aScris = dorintaMembrului($scrie);
+$aScris = poatePuneODorinta($scrie)['dorinte'][0] ?? [];
 verifica('intră în așteptare, nu direct pe tablă',
     'in_asteptare', $aScris['stare_moderare'] ?? null);
 // `??` ar fi înghițit tocmai NULL-ul căutat: null ?? 'x' dă 'x'.
@@ -275,7 +397,7 @@ verifica('și fără ștampilă de publicare', true,
     array_key_exists('publicat_la', $aScris) && $aScris['publicat_la'] === null);
 
 /**
- * Regula „o singură dorință" se ține LA SCRIERE, nu în butonul de pe ecran.
+ * Regula celor trei se ține LA SCRIERE, nu în butonul de pe ecran.
  *
  * Iar întrebarea și scrierea stau sub același lacăt, pe rândul omului: două
  * SESIUNI deosebite ale aceluiași om — laptopul și telefonul — trimiteau
@@ -285,8 +407,15 @@ verifica('și fără ștampilă de publicare', true,
  * alta.)
  */
 $r = puneODorinta($scrie, ['oras' => $orasBun, 'dorinta' => 'TSTDOR și încă una']);
-verifica('a doua nu trece', false, $r['ok']);
+verifica('a doua trece',  true, $r['ok']);
+$r = puneODorinta($scrie, ['oras' => $orasBun, 'dorinta' => 'TSTDOR și a treia']);
+verifica('și a treia la fel', true, $r['ok']);
+
+$r = puneODorinta($scrie, ['oras' => $orasBun, 'dorinta' => 'TSTDOR dar a patra, nu']);
+verifica('a patra nu trece', false, $r['ok']);
 verifica('cu 409, nu cu 422', 409, $r['cod']);
+verifica('și i se spune de unde le poate șterge', true,
+    str_contains($r['mesaj'], 'Dorințele mele'));
 
 /**
  * Și tranzacția s-a închis în urma ei. Un refuz care ar fi ieșit din funcție
@@ -298,12 +427,17 @@ verifica('și nu rămâne nicio tranzacție deschisă', false, db()->inTransacti
 
 $q = db()->prepare('SELECT COUNT(*) FROM dorinte WHERE membru_id = ?');
 $q->execute([$scrie]);
-verifica('și chiar n-a intrat în bază', 1, (int) $q->fetchColumn());
+verifica('și chiar n-a intrat în bază', DORINTE_DEODATA, (int) $q->fetchColumn());
 
-/* Nici cel care are una pe tablă. */
-$r = puneODorinta($ana, ['oras' => $orasBun, 'dorinta' => 'TSTDOR încă o dorință']);
-verifica('nici cine are una pe tablă nu poate', false, $r['ok']);
-verifica('și i se spune până când', true, str_contains($r['mesaj'], 'pe tablă'));
+/**
+ * DAR DUPĂ CE ȘTERGE UNA, POATE DIN NOU. Asta face ștergerea folositoare: fără
+ * ea, „trei" ar fi fost tot o ușă închisă, doar de trei ori mai încolo.
+ */
+$deSters = (int) poatePuneODorinta($scrie)['dorinte'][0]['id'];
+stergeDorintaOmului($scrie, $deSters);
+
+$r = puneODorinta($scrie, ['oras' => $orasBun, 'dorinta' => 'TSTDOR una în locul ei']);
+verifica('după o ștergere, se face loc', true, $r['ok']);
 
 /* Verificarea textului se face înaintea regulii de o dorință. */
 $r = puneODorinta($nou, ['oras' => '', 'dorinta' => 'x']);
@@ -357,36 +491,75 @@ verifica('logat, butonul deschide formularul',
     true, str_contains($b, 'href="#dorinta-formular"'));
 verifica('și stă lângă „Propune o ieșire"', true, str_contains($b, 'hero__cta'));
 
-verifica('cu una necitită, nu e niciun buton', '', butonulDorintei(true, 'asteapta'));
-verifica('nici cu una pe tablă',               '', butonulDorintei(true, 'e_pe_tabla'));
+/* Butonul dispare DOAR când le are pe toate trei. Cu una sau două, rămâne. */
+verifica('cu una în lucru, butonul rămâne', true,
+    str_contains(butonulDorintei(true, 'poate'), 'href="#dorinta-formular"'));
+verifica('cu toate trei, nu mai e niciun buton', '',
+    butonulDorintei(true, 'prea_multe'));
 
 /**
- * VORBA DE SUB TABLĂ, care a rămas acolo. Nu mai are buton în ea niciodată:
- * ori spune ceva despre dorința omului, ori nu spune nimic.
+ * VORBA DE SUB TABLĂ ȘI „DORINȚELE MELE".
+ *
+ * Vorba spune câte are și câte mai încap; sub ea stă butonul care deschide
+ * tabelul cu ele, cu „×" în dreptul fiecăreia.
  */
 verifica('nelogat, sub tablă nu scrie nimic', '', randeazaZonaDorinte(false, ''));
-verifica('nici cui poate pune una',           '', randeazaZonaDorinte(true, 'poate'));
+verifica('nici cui n-are niciuna',            '', randeazaZonaDorinte(true, 'poate', []));
 
-$z = randeazaZonaDorinte(true, 'asteapta');
-verifica('cu una necitită, o vorbă despre ea',
-    true, str_contains($z, 'așteaptă să fie citită'));
-verifica('și niciun buton', false, str_contains($z, '<a class="btn'));
+$aleMele = poatePuneODorinta($ana);
+$z = randeazaZonaDorinte(true, $aleMele['stare'], $aleMele['dorinte']);
 
-$z = randeazaZonaDorinte(true, 'e_pe_tabla', dorintaMembrului($ana));
-verifica('cu una pe tablă, scrie până când stă', true, str_contains($z, 'până'));
-verifica('și niciun buton', false, str_contains($z, '<a class="btn'));
+verifica('scrie câte are în lucru', true, str_contains($z, 'dorințe în lucru'));
+verifica('și câte mai încap',       true, str_contains($z, 'Mai poți pune'));
+verifica('și niciun buton de pus una', false, str_contains($z, '<a class="btn'));
 
 /**
- * Data are ziua săptămânii și n-are anul: „Joi, 27 august".
+ * TABELUL. Un `<details>`, nu un panou deschis de JS: se deschide singur, în
+ * orice browser, fără o linie de JavaScript.
+ */
+verifica('e un <details>',            true, str_contains($z, '<details class="dorintele"'));
+verifica('cu numărul pe buton',       true, str_contains($z, 'Dorințele mele (2)'));
+verifica('și cu un rând de fiecare',  2,    substr_count($z, 'dorintele__rand'));
+
+/**
+ * FIECARE „×" E UN FORMULAR ADEVĂRAT, cu token. Fără JavaScript, apăsarea
+ * ajunge în index.php și șterge; cu el, main.js îi ia locul.
+ */
+verifica('fiecare rând are formularul lui', 2, substr_count($z, 'method="post"'));
+verifica('și fiecare are token',            2, substr_count($z, 'name="csrf"'));
+verifica('cu id-ul dorinței în el',      true, str_contains($z, 'name="sterge_dorinta"'));
+verifica('și cu „×"-ul lui',                2, substr_count($z, 'dorintele__x'));
+
+/* Textul dorinței se escapează, ca peste tot. */
+$zRau = randeazaZonaDorinte(true, 'poate', [
+    ['id' => 5, 'oras' => 'Roman', 'dorinta' => 'un <turneu> "de" șah',
+     'stare_moderare' => 'in_asteptare', 'publicat_la' => null],
+]);
+verifica('textul se escapează la randare', true, str_contains($zRau, '&lt;turneu&gt;'));
+verifica('neescapat nu apare',            false, str_contains($zRau, '<turneu>'));
+verifica('nici în eticheta butonului',    false, str_contains($zRau, 'dorința „un <'));
+
+/* Starea se scrie pentru FIECARE dorință în parte, nu una pentru om. */
+verifica('cea necitită spune că așteaptă', true,
+    str_contains($zRau, 'Așteaptă să fie citită'));
+
+/**
+ * Data are ziua săptămânii și n-are anul: „joi, 27 august".
  *
  * Ziua săptămânii e ce caută omul întâi („mai am până joi"), iar anul, la
  * șapte zile depărtare, nu spune nimic — e limpede că e cel de-acum.
  */
-$ieseLa = dorintaIeseDePeTabla(dorintaMembrului($ana) ?? []);
+$ceaVeche = null;
+
+foreach ($aleMele['dorinte'] as $d) {
+    if ((string) $d['stare_moderare'] === 'aprobat') { $ceaVeche = $d; break; }
+}
+
+$ieseLa = dorintaIeseDePeTabla($ceaVeche ?? []);
 $ziua   = ['duminică','luni','marți','miercuri','joi','vineri','sâmbătă'][(int) date('w', (int) $ieseLa)];
 
-verifica('scrie ziua săptămânii', true,
-    str_contains(mb_strtolower($z, 'UTF-8'), $ziua));
+verifica('scrie „pe tablă până" și ziua săptămânii', true,
+    str_contains(mb_strtolower($z, 'UTF-8'), 'pe tablă până ' . $ziua));
 verifica('și ziua din lună cu luna', true,
     str_contains($z, date('j', (int) $ieseLa) . ' '
                    . numeleLunilor()[(int) date('n', (int) $ieseLa)]));
@@ -490,6 +663,40 @@ if ($BAZA === '') {
         $q->execute(['ceva de probă']);
         return $q->fetchColumn();
     })());
+
+    /**
+     * ȘTERGEREA: aceleași porți. Ea schimbă starea, deci trece prin aceleași
+     * trei uși ca orice altă faptă de pe site — metodă, token, cont.
+     */
+    $cheamaStergerea = static function (array $date, string $metoda = 'POST') use ($BAZA): array {
+        $ctx = stream_context_create(['http' => [
+            'method'         => $metoda,
+            'header'         => "Content-Type: application/json\r\n",
+            'content'        => json_encode($date),
+            'ignore_errors'  => true,
+            'timeout'        => 10,
+        ]]);
+        $raw = @file_get_contents($BAZA . '/api/sterge-dorinta.php', false, $ctx);
+        $cod = 0;
+        foreach ($http_response_header ?? [] as $rand) {
+            if (preg_match('~^HTTP/\S+\s+(\d+)~', $rand, $m)) { $cod = (int) $m[1]; }
+        }
+        return ['cod' => $cod, 'corp' => json_decode((string) $raw, true)];
+    };
+
+    /* O dorință adevărată, ca să se vadă că nu se atinge nimeni de ea. */
+    $tinta = faDorinta($radu, 'TSTDOR ținta ștergerii prin http', 'aprobat', 10);
+
+    $r = $cheamaStergerea([], 'GET');
+    verifica('GET nu șterge nimic', 405, $r['cod']);
+
+    $r = $cheamaStergerea(['id' => $tinta]);
+    verifica('fără token CSRF, 419', 419, $r['cod']);
+
+    $q = db()->prepare('SELECT sters_la FROM dorinte WHERE id = ?');
+    $q->execute([$tinta]);
+    // `??` ar fi înghițit tocmai NULL-ul căutat.
+    verifica('și dorința e neatinsă', null, $q->fetchColumn() ?: null);
 }
 
 printf("\n%s\nTOTAL: %d trecute, %d picate\n", str_repeat('=', 60), $treceri, $picaturi);
