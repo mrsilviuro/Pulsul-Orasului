@@ -376,6 +376,10 @@ inc/
                       cale vine la el, DAR nu la un anunț ținut deoparte de
                       profil: acolo omul de casă n-a scris o ieșire de-a lui, ci
                       una a orașului, deci nu se trece pe lista de participanți.
+                      Se poate însă înscrie SINGUR, ca oricare altul — și atunci
+                      anunțul îi intră în „Istoric" și în „Prezent la
+                      activități", doar fără însemnul „Organizator" (vezi
+                      istoricEvenimente din inc/evaluari.php).
                       Întrebarea se pune în două locuri: salveazaEveniment() și
                       api/modereaza-eveniment.php (la aprobare)
   interese.php      → „Mergi la acest eveniment?" — cine e interesat, cine
@@ -482,7 +486,19 @@ inc/
                       TOT AICI: cifrele de
                       pe profil și tabul „Istoric" (istoricEvenimente) — pe
                       unde a fost omul, DOAR evenimente încheiate, cu
-                      „Organizator" și „Absent" pe cartonașe
+                      „Organizator" și „Absent" pe cartonașe. BIFA
+                      `ascuns_pe_profil` NU SCOATE NIMIC DE AICI, nici măcar de
+                      pe profilul celui care a pus anunțul: istoricul spune pe
+                      unde a fost omul, nu ce a organizat. Dacă omul de casă a
+                      apăsat „Particip" la un anunț al orașului, a fost acolo ca
+                      oricare altul, iar cartonașul intră în istoric și se
+                      numără la „Prezent la activități" (laCateEvenimenteAFost —
+                      aceeași socoteală, ca cifra să numere fix cartonașele de
+                      sub ea). Ce face bifa AICI e un singur lucru: stinge
+                      însemnul „Organizator" (`e_organizator` iese 0 în
+                      interogare), fiindcă el n-a pus nimic la cale. Restul
+                      bifei rămâne unde-i e rostul: „Ieșiri organizate"
+                      (evenimenteDePeProfil, cateEvenimenteOrganizate)
   newsletter.php    → NEWSLETTERUL ZILNIC: „ce se întâmplă azi în oraș". O dată
                       pe zi, la 12, către cine are bifa `membri.newsletter`.
                       Evenimentele se scriu ca niște CARTONAȘE ca pe prima

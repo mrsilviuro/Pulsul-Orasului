@@ -5028,20 +5028,42 @@ lucrează în trei locuri, toate pe profil:
 | Unde | Ce se întâmplă |
 |---|---|
 | lista „Ieșiri organizate" | lipsește (`evenimenteDePeProfil`) |
-| cifra „Evenimente organizate" | nu-l numără (`cateEvenimenteOrganizate`) |
-| tabul „Istoric" | lipsește — **doar de pe profilul organizatorului** |
+| cifra „Ieșiri organizate" | nu-l numără (`cateEvenimenteOrganizate`) |
+| lista de participanți | nu se trece singur pe ea (`organizatorulVineSingur`) |
+| tabul „Istoric" | **intră normal, dacă s-a dus** — dar fără însemnul „Organizator" |
 
 Nicăieri altundeva. Anunțul rămâne întreg pe prima pagină, în filtre, în „Ar
 putea să te intereseze" și pe pagina lui, cu numele organizatorului la vedere.
 Nu e o coloană de anonimat — e una care spune „ăsta nu e o ieșire de-a mea".
 
-Jumătatea cu `e.membru_id` din condiția istoricului nu e de prisos: fără ea, un
-anunț al orașului ar fi dispărut din istoricul celor cincizeci de oameni care au
-fost la el. Pentru cine a fost acolo, seara aceea a existat.
-
 Lipsește **și de pe profilul lui, când și-l vede el însuși**. Dacă i s-ar arăta
 doar lui, ar crede de fiecare dată că bifa n-a mers, iar profilul lui ar arăta
 altfel pentru el decât pentru lume.
+
+#### Istoricul spune pe unde a fost, nu ce a organizat
+
+Anunțurile astea sunt de obicei ale primăriei sau ale altcuiva, iar omul de casă
+doar le scrie pe site — atunci nu e nici pe lista de participanți, deci nu apare
+nicăieri, și e corect.
+
+Dar uneori se duce și el, și apasă „Particip" ca oricare altul. **Atunci seara
+aceea intră în istoricul lui și se numără la „Prezent la activități".** Lipsea,
+și era greșit: ieșea o pagină care se contrazicea singură — pe lista de
+participanți a evenimentului scria numele lui, iar în istoricul lui seara aceea
+nu existase niciodată.
+
+Ce rămâne din bifă în istoric e un singur lucru: **nu se scrie „Organizator" pe
+cartonaș** (`e_organizator` iese 0 în interogare). N-a pus el nimic la cale; a
+fost acolo.
+
+Cele două merg **împreună**, dinadins: `laCateEvenimenteAFost()` numără exact
+cartonașele care se văd sub cifră. Cât timp amândouă scoteau anunțul, un om de
+casă care spusese „particip" la târgul de Crăciun avea **0** scris sus și niciun
+cartonaș jos — deși fusese acolo.
+
+Pentru **ceilalți** n-a fost niciodată o întrebare: pentru cine a fost acolo,
+seara aceea a existat, iar bifa spune „nu e o ieșire de-a MEA", nu „ștergeți
+evenimentul din viețile tuturor".
 
 **Ascultată numai de la staff.** `ascundePeProfil()` întoarce `false` pentru
 oricine altcineva, oricât ar scrie în cererea trimisă — caseta nici nu se
@@ -5062,7 +5084,8 @@ fi notat de participanți la sfârșit, ca și cum ar fi fost acolo cu ei.
 
 Poate să se înscrie oricând singur, de pe pagina evenimentului, ca oricine
 altcineva — dacă chiar se duce. Regula de gen nu-l oprește nici atunci: e
-evenimentul lui.
+evenimentul lui. Și atunci anunțul îi intră în „Istoric" și în „Prezent la
+activități", doar fără însemnul „Organizator" — vezi mai sus.
 
 Întrebarea se pune prin `organizatorulVineSingur()`, în două locuri depărtate —
 la salvare și la aprobarea unui anunț care așteptase
