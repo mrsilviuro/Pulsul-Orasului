@@ -250,6 +250,60 @@ $htmlGol = randeazaListaOameni($evenimentId, 'participant', $organizator, false)
 verifica('fără drepturi, niciun buton', 0, substr_count($htmlGol, 'data-scoate'));
 verifica('dar lista se vede întreagă', 3, substr_count($htmlGol, 'class="person"'));
 
+/* ---------------- stelele, la un eveniment încheiat ---------------- */
+
+/**
+ * CINE N-A FOST ACOLO NU VEDE NICIO STEA.
+ *
+ * Vedea cinci stele înghețate în dreptul fiecărui om — un buton care nu se
+ * apasă, pus acolo pentru un drept pe care nu-l are. Iar ele nici nu spuneau
+ * ceva despre omul din dreptul lor: erau nota pe care ar fi dat-o CEL CARE SE
+ * UITĂ, adică zero, la toți. Cinci stele goale citite ca „nota lui" sunt mai
+ * rele decât nimic.
+ *
+ * Contextul e cel pe care îl face event.php la un eveniment încheiat. Ce
+ * hotărăște aici e `eu_participant`: `pot_nota` singur nu ajunge, fiindcă el se
+ * stinge și la termenul notelor — iar atunci cine A FOST trebuie să-și vadă
+ * mai departe nota dată, stinsă.
+ */
+$contextul = static fn(int $eu, bool $participant, bool $poate): array => [
+    'eu'             => $eu,
+    'slug'           => 'tstpar-ev',
+    'pot_nota'       => $poate,
+    'eu_participant' => $participant,
+    'inchise'        => !$poate && $participant,
+    'motiv_stins'    => 'Notele s-au închis.',
+    'termen'         => null,
+    'e_organizator'  => false,
+    'notele_mele'    => [],
+    'absenti'        => [],
+];
+
+$strainul = faMembru('strain', 'Dan', 'Vasile');
+
+$vazutDeStrain = randeazaListaOameni($evenimentId, 'participant', $organizator, false,
+    $contextul($strainul, false, false));
+
+verifica('străinul vede oamenii', 3, substr_count($vazutDeStrain, 'class="person"'));
+verifica('dar nicio stea apăsabilă', 0, substr_count($vazutDeStrain, 'data-stele-participant'));
+verifica('și nici stinsă',            0, substr_count($vazutDeStrain, 'person__stele--stinse'));
+
+/* Cine A FOST acolo le vede — apăsabile cât ține fereastra… */
+$vazutDeAna = randeazaListaOameni($evenimentId, 'participant', $organizator, false,
+    $contextul($ana, true, true));
+
+verifica('cine a fost, vede stele apăsabile', true,
+    substr_count($vazutDeAna, 'data-stele-participant') > 0);
+
+/* …și stinse după ea, ca să-și vadă nota dată. */
+$vazutDupaTermen = randeazaListaOameni($evenimentId, 'participant', $organizator, false,
+    $contextul($ana, true, false));
+
+verifica('după termen, le vede stinse', true,
+    substr_count($vazutDupaTermen, 'person__stele--stinse') > 0);
+verifica('dar nu mai poate apăsa', 0,
+    substr_count($vazutDupaTermen, 'data-stele-participant'));
+
 /* ==================== 4b. TABUL „INTERESAȚI" ======================= */
 
 echo "\n=== TABUL INTERESAȚI ===\n";

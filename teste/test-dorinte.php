@@ -289,6 +289,73 @@ verifica('adică peste vreo șapte zile', true,
     $iese !== null && abs($iese - (time() + ZILE_PE_TABLA * 24 * 3600 - 3600)) < 120);
 
 /* ==================================================================== */
+sectiune('dorința omului de casă');
+
+/**
+ * OMUL DE CASĂ PUBLICĂ DE-A DREPTUL, fără moderare.
+ *
+ * El e cel pe la care ar fi trecut dorința: a o pune „în așteptare" ar fi
+ * însemnat să se aprobe singur, dintr-o pagină în alta, la fiecare rând scris.
+ * Aceeași socoteală ca la evenimente (starePentruPublicare).
+ */
+verifica('pentru un om obișnuit, în așteptare', 'in_asteptare', stareaDorinteiNoi(false));
+verifica('pentru omul de casă, aprobat',        'aprobat',      stareaDorinteiNoi(true));
+
+$deCasa = faMembru('casa', 'Rusu', 'Silviu');
+
+$r = puneODorinta($deCasa, ['oras' => $orasBun, 'dorinta' => 'TSTDOR o seară de povești'], true);
+verifica('dorința lui se scrie', true, $r['ok']);
+
+$aLui = poatePuneODorinta($deCasa)['dorinte'][0] ?? [];
+verifica('și intră APROBAT, nu în așteptare', 'aprobat', $aLui['stare_moderare'] ?? '');
+
+/**
+ * `publicat_la` NU se pune la scriere: îl scrie stampileazaCeleAprobate() la
+ * prima încărcare a primei pagini, ca la orice dorință aprobată. Așa, cele
+ * șapte zile de tablă se numără dintr-un singur loc.
+ */
+verifica('fără ștampilă de publicare, încă', true,
+    array_key_exists('publicat_la', $aLui) && $aLui['publicat_la'] === null);
+
+dorinteDePeTabla();          // trecerea pe la tablă o pune
+
+$aLui = poatePuneODorinta($deCasa)['dorinte'][0] ?? [];
+verifica('după o trecere pe la tablă, o are', true,
+    is_string($aLui['publicat_la'] ?? null) && $aLui['publicat_la'] !== '');
+
+/* Și chiar ajunge pe tablă, ca oricare alta. */
+$peTablaAcum = static function (string $text): bool {
+    for ($i = 0; $i < 40; $i++) {
+        foreach (dorinteDePeTabla() as $d) {
+            if ((string) $d['dorinta'] === $text) { return true; }
+        }
+    }
+    return false;
+};
+verifica('și e pe tablă', true, $peTablaAcum('TSTDOR o seară de povești'));
+
+/* Vorba care i se spune e alta: „o vom citi" ar fi spus chiar celui care citește. */
+verifica('i se spune că e publicată', MESAJ_DORINTA_PUBLICATA, $r['mesaj']);
+verifica('nu că o vom citi', false, str_contains($r['mesaj'], 'O vom citi'));
+
+/* Iar unui om obișnuit i se spune ca înainte. */
+$obisnuit = faMembru('obis', 'Popa', 'Vlad');
+$r2 = puneODorinta($obisnuit, ['oras' => $orasBun, 'dorinta' => 'TSTDOR ceva obișnuit']);
+verifica('omului obișnuit, tot vechea vorbă', MESAJ_DORINTA_TRIMISA, $r2['mesaj']);
+verifica('și dorința lui așteaptă', 'in_asteptare',
+    poatePuneODorinta($obisnuit)['dorinte'][0]['stare_moderare'] ?? '');
+
+/**
+ * ȘI NU APRINDE CIFRA DE PE PANOUL DE ADMIN: n-are nimic de hotărât nimeni.
+ */
+require_once __DIR__ . '/../inc/admin.php';
+
+$q = db()->prepare('SELECT COUNT(*) FROM dorinte
+                     WHERE membru_id = ? AND stare_moderare = \'in_asteptare\' AND sters_la IS NULL');
+$q->execute([$deCasa]);
+verifica('nimic de moderat de la el', 0, (int) $q->fetchColumn());
+
+/* ==================================================================== */
 sectiune('ștergerea unei dorințe');
 
 /**

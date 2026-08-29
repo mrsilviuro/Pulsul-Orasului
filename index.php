@@ -59,7 +59,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['dorinta'])) {
     } elseif ($membruAcum === null) {
         $dorintaRau = 'Trebuie să fii conectat ca să-ți pui o dorință.';
     } else {
-        $rezultat = puneODorinta((int) $membruAcum['id'], $_POST);
+        $rezultat = puneODorinta((int) $membruAcum['id'], $_POST, esteStaff($membruAcum));
 
         /**
          * Reușita se întoarce printr-o REDIRECȚIONARE, nu direct în pagină.
@@ -234,7 +234,13 @@ require __DIR__ . '/inc/antet.php';
         if ((string) $aMea['stare_moderare'] === 'in_asteptare') { $areUnaNecitita = true; break; }
     }
 
-    $dorintaGata = ($_GET['dorinta'] ?? '') === 'trimisa' && $areUnaNecitita;
+    /**
+      * Se cere doar să AIBĂ ceva în lucru, nu neapărat ceva necitit: dorința
+      * omului de casă intră de-a dreptul „aprobat" (stareaDorinteiNoi), deci
+      * după trimitere n-are nimic în așteptare — iar panoul de mulțumire nu i
+      * s-ar mai fi arătat niciodată.
+      */
+    $dorintaGata = ($_GET['dorinta'] ?? '') === 'trimisa' && $voieLaDorinta['cate'] > 0;
 
     /* Formularul se desenează pentru cine mai poate pune o dorință — sau
        pentru cine tocmai a trimis una, ca să vadă mulțumirea. */
@@ -352,7 +358,14 @@ require __DIR__ . '/inc/antet.php';
           <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M20 6 9 17l-5-5"/>
           </svg>
-          <p><?= h(MESAJ_DORINTA_TRIMISA) ?></p>
+          <!--
+            Vorba se alege după om: cine e de-al casei își vede dorința pe
+            tablă pe loc, deci „o vom citi" ar fi fost o vorbă goală spusă chiar
+            celui care citește. Cu JavaScript, textul vine din răspunsul
+            serverului (main.js) — tot ăsta, dar dintr-un singur loc.
+          -->
+          <p data-dorinta-gata-text><?= h(esteStaff($membruAcum)
+              ? MESAJ_DORINTA_PUBLICATA : MESAJ_DORINTA_TRIMISA) ?></p>
 
           <!--
             „×"-ul de închidere. E o LEGĂTURĂ către /index.php, nu un buton de

@@ -838,6 +838,45 @@
     }
   }
 
+  /**
+   * Pune la loc vorba de sub tablă și butonul „Dorințele mele".
+   *
+   * Amândouă se schimbă la fiecare dorință scrisă sau ștearsă, dar pagina nu se
+   * reîncarcă — rămâneau cele de dinainte până la un F5. Vin gata desenate de
+   * pe server (`zona`, din api/dorinta.php), de aceeași funcție care le scrie
+   * și la încărcarea paginii: aici nu se construiește nimic, ar fi fost al
+   * doilea loc care știe cum arată.
+   *
+   * `poate` spune dacă mai încape una — de el atârnă butonul „Pune-ți o
+   * dorință" din fereastra de bun venit. La a treia dorință n-are ce căuta pe
+   * ecran: ar duce la un formular pe care serverul îl refuză oricum.
+   */
+  function punZonaDorintelor(raspuns) {
+    if (!raspuns || typeof raspuns.zona !== 'string') return;
+
+    var sectiune = document.querySelector('section.tabla');
+
+    if (sectiune) {
+      var unelte = sectiune.querySelector('.tabla__unelte');
+
+      if (raspuns.zona === '') {
+        if (unelte) unelte.remove();
+      } else {
+        if (!unelte) {
+          unelte = document.createElement('div');
+          unelte.className = 'tabla__unelte';
+          sectiune.appendChild(unelte);
+        }
+        unelte.innerHTML = raspuns.zona;
+      }
+    }
+
+    if (raspuns.poate === false) {
+      var cta = document.querySelector('.hero__cta--dorinta');
+      if (cta) cta.remove();
+    }
+  }
+
   /* --- formularul dorinței --- */
 
   var cutiaDorintei = document.getElementById('dorinta-formular');
@@ -903,6 +942,23 @@
         cutiaDorintei.classList.add('e-inchis');
 
         /**
+         * ȘI SE GOLESC CÂMPURILE.
+         *
+         * Fără asta, cine apăsa din nou „Pune-ți o dorință" fără să reîncarce
+         * pagina găsea acolo dorința pe care tocmai o trimisese — și era ușor
+         * s-o trimită a doua oară crezând că n-a mers prima.
+         *
+         * `reset()` întoarce câmpurile la ce era în HTML, deci se duc și
+         * greșelile rămase pe ele, și contorul de caractere trebuie socotit din
+         * nou (altfel ar fi rămas scris „63 din 100").
+         */
+        formDorinta.reset();
+        setError('dorinta-oras', 'err-dorinta-oras', '');
+        setError('dorinta-text', 'err-dorinta-text', '');
+        if (rauDorinta) { rauDorinta.textContent = ''; rauDorinta.hidden = true; }
+        if (typeof numaraDorinta === 'function') { numaraDorinta(); }
+
+        /**
          * Și adresa se curăță de „#dorinta-formular" și de „?dorinta=trimisa".
          *
          * Fără asta, un F5 ar fi redeschis tot ce omul tocmai a închis — `:target`
@@ -963,9 +1019,22 @@
           }
 
           if (rez.corp.ok) {
+            /**
+             * Vorba vine din răspuns, nu din pagină: omul de casă își vede
+             * dorința pe tablă pe loc, deci „o vom citi" ar fi fost o vorbă
+             * goală spusă chiar celui care citește. Serverul o alege după om
+             * (vezi stareaDorinteiNoi din inc/dorinte.php).
+             */
+            var vorbaGata = gataDorinta && gataDorinta.querySelector('[data-dorinta-gata-text]');
+            if (vorbaGata && rez.corp.mesaj) { vorbaGata.textContent = rez.corp.mesaj; }
+
             formDorinta.hidden = true;
             if (gataDorinta) gataDorinta.hidden = false;
             cutiaDorintei.classList.add('e-deschis');
+
+            /* Vorba de sub tablă și „Dorințele mele" s-au schimbat odată cu
+               dorința tocmai scrisă. Vin gata desenate de pe server. */
+            punZonaDorintelor(rez.corp);
             return;
           }
 

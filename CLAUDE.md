@@ -482,7 +482,15 @@ inc/
                       desenate în pagină, și api/evaluare.php, și formularul de
                       părere de pe profil. Termenul se scrie PE FAȚĂ în capul
                       tabului „Au participat" (.panel__nota din event.php):
-                      motivul dintr-un `title` nu se vede pe telefon niciodată. STELELE SINGURE sunt anonime și nici nu se
+                      motivul dintr-un `title` nu se vede pe telefon niciodată.
+                      CINE N-A FOST ACOLO NU VEDE NICIO STEA — nici stinsă:
+                      vedea cinci înghețate în dreptul fiecărui om, un buton
+                      care nu se apasă, iar ele erau nota pe care ar fi dat-o EL
+                      (zero), nu a omului din dreptul lor. Hotărăște
+                      `eu_participant` din contextul făcut în event.php,
+                      DEOSEBIT de `pot_nota`, care se stinge și la termen: cine
+                      A FOST își vede stelele stinse și după el, fiindcă în ele
+                      scrie nota pe care a dat-o. STELELE SINGURE sunt anonime și nici nu se
                       arată pe profil; doar părerile SCRISE ajung în listă, iar
                       acelea vin semnate. Cine e însemnat neprezentat nu se mai
                       notează de nimeni (esteNeprezentat). PĂREREA SE SCRIE PE
@@ -618,7 +626,15 @@ inc/
                       codul, într-un singur loc (stampileazaCeleAprobate,
                       chemată de dorinteDePeTabla), tot cu ceasul PHP: ca să
                       publici o dorință din phpMyAdmin e de ajuns să-i schimbi
-                      `stare_moderare` în „aprobat". TREI DORINȚE DEODATĂ de
+                      `stare_moderare` în „aprobat". DORINȚA OMULUI DE CASĂ
+                      INTRĂ APROBATĂ DE-A DREPTUL (stareaDorinteiNoi, ca
+                      starePentruPublicare la evenimente): el e cel pe la care
+                      ar fi trecut, iar „în așteptare" ar fi însemnat să se
+                      aprobe singur. NU pleacă niciun e-mail — vestea despre
+                      hotărârea moderării o trimite api/admin.php, când chiar
+                      hotărăște cineva ceva. `publicat_la` tot nu se pune la
+                      scriere: îl pune stampileazaCeleAprobate(), ca la oricare
+                      alta. TREI DORINȚE DEODATĂ de
                       om (DORINTE_DEODATA) — a fost UNA singură, și era prea
                       strâmt. „În lucru" înseamnă cele care așteaptă să fie
                       citite ȘI cele publicate care n-au împlinit șapte zile
