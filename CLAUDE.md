@@ -653,8 +653,12 @@ inc/
                       în FEREASTRA DE BUN VENIT, lângă „Propune o ieșire", și
                       DISPARE doar pentru cine le are pe toate trei — și
                       randeazaZonaDorinte(), vorba despre dorințele lui („Ai
-                      două dorințe în lucru. Mai poți pune una."). STĂ MEREU ÎN
-                      SECȚIUNEA TABLEI, și când tabla nu se desenează: de aceea
+                      două dorințe în lucru. Mai poți pune una."). STĂ ÎN
+                      SECȚIUNEA TABLEI, și când tabla nu se desenează — dar
+                      atunci NUMAI dacă omul are ceva care AȘTEAPTĂ MODERAREA
+                      ($aratZonaDorinte din index.php): o dorință publicată și
+                      proaspătă e chiar una de pe tablă, deci tabla s-ar fi
+                      desenat oricum. De aceea
                       `<section class="tabla">` din index.php se scrie și când
                       n-are nici tablă, nici formular. Ajungea, în cazul acela,
                       în `.section-head`, adică pe rândul lui „Ce facem zilele

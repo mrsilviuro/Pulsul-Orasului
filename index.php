@@ -244,9 +244,25 @@ require __DIR__ . '/inc/antet.php';
        nu se desenează nici casa în care ar fi stat. */
     $zonaDorinte = randeazaZonaDorinte($logat, $voieLaDorinta['stare'],
                                        $voieLaDorinta['dorinte']);
+
+    /**
+     * SE ARATĂ VORBA ȘI „DORINȚELE MELE"?
+     *
+     * Dacă tabla se desenează, da: ele stau sub ea, la locul lor.
+     *
+     * Dacă NU se desenează, numai când omul are ceva care AȘTEAPTĂ MODERAREA.
+     * Fiindcă o dorință publicată și proaspătă e chiar una de pe tablă — dacă
+     * are așa ceva, tabla nu e goală, deci s-ar fi desenat. Ce mai rămâne fără
+     * tablă e tocmai ce n-a trecut încă pe la nimeni: aceea nu se vede nicăieri
+     * altundeva, și pentru ea merită deschisă secțiunea.
+     *
+     * Fără ea n-are rost: o secțiune desenată numai ca să spună ceva despre
+     * nimic e un rând gol în capul paginii.
+     */
+    $aratZonaDorinte = $zonaDorinte !== '' && ($areTabla || $areUnaNecitita);
     ?>
 
-    <?php if ($areTabla || $poateDori || $zonaDorinte !== ''): ?>
+    <?php if ($areTabla || $poateDori || $aratZonaDorinte): ?>
     <section class="tabla<?= $areTabla ? '' : ' tabla--fara' ?>" aria-label="Tabla cu dorințe">
 
       <?php if ($poateDori): ?>
@@ -374,7 +390,7 @@ require __DIR__ . '/inc/antet.php';
         De aceea secțiunea se desenează și când n-are nici tablă, nici
         formular: dacă omul are dorințe în lucru, undeva trebuie să le vadă.
       -->
-      <?php if ($zonaDorinte !== ''): ?>
+      <?php if ($aratZonaDorinte): ?>
       <div class="tabla__unelte"><?= $zonaDorinte ?></div>
       <?php endif; ?>
     </section>

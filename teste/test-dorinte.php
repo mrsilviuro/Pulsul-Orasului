@@ -648,6 +648,25 @@ if ($BAZA === '') {
         str_contains($cuCont, '<a class="dorinta-gata__x" href="/index.php"'));
 
     /**
+     * ȘI „DORINȚELE MELE" APARE FĂRĂ TABLĂ — dar numai cu ceva NECITIT.
+     *
+     * O dorință publicată și proaspătă e chiar una de pe tablă: dacă omul are
+     * așa ceva, tabla nu e goală, deci s-ar fi desenat. Ce mai rămâne fără
+     * tablă e tocmai ce n-a trecut încă pe la nimeni — aceea nu se vede
+     * nicăieri altundeva.
+     *
+     * Radu are una în așteptare; `$dan` are doar una respinsă, deci nimic în
+     * lucru și nimic de arătat.
+     */
+    $cookieDan = $intra(SEMN . 'dan@invalid.local');
+    $paginaDan = $ia('/index.php', $cookieDan);
+
+    verifica('Dan a putut intra în cont', true, $cookieDan !== '');
+    verifica('fără nicio dorință în lucru, nu se desenează nimic', false,
+        str_contains($paginaDan, 'dorintele__buton'));
+    verifica('nici vorba despre ele', false, str_contains($paginaDan, 'tabla__stare'));
+
+    /**
      * ȘI CÂND N-ARE CE ARĂTA.
      *
      * Tabla trebuie să dispară cu totul, iar butonul să urce în capul listei,
