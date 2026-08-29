@@ -1926,6 +1926,81 @@ verifica('spune limpede că nu e publicat', true,
     str_contains($pagina['corp'], 'nu e publicat nimic'));
 verifica('și nu se lasă indexată', true, str_contains($pagina['corp'], 'name="robots"'));
 
+/* ------------------- coada „ #2", ca la publicare -------------------- */
+
+/**
+ * Cine are deja „Cursa de seară prin centrul vechi" și scrie încă unul la fel
+ * primește, la publicare, „… #2" — o pune titluCuNumar(). PREVIZUALIZAREA
+ * N-O PUNEA: omul vedea aici un titlu și pe prima pagină altul, iar o
+ * previzualizare care nu spune adevărul despre exact lucrul pe care îl arată e
+ * mai rea decât niciuna.
+ */
+verifica('la primul, titlul e curat', true,
+    str_contains($pagina['corp'], 'Cursa de seară prin centrul vechi'));
+verifica('fără nicio coadă', false, str_contains($pagina['corp'], 'centrul vechi #'));
+
+/**
+ * Se publică unul cu numele ăsta, și se previzualizează încă unul la fel.
+ *
+ * Limita de evenimente active i se ridică omului: aici se probează numărul din
+ * titlu, nu numărătoarea de anunțuri, iar cu limita obișnuită al doilea nici
+ * n-ar fi apucat să se scrie.
+ */
+$limitaDeDinainte = (int) db()->query(
+    'SELECT limita_evenimente_active FROM membri WHERE id = ' . $idOrg)->fetchColumn();
+
+db()->prepare('UPDATE membri SET limita_evenimente_active = 20 WHERE id = ?')->execute([$idOrg]);
+
+verifica('primul chiar s-a publicat', true, !empty(trimite($c)['ok']));
+verifica('cu titlul curat', 'Cursa de seară prin centrul vechi',
+    (string) (ultimulEveniment()['titlu'] ?? ''));
+
+$pAlDoilea = cerere($baza . '/previzualizare.php?p='
+    . urlencode((string) previzualizeaza($c)['cheie']), $c)['corp'];
+
+verifica('al doilea se previzualizează cu „ #2"', true,
+    str_contains($pAlDoilea, 'Cursa de seară prin centrul vechi #2'));
+
+/* Și chiar așa se și publică — cele două trebuie să spună la fel. */
+trimite($c);
+$alDoilea = ultimulEveniment();
+verifica('iar publicat, tot „ #2"', 'Cursa de seară prin centrul vechi #2',
+    (string) ($alDoilea['titlu'] ?? ''));
+
+/* Al treilea: „#3" în amândouă locurile. */
+$pAlTreilea = cerere($baza . '/previzualizare.php?p='
+    . urlencode((string) previzualizeaza($c)['cheie']), $c)['corp'];
+verifica('al treilea, „ #3"', true,
+    str_contains($pAlTreilea, 'Cursa de seară prin centrul vechi #3'));
+
+/**
+ * LA EDITARE, NU. Titlul e deja numerotat, iar o a doua trecere l-ar fi urcat
+ * cu unu la fiecare virgulă îndreptată — aceeași grijă ca în
+ * actualizeazaEveniment(), care tocmai de aceea nu cheamă titluCuNumar().
+ */
+$pEditare = cerere($baza . '/previzualizare.php?p=' . urlencode((string) previzualizeaza($c, [
+    'slug'  => (string) ($alDoilea['slug'] ?? ''),
+    'titlu' => 'Cursa de seară prin centrul vechi #2',
+])['cheie']), $c)['corp'];
+
+verifica('la editare, titlul rămâne cum e', true,
+    str_contains($pEditare, 'Cursa de seară prin centrul vechi #2'));
+verifica('și nu urcă la „ #3"', false,
+    str_contains($pEditare, 'Cursa de seară prin centrul vechi #3'));
+
+/**
+ * Curat pentru ce urmează: probele de mai jos numără de la zero, iar una
+ * dintre ele probează chiar limita de evenimente active — care trebuie să fie
+ * cea dinainte, nu cea ridicată aici.
+ */
+db()->exec('DELETE FROM evenimente');
+db()->prepare('UPDATE membri SET limita_evenimente_active = ? WHERE id = ?')
+    ->execute([$limitaDeDinainte, $idOrg]);
+
+$rPreviz = previzualizeaza($c);
+$cheie   = (string) $rPreviz['cheie'];
+$pagina  = cerere($baza . '/previzualizare.php?p=' . urlencode($cheie), $c);
+
 /**
  * Aceeași afișare condiționată ca pe pagina adevărată: ce lipsește nu se
  * arată. E și dovada că amândouă trec prin afiseazaEveniment().

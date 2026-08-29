@@ -570,22 +570,6 @@ function randeazaDorinteleMele(array $dorinte): string
 }
 
 /**
- * „joi, 27 august" — ziua săptămânii și data, fără an și cu literă mică.
- *
- * dataLunga() o scrie cu majusculă, fiindcă de obicei stă singură la începutul
- * unui rând („Joi, 27 august, ora 19:00"). Aici intră în mijlocul unei fraze,
- * iar „până Joi" ar fi fost o majusculă în mijlocul propoziției. Anul lipsește
- * fiindcă data e la câteva zile distanță și se înțelege de la sine.
- */
-function dataScrisaMic(string $zi): string
-{
-    $scris = dataLunga($zi, false);
-
-    return mb_strtolower(mb_substr($scris, 0, 1, 'UTF-8'), 'UTF-8')
-         . mb_substr($scris, 1, null, 'UTF-8');
-}
-
-/**
  * Butonul „Pune-ți o dorință", cel din fereastra de bun venit.
  *
  * Stă lângă „Propune o ieșire", fiindcă acolo se hotărăște omul ce vrea să

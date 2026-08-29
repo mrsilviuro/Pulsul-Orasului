@@ -1783,6 +1783,27 @@ cel mult trei deodată. Cheia e legată de sesiune: pentru altcineva, aceeași
 adresă nu duce nicăieri. Nimic nu se scrie în `evenimente`, iar limita de
 evenimente active nici nu se verifică — previzualizarea nu creează nimic.
 
+### Coada „ #2" se vede și aici
+
+Cine are deja „Fotbal de seară" și scrie încă unul la fel primește, la
+publicare, **„Fotbal de seară #2"** — o pune `titluCuNumar()`, din
+`salveazaEveniment()`.
+
+Previzualizarea n-o punea, iar omul vedea aici un titlu și pe prima pagină
+altul. O previzualizare care nu spune adevărul despre exact lucrul pe care îl
+arată e mai rea decât niciuna, așa că `api/previzualizare.php` cheamă acum
+aceeași funcție.
+
+**Numai la un anunț nou**, cu aceeași condiție de care atârnă și salvarea
+(`$deEditat === null`) — inclusiv la „Remake", unde numărul chiar trebuie pus.
+La editare, titlul e deja numerotat, iar o a doua trecere l-ar fi urcat cu unu
+la fiecare virgulă îndreptată: aceeași grijă pentru care `actualizeazaEveniment()`
+n-o cheamă niciodată.
+
+Aici doar se **arată**. Numărul adevărat se pune tot la scriere, din bază, în
+clipa aceea: între previzualizare și apăsarea butonului omul poate publica
+altceva de pe alt telefon, iar cel scris atunci e cel care contează.
+
 ### Care copertă se arată
 
 Ordinea, și n-are voie să se inverseze:
@@ -3366,6 +3387,52 @@ spatele ei e o seară petrecută împreună, nu o apăsare de pe un profil găsi
 
 Toate opreliștile stau într-un loc, `motivBlocajEvaluare()`, de care atârnă și
 stelele stinse din pagină, și refuzul din API — ca la participare.
+
+### Și numai 48 de ore
+
+Fereastra se închide la **48 de ore de la sfârșitul evenimentului**
+(`ORE_PENTRU_NOTE`). După ea nu se mai adaugă și **nu se mai schimbă** nimic:
+nici stele, nici păreri scrise, nici „Nu s-a prezentat".
+
+O părere despre cum a fost cineva se face cât seara aceea e încă proaspătă.
+După o săptămână nu mai e o părere, e o amintire — iar peste o lună, o stea
+pusă atunci spune mai mult despre ce s-a întâmplat între timp decât despre
+eveniment. Notele nu se pot retrage și nu se pot raporta, deci singura apărare
+împotriva uneia date la supărare, mult mai târziu, e ceasul.
+
+Nu se face deosebire între „adaugă" și „schimbă": cine a notat în prima zi nu
+se poate întoarce peste o săptămână să-și schimbe nota. Altfel fereastra n-ar
+fi însemnat nimic tocmai pentru cei care apucaseră să noteze.
+
+**Termenul se socotește din ceasul anunțului** (`terminulNotelor`): ora de
+sfârșit dacă organizatorul a dat una, altfel capătul zilei — și abia apoi cele
+48 de ore.
+
+Nu din clipa în care s-a apăsat „Încheie evenimentul", deși aceea e „când s-a
+terminat" în sens strict. Două motive: termenul trebuie să se poată **citi de
+pe pagină** (omul se uită la anunț și știe cât mai are), și n-are de ce să fie
+mai scurt pentru participanții unui organizator harnic decât pentru ai unuia
+care n-a apăsat nimic. Ceasul pornește la fel pentru toți.
+
+**Se scrie pe față**, în capul tabului „Au participat":
+
+> Mai poți da note și scrie păreri până duminică, 30 august, la 21:00.
+
+iar după termen:
+
+> Notele s-au închis — au trecut 48 de ore de la sfârșitul evenimentului.
+
+Numai pentru cine a fost acolo: pentru un vizitator oarecare, termenul nu spune
+nimic. Stelele stinse poartă motivul și într-un `title`, dar acela se vede doar
+cu cursorul pe ele — pe telefon, niciodată.
+
+**„Nu s-a prezentat" se închide odată cu ele.** E tot un rând în `evaluari` și
+tot o stea în media cuiva; dacă notele s-au închis pentru toți, n-are cum să
+rămână tocmai aceea deschisă la nesfârșit. Butonul dispare din pagină, iar
+`api/evaluare.php` îl refuză prin aceeași funcție.
+
+Ce s-a scris **rămâne**: fereastra închide scrisul, nu șterge ce era. Notele
+date la vreme intră în medie mai departe.
 
 ### Stelele sunt anonime. Vorbele se semnează
 

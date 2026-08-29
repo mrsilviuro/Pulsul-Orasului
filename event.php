@@ -287,10 +287,30 @@ $blocajParticipare = $stareaMea === 'participant'
 $contextEvaluare = null;
 
 if ($eIncheiat && $ePublicat) {
+    /**
+     * NOTELE SE ÎNCHID LA DOUĂ ZILE de la sfârșitul evenimentului
+     * (terminulNotelor din inc/evaluari.php). După termen nu se mai adaugă și
+     * nu se mai schimbă nimic — nici stele, nici păreri scrise, nici „Nu s-a
+     * prezentat".
+     *
+     * Motivul se scrie AICI, gata făcut, și se duce mai departe în context:
+     * inc/interese.php desenează stelele, dar n-are voie să ceară
+     * inc/evaluari.php pentru o constantă — cele două fișiere s-ar cere unul
+     * pe altul, în cerc. Aceeași scutire ca la `absenti`, câteva rânduri mai
+     * jos.
+     */
+    $noteleAuTrecut = auTrecutNotele($eveniment);
+
     $contextEvaluare = [
         'eu'            => $membruId,
         'slug'          => (string) $eveniment['slug'],
         'pot_nota'      => potNotaLaEveniment($eveniment, $membruId),
+        'inchise'       => $noteleAuTrecut,
+        'motiv_stins'   => $noteleAuTrecut
+            ? 'S-au închis notele — au trecut ' . ORE_PENTRU_NOTE
+              . ' de ore de la sfârșitul evenimentului.'
+            : 'Poți nota doar dacă ai fost și tu pe lista de participanți.',
+        'termen'        => terminulNotelor($eveniment),
         'e_organizator' => $eOrganizatorul,
         'notele_mele'   => noteleMeleLaEveniment($evenimentId, $membruId),
         // Pentru toată lumea, nu doar pentru organizator: „Neprezentat" se
@@ -1227,6 +1247,44 @@ require __DIR__ . '/inc/antet.php';
           <p class="panel__intro<?= $numarInterese['participant'] === 0 ? ' panel__intro--gol' : '' ?>">
             <?= vorbaDespreCatiSunt((int) $numarInterese['participant'], 'participant', $eIncheiat) ?>
           </p>
+
+          <?php
+          /**
+           * TERMENUL NOTELOR, scris pe față.
+           *
+           * Stelele stinse poartă motivul într-un `title`, dar acela se vede
+           * doar dacă ții cursorul pe ele — iar pe telefon, niciodată. Cine a
+           * fost la eveniment trebuie să afle din pagină cât mai are, nu să
+           * descopere din stele care nu se apasă.
+           *
+           * Numai pentru cine A FOST acolo: pentru un vizitator oarecare,
+           * termenul de notare nu spune nimic.
+           */
+          $vorbaDespreNote = '';
+
+          if ($contextEvaluare !== null && $stareaMea === 'participant') {
+              $termen = $contextEvaluare['termen'] ?? null;
+
+              if (!empty($contextEvaluare['inchise'])) {
+                  $vorbaDespreNote = 'Notele s-au închis — au trecut '
+                                   . ORE_PENTRU_NOTE . ' de ore de la sfârșitul evenimentului.';
+              } elseif ($termen !== null) {
+                  // „joi, 28 august" — cu literă mică, fiindcă intră în
+                  // mijlocul frazei (dataScrisaMic din inc/validare.php).
+                  $vorbaDespreNote = 'Mai poți da note și scrie păreri până '
+                                   . dataScrisaMic(date('Y-m-d', $termen))
+                                   . ', la ' . date('H:i', $termen) . '.';
+              }
+          }
+          ?>
+          <?php if ($vorbaDespreNote !== ''): ?>
+          <p class="panel__nota<?= !empty($contextEvaluare['inchise']) ? ' panel__nota--stinsa' : '' ?>">
+            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>
+            </svg>
+            <span><?= h($vorbaDespreNote) ?></span>
+          </p>
+          <?php endif; ?>
 
           <ul class="people" data-lista-oameni>
             <?= randeazaListaOameni($evenimentId, 'participant', (int) $eveniment['membru_id'], $poateScoateParticipanti, $contextEvaluare, $vedeTelefoanele) ?>

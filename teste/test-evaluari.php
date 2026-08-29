@@ -74,7 +74,13 @@ $ana         = faMembru('ana', 'Neagu',   'Elena');
 $vlad        = faMembru('vld', 'Solomon', 'Vlad');
 $strain      = faMembru('str', 'Popa',    'Dan');
 
-$trecut = faEveniment('tsteva-trecut', $organizator, '-3 days');
+/**
+ * IERI, nu acum trei zile: notele se închid la ORE_PENTRU_NOTE (48) de la
+ * sfârșitul evenimentului, iar unul de acum trei zile ar fi fost deja închis —
+ * și atunci tot ce se probează mai jos ar fi picat din alt motiv decât cel
+ * scris în probă.
+ */
+$trecut = faEveniment('tsteva-trecut', $organizator, '-1 day');
 $viitor = faEveniment('tsteva-viitor', $organizator, '+9 days');
 
 foreach ([$trecut, $viitor] as $ev) {
@@ -117,6 +123,112 @@ verifica('scurtătura spune la fel, pentru participant', true,
     potNotaLaEveniment($trecut, $ana));
 verifica('pentru cel doar interesat, nu', false, potNotaLaEveniment($trecut, $strain));
 verifica('și nici înainte de eveniment', false, potNotaLaEveniment($viitor, $ana));
+
+/* ================= 1b. FEREASTRA DE 48 DE ORE ====================== */
+
+echo "\n=== FEREASTRA DE 48 DE ORE ===\n";
+
+/**
+ * O părere despre cum a fost cineva se face cât seara aceea e încă proaspătă.
+ * Notele nu se pot retrage și nu se pot raporta, deci singura apărare
+ * împotriva uneia date la supărare, peste o lună, e ceasul.
+ *
+ * TERMENUL SE SOCOTEȘTE DIN CEASUL ANUNȚULUI: ora de sfârșit dacă e una,
+ * altfel capătul zilei — și abia apoi cele 48 de ore. Așa se poate citi de pe
+ * pagină, iar cel al unui organizator care apasă „Încheie evenimentul" nu e
+ * mai scurt decât al unuia care nu apasă nimic.
+ */
+$laClipa = static fn(string $zi, ?string $sfarsit): array => [
+    'id'             => $trecutId,
+    'data_eveniment' => $zi,
+    'ora_inceput'    => '18:00:00',
+    'ora_sfarsit'    => $sfarsit,
+    'stare_moderare' => 'aprobat',
+];
+
+$ieri     = date('Y-m-d', strtotime('-1 day'));
+$aTreiaZi = date('Y-m-d', strtotime('-3 days'));
+
+verifica('cu oră de sfârșit, termenul e ea plus 48h',
+    strtotime($ieri . ' 21:00:00') + ORE_PENTRU_NOTE * 3600,
+    terminulNotelor($laClipa($ieri, '21:00:00')));
+
+/**
+ * FĂRĂ ORĂ DE SFÂRȘIT, ziua se încheie la miezul nopții — aceeași socoteală ca
+ * evenimentIncheiat(), care tot pe zile merge. Nu la ora de început: un
+ * eveniment de la 18:00 nu s-a terminat la 18:00.
+ */
+verifica('fără ea, capătul zilei plus 48h',
+    strtotime($ieri . ' 00:00:00 +1 day') + ORE_PENTRU_NOTE * 3600,
+    terminulNotelor($laClipa($ieri, null)));
+
+verifica('fără dată, nu se poate ști', null,
+    terminulNotelor(['id' => 1, 'data_eveniment' => '']));
+
+/* --- înainte și după termen --- */
+
+verifica('la unul de ieri, fereastra e deschisă', false,
+    auTrecutNotele($laClipa($ieri, '21:00:00')));
+verifica('la unul de acum trei zile, s-a închis', true,
+    auTrecutNotele($laClipa($aTreiaZi, '21:00:00')));
+verifica('fără dată, nu se închide nimic', false,
+    auTrecutNotele(['id' => 1, 'data_eveniment' => '']));
+
+/* --- și opreliștea propriu-zisă, prin aceeași funcție ca peste tot --- */
+
+/**
+ * Evenimentul ĂSTA se face ȘI SE STRÂNGE AICI, nu sus, printre celelalte.
+ *
+ * Secțiunile de mai jos numără câte evenimente are omul în istoric, câte
+ * cartonașe se desenează, ce medie iese — iar un al treilea eveniment lăsat în
+ * trusa comună ar fi mutat toate cifrele acelea cu unu. Proba de față are
+ * nevoie de el doar cât ține secțiunea.
+ */
+$vechi   = faEveniment('tsteva-vechi', $organizator, '-5 days');
+$vechiId = (int) $vechi['id'];
+
+faOrganizatorulParticipant($vechiId, $organizator);
+salveazaInteres($vechiId, $ana,  'participant');
+salveazaInteres($vechiId, $vlad, 'participant');
+
+verifica('după termen, nu se mai notează',
+    'Au trecut ' . ORE_PENTRU_NOTE . ' de ore de la eveniment. Notele s-au închis.',
+    motivBlocajEvaluare($vechi, $ana, $vlad));
+
+verifica('nici scurtătura paginii nu-l lasă', false, potNotaLaEveniment($vechi, $ana));
+
+/**
+ * NU SE FACE DEOSEBIRE ÎNTRE „ADAUGĂ" ȘI „SCHIMBĂ". Cine a notat în prima zi
+ * nu se poate întoarce peste o săptămână să-și schimbe nota — altfel fereastra
+ * n-ar fi însemnat nimic pentru cei care oricum apucaseră să noteze.
+ */
+salveazaEvaluare($vechiId, $vlad, $ana, 5);
+verifica('nici cel care notase deja n-o mai poate schimba',
+    'Au trecut ' . ORE_PENTRU_NOTE . ' de ore de la eveniment. Notele s-au închis.',
+    motivBlocajEvaluare($vechi, $ana, $vlad));
+
+/**
+ * IAR CE S-A SCRIS RĂMÂNE. Fereastra închide scrisul, nu șterge ce era: notele
+ * date la vreme intră în medie mai departe.
+ */
+$q = db()->prepare('SELECT stele FROM evaluari WHERE eveniment_id = ? AND evaluat_id = ? AND evaluator_id = ?');
+$q->execute([$vechiId, $vlad, $ana]);
+verifica('nota dată la vreme rămâne', 5, (int) $q->fetchColumn());
+
+/**
+ * ORDINEA OPRELIȘTILOR: întâi „nu s-a încheiat", abia apoi „a trecut vremea".
+ * Un eveniment din viitor n-are cum să aibă fereastra închisă, iar mesajul
+ * trebuie să spună ce trebuie făcut — nu că e prea târziu la ceva ce n-a avut
+ * loc încă.
+ */
+verifica('la unul viitor, tot „nu s-a încheiat"',
+    'Notele se dau după ce se încheie evenimentul.',
+    motivBlocajEvaluare($viitor, $ana, $vlad));
+
+/* Strâns după noi: de aici încolo se numără iar cele două de sus. */
+db()->prepare('DELETE FROM evaluari WHERE eveniment_id = ?')->execute([$vechiId]);
+db()->prepare('DELETE FROM interese_evenimente WHERE eveniment_id = ?')->execute([$vechiId]);
+db()->prepare('DELETE FROM evenimente WHERE id = ?')->execute([$vechiId]);
 
 /* ========================= 2. NOTELE ============================== */
 

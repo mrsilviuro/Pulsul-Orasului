@@ -350,7 +350,12 @@ inc/
                       același nume AL ACELUIAȘI OM primește „ #2", al treilea
                       „ #3"; se cheamă din salveazaEveniment(), niciodată la
                       editare, iar numărul se ia din CEL MAI MARE de până acum,
-                      nu din câte rânduri sunt. UN ANUNȚ
+                      nu din câte rânduri sunt. O CHEAMĂ ȘI
+                      api/previzualizare.php, cu aceeași condiție
+                      (`$deEditat === null`): altfel omul vedea în
+                      previzualizare un titlu și pe prima pagină altul. Acolo
+                      doar se ARATĂ — numărul adevărat se pune tot la scriere,
+                      din bază, în clipa aceea. UN ANUNȚ
                       ANULAT nu se mai ascunde: se vede de oricine, pe prima
                       pagină și în istoricul de pe profil, stins ca unul
                       încheiat dar cu „Anulat" în colț, iar pe pagina lui stă
@@ -461,7 +466,23 @@ inc/
                       fost pusă după ce trecea mașina
   evaluari.php      → notele dintre participanți, după eveniment: cine poate
                       nota, media și distribuția de pe profil, „Nu s-a
-                      prezentat". STELELE SINGURE sunt anonime și nici nu se
+                      prezentat". FEREASTRA E DE 48 DE ORE (ORE_PENTRU_NOTE):
+                      după ea nu se mai adaugă și nu se mai SCHIMBĂ nimic —
+                      nici stele, nici păreri scrise, nici „Nu s-a prezentat".
+                      O părere se face cât seara aceea e proaspătă, iar notele
+                      nu se pot retrage și nu se pot raporta, deci ceasul e
+                      singura apărare împotriva uneia date la supărare peste o
+                      lună. TERMENUL SE SOCOTEȘTE DIN CEASUL ANUNȚULUI
+                      (terminulNotelor): ora de sfârșit dacă e una, altfel
+                      capătul zilei — apoi 48 de ore. Nu din clipa în care s-a
+                      apăsat „Încheie evenimentul": acela ar fi un termen pe
+                      care participanții nu-l văd nicăieri, și mai scurt pentru
+                      cei ai unui organizator harnic. Regula stă într-un singur
+                      loc, motivBlocajEvaluare(), de unde o iau și stelele
+                      desenate în pagină, și api/evaluare.php, și formularul de
+                      părere de pe profil. Termenul se scrie PE FAȚĂ în capul
+                      tabului „Au participat" (.panel__nota din event.php):
+                      motivul dintr-un `title` nu se vede pe telefon niciodată. STELELE SINGURE sunt anonime și nici nu se
                       arată pe profil; doar părerile SCRISE ajung în listă, iar
                       acelea vin semnate. Cine e însemnat neprezentat nu se mai
                       notează de nimeni (esteNeprezentat). PĂREREA SE SCRIE PE
@@ -646,8 +667,10 @@ inc/
                       cheamă api/sterge-dorinta.php. FĂRĂ CONFIRMARE, dinadins:
                       o dorință e un rând de o sută de caractere, iar ce se
                       pierde e o frază pe care omul o poate scrie din nou.
-                      Data se scrie cu dataScrisaMic():
-                      cu ziua săptămânii, fără an, cu literă mică. puneODorinta()
+                      Data se scrie cu dataScrisaMic() (stă în
+                      inc/validare.php, lângă dataLunga — o cere și termenul
+                      notelor de pe pagina unui eveniment): cu ziua săptămânii,
+                      fără an, cu literă mică. puneODorinta()
                       și stergeDorintaOmului() sunt chemate amândouă din DOUĂ
                       locuri: api/ (cu JS) și index.php (fără)
   constructie.php   → LACĂTUL de pe site (`in_constructie` din config.php):

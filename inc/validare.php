@@ -887,6 +887,33 @@ function dataLunga(?string $data, bool $cuAnul = true): string
         . ($cuAnul ? ' ' . $moment->format('Y') : '');
 }
 
+/**
+ * Aceeași dată, dar cu literă mică: „joi, 27 august".
+ *
+ * dataLunga() o scrie cu majusculă, fiindcă de obicei stă singură la începutul
+ * unui rând („Joi, 27 august, ora 19:00"). Când intră în MIJLOCUL unei fraze —
+ * „e pe tablă până joi", „mai poți da note până joi" — majuscula aceea ar fi
+ * fost una în mijlocul propoziției.
+ *
+ * Fără an, ca `dataLunga($d, false)`: se folosește pentru lucruri care se
+ * petrec în zilele astea, iar acolo anul nu spune nimic.
+ *
+ * Stă aici, lângă sora ei, fiindcă o cer două locuri depărtate: tabla cu
+ * dorințe (inc/dorinte.php) și termenul notelor de pe pagina unui eveniment.
+ * Scrisă în amândouă, s-ar fi despărțit la prima corectură.
+ */
+function dataScrisaMic(?string $data): string
+{
+    $scris = dataLunga($data, false);
+
+    if ($scris === '') {
+        return '';
+    }
+
+    return mb_strtolower(mb_substr($scris, 0, 1, 'UTF-8'), 'UTF-8')
+         . mb_substr($scris, 1, null, 'UTF-8');
+}
+
 /** Ora fără secunde: „19:00:00" din bază devine „19:00". */
 function oraScurta(?string $ora): string
 {

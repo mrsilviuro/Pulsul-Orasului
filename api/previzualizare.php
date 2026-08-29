@@ -82,6 +82,29 @@ if ($rezultat['erori'] !== []) {
 
 $curat = $rezultat['curat'];
 
+/**
+ * COADA „ #2", ca la salvare.
+ *
+ * Cine are deja „Fotbal de seară" și scrie încă unul la fel primește, la
+ * publicare, „Fotbal de seară #2" — o pune titluCuNumar(), din
+ * salveazaEveniment(). Previzualizarea n-o punea, iar omul vedea aici un titlu
+ * și pe prima pagină altul. O previzualizare care nu spune adevărul despre
+ * exact lucrul pe care îl arată e mai rea decât niciuna.
+ *
+ * NUMAI LA UNUL NOU. La editare, titlul e deja numerotat, iar o a doua trecere
+ * l-ar fi urcat cu unu la fiecare virgulă îndreptată — aceeași grijă ca în
+ * actualizeazaEveniment(), care tocmai de aceea n-o cheamă. Condiția e chiar
+ * cea de care atârnă și salvarea: `$deEditat === null` înseamnă „ăsta va fi un
+ * anunț nou", inclusiv la „Remake", unde numărul chiar trebuie pus.
+ *
+ * Aici doar se ARATĂ. Numărul adevărat se pune tot la scriere, din bază, în
+ * clipa aceea: între previzualizare și apăsarea butonului omul poate publica
+ * altceva de pe alt telefon, iar cel scris atunci e cel care contează.
+ */
+if ($deEditat === null) {
+    $curat['titlu'] = titluCuNumar($membruId, (string) $curat['titlu']);
+}
+
 /* ================== 2. Ce se vede în jurul datelor =================== */
 
 /**

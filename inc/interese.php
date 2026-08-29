@@ -803,8 +803,16 @@ function randeazaOm(
             $stele = randeazaSteleParticipant($id, $notaLui, '',
                 (string) ($om['permalink'] ?? ''), $parereaMea);
         } else {
+            /**
+             * Stinse — dar motivul e altul după caz: ori omul n-a fost pe
+             * listă, ori au trecut cele două zile în care se puteau da note.
+             * Vorba vine gata scrisă din event.php (`motiv_stins`): aici nu se
+             * poate cere inc/evaluari.php pentru constanta orelor, fiindcă cele
+             * două fișiere s-ar cere unul pe altul.
+             */
             $stele = randeazaSteleParticipant($id, $notaLui,
-                'Poți nota doar dacă ai fost și tu pe lista de participanți.', '');
+                (string) ($evaluare['motiv_stins']
+                    ?? 'Poți nota doar dacă ai fost și tu pe lista de participanți.'), '');
         }
 
         /**
@@ -815,7 +823,15 @@ function randeazaOm(
          * Butonul dispare după apăsare: însemnarea nu se ia înapoi, iar ce a
          * rămas în locul lui e cuvântul „Neprezentat", de mai sus.
          */
-        if (!$absent && !empty($evaluare['e_organizator']) && $id !== $euId && $id !== $organizatorId) {
+        /**
+         * ...și numai cât mai e vreme. După termenul notelor, butonul dispare:
+         * „Nu s-a prezentat" pune o stea în media omului, iar dacă notele s-au
+         * închis pentru toți, nu se poate ca tocmai asta să rămână deschisă la
+         * nesfârșit. Regula adevărată e în motivBlocajEvaluare(), pe care o
+         * cheamă api/evaluare.php.
+         */
+        if (!$absent && empty($evaluare['inchise'])
+            && !empty($evaluare['e_organizator']) && $id !== $euId && $id !== $organizatorId) {
             $stele .= '<button class="person__absent" type="button"'
                     . ' data-absent="' . $id . '" data-nume="' . $nume . '"'
                     . ' title="Nu s-a prezentat">'
