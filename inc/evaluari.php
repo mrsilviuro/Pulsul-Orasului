@@ -184,6 +184,67 @@ function evaluarilePrimite(int $membruId): array
     return $q->fetchAll();
 }
 
+/* =========================== FEREASTRA ============================== */
+
+/**
+ * Câte ceasuri au oamenii la dispoziție ca să se noteze între ei.
+ *
+ * DE CE EXISTĂ O FEREASTRĂ. O părere despre cum a fost cineva se face cât
+ * seara aceea e încă proaspătă. După o săptămână nu mai e o părere, e o
+ * amintire — iar peste o lună, când nimeni nu mai ține minte nimic, o stea
+ * pusă atunci spune mai mult despre ce s-a întâmplat între timp decât despre
+ * eveniment. Notele nu se pot retrage și nu se pot raporta, deci singura
+ * apărare împotriva unei note date la supărare, mult mai târziu, e ceasul.
+ *
+ * Două zile sunt de ajuns: cine s-a trezit a doua zi cu ceva de spus are
+ * timp, iar cine n-a spus nimic până a treia zi n-avea nimic de spus.
+ */
+const ORE_PENTRU_NOTE = 48;
+
+/**
+ * Clipa în care se închid notele — sau null, dacă nu se poate ști.
+ *
+ * SE SOCOTEȘTE DIN CEASUL ANUNȚULUI, nu din ce scrie în bază despre când s-a
+ * apăsat un buton. Adică: ora de sfârșit dacă organizatorul a dat una, altfel
+ * miezul nopții de la capătul zilei — apoi încă ORE_PENTRU_NOTE.
+ *
+ * DE CE AȘA. Fiindcă termenul trebuie să se poată citi de pe pagină: omul se
+ * uită la anunț și știe până când mai poate nota. Socotit din clipa în care
+ * organizatorul a apăsat „Încheie evenimentul", ar fi fost un termen pe care
+ * participanții nu-l văd nicăieri — și mai scurt pentru cei ai unui
+ * organizator harnic decât pentru ai unuia care n-a apăsat nimic. Ceasul
+ * pornește la fel pentru toți, din ce scrie în anunț.
+ *
+ * Fără oră de sfârșit, ziua se încheie la miezul nopții — aceeași socoteală ca
+ * evenimentIncheiat(), care tot pe zile merge.
+ *
+ * Ceasul e al PHP-ului, ca peste tot (regula 5 din CLAUDE.md).
+ */
+function terminulNotelor(array $eveniment): ?int
+{
+    $zi = (string) ($eveniment['data_eveniment'] ?? '');
+
+    if ($zi === '') {
+        return null;
+    }
+
+    $ora     = oraScurta($eveniment['ora_sfarsit'] ?? null);
+    $sfarsit = $ora !== ''
+        ? strtotime($zi . ' ' . $ora . ':00')
+        // Fără oră de sfârșit: capătul zilei, adică miezul nopții următoare.
+        : strtotime($zi . ' 00:00:00 +1 day');
+
+    return $sfarsit === false ? null : $sfarsit + ORE_PENTRU_NOTE * 3600;
+}
+
+/** A trecut fereastra de notare? */
+function auTrecutNotele(array $eveniment): bool
+{
+    $termen = terminulNotelor($eveniment);
+
+    return $termen !== null && time() > $termen;
+}
+
 /* ============================== SCRIEREA ============================= */
 
 /**
@@ -195,8 +256,8 @@ function evaluarilePrimite(int $membruId): array
  * stelele desenate în pagină, și refuzul din api/evaluare.php. Scrise separat,
  * s-ar fi despărțit.
  *
- * Regulile, pe scurt: după ce s-a terminat, între oameni care au fost acolo,
- * și nu pe tine însuți.
+ * Regulile, pe scurt: după ce s-a terminat, ÎN DOUĂ ZILE de la sfârșit, între
+ * oameni care au fost acolo, și nu pe tine însuți.
  */
 function motivBlocajEvaluare(array $eveniment, int $evaluatorId, int $evaluatId): string
 {
@@ -216,6 +277,18 @@ function motivBlocajEvaluare(array $eveniment, int $evaluatorId, int $evaluatId)
      */
     if (!evenimentIncheiat($eveniment)) {
         return 'Notele se dau după ce se încheie evenimentul.';
+    }
+
+    /**
+     * Și numai DOUĂ ZILE după aceea (vezi terminulNotelor).
+     *
+     * Aici se închide și pentru cel care n-a apucat, și pentru cel care s-ar
+     * întoarce peste o lună să schimbe o notă. Nu se face deosebire între
+     * „adaugă" și „schimbă": după termen, rândul e cum a rămas.
+     */
+    if (auTrecutNotele($eveniment)) {
+        return 'Au trecut ' . ORE_PENTRU_NOTE . ' de ore de la eveniment. '
+             . 'Notele s-au închis.';
     }
 
     $evenimentId = (int) $eveniment['id'];
@@ -428,6 +501,7 @@ function potNotaLaEveniment(array $eveniment, int $membruId): bool
 {
     return $membruId > 0
         && evenimentIncheiat($eveniment)
+        && !auTrecutNotele($eveniment)
         && interesulMeu((int) $eveniment['id'], $membruId) === 'participant';
 }
 

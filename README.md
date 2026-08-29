@@ -181,6 +181,32 @@ O dorință **retrasă de autor** se vede mai departe în tabelul staff-ului,
 însemnată „retrasă", dar nu mai are butoane de moderare și nu mai aprinde cifra
 de pe panou: omul și-a luat vorbele înapoi, deci nu mai e nimic de hotărât.
 
+### Panoul de mulțumire are un „×"
+
+După ce trimiți o dorință, formularul lasă locul unei vorbe: *„Dorința ta a
+ajuns la noi. O vom citi, iar dacă respectă regulamentul nostru, o vom publica
+de îndată."*
+
+Rămânea acolo până la următoarea navigare — omul citea vestea, o înțelegea, și
+n-avea ce apăsa ca s-o dea la o parte.
+
+„×"-ul e o **legătură** către `/index.php`, nu un buton de JS: fără JavaScript,
+panoul e desenat de server fiindcă adresa poartă `?dorinta=trimisa`, iar o
+încărcare curată îl face să dispară. Cu JavaScript, `main.js` îi ia locul, îl
+ascunde pe loc și pune formularul la loc — cine mai are locuri libere poate
+scrie alta fără să reîncarce.
+
+### Unde stă „Dorințele mele" când tabla e goală
+
+**Tot în secțiunea tablei**, chiar dacă tabla nu se desenează. De aceea
+`<section class="tabla">` din `index.php` se scrie și când n-are nici tablă,
+nici formular: dacă omul are dorințe în lucru, undeva trebuie să le vadă.
+
+Ajungeau, în cazul acela, în `.section-head` — adică pe rândul lui „Ce facem
+zilele astea?". Acela e un rând de titlu, cu `align-items: flex-end`: butonul
+ieșea lipit de linia de bază a titlului, înghesuit lângă el, ca și cum ar fi
+fost al titlului. N-are ce căuta acolo; e al dorințelor.
+
 ### Cum se aprobă o dorință
 
 Din `admin-dorinte.php`, cu două butoane. Merge mai departe și din phpMyAdmin —
@@ -210,6 +236,53 @@ intrat `NOW()`-ul lui MySQL, din alt fus, într-un lucru care se numără în zi
 - **Dorința cuiva care și-a șters contul dispare de pe tablă**, fiindcă tabla
   cere `membri.stare = 'activ'`, iar contul anonimizat nu mai e. Rândul rămâne
   în bază.
+
+## Mesajul scurt de jos
+
+Bula neagră care apare o clipă în josul ecranului: „Link copiat!", „Nota ta a
+fost trimisă.", „Nu am putut copia linkul. Copiază-l din bara de adrese."
+
+Cutia e scrisă o dată, în `inc/subsol.php`, pentru tot site-ul; `main.js` îi
+schimbă doar textul dinăuntru.
+
+### Cinci secunde, și un „×"
+
+Stătea **2,6 secunde**. Pentru „Link copiat!" e destul, dar mesajele lungi au
+peste cincizeci de semne — iar cine se uita în altă parte în clipa aceea nu mai
+apuca nimic. Acum stă **cinci**.
+
+Și tocmai fiindcă stă mai mult, are un **„×"**: mai mult timp de citit înseamnă
+și mai mult timp în care stă în drum, peste colțul de jos al paginii. `Escape`
+îl închide la fel.
+
+Textul intră într-un `<span data-toast-text>`, nu de-a dreptul în cutie: altfel
+fiecare `textContent = …` ar fi șters butonul.
+
+### De ce era îngustă pe telefon
+
+Bula se strânge pe text (`width: auto` la un element fixat = *shrink-to-fit*),
+cu un plafon de `max-width`. Numai că era centrată cu `left: 50%` plus
+`translate(-50%, …)` — iar locul liber pe care îl vede shrink-to-fit-ul e
+**lățimea ecranului minus `left`**, adică **50%**.
+
+Așa că textul se rupea pe rânduri la jumătatea ecranului, oricât ar fi scris în
+`max-width`: cele 92% de acolo nu se puteau atinge niciodată. Pe un telefon de
+412px, un mesaj de 55 de semne ieșea **206px lat și 79px înalt** — o bulă
+îngustă și înaltă.
+
+Centrarea se face acum altfel: `left: 0; right: 0` (deci locul liber e ecranul
+întreg), `width: max-content` (bula vrea textul pe un rând) și
+`margin-inline: auto` (o cutie strânsă între două margini automate se așază pe
+mijloc). Plafonul rămâne `min(92vw, 520px)`, dar de-acum e unul adevărat.
+
+Același mesaj, măsurat în Chromium pe același ecran de 412px:
+
+| | lățime | înălțime |
+|---|---|---|
+| cum era | 206px (50%) | 79px |
+| cum e | 379px (**92%**) | 60px |
+
+Mesajele scurte rămân strânse pe text — „Link copiat!" are 141px, adică 34%.
 
 ## Cum adaugi un articol
 
@@ -1782,6 +1855,27 @@ Datele stau în sesiune, sub o cheie întâmplătoare, cel mult un sfert de oră
 cel mult trei deodată. Cheia e legată de sesiune: pentru altcineva, aceeași
 adresă nu duce nicăieri. Nimic nu se scrie în `evenimente`, iar limita de
 evenimente active nici nu se verifică — previzualizarea nu creează nimic.
+
+### Coada „ #2" se vede și aici
+
+Cine are deja „Fotbal de seară" și scrie încă unul la fel primește, la
+publicare, **„Fotbal de seară #2"** — o pune `titluCuNumar()`, din
+`salveazaEveniment()`.
+
+Previzualizarea n-o punea, iar omul vedea aici un titlu și pe prima pagină
+altul. O previzualizare care nu spune adevărul despre exact lucrul pe care îl
+arată e mai rea decât niciuna, așa că `api/previzualizare.php` cheamă acum
+aceeași funcție.
+
+**Numai la un anunț nou**, cu aceeași condiție de care atârnă și salvarea
+(`$deEditat === null`) — inclusiv la „Remake", unde numărul chiar trebuie pus.
+La editare, titlul e deja numerotat, iar o a doua trecere l-ar fi urcat cu unu
+la fiecare virgulă îndreptată: aceeași grijă pentru care `actualizeazaEveniment()`
+n-o cheamă niciodată.
+
+Aici doar se **arată**. Numărul adevărat se pune tot la scriere, din bază, în
+clipa aceea: între previzualizare și apăsarea butonului omul poate publica
+altceva de pe alt telefon, iar cel scris atunci e cel care contează.
 
 ### Care copertă se arată
 
@@ -3366,6 +3460,52 @@ spatele ei e o seară petrecută împreună, nu o apăsare de pe un profil găsi
 
 Toate opreliștile stau într-un loc, `motivBlocajEvaluare()`, de care atârnă și
 stelele stinse din pagină, și refuzul din API — ca la participare.
+
+### Și numai 48 de ore
+
+Fereastra se închide la **48 de ore de la sfârșitul evenimentului**
+(`ORE_PENTRU_NOTE`). După ea nu se mai adaugă și **nu se mai schimbă** nimic:
+nici stele, nici păreri scrise, nici „Nu s-a prezentat".
+
+O părere despre cum a fost cineva se face cât seara aceea e încă proaspătă.
+După o săptămână nu mai e o părere, e o amintire — iar peste o lună, o stea
+pusă atunci spune mai mult despre ce s-a întâmplat între timp decât despre
+eveniment. Notele nu se pot retrage și nu se pot raporta, deci singura apărare
+împotriva uneia date la supărare, mult mai târziu, e ceasul.
+
+Nu se face deosebire între „adaugă" și „schimbă": cine a notat în prima zi nu
+se poate întoarce peste o săptămână să-și schimbe nota. Altfel fereastra n-ar
+fi însemnat nimic tocmai pentru cei care apucaseră să noteze.
+
+**Termenul se socotește din ceasul anunțului** (`terminulNotelor`): ora de
+sfârșit dacă organizatorul a dat una, altfel capătul zilei — și abia apoi cele
+48 de ore.
+
+Nu din clipa în care s-a apăsat „Încheie evenimentul", deși aceea e „când s-a
+terminat" în sens strict. Două motive: termenul trebuie să se poată **citi de
+pe pagină** (omul se uită la anunț și știe cât mai are), și n-are de ce să fie
+mai scurt pentru participanții unui organizator harnic decât pentru ai unuia
+care n-a apăsat nimic. Ceasul pornește la fel pentru toți.
+
+**Se scrie pe față**, în capul tabului „Au participat":
+
+> Mai poți da note și scrie păreri până duminică, 30 august, la 21:00.
+
+iar după termen:
+
+> Notele s-au închis — au trecut 48 de ore de la sfârșitul evenimentului.
+
+Numai pentru cine a fost acolo: pentru un vizitator oarecare, termenul nu spune
+nimic. Stelele stinse poartă motivul și într-un `title`, dar acela se vede doar
+cu cursorul pe ele — pe telefon, niciodată.
+
+**„Nu s-a prezentat" se închide odată cu ele.** E tot un rând în `evaluari` și
+tot o stea în media cuiva; dacă notele s-au închis pentru toți, n-are cum să
+rămână tocmai aceea deschisă la nesfârșit. Butonul dispare din pagină, iar
+`api/evaluare.php` îl refuză prin aceeași funcție.
+
+Ce s-a scris **rămâne**: fereastra închide scrisul, nu șterge ce era. Notele
+date la vreme intră în medie mai departe.
 
 ### Stelele sunt anonime. Vorbele se semnează
 

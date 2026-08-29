@@ -485,6 +485,12 @@ button { cursor: pointer; border: 0; background: none; }
 /* Când nu e nicio dorință de arătat, în pagină rămâne doar cutia închisă a
    formularului. N-are ce ocupa loc până nu se deschide. */
 .tabla--fara { margin-bottom: 0; }
+
+/* ...dar dacă omul are dorințe în lucru, sub tabla care lipsește stă vorba
+   despre ele și butonul „Dorințele mele". Atunci e singurul lucru din
+   secțiune: n-are de ce să se despartă de nimic deasupra, dar are nevoie de
+   aer până la „Ce facem zilele astea?" de dedesubt. */
+.tabla--fara .tabla__unelte { margin-top: 0; margin-bottom: 30px; }
 .tabla--fara .tabla__cutie.e-deschis,
 .tabla--fara .tabla__cutie:target { margin-bottom: 34px; }
 
@@ -755,7 +761,25 @@ button { cursor: pointer; border: 0; background: none; }
   color: #16a34a;
 }
 [data-theme="dark"] .dorinta-gata .ico { color: #6ee7a0; }
-.dorinta-gata p { margin: 0; font-size: 14.5px; line-height: 1.6; }
+.dorinta-gata p { margin: 0; flex: 1 1 auto; font-size: 14.5px; line-height: 1.6; }
+
+/* „×"-ul de închidere, în colțul din dreapta. Stins, ca să nu tragă ochiul de
+   la vestea bună de lângă el — dar cu o zonă de apăsare de 30px.
+
+   SCRIS DUPĂ `.dorinta-gata .ico`, dinadins: cele două selectoare au aceeași
+   greutate, iar bifa verde de alături e desenată de acela. Pus mai sus, „×"-ul
+   ar fi ieșit tot de 22px și tot verde. */
+.dorinta-gata__x {
+  flex: 0 0 auto;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px;
+  margin: -4px -6px 0 0;
+  border-radius: 50%;
+  color: var(--text-faint);
+  transition: background-color .15s var(--ease), color .15s var(--ease);
+}
+.dorinta-gata__x:hover { background: var(--surface-2); color: var(--text); }
+.dorinta-gata__x .ico  { width: 16px; height: 16px; color: inherit; }
 
 /* --------------------------- 6. CONȚINUT -------------------------------- */
 main { padding-block: 46px 64px; }
@@ -1704,6 +1728,28 @@ main { padding-block: 46px 64px; }
   color: var(--text-faint);
 }
 
+/* Termenul notelor, în capul tabului „Au participat": „Mai poți da note până
+   joi, 28 august, la 22:00." — sau, după termen, vorba că s-au închis.
+
+   Stelele stinse poartă motivul într-un `title`, dar acela se vede doar cu
+   cursorul pe ele, iar pe telefon niciodată. Cine a fost la eveniment trebuie
+   să afle din pagină cât mai are. */
+.panel__nota {
+  display: flex; align-items: flex-start; gap: 9px;
+  margin: -8px 0 18px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  font-size: 13.5px; line-height: 1.45;
+  color: var(--text-soft);
+}
+.panel__nota .ico { width: 16px; height: 16px; flex: 0 0 auto; margin-top: 1px; }
+
+/* Închise: aceeași casetă, dar stinsă — nu roșie. N-a greșit nimeni, doar a
+   trecut vremea. */
+.panel__nota--stinsa { color: var(--text-faint); }
+
 /* formular de comentariu */
 .comment-form { display: flex; gap: 12px; margin-bottom: 30px; }
 .comment-form__avatar { width: 38px; height: 38px; border-radius: 50%; flex: none; }
@@ -2165,13 +2211,29 @@ main { padding-block: 46px 64px; }
 html.cu-lupa, html.cu-lupa body { overflow: hidden; }
 
 /* ------------------------------ 12. TOAST ------------------------------- */
+/* DE CE NU MAI E CENTRAT CU „left: 50%".
+   Era `left: 50%` plus `translate(-50%, …)`, iar bula se strângea singură pe
+   text (`width: auto` la un element fixat = shrink-to-fit). Numai că locul
+   liber pe care îl vede shrink-to-fit-ul e „lățimea ecranului MINUS `left`" —
+   adică 50%. Așa că textul se rupea pe rânduri la jumătatea ecranului, oricât
+   ar fi scris în `max-width`: cele 92% de acolo nu se puteau atinge niciodată.
+   Pe telefon ieșea o bulă îngustă și înaltă de patru rânduri.
+
+   Acum: `left: 0; right: 0` (deci locul liber e ecranul întreg),
+   `width: max-content` (bula vrea textul pe un rând) și `margin-inline: auto`
+   (o cutie strânsă între două margini automate se așază pe mijloc). Plafonul
+   de 92% e de-acum unul adevărat: textul lung se întinde până la el și abia
+   apoi se rupe. */
 .toast {
   position: fixed;
-  left: 50%; bottom: 26px;
-  transform: translate(-50%, 20px);
+  left: 0; right: 0; bottom: 26px;
+  margin-inline: auto;
+  width: max-content;
+  max-width: min(92vw, 520px);
+  transform: translateY(20px);
   z-index: 300;
-  max-width: min(92vw, 420px);
-  padding: 12px 20px;
+  display: flex; align-items: center; gap: 4px;
+  padding: 11px 8px 11px 20px;
   border-radius: var(--radius-pill);
   background: #14161c;
   color: #fff;
@@ -2182,8 +2244,30 @@ html.cu-lupa, html.cu-lupa body { overflow: hidden; }
   visibility: hidden;
   transition: opacity .25s var(--ease), transform .25s var(--ease), visibility .25s;
 }
-.toast.is-visible { opacity: 1; visibility: visible; transform: translate(-50%, 0); }
+.toast.is-visible { opacity: 1; visibility: visible; transform: translateY(0); }
 [data-theme="dark"] .toast { background: #262d3a; }
+
+.toast__text { flex: 1 1 auto; line-height: 1.35; }
+
+/* „×"-ul. Rotund, stins, și cu o zonă de apăsare de 30px: pe telefon un semn
+   de 14px nu se nimerește cu degetul. */
+.toast__x {
+  flex: 0 0 auto;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px;
+  border: 0; border-radius: 50%;
+  background: transparent;
+  color: rgba(255, 255, 255, .55);
+  cursor: pointer;
+  transition: background-color .15s var(--ease), color .15s var(--ease);
+}
+.toast__x:hover { background: rgba(255, 255, 255, .12); color: #fff; }
+.toast__x .ico  { width: 15px; height: 15px; }
+
+/* Cu mesajul ascuns, cutia n-are voie să stea în calea niciunui clic. Pe
+   `visibility: hidden` browserul o sare oricum, dar bula e acum lată cât
+   ecranul, deci merită spus și pe față. */
+.toast:not(.is-visible) { pointer-events: none; }
 
 /* ------------------- responsive pagina de articol ----------------------- */
 @media (max-width: 800px) {

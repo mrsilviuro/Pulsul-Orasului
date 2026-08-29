@@ -246,7 +246,7 @@ require __DIR__ . '/inc/antet.php';
                                        $voieLaDorinta['dorinte']);
     ?>
 
-    <?php if ($areTabla || $poateDori): ?>
+    <?php if ($areTabla || $poateDori || $zonaDorinte !== ''): ?>
     <section class="tabla<?= $areTabla ? '' : ' tabla--fara' ?>" aria-label="Tabla cu dorințe">
 
       <?php if ($poateDori): ?>
@@ -337,13 +337,44 @@ require __DIR__ . '/inc/antet.php';
             <path d="M20 6 9 17l-5-5"/>
           </svg>
           <p><?= h(MESAJ_DORINTA_TRIMISA) ?></p>
+
+          <!--
+            „×"-ul de închidere. E o LEGĂTURĂ către /index.php, nu un buton de
+            JS: fără JavaScript, panoul e desenat de server fiindcă adresa
+            poartă `?dorinta=trimisa`, iar o încărcare curată a paginii îl
+            face să dispară. Cu JavaScript, main.js îi ia locul și doar îl
+            ascunde, fără să clatine pagina.
+
+            Panoul rămânea altfel pe ecran până la următoarea navigare — omul
+            citea vestea, o înțelegea, și n-avea ce apăsa ca s-o dea la o
+            parte.
+          -->
+          <a class="dorinta-gata__x" href="/index.php" data-dorinta-gata-x
+             aria-label="Închide" title="Închide">
+            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M18 6 6 18M6 6l12 12"/>
+            </svg>
+          </a>
         </div>
       </div>
       <?php endif; ?>
 
       <?= $tablaHtml ?>
 
-      <?php if ($areTabla && $zonaDorinte !== ''): ?>
+      <!--
+        Vorba despre dorințele omului și butonul „Dorințele mele", ÎNTOTDEAUNA
+        aici, sub tablă — nu doar când tabla se desenează.
+
+        Stăteau, când nu era nicio dorință pe tablă, în `.section-head`, adică
+        pe același rând cu „Ce facem zilele astea?". Acela e un rând de titlu,
+        cu `align-items: flex-end`: butonul ajungea lipit de linia de bază a
+        titlului, înghesuit lângă el, iar pe ecran arăta ca și cum ar fi al
+        titlului. N-are ce căuta acolo — e al dorințelor.
+
+        De aceea secțiunea se desenează și când n-are nici tablă, nici
+        formular: dacă omul are dorințe în lucru, undeva trebuie să le vadă.
+      -->
+      <?php if ($zonaDorinte !== ''): ?>
       <div class="tabla__unelte"><?= $zonaDorinte ?></div>
       <?php endif; ?>
     </section>
@@ -352,16 +383,15 @@ require __DIR__ . '/inc/antet.php';
     <!--
       Titlu secțiune. `h2`, nu `h1`: numele site-ului din prima fereastră e
       titlul paginii, iar pe o pagină nu stau două titluri de rang întâi.
-      Butoanele s-au mutat amândouă sus, în fereastra de bun venit.
 
-      Aici ajunge doar vorba despre dorința omului („e pe tablă până joi"), și
-      numai când tabla nu se desenează — altfel are casa ei, sub tablă.
+      NUMAI TITLUL. Butoanele s-au mutat amândouă sus, în fereastra de bun
+      venit, iar vorba despre dorințele omului stă lângă tabla lor, mai sus.
+      Aici ajunsese doar când tabla nu se desena, și se înghesuia lângă titlu.
     -->
     <div class="section-head">
       <div>
         <h2 class="section-title">Ce facem zilele astea?</h2>
       </div>
-      <?php if (!$areTabla): ?><?= $zonaDorinte ?><?php endif; ?>
     </div>
 
     <!-- ============================ FILTRELE ============================
