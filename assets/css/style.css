@@ -688,6 +688,15 @@ button { cursor: pointer; border: 0; background: none; }
 .tabla__cutie:target,
 .tabla__cutie.e-deschis { display: block; }
 
+/* „×"-ul de pe panoul de mulțumire închide TOT: și panoul, și formularul de
+   deasupra lui. Numai că adresa se termină în `#dorinta-formular` — omul a
+   ajuns acolo apăsând „Pune-ți o dorință" — iar `:target` de mai sus ține
+   cutia deschisă oricâte clase i-ar scoate JS-ul.
+
+   De aceea închiderea are clasa ei, scrisă cu un selector mai greu (o clasă în
+   plus, `.tabla`), ca să treacă înaintea lui `:target` fără `!important`. */
+.tabla .tabla__cutie.e-inchis { display: none; }
+
 /* Deschisă, ia locul tablei. `~` merge fiindcă în HTML cutia stă înaintea
    slide-ului — de aceea e scrisă acolo, deși pe ecran apare în același loc. */
 .tabla__cutie:target ~ .tabla__slide,

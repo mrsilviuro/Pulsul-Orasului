@@ -192,15 +192,34 @@ n-avea ce apăsa ca s-o dea la o parte.
 
 „×"-ul e o **legătură** către `/index.php`, nu un buton de JS: fără JavaScript,
 panoul e desenat de server fiindcă adresa poartă `?dorinta=trimisa`, iar o
-încărcare curată îl face să dispară. Cu JavaScript, `main.js` îi ia locul, îl
-ascunde pe loc și pune formularul la loc — cine mai are locuri libere poate
-scrie alta fără să reîncarce.
+încărcare curată îl face să dispară.
+
+Cu JavaScript, `main.js` îi ia locul și **închide tot** — și panoul, și
+formularul de deasupra lui.
+
+Scoaterea clasei `e-deschis` nu era de ajuns: omul a ajuns acolo apăsând
+„Pune-ți o dorință", deci adresa se termină în `#dorinta-formular`, iar
+`:target` ținea cutia deschisă mai departe. Panoul pleca și **rămânea
+formularul gol** pe ecran. De aceea închiderea are clasa ei, `e-inchis`,
+scrisă în CSS cu un selector mai greu decât `:target` (`.tabla .tabla__cutie.e-inchis`),
+ca să treacă înaintea lui fără `!important`.
+
+Adresa se curăță și ea, cu `replaceState`: fără asta, un F5 ar fi redeschis tot
+ce omul tocmai a închis — `:target` din adresă, iar panoul din întrebarea de pe
+server. Apăsat din nou „Pune-ți o dorință", se redeschide.
 
 ### Unde stă „Dorințele mele" când tabla e goală
 
 **Tot în secțiunea tablei**, chiar dacă tabla nu se desenează. De aceea
 `<section class="tabla">` din `index.php` se scrie și când n-are nici tablă,
-nici formular: dacă omul are dorințe în lucru, undeva trebuie să le vadă.
+nici formular: dacă omul are ceva de văzut acolo, undeva trebuie să vadă.
+
+**Dar numai dacă are ceva care așteaptă moderarea.** O dorință publicată și
+proaspătă e chiar una de pe tablă — dacă are așa ceva, tabla nu e goală, deci
+s-ar fi desenat. Ce mai rămâne fără tablă e tocmai ce n-a trecut încă pe la
+nimeni: aceea nu se vede nicăieri altundeva, și pentru ea merită deschisă
+secțiunea. Fără ea n-are rost — o secțiune desenată numai ca să spună ceva
+despre nimic e un rând gol în capul paginii.
 
 Ajungeau, în cazul acela, în `.section-head` — adică pe rândul lui „Ce facem
 zilele astea?". Acela e un rând de titlu, cu `align-items: flex-end`: butonul
@@ -257,6 +276,34 @@ apuca nimic. Acum stă **cinci**.
 
 Textul intră într-un `<span data-toast-text>`, nu de-a dreptul în cutie: altfel
 fiecare `textContent = …` ar fi șters butonul.
+
+### Trece peste o navigare
+
+Multe fapte arată un mesaj și pe urmă duc omul în altă parte: „Evenimentul a
+fost încheiat" și reîncărcarea paginii, „Bine ai revenit" și intrarea în cont,
+„Dorința a fost aprobată" și lista de admin cerută din nou.
+
+Mesajul apuca atunci **700 de milisecunde**, uneori nici atât — la moderarea
+unei dorințe reîncărcarea pleca pe loc, iar bula abia clipea.
+
+Cele cinci secunde n-au ce căuta în așteptare: nimeni nu vrea să se uite la un
+buton stins cinci secunde ca să apuce să citească. Deci mesajul se **pune
+deoparte** (`sessionStorage`, cât ține fila) și se arată **din nou** pe pagina
+care urmează, de la capăt.
+
+La încărcare se preferă mesajul lăsat de **server** (`$_SESSION['mesaj_bun']`,
+vezi `inc/subsol.php`): el e adevărul, și e singurul care ajunge pe ecran și
+fără JavaScript. Cel purtat e doar copia lui, pentru cazurile în care serverul
+n-are unde s-o lase — o cerere care a picat, o reîncărcare pornită din JS.
+Arătate amândouă, ar fi fost același text de două ori.
+
+O **ștampilă de timp** îl aruncă după 15 secunde: dacă omul apasă „înapoi" în
+loc să lase redirecționarea să meargă, mesajul n-are de ce să-i sară în față
+peste un sfert de oră.
+
+Măsurat în Chromium, cu un cârlig pus înainte de pagină: **4998 ms** după
+aprobarea unei dorințe din admin (unde reîncărcarea pleacă pe loc) și
+**5000 ms** la intrarea în cont (unde pagina se schimbă cu totul).
 
 ### De ce era îngustă pe telefon
 

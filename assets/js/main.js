@@ -176,6 +176,61 @@
     toastTimer = setTimeout(inchideToast, TOAST_SECUNDE * 1000);
   }
 
+  /**
+   * MESAJUL TREBUIE SĂ TREACĂ PESTE O NAVIGARE.
+   *
+   * Multe fapte de pe site arată un mesaj și pe urmă duc omul în altă parte:
+   * „Evenimentul a fost încheiat" și reîncărcarea paginii, „Bine ai revenit" și
+   * intrarea în cont, „Dorința a fost aprobată" și lista de admin cerută din
+   * nou. Mesajul apuca atunci 700 de milisecunde, uneori nici atât — la
+   * moderarea unei dorințe, reîncărcarea pleca pe loc, iar bula abia clipea.
+   *
+   * Cele cinci secunde n-au ce căuta în așteptare: nimeni nu vrea să se uite
+   * la un buton stins cinci secunde ca să apuce să citească. Deci mesajul se
+   * pune deoparte și se arată DIN NOU pe pagina care urmează, de la capăt.
+   *
+   * `sessionStorage`, nu `localStorage`: ține cât ține fila, și numai în ea.
+   * Poate să arunce (fereastră privată, setări care opresc stocarea) — atunci
+   * pur și simplu nu se duce mesajul mai departe, ca înainte.
+   *
+   * ȘTAMPILA DE TIMP e paza pentru navigarea care nu s-a mai întâmplat: dacă
+   * omul apasă „înapoi" în loc să lase redirecționarea să meargă, mesajul n-are
+   * de ce să-i sară în față peste un sfert de oră.
+   */
+  var TOAST_CARAT   = 'po-toast';
+  var TOAST_VALABIL = 15;   // secunde
+
+  function pastreazaToast(mesaj) {
+    if (!mesaj) return;
+    try {
+      sessionStorage.setItem(TOAST_CARAT, JSON.stringify({ m: String(mesaj), t: Date.now() }));
+    } catch (e) {}
+  }
+
+  /** Îl arată acum ȘI pe pagina următoare. */
+  function toastSiDupa(mesaj) {
+    toast(mesaj);
+    pastreazaToast(mesaj);
+  }
+
+  /** Ce s-a pus deoparte pentru pagina asta — o singură dată. */
+  function toastulCarat() {
+    var brut = null;
+
+    try {
+      brut = sessionStorage.getItem(TOAST_CARAT);
+      sessionStorage.removeItem(TOAST_CARAT);
+    } catch (e) { return ''; }
+
+    if (!brut) return '';
+
+    try {
+      var p = JSON.parse(brut);
+      if (!p || !p.m) return '';
+      return (Date.now() - (p.t || 0)) <= TOAST_VALABIL * 1000 ? p.m : '';
+    } catch (e) { return ''; }
+  }
+
   if (toastEl) {
     var toastX = toastEl.querySelector('[data-toast-x]');
     if (toastX) toastX.addEventListener('click', inchideToast);
@@ -191,10 +246,23 @@
     });
   }
 
-  // Mesajul lăsat de server pentru pagina asta (vezi inc/subsol.php).
-  if (toastEl && toastEl.getAttribute('data-mesaj')) {
-    toast(toastEl.getAttribute('data-mesaj'));
+  /**
+   * Ce se arată la încărcarea paginii.
+   *
+   * ÎNTÂI cel lăsat de server (`$_SESSION['mesaj_bun']`, vezi inc/subsol.php):
+   * el e adevărul, și e singurul care ajunge pe ecran și fără JavaScript.
+   * Cel purtat de la pagina dinainte e doar copia lui, pentru cazurile în care
+   * serverul n-are unde s-o lase — o cerere care a picat, o reîncărcare
+   * pornită din JS. Arătate amândouă, ar fi fost același text de două ori.
+   */
+  var mesajDeLaServer = toastEl ? (toastEl.getAttribute('data-mesaj') || '') : '';
+  var mesajCarat      = toastulCarat();
+
+  if (mesajDeLaServer !== '') {
+    toast(mesajDeLaServer);
     toastEl.removeAttribute('data-mesaj');
+  } else if (mesajCarat !== '') {
+    toast(mesajCarat);
   }
 
   /* --- Vorbitul cu serverul ----------------------------------------------
@@ -788,6 +856,8 @@
      */
     document.querySelectorAll('a[href="#dorinta-formular"]').forEach(function (a) {
       a.addEventListener('click', function () {
+        // Închisă mai devreme din „×"? Se deschide din nou.
+        cutiaDorintei.classList.remove('e-inchis');
         cutiaDorintei.classList.add('e-deschis');
         // Focusul intră în formular abia după ce browserul a sărit acolo.
         setTimeout(function () {
@@ -816,12 +886,32 @@
     if (xDorintaGata) {
       xDorintaGata.addEventListener('click', function (e) {
         e.preventDefault();
-        if (gataDorinta) gataDorinta.hidden = true;
-        cutiaDorintei.classList.remove('e-deschis');
 
-        /* Formularul se pune la loc: cine tocmai a trimis o dorință poate,
-           dacă mai are locuri libere, să scrie alta fără să reîncarce. */
+        /**
+         * ÎNCHIDE TOT, nu doar vestea: și formularul de deasupra ei.
+         *
+         * `e-deschis` scoasă nu era de ajuns. Omul a ajuns aici apăsând
+         * „Pune-ți o dorință", deci adresa se termină în `#dorinta-formular`,
+         * iar `:target` ținea cutia deschisă mai departe: panoul pleca și
+         * rămânea formularul gol pe ecran. De aceea închiderea are clasa ei,
+         * `e-inchis`, scrisă în CSS cu un selector mai greu decât `:target`.
+         */
+        if (gataDorinta) gataDorinta.hidden = true;
         formDorinta.hidden = false;
+
+        cutiaDorintei.classList.remove('e-deschis');
+        cutiaDorintei.classList.add('e-inchis');
+
+        /**
+         * Și adresa se curăță de „#dorinta-formular" și de „?dorinta=trimisa".
+         *
+         * Fără asta, un F5 ar fi redeschis tot ce omul tocmai a închis — `:target`
+         * din adresă, iar panoul din întrebarea de pe server. `replaceState` nu
+         * lasă urmă în istoric: „înapoi" duce tot de unde a venit.
+         */
+        if (window.history && history.replaceState) {
+          history.replaceState(null, '', window.location.pathname);
+        }
       });
     }
 
@@ -1369,7 +1459,7 @@
         if (!c.ok) { gata(); toast(c.mesaj || 'Nu am putut încheia evenimentul.'); return; }
 
         // Butonul rămâne stins: nu mai e nimic de apăsat cât se reîncarcă.
-        toast(c.mesaj || 'Evenimentul a fost încheiat.');
+        toastSiDupa(c.mesaj || 'Evenimentul a fost încheiat.');
         setTimeout(function () {
           window.location.href = c.redirect || window.location.href;
         }, 700);
@@ -1526,7 +1616,7 @@
           /* Reîncărcarea e chiar lucrul care arată ce s-a schimbat: banda de
              stare de sus, butoanele de aici și, la aprobare, tot ce se poate
              face pe o pagină publicată. Nu încercăm să le potrivim din JS. */
-          toast(c.mesaj || 'Gata.');
+          toastSiDupa(c.mesaj || 'Gata.');
           setTimeout(function () {
             window.location.href = c.redirect || window.location.href;
           }, 700);
@@ -1698,7 +1788,7 @@
 
         // Sesiunea s-a stins între încărcarea paginii și apăsare.
         if (rez.stare === 401) {
-          toast('Intră în cont ca să te adaugi pe listă.');
+          toastSiDupa('Intră în cont ca să te adaugi pe listă.');
           setTimeout(goToLogin, 900);
           return;
         }
@@ -1730,7 +1820,7 @@
         // sesiunea a expirat sub ochii omului, îl trimitem înapoi la intrare
         // cu adresa de acum în buzunar.
         if (!isLoggedIn()) {
-          toast('Intră în cont ca să te adaugi pe listă.');
+          toastSiDupa('Intră în cont ca să te adaugi pe listă.');
           setTimeout(goToLogin, 900);
           return;
         }
@@ -1967,7 +2057,7 @@
 
         // Sesiunea s-a stins între încărcarea paginii și apăsare.
         if (rez.stare === 401) {
-          toast('Intră în cont ca să comentezi.');
+          toastSiDupa('Intră în cont ca să comentezi.');
           setTimeout(goToLogin, 900);
           return;
         }
@@ -2397,7 +2487,7 @@
         // numărul de pe el e o veste bună pentru discuție — dar apăsarea lui
         // duce la intrare, cu întoarcere fix aici.
         if (!isLoggedIn()) {
-          toast('Intră în cont ca să apreciezi un comentariu.');
+          toastSiDupa('Intră în cont ca să apreciezi un comentariu.');
           setTimeout(goToLogin, 900);
           return;
         }
@@ -2415,7 +2505,7 @@
       /* --- răspuns --- */
       if (buton.hasAttribute('data-reply')) {
         if (!isLoggedIn()) {
-          toast('Intră în cont ca să răspunzi.');
+          toastSiDupa('Intră în cont ca să răspunzi.');
           setTimeout(goToLogin, 900);
           return;
         }
@@ -2713,7 +2803,7 @@
           var c = rez.corp;
 
           if (rez.stare === 401) {
-            toast('Intră în cont ca să faci asta.');
+            toastSiDupa('Intră în cont ca să faci asta.');
             setTimeout(goToLogin, 900);
             return;
           }
@@ -2817,7 +2907,7 @@
       var c = rez.corp;
 
       if (rez.stare === 401) {
-        toast('Intră în cont ca să dai o notă.');
+        toastSiDupa('Intră în cont ca să dai o notă.');
         setTimeout(goToLogin, 900);
         return;
       }
@@ -3506,7 +3596,7 @@
     if (backTo && notice) notice.hidden = false;
 
     function afterAuth(message) {
-      toast(message);
+      toastSiDupa(message);
       setTimeout(function () {
         window.location.href = backTo || '/index.php';
       }, 1000);
@@ -3616,7 +3706,7 @@
         var c = rez.corp;
 
         if (c.ok) {
-          toast(c.mesaj || 'Bine ai revenit!');
+          toastSiDupa(c.mesaj || 'Bine ai revenit!');
           setTimeout(function () { window.location.href = c.redirect || '/index.php'; }, 700);
           return;
         }
@@ -4264,13 +4354,19 @@
         }
 
         if (!c.ok) {
-          toast(c.mesaj || 'Nu am putut crea contul.');
-          // Când sesiunea a expirat, singurul drum e de la capăt.
-          if (c.redirect) setTimeout(function () { window.location.href = c.redirect; }, 1600);
+          // Când sesiunea a expirat, singurul drum e de la capăt — iar
+          // mesajul trebuie să ajungă acolo, altfel omul se trezește pe un
+          // formular gol fără să știe de ce.
+          if (c.redirect) {
+            toastSiDupa(c.mesaj || 'Nu am putut crea contul.');
+            setTimeout(function () { window.location.href = c.redirect; }, 1600);
+          } else {
+            toast(c.mesaj || 'Nu am putut crea contul.');
+          }
           return;
         }
 
-        toast(c.mesaj || 'Contul e gata.');
+        toastSiDupa(c.mesaj || 'Contul e gata.');
         setTimeout(function () { window.location.href = c.redirect || '/index.php'; }, 900);
       })
       .catch(function () {
@@ -5222,7 +5318,7 @@
 
           // Butonul rămâne stins: hotărârea e luată, n-are rost să se poată
           // apăsa încă o dată cât se face mutarea.
-          toast(c.mesaj || 'Evenimentul a fost anulat.');
+          toastSiDupa(c.mesaj || 'Evenimentul a fost anulat.');
           setTimeout(function () {
             window.location.href = c.redirect || '/profil.php';
           }, 700);
@@ -6364,7 +6460,17 @@
             return;
           }
 
-          if (fapta === 'modereaza-dorinta') { window.location.reload(); return; }
+          /**
+            * REÎNCĂRCAREA PLEACĂ PE LOC, deci mesajul de mai sus n-ar fi apucat
+            * să se vadă — bula abia clipea. Se pune deoparte și se arată din
+            * nou pe pagina cerută din nou, de la capăt, cu cele cinci secunde
+            * ale ei.
+            */
+          if (fapta === 'modereaza-dorinta') {
+            pastreazaToast(c.mesaj || 'Gata.');
+            window.location.reload();
+            return;
+          }
 
           /**
            * O NOTĂ ȘTEARSĂ SCHIMBĂ ȘI CIFRELE DE DEASUPRA.
@@ -6378,7 +6484,11 @@
            * Redesenată din JS, ar fi fost al doilea loc care știe cum se
            * socotește o medie. Deci se cere pagina din nou.
            */
-          if (fapta === 'sterge-evaluare') { window.location.reload(); return; }
+          if (fapta === 'sterge-evaluare') {
+            pastreazaToast(c.mesaj || 'Gata.');
+            window.location.reload();
+            return;
+          }
 
           var deScos = randulLui(buton);
           if (deScos) { deScos.remove(); }
@@ -6431,9 +6541,11 @@
           var c = rez.corp;
 
           if (!c || !c.ok) {
-            toast((c && c.mesaj) || 'N-a mers.');
             // Pagina e acum mai proaspătă decât ce se vede: se cere din nou,
-            // ca omul să nu rămână cu o valoare care n-a intrat nicăieri.
+            // ca omul să nu rămână cu o valoare care n-a intrat nicăieri. Iar
+            // mesajul de necaz trebuie să ajungă acolo — altfel omul vede doar
+            // pagina sărind, fără să afle de ce.
+            toastSiDupa((c && c.mesaj) || 'N-a mers.');
             window.setTimeout(function () { window.location.reload(); }, 1600);
             return;
           }
