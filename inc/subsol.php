@@ -80,9 +80,27 @@ if (session_status() === PHP_SESSION_ACTIVE && !empty($_SESSION['mesaj_bun'])) {
   </div>
 </footer>
 
-<div class="toast" id="toast" role="status" aria-live="polite"
-     data-mesaj="<?= h($mesajTrecator) ?>"></div>
+<!--
+  MESAJUL SCURT DE JOS („Link copiat!", „Nota ta a fost trimisă.").
 
-<script src="/assets/js/main.js?v=82"></script>
+  `role="status" aria-live="polite"` stă pe cutie, iar textul se schimbă în
+  `<span>`-ul dinăuntru: cititoarele de ecran anunță ce s-a adăugat. Butonul e
+  scris o dată, la început, deci nu se anunță de fiecare dată cu el.
+
+  „×"-ul e acolo fiindcă mesajul stă acum CINCI secunde, nu două și jumătate.
+  Mai mult timp de citit înseamnă și mai mult timp în care stă în drum — cine
+  l-a citit trebuie să-l poată da la o parte.
+-->
+<div class="toast" id="toast" role="status" aria-live="polite"
+     data-mesaj="<?= h($mesajTrecator) ?>">
+  <span class="toast__text" data-toast-text></span>
+  <button class="toast__x" type="button" data-toast-x aria-label="Închide mesajul">
+    <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M18 6 6 18M6 6l12 12"/>
+    </svg>
+  </button>
+</div>
+
+<script src="/assets/js/main.js?v=83"></script>
 </body>
 </html>

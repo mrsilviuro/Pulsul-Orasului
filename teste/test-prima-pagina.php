@@ -588,12 +588,14 @@ if ($baza !== '') {
     verifica('„Propune o ieșire" e în panou', 1,
         substr_count($html, 'class="btn btn--primary hero__cta"'));
     /**
-     * În capul listei nu mai stă „Propune o ieșire": s-a mutat în panou.
+     * ÎN CAPUL LISTEI STĂ NUMAI TITLUL.
      *
-     * Un buton tot poate ajunge acolo — „Pune-ți o dorință", când tabla cu
-     * dorințe e goală și nu se desenează (vezi test-dorinte.php). De aceea se
-     * caută butonul ANUME, nu orice buton: altfel proba asta ar fi picat după
-     * fiecare zi în care nimeni nu și-a pus nicio dorință.
+     * „Propune o ieșire" s-a mutat în panoul de bun venit. O vreme mai ajungea
+     * acolo și vorba despre dorințele omului, cu butonul „Dorințele mele" —
+     * dar numai când tabla cu dorințe era goală și nu se desena. Rândul acela
+     * are `align-items: flex-end`: butonul ieșea lipit de linia de bază a
+     * titlului, înghesuit lângă el, ca și cum ar fi fost al lui. Acum stă lângă
+     * tabla lui, mai sus, chiar și când tabla lipsește.
      */
     $capulListei = '';
     if (preg_match('~<div class="section-head">(.*?)</div>\s*</div>~s', $html, $m)) {
@@ -602,10 +604,29 @@ if ($baza !== '') {
     verifica('capul listei s-a găsit', true, $capulListei !== '');
     verifica('și n-are „Propune o ieșire" în el',
         false, str_contains($capulListei, 'Propune o ieșire'));
+    verifica('nici vorba despre dorințe',
+        false, str_contains($capulListei, 'tabla__stare'));
+    verifica('nici butonul „Dorințele mele"',
+        false, str_contains($capulListei, 'dorintele__buton'));
+    verifica('deci niciun buton, de niciun fel',
+        false, str_contains($capulListei, 'class="btn'));
 
     // Săgeata e o legătură adevărată, ca să meargă și fără JavaScript.
     verifica('săgeata duce la conținut', true,
         str_contains($html, '<a class="hero__jos" href="#main">'));
+
+    /**
+     * MESAJUL SCURT DE JOS are un „×" și un loc al lui pentru text.
+     *
+     * Textul intră în `<span data-toast-text>`, nu de-a dreptul în cutie:
+     * altfel butonul ar fi fost șters de fiecare `textContent = …`. Butonul e
+     * scris o dată, în inc/subsol.php, pentru tot site-ul.
+     */
+    verifica('mesajul de jos are locul lui de text', true,
+        str_contains($html, 'data-toast-text'));
+    verifica('și un „×" de închidere', true, str_contains($html, 'data-toast-x'));
+    verifica('cu vorbă pentru cititoarele de ecran', true,
+        str_contains($html, 'aria-label="Închide mesajul"'));
 
     // Un singur titlu de rang întâi pe pagină: numele site-ului.
     verifica('un singur h1', 1, substr_count($html, '<h1'));

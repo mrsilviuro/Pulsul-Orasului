@@ -572,9 +572,48 @@ if ($BAZA === '') {
 } else {
     sectiune('prin http');
 
-    $ia = static function (string $cale) use ($BAZA): string {
-        $ctx = stream_context_create(['http' => ['ignore_errors' => true, 'timeout' => 10]]);
+    $ia = static function (string $cale, string $cookie = '') use ($BAZA): string {
+        $ctx = stream_context_create(['http' => [
+            'ignore_errors' => true,
+            'timeout'       => 10,
+            'header'        => $cookie === '' ? '' : "Cookie: $cookie\r\n",
+        ]]);
         return (string) @file_get_contents($BAZA . $cale, false, $ctx);
+    };
+
+    /**
+     * Intră în cont și întoarce cookie-ul. Panoul de mulțumire stă în cutia
+     * formularului, iar aceea nu se desenează pentru un vizitator fără cont —
+     * deci fără o sesiune n-avem ce proba.
+     */
+    $intra = static function (string $email) use ($BAZA): string {
+        $ceruta = static function (string $cale, ?array $trup, string $cookie) use ($BAZA): array {
+            $ctx = stream_context_create(['http' => [
+                'method'        => $trup === null ? 'GET' : 'POST',
+                'header'        => "Content-Type: application/json\r\n"
+                                 . ($cookie === '' ? '' : "Cookie: $cookie\r\n"),
+                'content'       => $trup === null ? '' : json_encode($trup),
+                'ignore_errors' => true,
+                'timeout'       => 10,
+            ]]);
+
+            $corp = (string) @file_get_contents($BAZA . $cale, false, $ctx);
+            $nou  = $cookie;
+
+            foreach ($http_response_header ?? [] as $rand) {
+                if (preg_match('/^Set-Cookie:\s*([^;]+)/i', $rand, $m) === 1) { $nou = $m[1]; }
+            }
+
+            return ['corp' => $corp, 'cookie' => $nou];
+        };
+
+        $pag = $ceruta('/login.php', null, '');
+        preg_match('/name="csrf" value="([^"]+)"/', $pag['corp'], $m);
+
+        $r = $ceruta('/api/autentificare.php',
+            ['csrf' => $m[1] ?? '', 'email' => $email, 'parola' => PAROLA], $pag['cookie']);
+
+        return (json_decode($r['corp'], true)['ok'] ?? false) === true ? $r['cookie'] : '';
     };
 
     $pagina = $ia('/index.php');
@@ -585,6 +624,28 @@ if ($BAZA === '') {
         true, str_contains($pagina, 'Pune-ți o dorință'));
     verifica('dar nu și formularul',
         false, str_contains($pagina, 'id="dorinta-formular"'));
+
+    /**
+     * PANOUL DE MULȚUMIRE ARE UN „×".
+     *
+     * Rămânea pe ecran până la următoarea navigare: omul citea vestea, o
+     * înțelegea, și n-avea ce apăsa ca s-o dea la o parte. „×"-ul e o
+     * LEGĂTURĂ către /index.php, ca să meargă și fără JavaScript — acolo
+     * panoul e desenat fiindcă adresa poartă `?dorinta=trimisa`, iar o
+     * încărcare curată îl face să dispară.
+     *
+     * Se cere ca un om conectat: panoul stă în cutia formularului, iar aceea
+     * nu se desenează pentru un vizitator fără cont.
+     */
+    $cookieOm = $intra(SEMN . 'nou@invalid.local');
+    verifica('proba a putut intra în cont', true, $cookieOm !== '');
+
+    $cuCont = $ia('/index.php?dorinta=trimisa', $cookieOm);
+
+    verifica('panoul de mulțumire are un „×"', true,
+        str_contains($cuCont, 'data-dorinta-gata-x'));
+    verifica('și e o legătură adevărată', true,
+        str_contains($cuCont, '<a class="dorinta-gata__x" href="/index.php"'));
 
     /**
      * ȘI CÂND N-ARE CE ARĂTA.
@@ -623,12 +684,49 @@ if ($BAZA === '') {
     verifica('dar butonul din fereastră rămâne',
         true, str_contains($goala, 'hero__cta--dorinta'));
 
+    /**
+     * ȘI NIMIC NU SE MUTĂ ÎN CAPUL LISTEI.
+     *
+     * Vorba despre dorințele omului și butonul „Dorințele mele" ajungeau acolo
+     * tocmai când tabla lipsea — pe același rând cu „Ce facem zilele astea?",
+     * lipite de linia de bază a titlului. Acum secțiunea tablei se desenează
+     * și fără tablă, numai pentru ele.
+     */
     $capulListei = '';
     if (preg_match('~<div class="section-head">(.*?)</div>\s*</div>~s', $goala, $m)) {
         $capulListei = $m[1];
     }
-    verifica('și în capul listei nu s-a mutat niciun buton',
-        false, str_contains($capulListei, 'class="btn'));
+    verifica('capul listei s-a găsit',            true,  $capulListei !== '');
+    verifica('și n-are decât titlul în el',       true,  str_contains($capulListei, 'section-title'));
+    verifica('fără vorba despre dorințe',         false, str_contains($capulListei, 'tabla__stare'));
+    verifica('fără „Dorințele mele"',             false, str_contains($capulListei, 'dorintele__buton'));
+    verifica('fără niciun buton',                 false, str_contains($capulListei, 'class="btn'));
+
+    /**
+     * ȘI PENTRU CINE CHIAR ARE DORINȚE — proba de mai sus se uită la pagina
+     * unui vizitator fără cont, care n-are ce vedea acolo oricum.
+     *
+     * Radu e cel potrivit: dorința lui AȘTEAPTĂ să fie citită, iar golirea
+     * tablei de mai sus a împins în trecut doar dorințele PUBLICATE. A lui
+     * rămâne în lucru, deci vorba și butonul trebuie desenate — dar în
+     * secțiunea tablei, nu lângă titlu.
+     */
+    $cookieAna = $intra(SEMN . 'radu@invalid.local');
+    $goalaAna  = $ia('/index.php', $cookieAna);
+
+    verifica('Radu a putut intra în cont', true, $cookieAna !== '');
+    verifica('tabla lipsește și pentru el', false, str_contains($goalaAna, 'data-tabla'));
+    verifica('dar „Dorințele mele" se vede', true,
+        str_contains($goalaAna, 'dorintele__buton'));
+
+    $capulEi = '';
+    if (preg_match('~<div class="section-head">(.*?)</div>\s*</div>~s', $goalaAna, $m)) {
+        $capulEi = $m[1];
+    }
+    verifica('și NU în capul listei', false, str_contains($capulEi, 'dorintele__buton'));
+    verifica('ci în secțiunea tablei', true,
+        preg_match('~<section class="tabla[^"]*"[^>]*>.*?dorintele__buton.*?</section>~s',
+            $goalaAna) === 1);
 
     /* La loc, ca restul probei să vadă tabla plină. */
     $u = db()->prepare('UPDATE dorinte SET publicat_la = ? WHERE id = ?');

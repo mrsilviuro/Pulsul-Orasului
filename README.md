@@ -181,6 +181,32 @@ O dorință **retrasă de autor** se vede mai departe în tabelul staff-ului,
 însemnată „retrasă", dar nu mai are butoane de moderare și nu mai aprinde cifra
 de pe panou: omul și-a luat vorbele înapoi, deci nu mai e nimic de hotărât.
 
+### Panoul de mulțumire are un „×"
+
+După ce trimiți o dorință, formularul lasă locul unei vorbe: *„Dorința ta a
+ajuns la noi. O vom citi, iar dacă respectă regulamentul nostru, o vom publica
+de îndată."*
+
+Rămânea acolo până la următoarea navigare — omul citea vestea, o înțelegea, și
+n-avea ce apăsa ca s-o dea la o parte.
+
+„×"-ul e o **legătură** către `/index.php`, nu un buton de JS: fără JavaScript,
+panoul e desenat de server fiindcă adresa poartă `?dorinta=trimisa`, iar o
+încărcare curată îl face să dispară. Cu JavaScript, `main.js` îi ia locul, îl
+ascunde pe loc și pune formularul la loc — cine mai are locuri libere poate
+scrie alta fără să reîncarce.
+
+### Unde stă „Dorințele mele" când tabla e goală
+
+**Tot în secțiunea tablei**, chiar dacă tabla nu se desenează. De aceea
+`<section class="tabla">` din `index.php` se scrie și când n-are nici tablă,
+nici formular: dacă omul are dorințe în lucru, undeva trebuie să le vadă.
+
+Ajungeau, în cazul acela, în `.section-head` — adică pe rândul lui „Ce facem
+zilele astea?". Acela e un rând de titlu, cu `align-items: flex-end`: butonul
+ieșea lipit de linia de bază a titlului, înghesuit lângă el, ca și cum ar fi
+fost al titlului. N-are ce căuta acolo; e al dorințelor.
+
 ### Cum se aprobă o dorință
 
 Din `admin-dorinte.php`, cu două butoane. Merge mai departe și din phpMyAdmin —
@@ -210,6 +236,53 @@ intrat `NOW()`-ul lui MySQL, din alt fus, într-un lucru care se numără în zi
 - **Dorința cuiva care și-a șters contul dispare de pe tablă**, fiindcă tabla
   cere `membri.stare = 'activ'`, iar contul anonimizat nu mai e. Rândul rămâne
   în bază.
+
+## Mesajul scurt de jos
+
+Bula neagră care apare o clipă în josul ecranului: „Link copiat!", „Nota ta a
+fost trimisă.", „Nu am putut copia linkul. Copiază-l din bara de adrese."
+
+Cutia e scrisă o dată, în `inc/subsol.php`, pentru tot site-ul; `main.js` îi
+schimbă doar textul dinăuntru.
+
+### Cinci secunde, și un „×"
+
+Stătea **2,6 secunde**. Pentru „Link copiat!" e destul, dar mesajele lungi au
+peste cincizeci de semne — iar cine se uita în altă parte în clipa aceea nu mai
+apuca nimic. Acum stă **cinci**.
+
+Și tocmai fiindcă stă mai mult, are un **„×"**: mai mult timp de citit înseamnă
+și mai mult timp în care stă în drum, peste colțul de jos al paginii. `Escape`
+îl închide la fel.
+
+Textul intră într-un `<span data-toast-text>`, nu de-a dreptul în cutie: altfel
+fiecare `textContent = …` ar fi șters butonul.
+
+### De ce era îngustă pe telefon
+
+Bula se strânge pe text (`width: auto` la un element fixat = *shrink-to-fit*),
+cu un plafon de `max-width`. Numai că era centrată cu `left: 50%` plus
+`translate(-50%, …)` — iar locul liber pe care îl vede shrink-to-fit-ul e
+**lățimea ecranului minus `left`**, adică **50%**.
+
+Așa că textul se rupea pe rânduri la jumătatea ecranului, oricât ar fi scris în
+`max-width`: cele 92% de acolo nu se puteau atinge niciodată. Pe un telefon de
+412px, un mesaj de 55 de semne ieșea **206px lat și 79px înalt** — o bulă
+îngustă și înaltă.
+
+Centrarea se face acum altfel: `left: 0; right: 0` (deci locul liber e ecranul
+întreg), `width: max-content` (bula vrea textul pe un rând) și
+`margin-inline: auto` (o cutie strânsă între două margini automate se așază pe
+mijloc). Plafonul rămâne `min(92vw, 520px)`, dar de-acum e unul adevărat.
+
+Același mesaj, măsurat în Chromium pe același ecran de 412px:
+
+| | lățime | înălțime |
+|---|---|---|
+| cum era | 206px (50%) | 79px |
+| cum e | 379px (**92%**) | 60px |
+
+Mesajele scurte rămân strânse pe text — „Link copiat!" are 141px, adică 34%.
 
 ## Cum adaugi un articol
 

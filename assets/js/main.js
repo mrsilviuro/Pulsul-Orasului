@@ -138,15 +138,57 @@
     window.location.href = '/login.php?redirect=' + back;
   }
 
-  // Mesaj scurt jos, pe mijloc
-  var toastEl = document.getElementById('toast');
+  /* --- Mesajul scurt de jos, pe mijloc -----------------------------------
+
+     CINCI SECUNDE, nu două și jumătate. „Link copiat!" se citește din ochi,
+     dar „Nu am putut copia linkul. Copiază-l din bara de adrese." are
+     cincizeci de semne — iar cine se uita în altă parte în clipa aceea nu mai
+     apuca nimic. Cinci secunde ajung pentru cel mai lung mesaj de pe site.
+
+     ȘI UN „×", tocmai fiindcă stă mai mult: mai mult timp de citit înseamnă și
+     mai mult timp în care stă în drum, peste colțul de jos al paginii.
+
+     Cutia și butonul sunt scrise în inc/subsol.php, o dată pentru tot site-ul;
+     aici se schimbă doar textul dinăuntru. */
+
+  var toastEl    = document.getElementById('toast');
+  var toastText  = toastEl ? toastEl.querySelector('[data-toast-text]') : null;
   var toastTimer = null;
+
+  var TOAST_SECUNDE = 5;
+
+  function inchideToast() {
+    clearTimeout(toastTimer);
+    toastTimer = null;
+    if (toastEl) toastEl.classList.remove('is-visible');
+  }
+
   function toast(message) {
     if (!toastEl) return;
-    toastEl.textContent = message;
+
+    // `toastText` lipsește doar dacă subsolul e mai vechi decât scriptul —
+    // atunci mesajul intră în cutie, ca înainte, și „×"-ul nu se pierde.
+    if (toastText) { toastText.textContent = message; }
+    else           { toastEl.textContent   = message; }
+
     toastEl.classList.add('is-visible');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(function () { toastEl.classList.remove('is-visible'); }, 2600);
+    toastTimer = setTimeout(inchideToast, TOAST_SECUNDE * 1000);
+  }
+
+  if (toastEl) {
+    var toastX = toastEl.querySelector('[data-toast-x]');
+    if (toastX) toastX.addEventListener('click', inchideToast);
+
+    /**
+     * `Escape` îl închide, ca orice altceva care se pune peste pagină.
+     * Nu fură tasta nimănui: se uită întâi dacă mesajul chiar e pe ecran.
+     */
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && toastEl.classList.contains('is-visible')) {
+        inchideToast();
+      }
+    });
   }
 
   // Mesajul lăsat de server pentru pagina asta (vezi inc/subsol.php).
@@ -760,6 +802,28 @@
         cutiaDorintei.classList.remove('e-deschis');
       });
     });
+
+    /**
+     * „×"-ul de pe panoul de mulțumire.
+     *
+     * E o legătură adevărată către /index.php, ca să meargă și fără JS: acolo
+     * panoul e desenat de server fiindcă adresa poartă `?dorinta=trimisa`, iar
+     * o încărcare curată îl face să dispară. Cu JS n-are rost o reîncărcare —
+     * se ascunde pe loc, iar cutia se închide odată cu el.
+     */
+    var xDorintaGata = cutiaDorintei.querySelector('[data-dorinta-gata-x]');
+
+    if (xDorintaGata) {
+      xDorintaGata.addEventListener('click', function (e) {
+        e.preventDefault();
+        if (gataDorinta) gataDorinta.hidden = true;
+        cutiaDorintei.classList.remove('e-deschis');
+
+        /* Formularul se pune la loc: cine tocmai a trimis o dorință poate,
+           dacă mai are locuri libere, să scrie alta fără să reîncarce. */
+        formDorinta.hidden = false;
+      });
+    }
 
     /* contorul de caractere, la fel ca la descrierea unui eveniment */
     if (textDorinta && numarDorinta) {

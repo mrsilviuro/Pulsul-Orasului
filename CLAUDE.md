@@ -653,11 +653,14 @@ inc/
                       în FEREASTRA DE BUN VENIT, lângă „Propune o ieșire", și
                       DISPARE doar pentru cine le are pe toate trei — și
                       randeazaZonaDorinte(), vorba despre dorințele lui („Ai
-                      două dorințe în lucru. Mai poți pune una."), care se
-                      desenează în DOUĂ
-                      locuri (sub tablă și, când nu e nicio dorință, în capul
-                      listei de evenimente), de aceea e o funcție, nu HTML
-                      scris de două ori. SUB EA, randeazaDorinteleMele():
+                      două dorințe în lucru. Mai poți pune una."). STĂ MEREU ÎN
+                      SECȚIUNEA TABLEI, și când tabla nu se desenează: de aceea
+                      `<section class="tabla">` din index.php se scrie și când
+                      n-are nici tablă, nici formular. Ajungea, în cazul acela,
+                      în `.section-head`, adică pe rândul lui „Ce facem zilele
+                      astea?" — un rând cu `align-items: flex-end`, unde butonul
+                      ieșea lipit de linia de bază a titlului, ca și cum ar fi
+                      fost al lui. SUB EA, randeazaDorinteleMele():
                       butonul „Dorințele mele (2)" și tabelul care se deschide
                       din el, cu un „×" roșu în dreptul fiecărei dorințe. E un
                       `<details>`, nu un panou de JS — se deschide singur, în
