@@ -65,6 +65,16 @@ const MESAJ_DORINTA_TRIMISA =
     'Dorința ta a ajuns la noi. O vom citi, iar dacă respectă regulamentul '
   . 'nostru, o vom publica de îndată.';
 
+/**
+ * Ce i se spune omului de casă, a cărui dorință nu trece pe la nimeni.
+ *
+ * „O vom citi" ar fi fost o vorbă goală spusă chiar celui care citește: el E
+ * moderarea. Iar dacă i s-ar fi spus totuși asta, s-ar fi dus pe urmă în admin
+ * să caute ce n-avea ce căuta acolo.
+ */
+const MESAJ_DORINTA_PUBLICATA =
+    'Dorința ta e pe tablă. Apare pe prima pagină de la următoarea încărcare.';
+
 /* ===================== CE SE VEDE PE TABLĂ ============================ */
 
 /**
@@ -266,6 +276,29 @@ function stergeDorintaOmului(int $membruId, int $dorintaId): bool
 /* ========================= SCRIEREA EI =============================== */
 
 /**
+ * Cu ce stare intră o dorință nouă.
+ *
+ * OMUL DE CASĂ PUBLICĂ DE-A DREPTUL. El e cel pe la care ar fi trecut dorința:
+ * a o pune „în așteptare" ar fi însemnat să se aprobe singur, dintr-o pagină
+ * în alta, la fiecare rând scris. Aceeași socoteală ca la evenimente, unde
+ * starePentruPublicare() face exact asta (vezi inc/evenimente.php).
+ *
+ * `publicat_la` NU se pune aici, dinadins: îl scrie stampileazaCeleAprobate()
+ * la prima încărcare a primei pagini, tot cu ceasul PHP. Așa, o dorință
+ * aprobată din admin, una schimbată de mână din phpMyAdmin și una scrisă de
+ * omul de casă se poartă toate la fel — iar cele șapte zile de tablă se numără
+ * dintr-un singur loc.
+ *
+ * ȘI NU PLEACĂ NICIUN E-MAIL. Vestea despre hotărârea moderării o trimite
+ * api/admin.php, când chiar hotărăște cineva ceva; aici n-a hotărât nimeni
+ * nimic, iar omul tocmai a apăsat butonul — știe deja.
+ */
+function stareaDorinteiNoi(bool $eStaff): string
+{
+    return $eStaff ? 'aprobat' : 'in_asteptare';
+}
+
+/**
  * Scrie o dorință nouă.
  *
  * Chemată din DOUĂ locuri: api/dorinta.php (cu JavaScript) și index.php (fără
@@ -276,7 +309,7 @@ function stergeDorintaOmului(int $membruId, int $dorintaId): bool
  * Întoarce ['ok', 'mesaj', 'cod', 'erori'], unde `erori` sunt pe câmpuri, ca
  * formularul să le poată pune fiecare sub căsuța ei.
  */
-function puneODorinta(int $membruId, array $date): array
+function puneODorinta(int $membruId, array $date, bool $eStaff = false): array
 {
     $rezultat = verificaDorinta($date, oraseDisponibile());
 
@@ -319,7 +352,7 @@ function puneODorinta(int $membruId, array $date): array
     try {
         $pdo->prepare('SELECT id FROM membri WHERE id = ? FOR UPDATE')->execute([$membruId]);
 
-        $raspuns = scrieDorintaSubLacat($membruId, $rezultat['curat']);
+        $raspuns = scrieDorintaSubLacat($membruId, $rezultat['curat'], $eStaff);
 
         $pdo->commit();
     } catch (Throwable $e) {
@@ -341,7 +374,7 @@ function puneODorinta(int $membruId, array $date): array
  * NU se cheamă de nicăieri altundeva: fără lacătul de deasupra, e chiar
  * socoteala pe care o repară el.
  */
-function scrieDorintaSubLacat(int $membruId, array $curat): array
+function scrieDorintaSubLacat(int $membruId, array $curat, bool $eStaff = false): array
 {
     $voie = poatePuneODorinta($membruId);
 
@@ -364,13 +397,13 @@ function scrieDorintaSubLacat(int $membruId, array $curat): array
         $membruId,
         $curat['oras'],
         $curat['dorinta'],
-        'in_asteptare',
+        stareaDorinteiNoi($eStaff),
         acum(),
     ]);
 
     return [
         'ok'    => true,
-        'mesaj' => MESAJ_DORINTA_TRIMISA,
+        'mesaj' => $eStaff ? MESAJ_DORINTA_PUBLICATA : MESAJ_DORINTA_TRIMISA,
         'cod'   => 200,
         'erori' => [],
     ];

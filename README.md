@@ -76,6 +76,7 @@ Tot codul stă în `inc/dorinte.php`; tabelul, în `sql/023-dorinte.sql`.
 |---|---|
 | lungime | cel mult **100 de caractere** (`DORINTA_MAX`), numărate cu `mb_strlen` |
 | câte deodată | **trei** de om (`DORINTE_DEODATA`) |
+| moderare | da — **în afară de** dorințele staff-ului, care intră direct pe tablă |
 | cât stă | **7 zile** (`ZILE_PE_TABLA`), numărate **de la aprobare**, nu de la trimitere |
 | după aceea | iese de pe tablă și se face loc pentru alta. Rândul NU se șterge |
 | se poate schimba? | nu — dar **se poate șterge**, oricând, din „Dorințele mele" |
@@ -121,6 +122,24 @@ iar aceea se scrie în tabelul de dedesubt.
 
 Când tabla nu se desenează (n-are nicio dorință aprobată), vorba trece în capul
 listei, lângă „Ce facem zilele astea?".
+
+### Dorința omului de casă nu trece pe la nimeni
+
+`stareaDorinteiNoi()` întoarce `'aprobat'` pentru staff și `'in_asteptare'`
+pentru restul — aceeași socoteală ca `starePentruPublicare()` la evenimente.
+
+El **e** moderarea: a-i pune dorința „în așteptare" ar fi însemnat să se aprobe
+singur, dintr-o pagină în alta, la fiecare rând scris. Și „O vom citi" ar fi
+fost o vorbă goală spusă chiar celui care citește — de aceea i se spune altceva
+(`MESAJ_DORINTA_PUBLICATA`): *„Dorința ta e pe tablă."*
+
+**Nu pleacă niciun e-mail.** Vestea despre hotărârea moderării o trimite
+`api/admin.php`, când chiar hotărăște cineva ceva; aici n-a hotărât nimeni
+nimic, iar omul tocmai a apăsat butonul — știe deja.
+
+`publicat_la` **nu** se pune la scriere, nici măcar aici: îl scrie
+`stampileazaCeleAprobate()` la prima încărcare a primei pagini, ca la orice
+dorință aprobată. Așa, cele șapte zile de tablă se numără dintr-un singur loc.
 
 ### „Dorințele mele" și „×"-ul roșu
 
@@ -207,6 +226,27 @@ ca să treacă înaintea lui fără `!important`.
 Adresa se curăță și ea, cu `replaceState`: fără asta, un F5 ar fi redeschis tot
 ce omul tocmai a închis — `:target` din adresă, iar panoul din întrebarea de pe
 server. Apăsat din nou „Pune-ți o dorință", se redeschide.
+
+**Și se golesc câmpurile.** Fără asta, cine apăsa din nou „Pune-ți o dorință"
+fără să reîncarce pagina găsea acolo dorința pe care tocmai o trimisese — și
+era ușor s-o trimită a doua oară crezând că n-a mers prima. `reset()` întoarce
+câmpurile la ce era în HTML, iar contorul de caractere se socotește din nou
+(altfel ar fi rămas scris „63 din 100").
+
+### Vorba de sub tablă se împrospătează fără refresh
+
+„Ai două dorințe în lucru. Mai poți pune una." și butonul „Dorințele mele (2)"
+se schimbă amândouă la fiecare dorință scrisă — dar pagina nu se reîncarcă,
+deci rămâneau cele de dinainte până la un F5.
+
+`api/dorinta.php` întoarce acum și `zona`: aceeași `randeazaZonaDorinte()` care
+o scrie și la încărcarea paginii, cerută **după** scriere ca să numere și
+dorința tocmai pusă. JS-ul o pune la locul ei — nu construiește nimic, ar fi
+fost al doilea loc care știe cum arată.
+
+Tot de acolo vine și `poate`: la a treia dorință, butonul „Pune-ți o dorință"
+din fereastra de bun venit pleacă de pe ecran, fiindcă ar duce la un formular
+pe care serverul îl refuză oricum.
 
 ### Unde stă „Dorințele mele" când tabla e goală
 
@@ -3545,6 +3585,28 @@ iar după termen:
 Numai pentru cine a fost acolo: pentru un vizitator oarecare, termenul nu spune
 nimic. Stelele stinse poartă motivul și într-un `title`, dar acela se vede doar
 cu cursorul pe ele — pe telefon, niciodată.
+
+### Cine n-a fost acolo nu vede nicio stea
+
+Vedea cinci stele **înghețate** în dreptul fiecărui om: un buton care nu se
+apasă, pus acolo pentru un drept pe care nu-l are. Și nici nu spuneau ceva
+despre omul din dreptul lor — erau nota pe care ar fi dat-o *cel care se uită*,
+adică zero, la toți. Cinci stele goale citite ca „nota lui" sunt mai rele decât
+nimic.
+
+Cine n-a avut treabă cu evenimentul vede **cine a fost acolo, și atât**: nici
+stele, nici termenul de notare.
+
+Hotărăște `eu_participant` din contextul făcut în `event.php` — deosebit de
+`pot_nota`, care se stinge **și** la termenul notelor. Cine a fost acolo își
+vede stelele mai departe și după termen, stinse: în ele scrie nota pe care a
+dat-o el, iar aceea merită să rămână la vedere.
+
+| cine se uită | ce vede în dreptul oamenilor |
+|---|---|
+| a fost acolo, fereastra deschisă | stele **apăsabile** |
+| a fost acolo, fereastra închisă | stele **stinse**, cu nota lui în ele |
+| n-a fost acolo (sau nu e conectat) | **nimic** |
 
 **„Nu s-a prezentat" se închide odată cu ele.** E tot un rând în `evaluari` și
 tot o stea în media cuiva; dacă notele s-au închis pentru toți, n-are cum să

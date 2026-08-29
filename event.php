@@ -305,6 +305,19 @@ if ($eIncheiat && $ePublicat) {
         'eu'            => $membruId,
         'slug'          => (string) $eveniment['slug'],
         'pot_nota'      => potNotaLaEveniment($eveniment, $membruId),
+        /**
+         * A FOST ȘI EL ACOLO?
+         *
+         * Deosebită de `pot_nota`, care se stinge și la termenul notelor. De
+         * ea atârnă dacă în dreptul oamenilor se desenează stele STINSE sau
+         * nimic: cine n-a fost pe listă n-are ce judeca, iar cinci stele
+         * înghețate în dreptul fiecărui om nu-i spun nimic — sunt un buton
+         * care nu se apasă, pus acolo pentru un drept pe care nu-l are.
+         *
+         * Cine A FOST, în schimb, le vede și după termen: acolo scrie nota pe
+         * care a dat-o el, iar aceea merită să rămână la vedere.
+         */
+        'eu_participant' => $stareaMea === 'participant',
         'inchise'       => $noteleAuTrecut,
         'motiv_stins'   => $noteleAuTrecut
             ? 'S-au închis notele — au trecut ' . ORE_PENTRU_NOTE

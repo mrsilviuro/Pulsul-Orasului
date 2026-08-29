@@ -802,17 +802,32 @@ function randeazaOm(
         } elseif (!empty($evaluare['pot_nota'])) {
             $stele = randeazaSteleParticipant($id, $notaLui, '',
                 (string) ($om['permalink'] ?? ''), $parereaMea);
-        } else {
+        } elseif (!empty($evaluare['eu_participant'])) {
             /**
-             * Stinse — dar motivul e altul după caz: ori omul n-a fost pe
-             * listă, ori au trecut cele două zile în care se puteau da note.
-             * Vorba vine gata scrisă din event.php (`motiv_stins`): aici nu se
-             * poate cere inc/evaluari.php pentru constanta orelor, fiindcă cele
-             * două fișiere s-ar cere unul pe altul.
+             * A FOST ȘI EL ACOLO, dar nu mai poate nota: au trecut cele două
+             * zile. Stelele rămân, stinse — în ele scrie nota pe care a dat-o
+             * el, iar aceea merită să rămână la vedere. Motivul vine gata
+             * scris din event.php (`motiv_stins`): aici nu se poate cere
+             * inc/evaluari.php pentru constanta orelor, fiindcă cele două
+             * fișiere s-ar cere unul pe altul.
              */
             $stele = randeazaSteleParticipant($id, $notaLui,
-                (string) ($evaluare['motiv_stins']
-                    ?? 'Poți nota doar dacă ai fost și tu pe lista de participanți.'), '');
+                (string) ($evaluare['motiv_stins'] ?? 'Notele s-au închis.'), '');
+        } else {
+            /**
+             * N-A FOST ACOLO: nu vede nicio stea.
+             *
+             * Vedea cinci stele înghețate în dreptul fiecărui om — un buton
+             * care nu se apasă, pus acolo pentru un drept pe care nu-l are.
+             * Iar ele nici nu spuneau ceva despre omul din dreptul lor: erau
+             * nota pe care ar fi dat-o CEL CARE SE UITĂ, adică zero, la
+             * toți. Cinci stele goale citite ca „nota lui" sunt mai rele decât
+             * nimic.
+             *
+             * Cine n-a avut treabă cu evenimentul vede cine a fost acolo, și
+             * atât.
+             */
+            $stele = '';
         }
 
         /**

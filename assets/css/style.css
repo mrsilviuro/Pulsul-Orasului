@@ -697,6 +697,13 @@ button { cursor: pointer; border: 0; background: none; }
    plus, `.tabla`), ca să treacă înaintea lui `:target` fără `!important`. */
 .tabla .tabla__cutie.e-inchis { display: none; }
 
+/* Și, odată închisă, vorba de sub tablă se vede din nou.
+   Regula de mai jos o ascunde cât cutia e deschisă — dar `:target` rămâne pe
+   cutie și după ce JS-ul a închis-o (adresa se curăță cu `replaceState`, care
+   nu clatină `:target`). Fără rândul ăsta, „Dorințele mele" ar fi rămas
+   nevăzut până la prima reîncărcare, adică exact lucrul pe care îl reparăm. */
+.tabla .tabla__cutie.e-inchis ~ .tabla__unelte { display: flex; }
+
 /* Deschisă, ia locul tablei. `~` merge fiindcă în HTML cutia stă înaintea
    slide-ului — de aceea e scrisă acolo, deși pe ecran apare în același loc. */
 .tabla__cutie:target ~ .tabla__slide,
