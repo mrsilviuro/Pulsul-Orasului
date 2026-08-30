@@ -310,6 +310,13 @@ Din `admin-dorinte.php`, **dintr-o singură listă de ales** — aceeași unealt
 starea contului din `admin-useri.php`. Are patru rânduri: „Așteptare",
 „Aprobă", „Respinge" și „Șterge".
 
+**Rândul în care dorința se află DEJA se scrie ca stare, nu ca poruncă**:
+„Aprobat" în loc de „Aprobă", „Respins" în loc de „Respinge" (`$hotarariAcum`
+lângă `$hotarari`). O listă strânsă arată un singur rând — cel ales — iar o
+dorință aprobată purta pe ea o poruncă, un lucru rămas de făcut, tocmai despre
+ceva ce se făcuse. Deschisă, lista se citește acum firesc: „e Aprobat; pot
+Respinge". „Așteptare" e la fel în amândouă, fiindcă e un nume, nu o faptă.
+
 Erau trei butoane, dintre care două se vedeau **numai cât dorința aștepta**. O
 dată hotărâtă, nu mai era nicio cale înapoi din interfață: un „Respinge" apăsat
 pe rândul de deasupra se îndrepta doar din phpMyAdmin. Lista arată starea de

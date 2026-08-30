@@ -763,11 +763,40 @@ if ($BAZA === '') {
         verifica('se aprobă din listă', true, ($r['corp']['ok'] ?? false) === true);
         verifica('starea e aprobat', 'aprobat', (string) $aNoastra()['stare_moderare']);
 
+        /**
+         * RÂNDUL ÎN CARE DORINȚA E DEJA SE SCRIE CA STARE, nu ca poruncă.
+         *
+         * O listă strânsă arată un singur rând: cel ales. Cu „Aprobă" pe el,
+         * o dorință aprobată purta o poruncă — un lucru rămas de făcut —
+         * tocmai despre ceva ce se făcuse.
+         */
+        $dupaAprobare = $ceruta('/admin-dorinte.php', null, $cookieGazda)['brut'];
+        preg_match('~<select[^>]*data-id="' . $idDorinta . '".*?</select>~s',
+                   $dupaAprobare, $m);
+        $listaEi = $m[0] ?? '';
+
+        verifica('aprobată, rândul ales scrie „Aprobat"', true,
+            str_contains($listaEi, 'selected>') && str_contains($listaEi, 'Aprobat'));
+        verifica('iar celelalte rămân fapte', true,
+            str_contains($listaEi, 'Respinge') && str_contains($listaEi, 'Așteptare'));
+        verifica('și nu scrie „Aprobă" nicăieri în ea', false,
+            str_contains($listaEi, 'Aprobă'));
+
         /* Răzgândirea merge, și ea trimite vestea: dorința tocmai a ieșit de pe tablă. */
         $r = $hotaraste('respins');
         verifica('și se poate răzgândi', 'respins', (string) $aNoastra()['stare_moderare']);
         verifica('la respingere se dă de veste', true,
             str_contains((string) ($r['corp']['mesaj'] ?? ''), 'I-am dat de veste'));
+
+        /* Aceeași regulă și de partea cealaltă: „Respins", nu „Respinge". */
+        preg_match('~<select[^>]*data-id="' . $idDorinta . '".*?</select>~s',
+                   $ceruta('/admin-dorinte.php', null, $cookieGazda)['brut'], $m);
+        $listaEi = $m[0] ?? '';
+
+        verifica('respinsă, rândul ales scrie „Respins"', true,
+            str_contains($listaEi, 'Respins') && !str_contains($listaEi, 'Respinge'));
+        verifica('iar „Aprobă" e din nou o faptă', true,
+            str_contains($listaEi, 'Aprobă'));
 
         /* O stare care nu există nu trece, oricât ar semăna cu una adevărată. */
         $r = $hotaraste('sters');
