@@ -45,10 +45,25 @@ $panaCand = static function (array $d): string {
     return $iese === null ? '' : dataLunga(date('Y-m-d', $iese), false);
 };
 
+/** Cum se citește starea în coloana „Stare" — o vorbă despre unde e dorința. */
 $vorbeStare = [
     'in_asteptare' => 'așteaptă',
     'aprobat'      => 'pe tablă',
     'respins'      => 'respinsă',
+];
+
+/**
+ * Ce se poate alege din listă. ACELEAȘI trei stări, dar scrise ca fapte —
+ * lista e un loc din care se face ceva, nu unul care doar spune cum stau
+ * lucrurile. Aceea e coloana de alături, cu vorbele de mai sus.
+ *
+ * „Așteptare" e și starea în care intră orice dorință nouă, și drumul înapoi
+ * pentru una hotărâtă din greșeală.
+ */
+$hotarari = [
+    'in_asteptare' => 'Așteptare',
+    'aprobat'      => 'Aprobă',
+    'respins'      => 'Respinge',
 ];
 
 $titlu   = 'Dorințe — Admin';
@@ -93,12 +108,12 @@ require __DIR__ . '/inc/antet.php';
                * ȘTEARSĂ DE AUTOR. Rândul rămâne — rândurile din `dorinte` nu
                * se șterg niciodată, ca mai târziu să se poată spune câte
                * dorințe și-au pus oamenii — dar nu mai e nimic de hotărât la
-               * ea, iar butoanele de moderare n-ar face decât să pună înapoi
-               * pe tablă ceva ce omul a retras.
+               * ea, iar o hotărâre luată acum n-ar face decât să pună înapoi
+               * pe tablă ceva ce omul a retras. De aceea lista de mai jos îi
+               * arată doar starea, stinsă, și ștergerea.
                */
-              $retrasa  = $d['sters_la'] !== null;
-              $asteapta = $d['stare_moderare'] === 'in_asteptare' && !$retrasa;
-              $iese     = $retrasa ? '' : $panaCand($d);
+              $retrasa = $d['sters_la'] !== null;
+              $iese    = $retrasa ? '' : $panaCand($d);
             ?>
             <tr data-rand class="admin-rand--<?= h((string) $d['stare_moderare']) ?>">
               <td><?= h((string) $d['dorinta']) ?></td>
@@ -123,27 +138,53 @@ require __DIR__ . '/inc/antet.php';
               <td><?= h(clipaScurta($d['creat_la'])) ?></td>
 
               <td class="admin-tabel__unelte">
-                <?php if ($asteapta): ?>
-                <button class="btn btn--primary btn--xs" type="button"
-                        data-fapta="modereaza-dorinta" data-hotarare="aprobat"
-                        data-id="<?= (int) $d['id'] ?>">Aprobă</button>
                 <!--
-                  Motivul se cere NUMAI la respingere: la aprobare n-are ce
-                  spune, iar o întrebare pusă degeaba e o întrebare pe care
-                  omul învață s-o închidă fără să citească. Lăsat gol, e-mailul
-                  spune limpede că nu s-a dat niciunul.
-                -->
-                <button class="btn btn--ghost btn--xs" type="button"
-                        data-fapta="modereaza-dorinta" data-hotarare="respins"
-                        data-motiv="De ce se respinge? Motivul îi pleacă pe e-mail."
-                        data-id="<?= (int) $d['id'] ?>">Respinge</button>
-                <?php endif; ?>
+                  O SINGURĂ LISTĂ, ca la starea contului din admin-useri.php.
 
-                <button class="btn btn--rau btn--xs" type="button"
-                        data-fapta="sterge-dorinta" data-id="<?= (int) $d['id'] ?>"
-                        data-intreb="Ștergi dorința asta de tot? Nu se mai numără nicăieri.">
-                  Șterge
-                </button>
+                  Erau trei butoane, dintre care două se vedeau numai cât
+                  dorința aștepta: o dată hotărâtă, nu mai era nicio cale
+                  înapoi din interfață, iar un „Respinge" apăsat pe rândul
+                  greșit se îndrepta doar din phpMyAdmin. Lista arată starea de
+                  acum ȘI toate drumurile care pleacă din ea — inclusiv
+                  întoarcerea în așteptare.
+
+                  Motivul se cere NUMAI la respingere (`data-motiv-pentru`): la
+                  aprobare n-are ce spune, iar o întrebare pusă degeaba e una
+                  pe care omul învață s-o închidă fără să citească. Lăsat gol,
+                  e-mailul spune limpede că nu s-a dat niciunul.
+
+                  „Șterge" stă în aceeași listă, dar e ALTĂ faptă — de aceea își
+                  poartă pe ea și `data-fapta`, și întrebarea de dinainte.
+                  Ștergerea de aici e adevărată, un DELETE, singura de pe site.
+                -->
+                <select class="admin-select" data-fapta="modereaza-dorinta"
+                        data-camp="hotarare" data-id="<?= (int) $d['id'] ?>"
+                        data-motiv-pentru="respins"
+                        data-motiv="De ce se respinge? Motivul îi pleacă pe e-mail."
+                        aria-label="Ce se face cu dorința">
+                  <?php if ($retrasa): ?>
+                  <!--
+                    RETRASĂ DE AUTOR: nu se mai moderează. A o pune înapoi pe
+                    tablă ar însemna să-i scoatem omului din gură vorbele pe
+                    care tocmai și le-a luat înapoi. Starea se arată doar, ca
+                    lista să nu mintă — la fel ca un cont anonimizat în
+                    admin-useri.php — și rămâne doar ștergerea.
+                  -->
+                  <option selected disabled>retrasă</option>
+                  <?php else: ?>
+                  <?php foreach ($hotarari as $val => $vorba): ?>
+                  <option value="<?= h($val) ?>"
+                          <?= $d['stare_moderare'] === $val ? 'selected' : '' ?>>
+                    <?= h($vorba) ?>
+                  </option>
+                  <?php endforeach; ?>
+                  <?php endif; ?>
+
+                  <option value="sters" data-fapta="sterge-dorinta"
+                          data-intreb="Ștergi dorința asta de tot? Nu se mai numără nicăieri.">
+                    Șterge
+                  </option>
+                </select>
               </td>
             </tr>
             <?php endforeach; ?>

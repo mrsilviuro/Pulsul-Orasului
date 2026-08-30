@@ -957,7 +957,22 @@ assets/css/style.css, assets/js/main.js, assets/img/
   antetul `List-Unsubscribe`. Celelalte sunt răspunsuri la ceva ce a făcut
   omul, iar alea nu se „dezabonează". NU pleacă nimic când cineva se înscrie
   la un eveniment, când se apreciază un comentariu sau când se raportează ceva
-- Tabla cu dorințe se moderează din `admin-dorinte.php`. Fiecare dorință intră
+- Tabla cu dorințe se moderează din `admin-dorinte.php`, DINTR-O SINGURĂ LISTĂ
+  DE ALES (aceeași unealtă ca starea contului din `admin-useri.php`), cu patru
+  rânduri: „Așteptare", „Aprobă", „Respinge", „Șterge". Erau trei butoane, și
+  două dintre ele se vedeau numai cât dorința aștepta: o dată hotărâtă, nu mai
+  era nicio cale înapoi din interfață. De aceea `modereaza-dorinta` primește
+  acum și `in_asteptare`, iar starea DIN CARE se pleacă a intrat în `WHERE`
+  (citită în aceeași cerere, nu `'in_asteptare'` scris de mână) — apărarea de
+  filele lăsate deschise rămâne, dar nu mai închide drumul înapoi. Aleasă
+  starea în care e deja, nu se scrie și nu pleacă nimic. ÎNTOARCEREA ÎN
+  AȘTEPTARE NU TRIMITE NICIUN E-MAIL (acolo nu s-a hotărât nimic), dar
+  RĂZGÂNDIREA trimite: dorința tocmai a intrat sau a ieșit de pe tablă. O
+  dorință RETRASĂ de autor nu se mai moderează deloc — lista arată „retrasă",
+  stinsă, și „Șterge". „Șterge" e ALTĂ FAPTĂ (`sterge-dorinta`): `<option>`-ul
+  își poartă pe el `data-fapta` și `data-intreb`, iar în main.js fapta scrisă
+  pe alegere bate fapta scrisă pe listă.
+  Fiecare dorință intră
   cu `stare_moderare = 'in_asteptare'` și nu se vede nicăieri până nu e
   aprobată; omul află pe e-mail în amândouă cazurile, iar la respingere se poate
   scrie un motiv (gol = „nu s-a dat niciunul"). Se poate și din phpMyAdmin, mai

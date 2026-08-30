@@ -306,8 +306,41 @@ fost al titlului. N-are ce căuta acolo; e al dorințelor.
 
 ### Cum se aprobă o dorință
 
-Din `admin-dorinte.php`, cu două butoane. Merge mai departe și din phpMyAdmin —
-e de ajuns `stare_moderare`:
+Din `admin-dorinte.php`, **dintr-o singură listă de ales** — aceeași unealtă ca
+starea contului din `admin-useri.php`. Are patru rânduri: „Așteptare",
+„Aprobă", „Respinge" și „Șterge".
+
+Erau trei butoane, dintre care două se vedeau **numai cât dorința aștepta**. O
+dată hotărâtă, nu mai era nicio cale înapoi din interfață: un „Respinge" apăsat
+pe rândul de deasupra se îndrepta doar din phpMyAdmin. Lista arată starea de
+acum **și** toate drumurile care pleacă din ea, întoarcerea în așteptare
+inclusiv.
+
+Ce se schimbă la fapte:
+
+- `modereaza-dorinta` primește acum și `in_asteptare`, nu doar `aprobat` /
+  `respins`.
+- Starea din care se pleacă a intrat în `WHERE` — `stare_moderare = ?` cu
+  valoarea citită în aceeași cerere, nu `'in_asteptare'` scris de mână. Apărarea
+  de dinainte rămâne (o filă lăsată deschisă nu răstoarnă ce a hotărât altcineva
+  între timp), dar fără să mai închidă drumul înapoi.
+- Aleasă starea în care dorința e deja, nu se scrie nimic și nu pleacă niciun
+  e-mail — se întâmplă de la sine când cineva deschide lista și o închide la loc.
+- **Întoarcerea în așteptare nu trimite nimic**: acolo nu s-a hotărât nimic, iar
+  „dorința ta așteaptă din nou" e o veste despre o nehotărâre. Răzgândirea
+  (`aprobat` → `respins` și invers) trimite, fiindcă dorința tocmai a intrat sau
+  a ieșit de pe tablă, iar omul trebuie să știe unde e **acum**.
+- O dorință **retrasă de autor** nu se mai moderează deloc: lista arată doar
+  „retrasă", stinsă, și „Șterge". A o pune înapoi pe tablă ar însemna să-i
+  scoatem omului din gură vorbele pe care tocmai și le-a luat înapoi. Aceeași
+  purtare ca a unui cont anonimizat în `admin-useri.php`.
+
+„Șterge" stă în aceeași listă, dar e **altă faptă** (`sterge-dorinta`) — de
+aceea `<option>`-ul își poartă pe el și `data-fapta`, și `data-intreb`. În
+`main.js`, fapta scrisă pe alegere bate fapta scrisă pe listă; fără una a ei se
+ia a listei, deci listele de dinainte merg neatinse.
+
+Merge mai departe și din phpMyAdmin — e de ajuns `stare_moderare`:
 
 ```sql
 UPDATE dorinte SET stare_moderare = 'aprobat' WHERE id = 7;   -- sau 'respins'

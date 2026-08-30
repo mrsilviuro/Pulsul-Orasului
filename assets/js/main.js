@@ -6519,11 +6519,10 @@
            *   citit / necitit → butonul se întoarce, rândul rămâne. Reîncărcat,
            *                     omul ar fi pierdut locul din listă la fiecare bifă.
            *   poză ștearsă    → OMUL RĂMÂNE. S-a șters poza lui, nu el.
-           *   dorință hotărâtă → pagina se cere din nou: rândul își schimbă și
-           *                     starea, și butoanele, și locul în listă (cele
-           *                     care așteaptă stau în cap). Redesenat din JS,
-           *                     ar fi fost al doilea loc care știe cum arată.
            *   restul (ștergeri) → rândul pleacă din tabel.
+           *
+           * Dorințele nu mai trec pe aici: hotărârea lor se ia dintr-o listă,
+           * nu dintr-un buton, deci o duce ramura de la `change`, mai jos.
            */
           if (fapta === 'marcheaza-mesaj') {
             var acumCitit = !!c.citit;
@@ -6564,18 +6563,6 @@
           }
 
           /**
-            * REÎNCĂRCAREA PLEACĂ PE LOC, deci mesajul de mai sus n-ar fi apucat
-            * să se vadă — bula abia clipea. Se pune deoparte și se arată din
-            * nou pe pagina cerută din nou, de la capăt, cu cele cinci secunde
-            * ale ei.
-            */
-          if (fapta === 'modereaza-dorinta') {
-            pastreazaToast(c.mesaj || 'Gata.');
-            window.location.reload();
-            return;
-          }
-
-          /**
            * O NOTĂ ȘTEARSĂ SCHIMBĂ ȘI CIFRELE DE DEASUPRA.
            *
            * Amândouă paginile de unde se poate apăsa au un rezumat care se
@@ -6612,6 +6599,33 @@
         if (!camp) { return; }
 
         /**
+         * O ALEGERE POATE FI ALTĂ FAPTĂ DECÂT CELELALTE DIN ACEEAȘI LISTĂ.
+         *
+         * La dorințe, trei rânduri din listă mută starea (`modereaza-dorinta`)
+         * și al patrulea șterge rândul de tot (`sterge-dorinta`). Fapta scrisă
+         * pe alegere bate fapta scrisă pe listă; fără una a ei, se ia a listei,
+         * deci listele de dinainte (starea contului) merg mai departe neatinse.
+         */
+        var alesul = camp.tagName === 'SELECT' && camp.selectedIndex >= 0
+          ? camp.options[camp.selectedIndex]
+          : null;
+
+        var faptaCamp = (alesul && alesul.getAttribute('data-fapta'))
+                     || camp.getAttribute('data-fapta');
+
+        /**
+         * `data-intreb` pe alegere, nu pe listă: întrebarea e a ștergerii, nu
+         * a listei din care se alege. Renunțat, pagina se cere din nou — altfel
+         * lista ar fi rămas arătând „Șterge" pentru un rând care e tot acolo.
+         */
+        var intrebCamp = alesul && alesul.getAttribute('data-intreb');
+
+        if (intrebCamp && !window.confirm(intrebCamp)) {
+          window.location.reload();
+          return;
+        }
+
+        /**
          * `data-motiv-pentru` îngustează întrebarea la o singură valoare: la
          * lista de stări, motivul are rost numai pentru „suspendat", fiindcă
          * numai acolo pleacă un e-mail. Lipsa lui înseamnă „mereu".
@@ -6629,11 +6643,15 @@
         }
 
         var date = {
-          fapta: camp.getAttribute('data-fapta'),
+          fapta: faptaCamp,
           id:    parseInt(camp.getAttribute('data-id'), 10)
         };
 
-        date[camp.getAttribute('data-camp')] = camp.value;
+        /* Valoarea aleasă are rost doar pentru fapta listei. Ștergerea n-are ce
+           face cu o „hotărâre" pe care n-o citește nimeni. */
+        if (faptaCamp === camp.getAttribute('data-fapta')) {
+          date[camp.getAttribute('data-camp')] = camp.value;
+        }
 
         if (motivCamp !== '') { date.motiv = motivCamp; }
 
@@ -6650,6 +6668,23 @@
             // pagina sărind, fără să afle de ce.
             toastSiDupa((c && c.mesaj) || 'N-a mers.');
             window.setTimeout(function () { window.location.reload(); }, 1600);
+            return;
+          }
+
+          /**
+           * O DORINȚĂ HOTĂRÂTĂ SCHIMBĂ MAI MULT DECÂT LISTA DIN CARE S-A ALES:
+           * rândul își schimbă starea din coloana de alături, locul în tabel
+           * (cele care așteaptă stau în cap) și cifra de pe panou. Ștearsă,
+           * pleacă de tot. Redesenate din JS, ar fi fost al doilea loc care
+           * știe cum arată — deci se cere pagina din nou, ca la butoane.
+           *
+           * Reîncărcarea pleacă pe loc, deci mesajul n-ar apuca să se vadă: se
+           * pune deoparte și se arată din nou pe pagina cerută, cu cele cinci
+           * secunde ale lui.
+           */
+          if (faptaCamp === 'modereaza-dorinta' || faptaCamp === 'sterge-dorinta') {
+            pastreazaToast(c.mesaj || 'Gata.');
+            window.location.reload();
             return;
           }
 
