@@ -87,6 +87,25 @@ Site live: https://pulsulorasului.ro
    rămâne pentru totdeauna: de el atârnă evenimentele organizate și participările.
    Se golește omul din el (`inc/stergere.php`), nu rândul. Ștergerea are răgaz de
    30 de zile, iar simpla intrare în cont o anulează — vezi `autentifica()`.
+   DE AICI DECURGE: oriunde se scrie un nume, rândul golit trebuie întrebat
+   întâi dacă mai are un om în el — `esteContSters($stare)` din `inc/validare.php`,
+   iar în locul numelui se scrie `NUME_CONT_STERS` („Utilizator șters"). Fără
+   întrebarea asta, `numeAfisat('Șters', 'Utilizator')` scotea „Ș. Utilizator":
+   o prescurtare care arată exact ca un nume de om adevărat, cu legătură cu tot
+   spre un profil gol. Se întreabă DOAR de `stare`, niciodată de
+   `cerere_stergere`: cele 30 de zile sunt dinadins un răstimp în care nu se
+   schimbă nimic. O pun TOATE locurile în care se scrie un nume: antetul unui
+   eveniment (`evenimentDinBaza`), comentariile (`contActiv` din
+   `inc/comentarii.php`), părerile scrise (`inc/evaluari.php`), câștigătorul
+   unei vânători (`inc/coduri-qr.php` — acolo scrie „Cineva", nu „Utilizator
+   șters": e altă vorbă fiindcă e altă propoziție) și zona de administrare
+   (`omulCuLegatura`). Listele de participanți nici n-au nevoie:
+   `INTERESE_DOAR_ACTIVI` taie din bază tot ce nu e `activ`.
+   ODATĂ CU NUMELE SE STINGE ȘI CHIPUL, și se stinge ÎN COD, nu se așteaptă să
+   fie NULL în bază: anonimizarea chiar șterge poza, dar un rând golit de mână
+   din phpMyAdmin — se mai întâmplă — ar rămâne altfel cu chipul pe el sub vorba
+   „Utilizator șters". Aici s-au găsit două scăpări, în două rânduri: antetul
+   evenimentului și caseta FindMe.
 
 8. **Poze de profil: niciodată nu se salvează fișierul primit așa cum a venit.**
    Se redesenează pixel cu pixel (`inc/imagini.php`), EXIF dispare, nume random hex.

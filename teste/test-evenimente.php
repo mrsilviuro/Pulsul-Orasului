@@ -1373,6 +1373,68 @@ verifica('organizatorul, cu link spre profilul lui', true,
     str_contains($pagina, 'profil.php?m=organizat02'));
 
 /**
+ * ORGANIZATORUL CARE ȘI-A ȘTERS CONTUL.
+ *
+ * Rândul lui rămâne în `membri` — de el atârnă anunțul — dar omul din el s-a
+ * golit. Antetul scria mai departe „Ș. Utilizator", adică o prescurtare care
+ * arată ca un nume adevărat, și ducea la un profil gol.
+ *
+ * Se probează întâi pe uscat, pe evenimentDinBaza(): acolo se ia hotărârea, iar
+ * un rând scris de mână spune limpede de ce anume atârnă ea.
+ */
+require_once __DIR__ . '/../inc/afisare-eveniment.php';
+
+$randOrg = [
+    'org_nume' => 'Popescu', 'org_prenume' => 'Mihai',
+    'org_permalink' => 'abcdefghij', 'org_poza' => str_repeat('a', 32),
+];
+
+$viu = evenimentDinBaza($randOrg + ['org_stare' => 'activ']);
+verifica('contul viu își păstrează numele',  'P. Mihai', $viu['organizator']);
+verifica('și legătura spre profil',          true, $viu['organizator_url'] !== '');
+verifica('și chipul',                        true, $viu['organizator_poza'] !== null);
+
+$dus = evenimentDinBaza($randOrg + ['org_stare' => 'sters']);
+verifica('contul șters scrie „Utilizator șters"', 'Utilizator șters', $dus['organizator']);
+verifica('fără legătură spre profil',            '',   $dus['organizator_url']);
+/* Poza se stinge aici, nu doar pe disc: un rând golit de mână din phpMyAdmin
+   ar fi rămas altfel cu chipul pe el. */
+verifica('și fără chip, chiar dacă rândul mai are unul', null, $dus['organizator_poza']);
+
+/**
+ * CELE TREIZECI DE ZILE DE RĂGAZ NU SCHIMBĂ NIMIC. Contul e întreg, iar simpla
+ * intrare în el anulează ștergerea — un anunț care și-ar pierde organizatorul
+ * în ziua apăsării butonului i-ar lăsa pe cei înscriși fără să știe cu cine se
+ * întâlnesc.
+ */
+$inRagaz = evenimentDinBaza($randOrg + ['org_stare' => 'activ', 'org_cerere_stergere' => acum()]);
+verifica('în răgaz, organizatorul e tot el', 'P. Mihai', $inRagaz['organizator']);
+
+/**
+ * Și acum prin HTTP, pe pagina adevărată. Starea se pune la loc imediat.
+ *
+ * SE CERE CU ALT BORCAN DE COOKIE-URI, nu cu al organizatorului: starea
+ * contului se citește din bază la FIECARE cerere, iar una făcută cu sesiunea
+ * lui cât e „sters" i-ar fi stins-o — și tot ce vine mai jos în proba asta se
+ * sprijină pe ea. Un anunț aprobat se vede oricum de oricine.
+ */
+$vizitator = [];
+db()->prepare('UPDATE membri SET stare = "sters" WHERE id = ?')->execute([$idOrg]);
+$paginaSters = cerere($laEveniment($idAprobat), $vizitator)['corp'];
+db()->prepare('UPDATE membri SET stare = "activ" WHERE id = ?')->execute([$idOrg]);
+
+verifica('pe pagină scrie „Utilizator șters"', true,
+    str_contains($paginaSters, '>Utilizator șters<'));
+verifica('și nu mai duce la profilul lui', false,
+    str_contains($paginaSters, 'profil.php?m=organizat02'));
+verifica('iar chipul e silueta implicită', true,
+    str_contains($paginaSters, 'post__avatar" src="/assets/img/avatars/implicit.svg'));
+
+// Pusă starea la loc, totul se întoarce cum era.
+verifica('starea pusă la loc, numele se întoarce', true,
+    str_contains(cerere($laEveniment($idAprobat), $c)['corp'], 'profil.php?m=organizat02'));
+
+/**
  * Câmpurile nespecificate nu lasă rânduri goale.
  *
  * Se caută eticheta așa cum e tipărită, „<span>Vârstă minimă</span>", nu

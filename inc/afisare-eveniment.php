@@ -247,6 +247,8 @@ function evenimentDinBaza(array $rand): array
         $coperta = urlImagineCategorie($rand['imagine_default'] ?? null);
     }
 
+    $orgSters = esteContSters($rand['org_stare'] ?? null);
+
     return [
         'titlu'            => $rand['titlu'] ?? '',
         'categorie'        => $rand['categorie'] ?? '',
@@ -262,11 +264,28 @@ function evenimentDinBaza(array $rand): array
         'participanti_max' => $rand['participanti_max'] ?? null,
         'gen_participanti' => $rand['gen_participanti'] ?? 'nespecificat',
         'coperta_url'      => $coperta,
-        'organizator'      => numeAfisat((string) ($rand['org_nume'] ?? ''), (string) ($rand['org_prenume'] ?? '')),
-        'organizator_url'  => !empty($rand['org_permalink'])
+
+        /**
+         * ORGANIZATORUL CARE ȘI-A ȘTERS CONTUL nu mai are nici nume, nici chip,
+         * nici profil la care să ducă legătura.
+         *
+         * Rândul lui a rămas în `membri` — de el atârnă anunțul ăsta și
+         * participările altora — dar omul din el s-a golit. Fără întrebarea de
+         * aici, antetul scria mai departe „Ș. Utilizator", adică o prescurtare
+         * care arată ca un nume adevărat, și trimitea la un profil gol.
+         *
+         * Poza se stinge ȘI EA, deși anonimizarea o șterge oricum de pe disc:
+         * regula n-are voie să atârne de curățenia altcuiva. Un rând golit de
+         * mână din phpMyAdmin — se mai întâmplă — ar fi rămas altfel cu chipul
+         * pe el.
+         */
+        'organizator'      => $orgSters
+            ? NUME_CONT_STERS
+            : numeAfisat((string) ($rand['org_nume'] ?? ''), (string) ($rand['org_prenume'] ?? '')),
+        'organizator_url'  => (!$orgSters && !empty($rand['org_permalink']))
             ? urlProfil((string) $rand['org_permalink'])
             : '',
-        'organizator_poza' => $rand['org_poza'] ?? null,
+        'organizator_poza' => $orgSters ? null : ($rand['org_poza'] ?? null),
         'creat_la'         => $rand['creat_la'] ?? null,
     ];
 }
