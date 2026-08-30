@@ -662,6 +662,127 @@ if ($BAZA === '') {
         if (preg_match('~^HTTP/\S+\s+(\d+)~', $rand, $m)) { $cod = (int) $m[1]; }
     }
     verifica('GET nu e primit', 405, $cod);
+
+    /* ================================================================== */
+    sectiune('hotărârea unei dorințe, din lista de ales');
+
+    /**
+     * De aici încolo se cere o sesiune de om de casă: fapta se face numai prin
+     * api/admin.php, iar aceea nu se lasă chemată de nimeni altcineva.
+     */
+    $ceruta = static function (string $cale, ?array $trup, string $cookie) use ($BAZA): array {
+        $ctx = stream_context_create(['http' => [
+            'method'        => $trup === null ? 'GET' : 'POST',
+            'header'        => "Content-Type: application/json\r\n"
+                             . ($cookie === '' ? '' : "Cookie: $cookie\r\n"),
+            'content'       => $trup === null ? '' : json_encode($trup),
+            'ignore_errors' => true,
+            'timeout'       => 10,
+        ]]);
+
+        $corp = (string) @file_get_contents($BAZA . $cale, false, $ctx);
+        $cod  = 0;
+        $nou  = $cookie;
+
+        foreach ($http_response_header ?? [] as $rand) {
+            if (preg_match('~^HTTP/\S+\s+(\d+)~', $rand, $m)) { $cod = (int) $m[1]; }
+            if (preg_match('/^Set-Cookie:\s*([^;]+)/i', $rand, $m) === 1) { $nou = $m[1]; }
+        }
+
+        return ['cod' => $cod, 'corp' => json_decode($corp, true), 'brut' => $corp,
+                'cookie' => $nou];
+    };
+
+    $pag = $ceruta('/login.php', null, '');
+    preg_match('/name="csrf" value="([^"]+)"/', $pag['brut'], $m);
+
+    $intrat = $ceruta('/api/autentificare.php',
+        ['csrf' => $m[1] ?? '', 'email' => SEMN . 'gazda@invalid.local', 'parola' => PAROLA],
+        $pag['cookie']);
+
+    $cookieGazda = ($intrat['corp']['ok'] ?? false) === true ? $intrat['cookie'] : '';
+    verifica('omul de casă a intrat', true, $cookieGazda !== '');
+
+    if ($cookieGazda === '') {
+        echo "   (fără sesiune nu se poate proba hotărârea)\n";
+    } else {
+        /* Tokenul CSRF se ia de pe chiar pagina de unde se apasă. */
+        $pagDorinte = $ceruta('/admin-dorinte.php', null, $cookieGazda);
+        preg_match('/data-csrf="([^"]+)"/', $pagDorinte['brut'], $m);
+        $csrf = $m[1] ?? '';
+
+        verifica('pagina se deschide pentru staff', 200, $pagDorinte['cod']);
+        verifica('și are tokenul ei', true, $csrf !== '');
+
+        /**
+         * LISTA A LUAT LOCUL CELOR TREI BUTOANE. Se probează pe HTML, nu pe
+         * vorbe: cine ar pune la loc un buton ar trece altfel neobservat.
+         */
+        verifica('e o listă de ales, nu butoane', true,
+            str_contains($pagDorinte['brut'], 'data-fapta="modereaza-dorinta"')
+            && str_contains($pagDorinte['brut'], 'data-camp="hotarare"'));
+        verifica('cu ștergerea în ea', true,
+            str_contains($pagDorinte['brut'], 'data-fapta="sterge-dorinta"'));
+        verifica('și cu întrebarea de dinaintea ei', true,
+            str_contains($pagDorinte['brut'], 'data-intreb="Ștergi dorința'));
+        verifica('motivul se cere doar la respingere', true,
+            str_contains($pagDorinte['brut'], 'data-motiv-pentru="respins"'));
+
+        $hotaraste = static function (string $stare) use ($ceruta, $cookieGazda, $csrf, $idDorinta): array {
+            return $ceruta('/api/admin.php', [
+                'csrf' => $csrf, 'fapta' => 'modereaza-dorinta',
+                'id' => $idDorinta, 'hotarare' => $stare,
+            ], $cookieGazda);
+        };
+
+        /* Dorința e „aprobat" din secțiunea de mai sus. */
+        verifica('pornim de la aprobat', 'aprobat', (string) $aNoastra()['stare_moderare']);
+
+        /**
+         * DRUMUL ÎNAPOI, care înainte nu exista: o dorință hotărâtă rămânea
+         * hotărâtă, iar un „Respinge" apăsat pe rândul greșit se îndrepta doar
+         * din phpMyAdmin.
+         */
+        $r = $hotaraste('in_asteptare');
+        verifica('se poate întoarce în așteptare', true, ($r['corp']['ok'] ?? false) === true);
+        verifica('și chiar se întoarce', 'in_asteptare', (string) $aNoastra()['stare_moderare']);
+        verifica('fără să-i scrie omului', true,
+            str_contains((string) ($r['corp']['mesaj'] ?? ''), 'Nu i-am scris'));
+
+        /**
+         * ALEASĂ STAREA ÎN CARE E DEJA: nu se scrie nimic și, mai ales, nu
+         * pleacă niciun e-mail. Se întâmplă de la sine când cineva deschide
+         * lista și o închide la loc.
+         */
+        $r = $hotaraste('in_asteptare');
+        verifica('a doua oară nu schimbă nimic', true, ($r['corp']['ok'] ?? false) === true);
+        verifica('și o spune', true,
+            str_contains((string) ($r['corp']['mesaj'] ?? ''), 'Era deja acolo'));
+
+        $r = $hotaraste('aprobat');
+        verifica('se aprobă din listă', true, ($r['corp']['ok'] ?? false) === true);
+        verifica('starea e aprobat', 'aprobat', (string) $aNoastra()['stare_moderare']);
+
+        /* Răzgândirea merge, și ea trimite vestea: dorința tocmai a ieșit de pe tablă. */
+        $r = $hotaraste('respins');
+        verifica('și se poate răzgândi', 'respins', (string) $aNoastra()['stare_moderare']);
+        verifica('la respingere se dă de veste', true,
+            str_contains((string) ($r['corp']['mesaj'] ?? ''), 'I-am dat de veste'));
+
+        /* O stare care nu există nu trece, oricât ar semăna cu una adevărată. */
+        $r = $hotaraste('sters');
+        verifica('„sters" nu e o hotărâre', 422, $r['cod']);
+        verifica('și starea a rămas', 'respins', (string) $aNoastra()['stare_moderare']);
+
+        /**
+         * `publicat_la` NU se pune la aprobare nici pe drumul ăsta: îl scrie
+         * tot stampileazaCeleAprobate(), de pe prima pagină.
+         */
+        db()->prepare('UPDATE dorinte SET publicat_la = NULL WHERE id = ?')->execute([$idDorinta]);
+        $hotaraste('in_asteptare');
+        $hotaraste('aprobat');
+        verifica('aprobată prin API, tot fără ștampilă', null, $aNoastra()['publicat_la']);
+    }
 }
 
 printf("\n%s\nTOTAL: %d trecute, %d picate\n", str_repeat('=', 60), $treceri, $picaturi);

@@ -18,7 +18,7 @@ declare(strict_types=1);
  *   sterge-mesaj      — un mesaj de contact, de tot
  *   sterge-evaluare   — o notă dintre participanți, de tot
  *   sterge-dorinta    — o dorință, oricare i-ar fi starea
- *   modereaza-dorinta — aprobă sau respinge o dorință care așteaptă
+ *   modereaza-dorinta — aprobă, respinge, sau întoarce în așteptare o dorință
  *   sterge-poza       — poza de profil a cuiva
  *   schimba-membru    — starea contului sau limita de evenimente active
  *
@@ -322,7 +322,13 @@ case 'sterge-dorinta':
 case 'modereaza-dorinta':
     $hotarare = (string) ($date['hotarare'] ?? '');
 
-    if (!in_array($hotarare, ['aprobat', 'respins'], true)) {
+    /**
+     * TREI STĂRI, NU DOUĂ. „in_asteptare" e acolo fiindcă de când hotărârea se
+     * ia dintr-o listă, și nu din două butoane, ea trebuie să poată fi și
+     * ÎNTOARSĂ: cine a apăsat din greșeală „Respinge" pe rândul de deasupra
+     * n-avea până acum nicio cale înapoi din interfață.
+     */
+    if (!in_array($hotarare, ['in_asteptare', 'aprobat', 'respins'], true)) {
         raspunsJson(['ok' => false, 'mesaj' => 'Hotărâre necunoscută.'], 422);
     }
 
@@ -331,12 +337,9 @@ case 'modereaza-dorinta':
      * la prima încărcare a primei pagini, tot cu ceasul PHP. Așa, o dorință
      * aprobată de mână din phpMyAdmin și una aprobată de aici se poartă la fel —
      * iar cele șapte zile de pe tablă se numără din același loc.
-     *
-     * `stare_moderare = 'in_asteptare'` stă în WHERE: o dorință deja hotărâtă nu
-     * se răzgândește dintr-o filă lăsată deschisă.
      */
-    /* Cui îi scriem, și ce scria în dorință — citite înaintea scrierii. */
-    $q = db()->prepare('SELECT membru_id, dorinta FROM dorinte WHERE id = ?');
+    /* Cui îi scriem, ce scria în dorință și unde era — citite înaintea scrierii. */
+    $q = db()->prepare('SELECT membru_id, dorinta, stare_moderare FROM dorinte WHERE id = ?');
     $q->execute([$idCerut('id')]);
     $dorintaRand = $q->fetch();
 
@@ -344,16 +347,36 @@ case 'modereaza-dorinta':
         raspunsJson(['ok' => false, 'mesaj' => 'Dorința nu mai există.'], 404);
     }
 
+    $dinainte = (string) $dorintaRand['stare_moderare'];
+
+    /**
+     * Aleasă starea în care e deja: nu se scrie nimic și, mai ales, nu pleacă
+     * niciun e-mail. Se întâmplă de la sine când cineva deschide lista și o
+     * închide la loc.
+     */
+    if ($dinainte === $hotarare) {
+        raspunsJson([
+            'ok'    => true,
+            'stare' => $hotarare,
+            'mesaj' => 'Era deja acolo. N-am schimbat nimic.',
+        ]);
+    }
+
+    /**
+     * Starea citită mai sus stă în WHERE — nu „in_asteptare" scris de mână.
+     * Așa rămâne apărarea de dinainte (o filă lăsată deschisă nu răstoarnă ce
+     * a hotărât altcineva între timp), dar fără să mai închidă drumul înapoi:
+     * ce se compară e ce scria pe ecran, nu o singură stare anume.
+     */
     $q = db()->prepare(
-        'UPDATE dorinte SET stare_moderare = ?
-          WHERE id = ? AND stare_moderare = \'in_asteptare\''
+        'UPDATE dorinte SET stare_moderare = ? WHERE id = ? AND stare_moderare = ?'
     );
-    $q->execute([$hotarare, $idCerut('id')]);
+    $q->execute([$hotarare, $idCerut('id'), $dinainte]);
 
     if ($q->rowCount() !== 1) {
         raspunsJson([
             'ok'    => false,
-            'mesaj' => 'Dorința asta a fost deja hotărâtă. Reîncarcă pagina.',
+            'mesaj' => 'Dorința asta a fost hotărâtă între timp. Reîncarcă pagina.',
         ], 409);
     }
 
@@ -365,9 +388,17 @@ case 'modereaza-dorinta':
      * dorința lui pur și simplu nu apărea, iar el nu știa dacă e citită sau
      * uitată.
      *
+     * NU PLEACĂ NIMIC LA ÎNTOARCEREA ÎN AȘTEPTARE: acolo nu s-a hotărât nimic,
+     * iar „dorința ta așteaptă din nou" e o veste despre o nehotărâre. Pleacă
+     * însă la RĂZGÂNDIRE (aprobat → respins și invers): dorința tocmai a intrat
+     * sau a ieșit de pe tablă, iar omul trebuie să știe unde e acum, nu unde a
+     * fost prima oară.
+     *
      * Motivul se ia în seamă numai la respingere: la aprobare n-are ce spune.
      */
-    $omulDorintei = $destinatarul((int) $dorintaRand['membru_id']);
+    $omulDorintei = $hotarare === 'in_asteptare'
+        ? null
+        : $destinatarul((int) $dorintaRand['membru_id']);
 
     if ($omulDorintei !== null) {
         emailDorintaHotarata(
@@ -380,13 +411,18 @@ case 'modereaza-dorinta':
         );
     }
 
+    if ($hotarare === 'in_asteptare') {
+        $vorba = 'Dorința s-a întors în așteptare. Nu i-am scris nimic omului.';
+    } elseif ($hotarare === 'aprobat') {
+        $vorba = 'Dorința a fost aprobată. Apare pe tablă de la prima încărcare a primei pagini.';
+    } else {
+        $vorba = 'Dorința a fost respinsă. Omul poate pune alta.';
+    }
+
     raspunsJson([
         'ok'    => true,
         'stare' => $hotarare,
-        'mesaj' => ($hotarare === 'aprobat'
-            ? 'Dorința a fost aprobată. Apare pe tablă de la prima încărcare a primei pagini.'
-            : 'Dorința a fost respinsă. Omul poate pune alta.')
-            . ($omulDorintei !== null ? ' I-am dat de veste.' : ''),
+        'mesaj' => $vorba . ($omulDorintei !== null ? ' I-am dat de veste.' : ''),
     ]);
     break;
 
