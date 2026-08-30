@@ -267,7 +267,7 @@ try {
         raspunsJson([
             'ok'    => false,
             'plin'  => true,
-            'mesaj' => 'Nu mai sunt locuri disponibile la acest eveniment.',
+            'mesaj' => 'S-au ocupat toate locurile la acest eveniment.',
         ], 409);
     }
 

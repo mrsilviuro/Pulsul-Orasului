@@ -320,7 +320,7 @@ function verificaInregistrare(array $date, ?DateTimeImmutable $azi = null): arra
     $echivalente = ['M' => 'M', 'MASCULIN' => 'M', 'F' => 'F', 'FEMININ' => 'F'];
 
     if ($sex === '') {
-        $erori['sex'] = 'Alege o opțiune.';
+        $erori['sex'] = 'Alege una dintre variante.';
     } elseif (!isset($echivalente[$sex])) {
         $erori['sex'] = 'Varianta asta nu e dintre cele de mai sus.';
     } else {

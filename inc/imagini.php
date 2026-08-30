@@ -184,7 +184,7 @@ function eroareIncarcare(int $cod): string
             return 'Fișierul e prea mare. Alege o poză de cel mult '
                  . (int) (POZA_OCTETI_MAX / 1024 / 1024) . ' MB.';
         case UPLOAD_ERR_PARTIAL:
-            return 'Fișierul a ajuns doar pe jumătate. Încearcă din nou.';
+            return 'Fișierul a ajuns doar pe jumătate. Mai încearcă o dată.';
         case UPLOAD_ERR_NO_FILE:
             return 'Nu ai ales nicio poză.';
         case UPLOAD_ERR_NO_TMP_DIR:
@@ -194,7 +194,7 @@ function eroareIncarcare(int $cod): string
             // Astea sunt probleme ale serverului, nu ale utilizatorului. Nu
             // spunem care anume: nu l-ar ajuta cu nimic, iar pe cineva
             // rău-intenționat l-ar lămuri cum e configurat serverul.
-            return 'Nu am putut primi fișierul. Încearcă din nou peste puțin.';
+            return 'N-am reușit să primim fișierul. Mai încearcă peste puțin.';
     }
 }
 
@@ -282,7 +282,7 @@ function deschidePozaPrimita(array $fisier, int $minLatime, int $minInaltime): a
      * citim noi în locul lui.
      */
     if ($temporar === '' || !is_uploaded_file($temporar)) {
-        return ['ok' => false, 'mesaj' => 'Fișierul nu a ajuns cum trebuie. Încearcă din nou.'];
+        return ['ok' => false, 'mesaj' => 'Fișierul nu a ajuns cum trebuie. Mai încearcă o dată.'];
     }
 
     /* --------------------------- 2. Mărimea --------------------------- */
@@ -308,7 +308,7 @@ function deschidePozaPrimita(array $fisier, int $minLatime, int $minInaltime): a
     $info = @getimagesize($temporar);
 
     if ($info === false || empty($info[0]) || empty($info[1])) {
-        return ['ok' => false, 'mesaj' => 'Fișierul nu e o imagine pe care să o putem citi.'];
+        return ['ok' => false, 'mesaj' => 'Fișierul ăsta nu pare o poză.'];
     }
 
     $latime   = (int) $info[0];
@@ -336,7 +336,7 @@ function deschidePozaPrimita(array $fisier, int $minLatime, int $minInaltime): a
 
     if ($latime > POZA_LATURA_MAX || $inaltime > POZA_LATURA_MAX
         || $latime * $inaltime > POZA_PIXELI_MAX) {
-        return ['ok' => false, 'mesaj' => 'Poza are prea mulți pixeli. Micșoreaz-o puțin și încearcă din nou.'];
+        return ['ok' => false, 'mesaj' => 'Poza are prea mulți pixeli. Micșoreaz-o puțin și mai încearcă.'];
     }
 
     if (!incapeInMemorie($latime, $inaltime)) {
@@ -349,7 +349,7 @@ function deschidePozaPrimita(array $fisier, int $minLatime, int $minInaltime): a
     $sursa   = @$citeste($temporar);
 
     if (!$sursa instanceof GdImage) {
-        return ['ok' => false, 'mesaj' => 'Nu am putut citi poza. Încearcă alt fișier.'];
+        return ['ok' => false, 'mesaj' => 'N-am reușit să citim poza. Încearcă alt fișier.'];
     }
 
     // Fotografiile de pe telefon sunt aproape mereu salvate „culcat", cu o
@@ -410,7 +410,7 @@ function procesezaPozaProfil(array $fisier, ?array $decupaj = null): array
         $caleDosar = caleDosarPoze();
 
         if (!is_dir($caleDosar) && !@mkdir($caleDosar, 0755, true) && !is_dir($caleDosar)) {
-            return ['ok' => false, 'mesaj' => 'Nu am putut salva poza. Încearcă din nou peste puțin.'];
+            return ['ok' => false, 'mesaj' => 'N-am reușit să salvăm poza. Mai încearcă peste puțin.'];
         }
 
         // Nu mărim niciodată peste ce ne-a dat omul: dintr-un decupaj de
@@ -425,7 +425,7 @@ function procesezaPozaProfil(array $fisier, ?array $decupaj = null): array
 
             if (!scriePatrat($sursa, $taietura, $latura, $cale)) {
                 foreach ($scrise as $facut) @unlink($facut);
-                return ['ok' => false, 'mesaj' => 'Nu am putut salva poza. Încearcă din nou peste puțin.'];
+                return ['ok' => false, 'mesaj' => 'N-am reușit să salvăm poza. Mai încearcă peste puțin.'];
             }
 
             $scrise[] = $cale;
@@ -567,7 +567,7 @@ function procesezaCoperta(array $fisier, ?array $decupaj = null): array
         $caleDosar = dirname(__DIR__) . '/' . COPERTA_DOSAR;
 
         if (!is_dir($caleDosar) && !@mkdir($caleDosar, 0755, true) && !is_dir($caleDosar)) {
-            return ['ok' => false, 'mesaj' => 'Nu am putut salva coperta. Încearcă din nou peste puțin.'];
+            return ['ok' => false, 'mesaj' => 'N-am reușit să salvăm coperta. Mai încearcă peste puțin.'];
         }
 
         $cale = $caleDosar . '/' . $nume . '.jpg';
@@ -575,7 +575,7 @@ function procesezaCoperta(array $fisier, ?array $decupaj = null): array
         if (!scrieDreptunghi($sursa, $taietura['x'], $taietura['y'],
                              $taietura['l'], $taietura['h'],
                              COPERTA_LATIME, COPERTA_INALTIME, $cale)) {
-            return ['ok' => false, 'mesaj' => 'Nu am putut salva coperta. Încearcă din nou peste puțin.'];
+            return ['ok' => false, 'mesaj' => 'N-am reușit să salvăm coperta. Mai încearcă peste puțin.'];
         }
 
         return ['ok' => true, 'nume' => $nume];

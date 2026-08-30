@@ -233,7 +233,7 @@ verifica('exact 5 în bază', 5, cateMesaje());
 
 $r = mesaj($c, ['mesaj' => 'Încă unul, tot destul de lung ca să treacă.']);
 verifica('al șaselea primește mesaj limpede', true,
-    str_contains($r['mesaj'] ?? '', 'prea multe mesaje'));
+    str_contains($r['mesaj'] ?? '', 'cam multe mesaje'));
 
 // Limita nu trebuie să încuie și intrarea în cont.
 $cLogin = [];

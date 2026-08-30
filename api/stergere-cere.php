@@ -76,7 +76,7 @@ $plecat = cereStergereaContului($membru);
 if (!$plecat) {
     raspunsJson([
         'ok'    => false,
-        'mesaj' => 'Nu am putut trimite e-mailul. Încearcă din nou peste câteva minute.',
+        'mesaj' => 'N-am reușit să trimitem e-mailul. Mai încearcă peste câteva minute.',
     ], 500);
 }
 

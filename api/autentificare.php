@@ -47,9 +47,9 @@ $parola = is_string($date['parola'] ?? null) ? $date['parola'] : '';
 $erori = [];
 
 if ($email === '') {
-    $erori['email'] = 'Scrie adresa de e-mail.';
+    $erori['email'] = 'Avem nevoie și de adresa ta de e-mail.';
 } elseif (mb_strlen($email, 'UTF-8') > EMAIL_MAX || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-    $erori['email'] = 'Adresa de e-mail nu pare validă.';
+    $erori['email'] = 'Adresa nu pare completă. Mai aruncă un ochi pe ea.';
 }
 
 if ($parola === '') {
@@ -149,7 +149,7 @@ if ($membru['stare'] === 'neconfirmat') {
         'ok'    => false,
         'stare' => 'neconfirmat',
         'email' => $membru['email'],
-        'mesaj' => 'Contul tău nu e încă activat. Verifică e-mailul de confirmare.',
+        'mesaj' => 'Contul tău nu e încă activat. Caută e-mailul de confirmare — ar trebui să fie acolo.',
     ], 403);
 }
 
@@ -158,7 +158,7 @@ if ($membru['stare'] !== 'activ') {
     raspunsJson([
         'ok'    => false,
         'stare' => 'suspendat',
-        'mesaj' => 'Contul este suspendat. Scrie-ne dacă vrei lămuriri.',
+        'mesaj' => 'Contul tău e suspendat momentan. Scrie-ne și lămurim împreună.',
     ], 403);
 }
 

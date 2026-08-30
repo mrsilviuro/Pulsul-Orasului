@@ -42,7 +42,7 @@ $email = mb_strtolower(
 
 if ($email === '' || mb_strlen($email, 'UTF-8') > EMAIL_MAX
     || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-    raspunsJson(['ok' => false, 'erori' => ['email' => 'Adresa de e-mail nu pare validă.']], 422);
+    raspunsJson(['ok' => false, 'erori' => ['email' => 'Adresa nu pare completă. Mai aruncă un ochi pe ea.']], 422);
 }
 
 /**
@@ -80,7 +80,7 @@ if ($ip !== null) {
     if ((int) $q->fetchColumn() >= 10) {
         raspunsJson([
             'ok'    => false,
-            'mesaj' => 'S-au cerut prea multe parole de pe conexiunea asta. Încearcă peste o oră.',
+            'mesaj' => 'S-au cerut cam multe parole de aici. Mai încearcă peste o oră.',
         ], 429);
     }
 
@@ -136,7 +136,7 @@ $hash   = password_hash($parola, PASSWORD_DEFAULT);
 $expira = (new DateTimeImmutable('+' . MINUTE_PAROLA_TEMPORARA . ' minutes'))->format('Y-m-d H:i:s');
 
 if ($hash === false) {
-    raspunsJson(['ok' => false, 'mesaj' => 'Nu am putut pregăti parola. Încearcă din nou.'], 500);
+    raspunsJson(['ok' => false, 'mesaj' => 'N-am reușit să pregătim parola. Mai încearcă o dată.'], 500);
 }
 
 // Contorul de greșeli pornește de la zero: e o parolă nouă.

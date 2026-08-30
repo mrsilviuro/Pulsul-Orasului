@@ -30,7 +30,7 @@ const EVALUARI_DEODATA = 20;
 const EVALUARE_ABSENT_STELE = 1;
 
 /** Textul pus în locul părerii, când nota o pune site-ul. */
-const EVALUARE_ABSENT_TEXT = 'Nu s-a prezentat la eveniment, deși s-a înscris pe lista de participanți.';
+const EVALUARE_ABSENT_TEXT = 'S-a înscris pe lista de participanți, dar nu a ajuns la eveniment.';
 
 /* ============================== CITIREA ============================== */
 

@@ -14,7 +14,7 @@ require_once __DIR__ . '/inc/auth.php';
 $token = isset($_GET['token']) && is_string($_GET['token']) ? trim($_GET['token']) : '';
 
 $titlu  = 'Link invalid';
-$mesaj  = 'Linkul de confirmare nu este valid. Verifică dacă l-ai copiat întreg.';
+$mesaj  = 'Linkul de confirmare nu pare întreg. Verifică dacă l-ai copiat tot.';
 $reusit = false;
 
 // Token-ul din link e în clar; în baza de date stă doar hash-ul lui.
@@ -31,7 +31,7 @@ if (preg_match('/^[a-f0-9]{64}$/', $token)) {
 
     if (!$membru) {
         $titlu = 'Link invalid';
-        $mesaj = 'Linkul nu mai este valabil. Poate a fost deja folosit.';
+        $mesaj = 'Linkul nu mai e bun. Se poate să fi fost deja folosit.';
 
     } elseif ($membru['stare'] === 'activ') {
         $titlu  = 'Contul e deja confirmat';
@@ -40,7 +40,7 @@ if (preg_match('/^[a-f0-9]{64}$/', $token)) {
 
     } elseif (new DateTimeImmutable((string) $membru['token_expira']) < new DateTimeImmutable()) {
         $titlu = 'Link expirat';
-        $mesaj = 'Linkul de confirmare a expirat. Înregistrează-te din nou sau cere altul.';
+        $mesaj = 'Linkul de confirmare a expirat. Cere altul, sau fă-ți contul din nou.';
 
     } else {
         $u = db()->prepare(
@@ -54,7 +54,7 @@ if (preg_match('/^[a-f0-9]{64}$/', $token)) {
         $u->execute([acum(), $membru['id']]);
 
         $titlu  = 'Contul tău e gata';
-        $mesaj  = 'Adresa de e-mail a fost confirmată. Acum te poți autentifica.';
+        $mesaj  = 'Gata, adresa ta e confirmată! Acum poți intra în cont.';
         $reusit = true;
     }
 }

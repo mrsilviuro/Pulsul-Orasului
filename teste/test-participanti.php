@@ -399,7 +399,7 @@ $omul = static function (int $id): array {
 
 // Vlad are ușa închisă de la scoaterea de mai devreme.
 verifica('ușa închisă oprește participarea',
-    'Nu te mai poți înscrie la această activitate.',
+    'Nu te mai poți înscrie la acest eveniment.',
     motivBlocajParticipare($eveniment, $omul($vlad)));
 
 verifica('cine n-a fost scos, nimic', '', motivBlocajParticipare($eveniment, $omul($ana)));
@@ -441,7 +441,7 @@ verifica('organizatorul trece de regula de gen', '',
 // Ușa închisă bate genul: cine e scos nu intră nici dacă e de sexul potrivit.
 $doarBarbatiSiInterzis = $doarBarbati;
 verifica('ușa închisă se spune prima',
-    'Nu te mai poți înscrie la această activitate.',
+    'Nu te mai poți înscrie la acest eveniment.',
     motivBlocajParticipare($doarBarbatiSiInterzis, $omul($vlad)));
 
 /* ----------------------- vârsta minimă ---------------------------- */
@@ -513,7 +513,7 @@ verifica('organizatorul nu e oprit de vârstă', '',
 
 // Ușa închisă se spune tot prima, înaintea vârstei.
 verifica('ușa închisă bate vârsta',
-    'Nu te mai poți înscrie la această activitate.',
+    'Nu te mai poți înscrie la acest eveniment.',
     motivBlocajParticipare($ev16, $omul($vlad)));
 
 /* ------------- socoteala anilor, luată deoparte ------------------- */

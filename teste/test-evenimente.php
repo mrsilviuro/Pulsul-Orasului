@@ -391,7 +391,7 @@ echo "\n=== UN SINGUR EVENIMENT ACTIV ===\n";
 
 $r = trimite($c, ['titlu' => 'Al doilea eveniment, care nu trebuie să intre']);
 verifica('al doilea e oprit', false, $r['ok'] ?? true);
-verifica('cu mesajul cerut', 'Ai deja un eveniment activ. Poți posta unul nou după ce acesta se încheie.',
+verifica('cu mesajul cerut', 'Ai deja un eveniment activ. Poți publica altul după ce se încheie ăsta.',
     $r['mesaj'] ?? '');
 verifica('n-a ajuns în bază', 1, cateEvenimente());
 
@@ -2389,7 +2389,7 @@ intra($c3, 'al-treilea@exemplu-test.ro');
 
 $r = apasa($c3, $slugEv, 'participant', ['confirmat' => '1']);
 verifica('locul e ocupat, deci e oprit', false, $r['ok'] ?? true);
-verifica('cu mesajul cerut', 'Nu mai sunt locuri disponibile la acest eveniment.', $r['mesaj'] ?? '');
+verifica('cu mesajul cerut', 'S-au ocupat toate locurile la acest eveniment.', $r['mesaj'] ?? '');
 verifica('și cu semnul că e plin', true, $r['plin'] ?? false);
 verifica('nimic în bază', null, stareaDinBaza($idEv, $alTreilea));
 
@@ -2438,7 +2438,7 @@ verifica('și butonul apăsat e însemnat ca atare', true,
 verifica('caseta de confirmare e în pagină, ascunsă', true,
     preg_match('/id="rsvp-confirm"[^>]*hidden/', $pagina) === 1);
 verifica('spune ce vede organizatorul', true,
-    str_contains($pagina, 'văzute de'));
+    str_contains($pagina, 'numele întreg și numărul de telefon'));
 verifica('și pomenește WhatsApp', true, str_contains($pagina, 'WhatsApp'));
 verifica('cu trimitere la termeni', true, str_contains($pagina, 'Termenii și condițiile'));
 verifica('cine are telefon în cont nu mai e întrebat', false,
@@ -2456,7 +2456,7 @@ verifica('și cu chipuri, fără link', true,
 $idPustiu = pune($idOrg, 'La care nu vine nimeni', 'aprobat', 16);
 $pustiu = cerere($baza . urlEveniment($slugul($idPustiu)), $altul)['corp'];
 verifica('fără nimeni, o invitație', true,
-    str_contains($pustiu, 'Fii primul interesat de această activitate!'));
+    str_contains($pustiu, 'Fii primul care se arată interesat!'));
 verifica('fără cercuri goale', false, str_contains($pustiu, 'class="facepile"'));
 
 // La unul neaprobat, secțiunea lipsește cu totul.

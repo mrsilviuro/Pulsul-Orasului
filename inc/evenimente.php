@@ -519,9 +519,9 @@ function poatePublicaEveniment(int $membruId, bool $eStaff = false): array
      * toată lumea, și n-are rost să sune ca un formular de la primărie.
      */
     $mesaj = $limita === 1
-        ? 'Ai deja un eveniment activ. Poți posta unul nou după ce acesta se încheie.'
+        ? 'Ai deja un eveniment activ. Poți publica altul după ce se încheie ăsta.'
         : 'Ai deja ' . count($active) . ' evenimente active, câte poți avea în același timp. '
-        . 'Poți posta unul nou după ce se încheie vreunul.';
+        . 'Poți publica altul după ce se încheie vreunul.';
 
     return ['poate' => false, 'mesaj' => $mesaj, 'active' => $active];
 }

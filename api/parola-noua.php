@@ -93,7 +93,7 @@ if ($noua === '') {
 }
 
 if ($noua !== '' && $noua2 !== $noua) {
-    $erori['parola_confirmare'] = 'Cele două parole nu coincid.';
+    $erori['parola_confirmare'] = 'Cele două parole nu se potrivesc. Mai încearcă o dată.';
 }
 
 // Parola nouă nu poate fi cea veche: altfel „schimbarea" n-ar schimba nimic.
@@ -110,7 +110,7 @@ if ($erori !== []) {
 $hash = password_hash($noua, PASSWORD_DEFAULT);
 
 if ($hash === false) {
-    raspunsJson(['ok' => false, 'mesaj' => 'Nu am putut salva parola. Încearcă din nou.'], 500);
+    raspunsJson(['ok' => false, 'mesaj' => 'N-am reușit să salvăm parola. Mai încearcă o dată.'], 500);
 }
 
 // Odată cu parola nouă dispare și cea temporară, dacă mai era vreuna în

@@ -34,7 +34,7 @@ if (!tokenCsrfValid(is_string($date['csrf'] ?? null) ? $date['csrf'] : '')) {
 $email = mb_strtolower(curataSpatii((string) ($date['email'] ?? '')), 'UTF-8');
 
 if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-    raspunsJson(['ok' => false, 'mesaj' => 'Adresa de e-mail nu pare validă.'], 422);
+    raspunsJson(['ok' => false, 'mesaj' => 'Adresa nu pare completă. Mai aruncă un ochi pe ea.'], 422);
 }
 
 /**

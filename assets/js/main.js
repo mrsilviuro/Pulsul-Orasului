@@ -615,24 +615,24 @@
 
   function verificaDataNasteriiInPagina(v) {
     v = String(v || '').trim();
-    if (!v) return 'Scrie data nașterii.';
+    if (!v) return 'Spune-ne și când te-ai născut.';
 
     // Din câmp vine ZZ-LL-AAAA, cum se scrie o dată în România; aceeași
     // trecere o face și serverul, cu dataDinFormular().
     var iso = dataPentruBaza(v);
-    if (!iso) return 'Data nașterii nu e validă. Scrie-o ca 25-12-1990.';
+    if (!iso) return 'Data asta nu ne iese. Scrie-o ca 25-12-1990.';
 
     var born = new Date(iso + 'T00:00:00');
-    if (isNaN(born.getTime())) return 'Data nu pare validă.';
+    if (isNaN(born.getTime())) return 'Data asta nu ne iese.';
 
     var today = new Date();
-    if (born > today) return 'Data nașterii nu poate fi în viitor.';
-    if (born.getFullYear() < 1900) return 'Data nu pare validă.';
+    if (born > today) return 'Data e în viitor — probabil s-a strecurat o greșeală.';
+    if (born.getFullYear() < 1900) return 'Data asta nu ne iese.';
 
     var age = today.getFullYear() - born.getFullYear();
     var m = today.getMonth() - born.getMonth();
     if (m < 0 || (m === 0 && today.getDate() < born.getDate())) age--;
-    if (age < VARSTA_MINIMA) return 'Trebuie să ai cel puțin ' + VARSTA_MINIMA + ' ani.';
+    if (age < VARSTA_MINIMA) return 'Ne pare rău, contul se poate face de la ' + VARSTA_MINIMA + ' ani în sus.';
 
     return '';
   }
@@ -1088,7 +1088,7 @@
         .catch(function () {
           if (buton) buton.disabled = false;
           if (rauDorinta) {
-            rauDorinta.textContent = 'Nu am putut trimite. Verifică legătura la internet.';
+            rauDorinta.textContent = 'N-am reușit să trimitem. Verifică legătura la internet.';
             rauDorinta.hidden = false;
           }
         });
@@ -1410,13 +1410,13 @@
           .catch(function () {
             // Permisiunea poate fi refuzată chiar și pe https.
             if (copiazaPeVechi(text)) { aratatCopiat(); }
-            else { toast('Nu am putut copia linkul. Copiază-l din bara de adrese.'); }
+            else { toast('N-am reușit să copiem linkul. Ia-l din bara de adrese.'); }
           });
         return;
       }
 
       if (copiazaPeVechi(text)) { aratatCopiat(); }
-      else { toast('Nu am putut copia linkul. Copiază-l din bara de adrese.'); }
+      else { toast('N-am reușit să copiem linkul. Ia-l din bara de adrese.'); }
     });
   }
 
@@ -1615,8 +1615,8 @@
         moderareUrmare.textContent = cuEditare
           ? 'Anunțul rămâne în așteptare, iar organizatorul primește un e-mail cu '
             + 'ce are de îndreptat.'
-          : 'Anunțul va fi respins, iar comentariile, notele și listele lui se '
-            + 'șterg. Nu se mai pot aduce înapoi.';
+          : 'Anunțul e respins, iar comentariile, notele și listele lui se șterg. '
+            + 'Nu se mai pot aduce înapoi.';
         moderareUrmare.classList.toggle('moderare__urmare--grea', !cuEditare);
       }
     }
@@ -1898,7 +1898,7 @@
 
         if (c.erori) {
           setError('rsvp-telefon', 'err-rsvp-telefon',
-            c.erori.telefon || 'Verifică numărul.');
+            c.erori.telefon || 'Mai verifică o dată numărul.');
           if (rsvpTelefon) rsvpTelefon.focus();
           return;
         }
@@ -2195,7 +2195,7 @@
         var text = campComentariu.value.trim();
 
         if (!text) {
-          aratErroarea(eroareComentariu, 'Scrie ceva înainte de a trimite.');
+          aratErroarea(eroareComentariu, 'Scrie ceva mai întâi.');
           campComentariu.focus();
           return;
         }
@@ -2355,7 +2355,7 @@
         var text = camp.value.trim();
 
         if (!text) {
-          aratErroarea(eroare, 'Scrie ceva înainte de a trimite.');
+          aratErroarea(eroare, 'Scrie ceva mai întâi.');
           camp.focus();
           return;
         }
@@ -2429,7 +2429,7 @@
         var text = camp.value.trim();
 
         if (!text) {
-          aratErroarea(eroare, 'Scrie ceva înainte de a salva.');
+          aratErroarea(eroare, 'Scrie ceva mai întâi.');
           camp.focus();
           return;
         }
@@ -2859,7 +2859,7 @@
            * de aici trebuie să fie fix cel pe care îl socotește mb_strlen().
            */
           if ([...text].length < 15) {
-            eroare.textContent = 'Scrie cel puțin 15 caractere. Omul primește textul ăsta pe e-mail.';
+            eroare.textContent = 'Scrie cel puțin 15 caractere. Îi trimitem textul ăsta pe e-mail.';
             eroare.hidden = false;
             motiv.focus();
             return;
@@ -3479,8 +3479,8 @@
       {
         id: 'cf-name', error: 'err-name',
         check: function (v) {
-          if (!v) return 'Scrie-ți numele și prenumele.';
-          if (v.indexOf(' ') < 0) return 'Scrie și numele, și prenumele.';
+          if (!v) return 'Spune-ne numele și prenumele tău.';
+          if (v.indexOf(' ') < 0) return 'Ne trebuie și numele, și prenumele.';
           return '';
         }
       },
@@ -3488,14 +3488,14 @@
         id: 'cf-email', error: 'err-email',
         check: function (v) {
           if (!v) return 'Avem nevoie de adresa ta de e-mail ca să îți răspundem.';
-          if (!tiparEmail.test(v)) return 'Adresa de e-mail nu pare validă.';
+          if (!tiparEmail.test(v)) return 'Adresa nu pare completă. Mai aruncă un ochi pe ea.';
           return '';
         }
       },
       {
         id: 'cf-phone', error: 'err-phone',
         check: function (v) {
-          if (!v) return 'Scrie un număr de telefon.';
+          if (!v) return 'Scrie-ne și un număr de telefon.';
           // Aceeași regulă ca pe server (verificaTelefon din inc/validare.php):
           // prefixele +40 / 0040 se aduc la 0, apoi zece cifre, 07, 02 sau 03.
           var cifre = v.replace(/[\s.\-()\/]+/g, '');
@@ -3503,7 +3503,7 @@
           else if (/^0040/.test(cifre)) cifre = '0' + cifre.slice(4);
           else if (/^40/.test(cifre) && cifre.length === 11) cifre = '0' + cifre.slice(2);
           if (!/^0[237]\d{8}$/.test(cifre)) {
-            return 'Numărul nu pare românesc. Zece cifre, începând cu 07, 02 sau 03.';
+            return 'Numărul nu pare românesc — zece cifre, care încep cu 07, 02 sau 03.';
           }
           return '';
         }
@@ -3549,7 +3549,7 @@
 
       if (firstBad) {
         firstBad.focus();
-        toast('Mai sunt câmpuri de completat.');
+        toast('Mai sunt câteva câmpuri de completat.');
         return;
       }
 
@@ -3596,7 +3596,7 @@
             if (mesaj && !primul) primul = document.getElementById(p[1]);
           });
           if (primul) primul.focus();
-          toast('Mai sunt câmpuri de corectat.');
+          toast('Mai e ceva de îndreptat.');
           return;
         }
 
@@ -3742,7 +3742,7 @@
         });
         if (firstBad) {
           firstBad.focus();
-          toast('Mai sunt câmpuri de completat.');
+          toast('Mai sunt câteva câmpuri de completat.');
           return;
         }
         onValid();
@@ -3757,8 +3757,8 @@
         {
           id: 'lg-email', error: 'err-lg-email',
           check: function (v) {
-            if (!v) return 'Scrie adresa de e-mail.';
-            if (!emailPattern.test(v)) return 'Adresa de e-mail nu pare validă.';
+            if (!v) return 'Avem nevoie și de adresa ta de e-mail.';
+            if (!emailPattern.test(v)) return 'Adresa nu pare completă. Mai aruncă un ochi pe ea.';
             return '';
           }
         },
@@ -3974,24 +3974,24 @@
         {
           id: 'rg-lastname', error: 'err-rg-lastname',
           check: function (v) {
-            if (!v) return 'Scrie numele.';
-            if (v.length < 2) return 'Numele pare prea scurt.';
+            if (!v) return 'Ne trebuie și numele tău de familie.';
+            if (v.length < 2) return 'Numele pare cam scurt. Mai adaugă câteva litere.';
             return '';
           }
         },
         {
           id: 'rg-firstname', error: 'err-rg-firstname',
           check: function (v) {
-            if (!v) return 'Scrie prenumele.';
-            if (v.length < 2) return 'Prenumele pare prea scurt.';
+            if (!v) return 'Spune-ne și prenumele tău.';
+            if (v.length < 2) return 'Prenumele pare cam scurt. Mai adaugă câteva litere.';
             return '';
           }
         },
         {
           id: 'rg-email', error: 'err-rg-email',
           check: function (v) {
-            if (!v) return 'Scrie adresa de e-mail.';
-            if (!emailPattern.test(v)) return 'Adresa de e-mail nu pare validă.';
+            if (!v) return 'Avem nevoie și de adresa ta de e-mail.';
+            if (!emailPattern.test(v)) return 'Adresa nu pare completă. Mai aruncă un ochi pe ea.';
             return '';
           }
         },
@@ -4001,12 +4001,12 @@
         },
         {
           id: 'rg-gender', error: 'err-rg-gender',
-          check: function (v) { return v ? '' : 'Alege o opțiune.'; }
+          check: function (v) { return v ? '' : 'Alege una dintre variante.'; }
         },
         {
           id: 'rg-password', error: 'err-rg-password',
           check: function (v) {
-            if (!v) return 'Alege o parolă.';
+            if (!v) return 'Alege-ți o parolă.';
             if (v.length < 8) return 'Parola trebuie să aibă minimum 8 caractere.';
             if (putereParolei(v) < 2) return 'Parola e prea simplă — adaugă cifre sau litere mari.';
             return '';
@@ -4015,15 +4015,15 @@
         {
           id: 'rg-password2', error: 'err-rg-password2',
           check: function (v) {
-            if (!v) return 'Scrie parola din nou.';
-            if (v !== document.getElementById('rg-password').value) return 'Cele două parole nu coincid.';
+            if (!v) return 'Mai scrie o dată parola, ca să fim siguri.';
+            if (v !== document.getElementById('rg-password').value) return 'Cele două parole nu se potrivesc. Mai încearcă o dată.';
             return '';
           }
         },
         {
           id: 'rg-terms', error: 'err-rg-terms',
           check: function (checked) {
-            return checked ? '' : 'Trebuie să accepți termenii ca să continui.';
+            return checked ? '' : 'Ca să mergem mai departe, avem nevoie să accepți termenii.';
           }
         }
       ], trimiteInregistrarea);
@@ -4090,7 +4090,7 @@
               if (mesaj && !primul) primul = document.getElementById(pereche[0]);
             });
             if (primul) primul.focus();
-            toast('Mai sunt câmpuri de corectat.');
+            toast('Mai e ceva de îndreptat.');
             return;
           }
 
@@ -4133,7 +4133,7 @@
         passInput.addEventListener('input', function () {
           if (pass2.value && fieldOf('rg-password2').classList.contains('has-error')) {
             setError('rg-password2', 'err-rg-password2',
-              pass2.value === passInput.value ? '' : 'Cele două parole nu coincid.');
+              pass2.value === passInput.value ? '' : 'Cele două parole nu se potrivesc. Mai încearcă o dată.');
           }
         });
       }
@@ -4156,12 +4156,12 @@
       var email = camp.value.trim();
 
       if (!email) {
-        setError('uit-email', 'err-uit-email', 'Scrie adresa de e-mail.');
+        setError('uit-email', 'err-uit-email', 'Avem nevoie și de adresa ta de e-mail.');
         camp.focus();
         return;
       }
       if (!tiparEmail.test(email)) {
-        setError('uit-email', 'err-uit-email', 'Adresa de e-mail nu pare validă.');
+        setError('uit-email', 'err-uit-email', 'Adresa nu pare completă. Mai aruncă un ochi pe ea.');
         camp.focus();
         return;
       }
@@ -4234,14 +4234,14 @@
     if (areVeche) {
       reguliParola.push({
         id: 'pn-veche', error: 'err-pn-veche',
-        check: function (v) { return v ? '' : 'Scrie parola de acum.'; }
+        check: function (v) { return v ? '' : 'Scrie mai întâi parola de acum.'; }
       });
     }
 
     reguliParola.push({
       id: 'pn-noua', error: 'err-pn-noua',
       check: function (v) {
-        if (!v) return 'Alege o parolă.';
+        if (!v) return 'Alege-ți o parolă.';
         if (v.length < 8) return 'Parola trebuie să aibă cel puțin 8 caractere.';
         if (putereParolei(v) < 2) return 'Parola e prea simplă — adaugă cifre sau litere mari.';
         return '';
@@ -4253,7 +4253,7 @@
       check: function (v) {
         var noua = document.getElementById('pn-noua').value;
         if (!v) return 'Repetă parola.';
-        if (v !== noua) return 'Cele două parole nu coincid.';
+        if (v !== noua) return 'Cele două parole nu se potrivesc. Mai încearcă o dată.';
         return '';
       }
     });
@@ -4284,7 +4284,7 @@
 
       if (primulGresit) {
         primulGresit.focus();
-        toast('Mai sunt câmpuri de corectat.');
+        toast('Mai e ceva de îndreptat.');
         return;
       }
 
@@ -4324,7 +4324,7 @@
             if (mesaj && !primul) primul = document.getElementById(p[1]);
           });
           if (primul) primul.focus();
-          toast('Mai sunt câmpuri de corectat.');
+          toast('Mai e ceva de îndreptat.');
           return;
         }
 
@@ -4358,24 +4358,24 @@
       {
         id: 'fn-lastname', error: 'err-fn-lastname',
         check: function (v) {
-          if (!v) return 'Scrie numele.';
-          if (v.length < 2) return 'Numele pare prea scurt.';
+          if (!v) return 'Ne trebuie și numele tău de familie.';
+          if (v.length < 2) return 'Numele pare cam scurt. Mai adaugă câteva litere.';
           return '';
         }
       },
       {
         id: 'fn-firstname', error: 'err-fn-firstname',
         check: function (v) {
-          if (!v) return 'Scrie prenumele.';
-          if (v.length < 2) return 'Prenumele pare prea scurt.';
+          if (!v) return 'Spune-ne și prenumele tău.';
+          if (v.length < 2) return 'Prenumele pare cam scurt. Mai adaugă câteva litere.';
           return '';
         }
       },
       { id: 'fn-birthdate', error: 'err-fn-birthdate', check: verificaDataNasteriiInPagina },
       { id: 'fn-gender', error: 'err-fn-gender',
-        check: function (v) { return v ? '' : 'Alege o opțiune.'; } },
+        check: function (v) { return v ? '' : 'Alege una dintre variante.'; } },
       { id: 'fn-terms', error: 'err-fn-terms',
-        check: function (v) { return v ? '' : 'Trebuie să accepți termenii.'; } }
+        check: function (v) { return v ? '' : 'Avem nevoie să accepți termenii.'; } }
     ];
 
     function valoareaLui(input) {
@@ -4410,7 +4410,7 @@
 
       if (primulGresit) {
         primulGresit.focus();
-        toast('Mai sunt câmpuri de completat.');
+        toast('Mai sunt câteva câmpuri de completat.');
         return;
       }
 
@@ -4452,7 +4452,7 @@
             if (mesaj && !primul) primul = document.getElementById(p[1]);
           });
           if (primul) primul.focus();
-          toast('Mai sunt câmpuri de corectat.');
+          toast('Mai e ceva de îndreptat.');
           return;
         }
 
@@ -5412,7 +5412,7 @@
           // alt câmp, nu într-un toast care se stinge singur.
           if (c.erori) {
             gata();
-            setError('ev-motiv', 'err-ev-motiv', c.erori.motiv || 'Scrie de ce anulezi.');
+            setError('ev-motiv', 'err-ev-motiv', c.erori.motiv || 'Spune-ne de ce anulezi.');
             if (evMotiv) evMotiv.focus();
             return;
           }
@@ -5727,7 +5727,7 @@
       });
 
       if (primul) primul.focus();
-      toast('Mai sunt câmpuri de corectat.');
+      toast('Mai e ceva de îndreptat.');
     }
 
     /* --- trimiterea --- */
@@ -5941,7 +5941,7 @@
       if (figura) {
         figura.innerHTML = '';
         figura.className = 'post__figure coperta-lipsa';
-        figura.textContent = 'Nu am putut încărca previzualizarea pozei — '
+        figura.textContent = 'N-am reușit să pregătim previzualizarea pozei — '
           + 'încearcă din nou sau verifică setările de confidențialitate ale browserului.';
       }
     }

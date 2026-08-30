@@ -27,7 +27,7 @@ $limitaPhp = octetiDinSetare((string) ini_get('post_max_size'));
 if ($_POST === [] && $_FILES === [] && $primite > 0 && $limitaPhp > 0 && $primite > $limitaPhp) {
     raspunsJson([
         'ok'    => false,
-        'mesaj' => 'Coperta e prea mare pentru server. Încarcă una mai mică.',
+        'mesaj' => 'Coperta e prea mare pentru server. Alege una mai mică.',
     ], 413);
 }
 

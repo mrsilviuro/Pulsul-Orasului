@@ -263,7 +263,7 @@ function randeazaChipuri(int $evenimentId): string
         // se poate face — iar aici mai e mereu ceva de făcut, fiindcă rândul
         // ăsta apare numai la un eveniment care n-a început.
         return '<p class="rsvp__note rsvp__note--gol">'
-             . 'Fii primul interesat de această activitate!</p>';
+             . 'Fii primul care se arată interesat!</p>';
     }
 
     /* ----------------------------- chipurile --------------------------- */
@@ -431,7 +431,7 @@ function motivBlocajParticipare(array $eveniment, ?array $membru): string
     // Ușa închisă de organizator sau de staff. Motivul a plecat întreg în
     // e-mailul de la scoatere; aici se spune doar ce se poate și ce nu.
     if (esteInterzisLaEveniment((int) $eveniment['id'], $membruId)) {
-        return 'Nu te mai poți înscrie la această activitate.';
+        return 'Nu te mai poți înscrie la acest eveniment.';
     }
 
     /**
