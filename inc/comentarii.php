@@ -572,10 +572,16 @@ function omDeInstiintatLaComentariu(array $eveniment, int $autorId, ?array $catr
 
 /* ========================= CUM SE ARATĂ PE ECRAN ====================== */
 
-/** Contul din spatele comentariului mai e al cuiva? */
+/**
+ * Contul din spatele comentariului mai e al cuiva?
+ *
+ * Întrebarea propriu-zisă stă în esteContSters(), din inc/validare.php, lângă
+ * numeAfisat() — o pun toate locurile în care se scrie un nume. Aici a rămas
+ * doar scurtătura care ia starea din rândul comentariului.
+ */
 function contActiv(array $c): bool
 {
-    return ($c['stare_cont'] ?? '') !== 'sters';
+    return !esteContSters($c['stare_cont'] ?? null);
 }
 
 /**
@@ -592,7 +598,7 @@ function contActiv(array $c): bool
 function numeleDinComentariu(array $c): string
 {
     if (!contActiv($c)) {
-        return 'Utilizator șters';
+        return NUME_CONT_STERS;
     }
 
     return numeAfisat((string) $c['nume'], (string) $c['prenume']);

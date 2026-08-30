@@ -470,7 +470,22 @@ db()->prepare('UPDATE membri SET stare = "sters" WHERE id = ?')->execute([$omul]
 $caseta = randeazaCasetaFindMe(evenimentDupaSlug('tstfm-joc'), codQrDupaCod($cod1));
 verifica('cont anonimizat: fără legătură', false, str_contains($caseta, 'profil.php?m='));
 verifica('dar tot spune că s-a găsit',      true, str_contains($caseta, 'findme--gasit'));
-db()->prepare('UPDATE membri SET stare = "activ" WHERE id = ?')->execute([$omul]);
+verifica('și nici numele nu se mai scrie', false, str_contains($caseta, 'Andrei'));
+
+/**
+ * ȘI FĂRĂ CHIP. Poza se lua mai departe din rând, oricât ar fi scris „Cineva"
+ * deasupra ei. De obicei nu se vedea, fiindcă anonimizarea o șterge și de pe
+ * disc, și din bază — dar atunci regula atârna de curățenia altcuiva.
+ *
+ * De aceea proba pune ANUME o poză înapoi pe rândul golit: fără ea, ar fi
+ * trecut și codul de dinainte, care nu întreba nimic.
+ */
+db()->prepare('UPDATE membri SET poza = ? WHERE id = ?')->execute([str_repeat('b', 32), $omul]);
+$caseta = randeazaCasetaFindMe(evenimentDupaSlug('tstfm-joc'), codQrDupaCod($cod1));
+verifica('cont anonimizat: nici chipul',   false, str_contains($caseta, str_repeat('b', 32)));
+verifica('ci silueta implicită',            true, str_contains($caseta, POZA_IMPLICITA));
+
+db()->prepare('UPDATE membri SET poza = NULL, stare = "activ" WHERE id = ?')->execute([$omul]);
 
 /* ==================================================================== */
 sectiune('cifrele de pe cartonaș');

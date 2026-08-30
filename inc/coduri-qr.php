@@ -597,8 +597,14 @@ function randeazaCasetaFindMe(array $eveniment, ?array $cod): string
          * dintr-un rând de participanți. urlPoza() cu al doilea argument false
          * dă fișierul întreg — cel mic e făcut pentru 40 de pixeli și s-ar
          * vedea moale la 130.
+         *
+         * FĂRĂ PROFIL, FĂRĂ CHIP. Numele și legătura se stingeau deja, dar poza
+         * se lua mai departe din rând. De obicei nu se vedea nimic, fiindcă
+         * anonimizarea o șterge și de pe disc, și din bază — numai că atunci
+         * regula atârna de curățenia altcuiva. Un rând golit de mână din
+         * phpMyAdmin ar fi lăsat un chip sub vorba „Cineva".
          */
-        $poza = urlPoza($cod['gasit_poza'] ?? null);
+        $poza = $areProfil ? urlPoza($cod['gasit_poza'] ?? null) : POZA_IMPLICITA;
 
         $chip = '<img class="findme__poza" src="' . h($poza) . '" alt=""'
               . ' width="130" height="130" loading="lazy">';

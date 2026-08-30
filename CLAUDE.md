@@ -94,11 +94,18 @@ Site live: https://pulsulorasului.ro
    o prescurtare care arată exact ca un nume de om adevărat, cu legătură cu tot
    spre un profil gol. Se întreabă DOAR de `stare`, niciodată de
    `cerere_stergere`: cele 30 de zile sunt dinadins un răstimp în care nu se
-   schimbă nimic. Azi o fac antetul unui eveniment (`evenimentDinBaza` din
-   `inc/afisare-eveniment.php`) și zona de administrare (`omulCuLegatura`);
-   listele de participanți nici n-au nevoie, fiindcă `INTERESE_DOAR_ACTIVI` taie
-   din bază tot ce nu e `activ`. COMENTARIILE ÎNCĂ NU o pun (`inc/comentarii.php`
-   face `JOIN membri` fără nicio condiție de stare) — vezi roadmap-ul.
+   schimbă nimic. O pun TOATE locurile în care se scrie un nume: antetul unui
+   eveniment (`evenimentDinBaza`), comentariile (`contActiv` din
+   `inc/comentarii.php`), părerile scrise (`inc/evaluari.php`), câștigătorul
+   unei vânători (`inc/coduri-qr.php` — acolo scrie „Cineva", nu „Utilizator
+   șters": e altă vorbă fiindcă e altă propoziție) și zona de administrare
+   (`omulCuLegatura`). Listele de participanți nici n-au nevoie:
+   `INTERESE_DOAR_ACTIVI` taie din bază tot ce nu e `activ`.
+   ODATĂ CU NUMELE SE STINGE ȘI CHIPUL, și se stinge ÎN COD, nu se așteaptă să
+   fie NULL în bază: anonimizarea chiar șterge poza, dar un rând golit de mână
+   din phpMyAdmin — se mai întâmplă — ar rămâne altfel cu chipul pe el sub vorba
+   „Utilizator șters". Aici s-au găsit două scăpări, în două rânduri: antetul
+   evenimentului și caseta FindMe.
 
 8. **Poze de profil: niciodată nu se salvează fișierul primit așa cum a venit.**
    Se redesenează pixel cu pixel (`inc/imagini.php`), EXIF dispare, nume random hex.
@@ -938,12 +945,6 @@ assets/css/style.css, assets/js/main.js, assets/img/
   Limita de evenimente active NU i se aplică: poatePublicaEveniment() îl lasă
   să treacă peste ea, fiindcă e făcută împotriva celui care ar umple prima
   pagină, iar el publică tocmai zece anunțuri ale orașului
-- Comentariile unui cont șters încă scriu „Ș. Utilizator", cu legătură spre un
-  profil gol: `inc/comentarii.php` face `JOIN membri` fără nicio condiție de
-  stare, iar `numeAfisat()` e chemat direct, fără `esteContSters()`. Antetul
-  evenimentului a fost îndreptat, discuția de sub el nu încă. Aceeași
-  îndreptare, în același fel, ar trebui și la părerile scrise de pe profil
-  (`inc/evaluari.php`) și la câștigătorul unei vânători (`inc/coduri-qr.php`)
 - Curățenia evenimentelor anulate: rândul cu `stare_moderare = 'anulat'` rămâne
   în bază pentru totdeauna, iar pagina lui se vede de oricine (cu banda și
   motivul). Ștergerea lui (cu tot cu coperta de pe disc, înscrieri și

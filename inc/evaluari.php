@@ -856,10 +856,10 @@ function randeazaEvaluari(array $evaluari, bool $eStaff = false): string
          * numele și nu se mai trimite nimeni la profilul lui. Aceeași regulă ca
          * la comentarii.
          */
-        $activ = ($ev['stare_cont'] ?? '') !== 'sters';
+        $activ = !esteContSters($ev['stare_cont'] ?? null);
         $nume  = $activ
             ? h(numeAfisat((string) $ev['nume'], (string) $ev['prenume']))
-            : 'Utilizator șters';
+            : h(NUME_CONT_STERS);
 
         /**
          * O notă automată nu e o părere, e un fapt: în capul ei scrie de la
