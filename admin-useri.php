@@ -66,15 +66,6 @@ require __DIR__ . '/inc/antet.php';
   <div class="wrap">
     <?= randeazaMeniulAdmin('useri') ?>
 
-    <header class="page-head">
-      <h1>Useri</h1>
-      <p class="page-head__sub">
-        Caută după nume, prenume, e-mail sau telefon — toate deodată. Numărul se
-        găsește și scris cu „+40" sau cu spații. Lista arată ultimii
-        <?= ADMIN_USERI ?> care au trecut pe site, cei mai proaspeți întâi.
-      </p>
-    </header>
-
     <form class="admin-cauta" method="get" action="/admin-useri.php" role="search">
       <label class="sr-only" for="cauta-om">Caută un om</label>
       <input type="search" id="cauta-om" name="q" value="<?= h($cauta) ?>"

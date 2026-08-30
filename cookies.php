@@ -44,154 +44,153 @@ require __DIR__ . '/inc/antet.php';
 <main id="main">
   <div class="wrap">
 
-    <header class="page-head">
-      <p class="eyebrow"><span class="pulse-dot" aria-hidden="true"></span> Documente</p>
-      <h1 class="page-title">Politica de cookies</h1>
-      <p class="page-lead">
-        Sunt două cookie-uri pe tot site-ul, amândouă necesare ca lucrurile să
-        meargă. Niciunul nu e de reclamă și niciunul nu te urmărește pe alte
-        site-uri.
-      </p>
-      <p class="doc-data">Ultima schimbare: <?= h($dataDocumentului) ?></p>
-    </header>
+  <nav class="crumbs" aria-label="Navigare">
+  <a href="/index.php">Acasă</a>
+  <span aria-hidden="true">/</span>
+  <span class="crumbs__current">Politica de cookies</span>
+  </nav>
+  <h1>Politica de cookies</h1>
 
     <div class="prose">
 
-      <h2>Ce e un cookie</h2>
+    <h2>Ce este un fișier cookie</h2>
 
-      <p>
-        Un fișier mic pe care site-ul îl lasă în browserul tău ca să-și
-        amintească ceva de la o pagină la alta — de pildă că ești conectat. Fără
-        el, ar trebui să-ți scrii parola la fiecare apăsare.
-      </p>
+    <p>
+    Un fișier de mici dimensiuni pe care site-ul nostru îl salvează în browserul tău
+    pentru a-și aminti anumite preferințe de la o pagină la alta, cum ar fi starea de
+    autentificare. Fără acest fișier, ar fi necesar să introduci parola la fiecare
+    accesare a unei pagini noi.
+    </p>
 
-      <h2>De ce nu-ți cerem acordul printr-un banner</h2>
+    <h2>De ce nu afișăm un banner pentru acordul de cookie-uri</h2>
 
-      <p>
-        Fiindcă n-avem pentru ce. Legea cere acord pentru cookie-urile de
-        măsurare și de reclamă — noi n-avem niciunul. Ce ne-a rămas e strict
-        necesar ca site-ul să funcționeze, iar pentru acelea nu se cere acord.
-      </p>
+    <p>
+    Deoarece nu avem motive să facem asta! Legea impune afișarea unui banner de consimțământ
+    pentru cookie-urile de analiză (trafic) sau pentru reclame,  iar platforma noastră nu
+    folosește niciunul dintre acestea. Folosim exclusiv cookie-uri tehnic esențiale pentru
+    funcționarea site-ului, iar pentru acestea legea nu solicită acord prealabil.
+    </p>
 
-      <p>
-        Un banner care cere „Accept" pentru nimic n-ar face decât să te învețe să
-        apeși fără să citești, iar asta n-ajută pe nimeni.
-      </p>
+    <p>
+    Un banner care ți-ar cere să apeși „Accept” fără un motiv real doar te-ar obosi și te-ar
+    obișnui să dai click fără să citești, ceea ce nu aduce niciun beneficiu.
+    </p>
 
-      <h2>Cookie-urile pe care le punem</h2>
+    <h2>Cookie-urile pe care le utilizăm</h2>
 
-      <div class="tabel-scroll">
-        <table class="tabel-doc">
-          <thead>
-            <tr>
-              <th scope="col">Nume</th>
-              <th scope="col">La ce e</th>
-              <th scope="col">Cât ține</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><span class="mono">PHPSESSID</span></td>
-              <td>
-                Ține minte că ești conectat, cât timp umbli prin site. Tot el
-                poartă și apărarea împotriva cererilor puse la cale de pe alt
-                site. Fără el nu te poți autentifica deloc.
-              </td>
-              <td>Până închizi browserul</td>
-            </tr>
-            <tr>
-              <td><span class="mono">po_amintit</span></td>
-              <td>
-                „Ține-mă minte", și numai dacă bifezi tu căsuța la intrarea în
-                cont. Te lasă conectat și după ce închizi browserul. Se
-                înnoiește la fiecare folosire și e legat de browserul tău.
-              </td>
-              <td><?= ZILE_TINE_MINTE ?> de zile</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+    <div class="tabel-scroll">
+    <table class="tabel-doc">
+    <thead>
+    <tr>
+    <th scope="col">Nume</th>
+    <th scope="col">La ce folosește</th>
+    <th scope="col">Cât timp este păstrat</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr>
+    <td><span class="mono">PHPSESSID</span></td>
+    <td>
+    Păstrează starea ta de autentificare pe parcursul navigării pe site. De
+    asemenea, asigură protecția împotriva cererilor neautorizate trimise de pe
+    alte platforme. Fără acest fișier, conectarea la cont nu este posibilă.
+    </td>
+    <td>Până la închiderea browserului</td>
+    </tr>
+    <tr>
+    <td><span class="mono">po_amintit</span></td>
+    <td>
+    Activează opțiunea „Ține-mă minte”, doar dacă bifezi căsuța respectivă la
+    autentificare. Îți menține contul conectat chiar și după închiderea
+    browserului. Se reînnoiește automat la fiecare utilizare și este asociat
+    în siguranță browserului tău.
+    </td>
+    <td><?= ZILE_TINE_MINTE ?> de zile</td>
+    </tr>
+    </tbody>
+    </table>
+    </div>
 
-      <p>
-        Amândouă sunt <span class="mono">HttpOnly</span> — adică niciun script
-        din pagină nu le poate citi — și <span class="mono">SameSite=Lax</span>,
-        deci nu pleacă la cereri venite de pe alte site-uri. Pe HTTPS sunt
-        marcate și <span class="mono">Secure</span>.
-      </p>
+    <p>
+    Ambele cookie-uri sunt setate ca <span class="mono">HttpOnly</span> (ceea ce înseamnă
+    că nu pot fi citite de scripturile din pagină) și <span class="mono">SameSite=Lax</span>
+    (nu pot fi transmise prin cereri efectuate de pe alte site-uri). Când navighezi
+    securizat prin HTTPS, acestea poartă și marcajul <span class="mono">Secure</span>.
+    </p>
 
-      <h2>Ce mai ținem minte în browser</h2>
+    <h2>Ce alte informații stocăm local în browser</h2>
 
-      <p>
-        Astea nu sunt cookie-uri — nu pleacă niciodată spre server, rămân doar la
-        tine în browser. Le scriem aici fiindcă tot despre ce-ți lasă site-ul în
-        calculator e vorba:
-      </p>
+    <p>
+    Aceste elemente nu sunt fișiere cookie, ele nu sunt transmise niciodată către serverul
+    nostru, ci rămân stocate exclusiv în browserul tău. Le menționăm aici pentru transparență
+    totală privind datele salvate local:
+    </p>
 
-      <div class="tabel-scroll">
-        <table class="tabel-doc">
-          <thead>
-            <tr>
-              <th scope="col">Nume</th>
-              <th scope="col">La ce e</th>
-              <th scope="col">Cât ține</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><span class="mono">po-theme</span></td>
-              <td>Tema pe care ai ales-o, luminoasă sau întunecată.</td>
-              <td>Până o ștergi</td>
-            </tr>
-            <tr>
-              <td><span class="mono">po-toast</span></td>
-              <td>
-                Un mesaj de confirmare care trebuie să treacă dintr-o pagină în
-                următoarea — de pildă când pagina se reîncarcă imediat după ce ai
-                apăsat ceva.
-              </td>
-              <td>Câteva secunde</td>
-            </tr>
-            <tr>
-              <td><span class="mono">po-previzualizare-…</span></td>
-              <td>
-                Poza aleasă pentru un eveniment, cât timp îi vezi
-                previzualizarea în altă filă.
-              </td>
-              <td>Până închizi fila</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+    <div class="tabel-scroll">
+    <table class="tabel-doc">
+    <thead>
+    <tr>
+    <th scope="col">Nume</th>
+    <th scope="col">La ce folosește</th>
+    <th scope="col">Cât timp este păstrat</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr>
+    <td><span class="mono">po-theme</span></td>
+    <td>Tema grafică pe care ai selectat-o (luminoasă sau întunecată).</td>
+    <td>Până când o ștergi</td>
+    </tr>
+    <tr>
+    <td><span class="mono">po-toast</span></td>
+    <td>
+    Un mesaj de confirmare sau notificare temporară transmis dintr-o pagină în alta
+    (de exemplu, când pagina se reîncarcă după ce ai salvat ceva).
+    </td>
+    <td>Câteva secunde</td>
+    </tr>
+    <tr>
+    <td><span class="mono">po-previzualizare-…</span></td>
+    <td>
+    Imaginea selectată pentru un eveniment, pe durata previzualizării acesteia
+    într-o filă nouă.
+    </td>
+    <td>Până la închiderea filei</td>
+    </tr>
+    </tbody>
+    </table>
+    </div>
 
-      <h2>Ce vine de la alții</h2>
+    <h2>Servicii externe integrate</h2>
 
-      <p>
-        Site-ul aduce fontul de la <strong>Google Fonts</strong>. Google nu pune
-        cookie-uri prin asta, dar browserul tău îi spune adresa ta IP când cere
-        fișierul. E singurul lucru care pleacă spre altcineva doar fiindcă ai
-        deschis o pagină.
-      </p>
+    <p>
+    Site-ul nostru încarcă fonturile grafice prin <strong>Google Fonts</strong>. Google nu
+    plasează cookie-uri în acest proces, însă browserul tău îi transmite adresa ta IP
+    pentru a descărca fontul. Acesta este singurul element transmis către un terț prin
+    simpla deschidere a unei pagini.
+    </p>
 
-      <p>
-        Dacă intri în cont cu <strong>Google</strong>, ești dus pentru câteva
-        clipe pe pagina lor de autentificare, unde se aplică regulile Google. Pe
-        site-ul nostru nu rămâne niciun cookie de-al lor.
-      </p>
+    <p>
+    Dacă alegi să te autentifici folosind contul <strong>Google</strong>, vei fi redirecționat
+    pentru câteva momente către pagina lor securizată de autentificare, unde se aplică
+    termenii Google. Pe platforma noastră nu rămâne niciun cookie furnizat de ei.
+    </p>
 
-      <p>
-        Nu avem butoane de Facebook, videoclipuri încorporate, hărți sau chat-uri
-        de la alții — adică tocmai lucrurile care aduc de obicei cookie-uri
-        străine pe un site.
-      </p>
+    <p>
+    Nu folosim daruri integrate de la rețele sociale (butoane de Facebook), videoclipuri
+    încorporate, hărți externe sau servicii terțe de chat, adică tocmai acele elemente
+    care plasează de obicei cookie-uri terțe pe alte site-uri.
+    </p>
 
-      <h2>Cum le ștergi</h2>
+    <h2>Cum poți șterge aceste date</h2>
 
-      <p>
-        Din setările browserului, la „Cookie-uri și date de site". Ține minte că,
-        dacă le ștergi, ieși din cont și site-ul uită tema aleasă. Poți și să
-        ieși din cont apăsând <a href="/iesire.php">Deloghează-te</a> — atunci
-        amândouă cookie-urile se șterg singure.
-      </p>
+    <p>
+    Poți șterge cookie-urile oricând direct din setările browserului tău, la secțiunea
+    „Cookie-uri și date de site”. Reține că, dacă le elimini, vei fi deconectat automat și
+    site-ul va reveni la tema grafică implicită. De asemenea, poți deconecta contul apăsând
+    pe <a href="/iesire.php">Deloghează-te</a>, caz în care cele două cookie-uri principale
+    vor fi șterse automat.
+    </p>
 
       <p class="doc-legatura">
         Vezi și <a href="/termeni.php">termenii și condițiile</a>

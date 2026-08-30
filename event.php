@@ -1491,9 +1491,6 @@ require __DIR__ . '/inc/antet.php';
     <section class="related" aria-labelledby="related-title">
       <div class="section-head">
         <h2 class="section-title" id="related-title">Ar putea să te intereseze și ...</h2>
-        <a class="link-more" href="/index.php">Prima pagină
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15"/><path d="m13 6 6 6-6 6"/></svg>
-        </a>
       </div>
 
       <div class="grid">

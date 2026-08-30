@@ -32,15 +32,6 @@ require __DIR__ . '/inc/antet.php';
   <div class="wrap">
     <?= randeazaMeniulAdmin('contact') ?>
 
-    <header class="page-head">
-      <h1>Mesaje de la contact</h1>
-      <p class="page-head__sub">
-        Cele mai noi întâi. Răspunsul pleacă din căsuța ta de e-mail;
-        „citit" e doar semnul tău, ca să știi unde ai rămas. „×" șterge
-        mesajul de tot — omul care l-a trimis nu află nimic.
-      </p>
-    </header>
-
     <section class="admin-sect" data-admin data-csrf="<?= h(tokenCsrf()) ?>">
       <?php if ($mesaje === []): ?>
       <p class="admin-gol">Niciun mesaj încă.</p>

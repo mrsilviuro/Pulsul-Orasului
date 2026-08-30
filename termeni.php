@@ -40,217 +40,107 @@ require __DIR__ . '/inc/antet.php';
 
 <main id="main">
   <div class="wrap">
+  <nav class="crumbs" aria-label="Navigare">
+  <a href="/index.php">Acasă</a>
+  <span aria-hidden="true">/</span>
+  <span class="crumbs__current">Termeni și Condiții</span>
+  </nav>
+  <div class="prose">
 
-    <header class="page-head">
-      <p class="eyebrow"><span class="pulse-dot" aria-hidden="true"></span> Documente</p>
-      <h1 class="page-title">Termeni și condiții</h1>
-      <p class="page-lead">
-        Regulile după care merge site-ul. Le-am scris pe înțelesul tuturor, fără
-        formule de avocat — dar rămân regulile după care ne purtăm, și noi, și tu.
-      </p>
-      <p class="doc-data">Ultima schimbare: <?= h($dataDocumentului) ?></p>
-    </header>
+  <p><h1>Termeni și Condiții</h1></p>
+  <p><h2>1. Ce este PulsulOrașului.Ro</h2></p>
 
-    <div class="prose">
+  <p>PulsulOrașului.Ro este locul în care comunitatea locală prinde viață ... un spațiu creat pentru ca oamenii dintr-un oraș să împărtășească ce pun la cale și să descopere activitățile celorlalți. Noi ne ocupăm de găzduirea și buna funcționare a platformei, iar evenimentele sunt publicate și organizate de către membrii comunității.</p>
 
-      <h2>Cine ține site-ul</h2>
+  <p>Deoarece fiecare organizator răspunde direct de conținutul anunțului său și de desfășurarea activității la fața locului, noi nu putem garanta că un eveniment va avea loc exact așa cum a fost descris sau că este potrivit pentru tine.</p>
 
-      <?php if ($operator['are_date']): ?>
-      <p>
-        PulsulOrasului.Ro e ținut de <strong><?= h($operator['nume']) ?></strong><?php
-        if ($operator['cui'] !== '') { echo ', CUI ' . h($operator['cui']); }
-        if ($operator['reg_com'] !== '') { echo ', înregistrată la Registrul Comerțului sub ' . h($operator['reg_com']); }
-        if ($operator['adresa'] !== '') { echo ', cu sediul în ' . h($operator['adresa']); }
-        ?>.
-        <?php if ($operator['email'] !== ''): ?>
-        Ne scrii oricând la <a href="mailto:<?= h($operator['email']) ?>"><?= h($operator['email']) ?></a>
-        sau prin <a href="/contact.php">formularul de contact</a>.
-        <?php endif; ?>
-      </p>
-      <?php else: ?>
-      <p>
-        Datele celui care ține site-ul nu sunt încă trecute aici. Până le
-        completăm, ne găsești prin <a href="/contact.php">formularul de contact</a>
-        — răspundem la tot ce ne vine.
-      </p>
-      <?php endif; ?>
+  <p>Utilizarea platformei este 100% gratuită. Nu vindem spații de promovare și nu percepem taxe pentru a poziționa un anunț mai sus pe pagină.</p>
 
-      <h2>Ce e site-ul ăsta</h2>
+  <p><h2>2. Contul tău</h2></p>
 
-      <p>
-        Un loc unde oamenii dintr-un oraș anunță ce pun la cale și află ce fac
-        ceilalți. Noi ținem site-ul; <strong>evenimentele le scriu oamenii</strong>.
-        Asta înseamnă ceva important: cine organizează ceva răspunde de ce a
-        scris în anunț și de ce se întâmplă la fața locului. Noi nu suntem
-        organizatorii și nu putem garanta că un eveniment are loc, că e așa cum a
-        fost descris sau că e potrivit pentru tine.
-      </p>
+  <p>Poți explora platforma și poți citi anunțurile fără a avea un cont. Totuși, pentru a publica un eveniment, a te înscrie la o activitate, a lăsa comentarii sau a evalua alți participanți, vei avea nevoie de un cont personal.</p>
 
-      <p>
-        Folosirea site-ului e gratuită. Nu vindem locuri în pagină și nu luăm
-        bani ca să punem un anunț mai sus.
-      </p>
+  <ul>
+  <li><strong>Vârsta minimă:</strong> Contul poate fi creat de către persoanele cu vârsta de cel puțin 10 ani. Pentru utilizatorii cu vârsta sub 16 ani, este necesar acordul unui părinte sau al tutorelui legal.</li>
+  <li><strong>Corectitudinea datelor:</strong> Te rugăm să folosești date reale și proprii. Crearea unui cont pe numele altcuiva dăunează comunității și poate crea neplăceri grave persoanei respective.</li>
+  <li><strong>Securitatea parolei:</strong> Parola ta este confidențială. Dacă bănuiești că altcineva ți-a aflat parola, te rugăm să o schimbi imediat din setări și să ne scrii.</li>
+  <li><strong>Un singur cont:</strong> Regula noastră este simplă: un singur cont pentru fiecare persoană.</li>
+  </ul>
 
-      <h2>Contul tău</h2>
+  <p><b>Ștergerea contului:</b></p>
 
-      <p>
-        Poți citi site-ul fără cont. Îți trebuie unul doar ca să publici un
-        eveniment, să te înscrii la unul, să comentezi sau să dai note.
-      </p>
+  <p>Îți poți șterge contul oricând din secțiunea de setări. Pentru siguranța ta, ștergerea include o perioadă de grație de 30 de zile, timp în care nu se schimbă nimic și te poți răzgândi oricând, fiind suficient să te reautentifici. Detaliile despre gestionarea datelor tale după această perioadă sunt prezentate în <a href="/confidentialitate.php">Politica de Confidențialitate</a>.</p>
 
-      <ul>
-        <li>
-          Contul se face de la <strong><?= VARSTA_MIN ?> ani</strong> în sus. Dacă
-          n-ai împlinit 16 ani, ai nevoie de acordul unui părinte sau al
-          tutorelui ca să-ți faci cont.
-        </li>
-        <li>
-          Datele pe care le scrii trebuie să fie ale tale și adevărate. Un cont
-          pe numele altcuiva nu e o glumă, e o problemă pentru omul acela.
-        </li>
-        <li>
-          Parola e a ta și numai a ta. Dacă bănuiești că a aflat-o cineva,
-          schimb-o din <a href="/setari.php">setări</a> și scrie-ne.
-        </li>
-        <li>Un om, un cont.</li>
-      </ul>
+  <p><h2>3. Ce publici pe platformă</h2></p>
 
-      <p>
-        Îți poți șterge contul oricând, din <a href="/setari.php">setări</a>.
-        Ștergerea are un răgaz de <strong><?= ZILE_RAGAZ_STERGERE ?> de zile</strong>,
-        în care nu se schimbă nimic și te poți răzgândi — e destul să intri din
-        nou în cont. Ce se întâmplă cu datele tale după aceea scrie în
-        <a href="/confidentialitate.php">politica de confidențialitate</a>.
-      </p>
+  <p>Anunțurile pe care le creezi îți aparțin în totalitate. Prin publicare, ne acorzi doar dreptul de a le afișa pe site și de a le include în e-mailul zilnic, strictul necesar pentru ca platforma să funcționeze. Nu le vom vinde, nu le vom înstrăina și nu le vom folosi în alt scop.</p>
 
-      <h2>Ce publici</h2>
+  <p><b>Ce nu își are locul pe site:</b></p>
 
-      <p>
-        Anunțul rămâne al tău. Ne dai doar dreptul de a-l arăta pe site și în
-        e-mailul zilnic — atât cât e nevoie ca site-ul să funcționeze. Nu-l
-        vindem, nu-l dăm altcuiva și nu-l folosim în altă parte.
-      </p>
+  <ul>
+  <li>Evenimente fictive sau descrise în mod înșelător;</li>
+  <li>Reclamă sau promovare comercială mascată sub formă de eveniment;</li>
+  <li>Conținut sau activități care încalcă legea sau care îndeamnă la nerespectarea acesteia;</li>
+  <li>Atacuri la persoană, jigniri, amenințări sau incitare la ură (indiferent dacă sunt bazate pe origine, religie, sex, orientare, dizabilitate sau orice alt criteriu);</li>
+  <li>Conținut destinat exclusiv adulților sau nepotrivit pentru minorii din comunitate;</li>
+  <li>Fotografii protejate de drepturi de autor pentru care nu deții dreptul de publicare, sau poze cu alte persoane încărcate fără acordul acestora;</li>
+  <li>Date cu caracter personal ale altor persoane (numere de telefon, adrese etc.) publicate fără consimțământul lor;</li>
+  <li>Spam, tentative de fraudă, escrocherii sau linkuri către pagini nesigure.</li>
+  </ul>
 
-      <p>Ce nu are ce căuta aici:</p>
+  <p><b>Verificarea anunțurilor:</b></p>
 
-      <ul>
-        <li>evenimente care nu există, sau descrise altfel decât sunt;</li>
-        <li>reclamă deghizată în eveniment;</li>
-        <li>lucruri care încalcă legea, sau care cheamă la asta;</li>
-        <li>
-          atacuri la persoană, jigniri, amenințări, incitare la ură — după
-          origine, religie, sex, orientare, dizabilitate sau orice altceva;
-        </li>
-        <li>conținut pentru adulți, sau nepotrivit pentru cine e minor pe site;</li>
-        <li>
-          poze care nu sunt ale tale și pentru care n-ai dreptul să le publici,
-          sau poze cu alți oameni fără voia lor;
-        </li>
-        <li>datele altcuiva — număr de telefon, adresă, orice — fără acordul lui;</li>
-        <li>spam, escrocherii, linkuri care duc la ele.</li>
-      </ul>
+  <p>Fiecare anunț este verificat de echipa noastră înainte de publicare. Te vom anunța pe e-mail cu privire la decizia luată. Dacă sunt necesare mici ajustări, îți vom explica exact ce este de modificat și vei putea retrimite anunțul fără a pierde datele introduse. În cazul în care un anunț nu respectă regulile de mai sus, acesta va fi respins, menționându-se motivul.</p>
 
-      <p>
-        <strong>Fiecare anunț trece pe la noi înainte să apară.</strong> Îl
-        citim și îți spunem pe e-mail ce am hotărât. Dacă e ceva de îndreptat, îți
-        scriem ce anume și îl poți trimite din nou — nu se pierde nimic din ce ai
-        scris. Dacă un anunț nu se potrivește cu regulile de mai sus, îl
-        respingem și îți spunem de ce.
-      </p>
+  <p><h2>4. Când te înscrii la un eveniment</h2></p>
 
-      <h2>Când te înscrii la un eveniment</h2>
+  <p>În momentul în care apeși butonul „Particip”, organizatorul va putea vedea numele tău complet și numărul tău de telefon, astfel încât să te poată contacta dacă apar modificări legate de eveniment. Ceilalți utilizatori vor vedea doar prenumele tău (sau numele prescurtat) și fotografia de profil.</p>
 
-      <p>
-        Când apeși „Particip", organizatorul îți vede numele întreg și numărul de
-        telefon, ca să te poată căuta dacă se schimbă ceva. Restul lumii vede
-        doar numele prescurtat și poza.
-      </p>
+  <p>Înscrierea este un angajament amical față de ceilalți participanți. Dacă nu mai poți ajunge, te rugăm să te retragi de pe listă din timp, pentru a elibera locul altcuiva. Organizatorul are opțiunea de a te retrage de pe listă (caz în care vei primi un e-mail explicativ) și te poate marca ca absent în cazul în care ai confirmat prezența, dar nu ai mai ajuns.</p>
 
-      <p>
-        E o înțelegere între oameni, nu un contract: dacă nu mai poți ajunge,
-        scoate-te de pe listă din vreme, ca locul să ajungă la altcineva.
-        Organizatorul poate să te scoată de pe listă — atunci primești un e-mail
-        cu motivul — și poate însemna că nu te-ai prezentat, dacă ai confirmat și
-        n-ai venit.
-      </p>
+  <p><h2>5. Evaluări, note și păreri</h2></p>
 
-      <h2>Note și păreri</h2>
+  <p>După încheierea unui eveniment, participanții își pot acorda reciproc evaluări timp de 48 de ore. Notarea prin steluțe este complet anonimă. Impresiile și comentariile scrise sunt publice, purtând semnătura autorului, și vor fi afișate pe profilul persoanei evaluate.</p>
 
-      <p>
-        După un eveniment, cei care au fost acolo se pot nota între ei, timp de
-        <strong><?= ORE_PENTRU_NOTE ?> de ore</strong>. Stelele sunt anonime.
-        Părerile scrise apar semnate, pe profilul omului.
-      </p>
+  <p>Evaluările trebuie să reflecte strict comportamentul și implicarea persoanei în cadrul evenimentului, nu părerea generală despre aceasta ca om. Notele acordate din frustrare, ca răzbunare sau prin înțelegeri amicale între prieteni distrug încrederea în comunitate, singurul motiv pentru care acest sistem există. Astfel de evaluări vor fi șterse imediat ce sunt identificate.</p>
 
-      <p>
-        O notă se dă despre cum a fost cineva la eveniment, nu despre cine e ca
-        om. Notele date din supărare, ca răzbunare sau ca înțelegere între
-        prieteni strică singurul lucru pentru care există — încrederea că merită
-        să ieși cu cineva pe care nu-l cunoști. Le ștergem când le găsim.
-      </p>
+  <p><h2>6. Ce putem face noi (Moderarea platformei)</h2></p>
 
-      <h2>Ce putem face noi</h2>
+  <p>Pentru a menține o comunitate sigură, corectă și plăcută, ne rezervăm dreptul de a:</p>
 
-      <p>Ca să ținem site-ul în regulă, putem:</p>
+  <ul>
+  <li>Solicita modificări pentru un anunț sau de a-l respinge;</li>
+  <li>Șterge comentarii, evaluări sau fotografii care încalcă regulamentul;</li>
+  <li>Suspenda un cont de utilizator;</li>
+  <li>Elimina o dorință de pe tabla de dorințe.</li>
+  </ul>
 
-      <ul>
-        <li>să respingem un anunț, sau să cerem o îndreptare;</li>
-        <li>să ștergem un comentariu, o notă sau o poză care încalcă regulile;</li>
-        <li>să suspendăm un cont;</li>
-        <li>să ștergem o dorință de pe tablă.</li>
-      </ul>
+  <p><b>Transparență:</b> Te vom informa întotdeauna pe e-mail de fiecare dată când intervenim asupra unui conținut creat de tine (ștergerea unui comentariu, a unei poze, suspendarea contului sau decizii legate de anunțuri și dorințe). Îți vom comunica și motivul deciziei. Dacă consideri că a fost vorba despre o greșeală, <a href="/contact.php">scrie-ne</a> oricând, citim fiecare mesaj și răspundem cu drag.</p>
 
-      <p>
-        <strong>Îți spunem întotdeauna, pe e-mail</strong>, când ștergem un
-        comentariu sau o poză de-a ta, când îți suspendăm contul și când hotărâm
-        ceva despre un anunț sau o dorință. Îți scriem și motivul, dacă a fost
-        scris unul. Dacă ți se pare o greșeală,
-        <a href="/contact.php">scrie-ne</a> — citim tot și răspundem.
-      </p>
+  <p><h2>7. Ce nu putem promite (Limitări de răspundere)</h2></p>
 
-      <h2>Ce nu putem promite</h2>
+  <p>Platforma este furnizată „așa cum este”. Depunem toate eforturile pentru ca site-ul să funcționeze impecabil și fără întreruperi, însă nu putem garanta absența erorilor tehnice sau veridicitatea fiecărui anunț publicat de utilizatori.</p>
 
-      <p>
-        Site-ul e oferit așa cum e. Ne străduim să meargă tot timpul și să fie
-        corect, dar nu putem promite că nu se va opri niciodată, că nu va avea
-        nicio greșeală sau că fiecare anunț scris de altcineva e adevărat.
-      </p>
+  <p>Nu purtăm răspunderea pentru desfășurarea evenimentelor și nici pentru înțelegerile private dintre participanți. Te încurajăm să abordezi întâlnirile cu persoane noi cu aceeași prudență pe care ai avea-o în viața de zi cu zi: alegeți spații publice și anunță pe cineva apropiat unde te afli.</p>
 
-      <p>
-        Nu răspundem pentru ce se întâmplă la un eveniment la care te-ai dus, nici
-        pentru înțelegerile dintre tine și alți oameni de pe site. Mergi la
-        întâlniri cu oameni pe care nu-i cunoști cu aceeași minte cu care ai face-o
-        oriunde altundeva: într-un loc public, spunând cuiva unde ești.
-      </p>
+  <p>Nicio prevedere din această pagină nu îți limitează drepturile legale garantate în calitate de utilizator sau consumator.</p>
 
-      <p>
-        Nimic din pagina asta nu-ți ia drepturile pe care ți le dă legea ca
-        utilizator sau consumator.
-      </p>
+  <p><h2>8. Modificarea termenilor și condițiilor</h2></p>
 
-      <h2>Dacă se schimbă ceva</h2>
+  <p>Atunci când actualizăm aceste reguli, vom menționa data revizuirii în partea de sus a paginii. În cazul unor modificări majore, te vom notifica și prin e-mail sau printr-un anunț direct pe site. Dacă nu ești de acord cu noile prevederi, îți poți închide contul în orice moment.</p>
 
-      <p>
-        Când schimbăm regulile, punem data nouă în capul paginii. Dacă e o
-        schimbare care contează cu adevărat, îți dăm de veste și pe e-mail sau pe
-        site. Dacă nu ești de acord cu ele, îți poți șterge contul oricând.
-      </p>
+  <p><h2>9. Cadrul legal și rezolvarea neînțelegerilor</h2></p>
 
-      <h2>Legea și neînțelegerile</h2>
+  <p>Acest regulament este guvernat de legea română. În cazul în care apare o neînțelegere, ne dorim să o rezolvăm mai întâi pe cale amiabilă. O simplă <a href="/contact.php">discuție prin e-mail</a> poate clarifica aproape orice situație.</p>
 
-      <p>
-        Se aplică legea română. Dacă apare o neînțelegere, hai să încercăm întâi
-        să o lămurim scriindu-ne — de obicei se rezolvă din câteva vorbe. Dacă
-        tot nu iese, se ocupă instanțele competente din România. Ca și consumator,
-        poți folosi și platforma europeană de
-        <a href="https://ec.europa.eu/consumers/odr" rel="noopener" target="_blank">soluționare online a litigiilor</a>.
-      </p>
+  <p>Dacă nu ajungem la o soluție comună, litigiul va fi soluționat de către instanțele judecătorești competente din România. În calitate de consumator, ai de asemenea posibilitatea de a utiliza platforma europeană de <a href="https://ec.europa.eu/consumers/odr" rel="noopener" target="_blank">Soluționare Online a Litigiilor (SOL)</a>.</p>
 
       <p class="doc-legatura">
         Vezi și <a href="/confidentialitate.php">politica de confidențialitate</a>
         și <a href="/cookies.php">politica de cookies</a>.
       </p>
 
+      </div>
     </div>
 
   </div>

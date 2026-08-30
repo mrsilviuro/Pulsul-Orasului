@@ -45,237 +45,229 @@ require __DIR__ . '/inc/antet.php';
 <main id="main">
   <div class="wrap">
 
-    <header class="page-head">
-      <p class="eyebrow"><span class="pulse-dot" aria-hidden="true"></span> Documente</p>
-      <h1 class="page-title">Politica de confidențialitate</h1>
-      <p class="page-lead">
-        Ce știm despre tine, de ce, cât timp și ce poți cere să facem cu datele
-        tale. Pe scurt: strângem cât mai puțin, nu urmărim pe nimeni și nu vindem
-        nimic nimănui.
-      </p>
-      <p class="doc-data">Ultima schimbare: <?= h($dataDocumentului) ?></p>
-    </header>
+  <nav class="crumbs" aria-label="Navigare">
+  <a href="/index.php">Acasă</a>
+  <span aria-hidden="true">/</span>
+  <span class="crumbs__current">Politica de confidențialitate</span>
+  </nav>
 
     <div class="prose">
 
-      <h2>Cine răspunde de datele tale</h2>
+    <h2>Politica de confidențialitate</h2>
 
-      <?php if ($operator['are_date']): ?>
-      <p>
-        Operatorul datelor e <strong><?= h($operator['nume']) ?></strong><?php
-        if ($operator['cui'] !== '') { echo ', CUI ' . h($operator['cui']); }
-        if ($operator['adresa'] !== '') { echo ', ' . h($operator['adresa']); }
-        ?>.
-        <?php if ($operator['email'] !== ''): ?>
-        Pentru orice ține de datele tale, scrie la
-        <a href="mailto:<?= h($operator['email']) ?>"><?= h($operator['email']) ?></a>.
-        <?php endif; ?>
-      </p>
-      <?php else: ?>
-      <p>
-        Datele operatorului nu sunt încă trecute aici. Până le completăm, pentru
-        orice ține de datele tale ne găsești prin
-        <a href="/contact.php">formularul de contact</a>.
-      </p>
-      <?php endif; ?>
+    <p>
+    Ce informații colectăm despre tine, de ce avem nevoie de ele, cât timp le păstrăm și
+    ce drepturi ai cu privire la datele tale personale. Pe scurt: colectăm cât mai puține
+    date posibil, nu urmărim activitatea nimănui pe internet și nu vindem sau închiriem
+    informațiile tale către terți.
+    </p>
 
-      <h2>Ce nu facem</h2>
+    <h2>1. Ce NU facem cu datele tale</h2>
 
-      <p>Începem cu asta, fiindcă e partea scurtă și cea mai importantă:</p>
+    <p>Începem cu această secțiune, deoarece este cea mai scurtă și mai importantă pentru noi:</p>
 
-      <ul>
-        <li><strong>Nu avem Google Analytics</strong> și niciun alt program care să numere pe unde umbli.</li>
-        <li><strong>Nu avem pixeli de Facebook</strong> sau de altă rețea.</li>
-        <li><strong>Nu punem cookie-uri de reclamă</strong> și nu facem profiluri de marketing.</li>
-        <li><strong>Nu vindem și nu închiriem datele nimănui.</strong></li>
-        <li><strong>Nu luăm hotărâri automate despre tine</strong> care să te privească în vreun fel.</li>
-      </ul>
+    <ul>
+    <li>
+    <strong>Fără Analytics:</strong> Nu avem Google Analytics și niciun alt program
+    care să-ți numere pașii sau să urmărească pe unde navighezi.
+    </li>
+    <li>
+    <strong>Fără Pixeli de urmărire:</strong> Nu folosim pixeli de la Facebook sau de la alte rețele sociale.
+    </li>
+    <li>
+    <strong>Fără Cookie-uri de reclamă:</strong> Nu plasăm cookie-uri pentru reclame și
+    nu construim profiluri de marketing.
+    </li>
+    <li>
+    <strong>Fără Vânzare de date:</strong> Nu vindem și nu închiriem datele niciunei persoane.
+    </li>
+    <li>
+    <strong>Fără Decizii automate:</strong> Nu luăm hotărâri automate sau bazate pe algoritmi care să te privească în vreun fel.
+    </li>
+    </ul>
 
-      <h2>Ce strângem, și de ce</h2>
+    <h2>2. Ce date colectăm și de ce le folosim</h2>
 
-      <h3>Când îți faci cont</h3>
+    <h3>Când îți creezi un cont</h3>
 
-      <p>
-        Îți cerem <strong>numele și prenumele</strong>, <strong>adresa de
-        e-mail</strong>, <strong>data nașterii</strong> și <strong>sexul</strong>.
-        Numele apare prescurtat pe site (P. Ionuț), data nașterii ne trebuie
-        pentru vârsta minimă a unui eveniment, iar sexul pentru evenimentele
-        anunțate doar pentru femei sau doar pentru bărbați. Adresa de e-mail e
-        felul în care intri în cont și primești vești.
-      </p>
+    <p>
+    Îți solicităm <strong>numele și prenumele</strong>, <strong>adresa de e-mail</strong>,
+<strong>data nașterii</strong> și <strong>sexul</strong>.
+</p>
 
-      <p>
-        Parola nu o știm. Se păstrează trecută printr-o funcție care nu se poate
-        întoarce (bcrypt), deci nici noi nu putem afla ce ai scris.
-      </p>
+<ul>
+<li>
+Numele apare prescurtat pe site (de exemplu: <em>P. Ionuț</em>) pentru a-ți proteja identitatea.
+</li>
+<li>
+Data nașterii ne este necesară pentru a verifica dacă îndeplinești limita de vârstă cerută pentru participarea la un eveniment.
+</li>
+<li>
+Sexul este utilizat pentru evenimentele anunțate doar pentru femei sau doar pentru bărbați.
+</li>
+<li>
+Adresa de e-mail este modul prin care intri în cont și primești notificările importante.
+</li>
+</ul>
 
-      <p>
-        Ținem și <strong>adresa IP de la înregistrare</strong>, ca să putem opri
-        pe cine face o sută de conturi într-o oră.
-      </p>
+<p>
+<strong>Parola ta este complet securizată.</strong> Nu o cunoaștem și nu o putem vedea,
+deoarece este stocată prin criptare ireversibilă (funcția bcrypt). Astfel, nimeni nu poate afla ce ai scris.
+</p>
 
-      <h3>Ce adaugi tu, dacă vrei</h3>
+<p>
+Păstrăm și <strong>adresa IP</strong> utilizată la înregistrare, pentru a opri tentativele
+de abuz (cum ar fi crearea automată a zeci de conturi într-o singură oră).
+</p>
 
-      <ul>
-        <li><strong>Numărul de telefon</strong> — îl vede doar organizatorul unui eveniment la care te-ai înscris, și staff-ul. Îl poți lăsa gol sau șterge oricând din <a href="/setari.php">setări</a>.</li>
-        <li><strong>Poza de profil</strong> — o redesenăm noi la salvare, iar datele ascunse în fișier (inclusiv locul unde a fost făcută poza) se pierd atunci. Nu ajung niciodată pe site.</li>
-        <li><strong>Ce scrii pe site</strong> — evenimente, comentarii, note, păreri, dorințe. Astea sunt publice, cum te aștepți să fie.</li>
-      </ul>
+<h3>Ce adaugi tu în cont, în mod opțional</h3>
 
-      <h3>Când ne scrii prin formularul de contact</h3>
+<ul>
+<li>
+<strong>Numărul de telefon:</strong> Este vizibil doar organizatorului unui eveniment la
+care te-ai înscris și echipei noastre de administrare. Îl poți lăsa gol sau îl poți șterge oricând din setări.
+</li>
+<li>
+<strong>Fotografia de profil:</strong> În momentul salvării, re-prelucrăm imaginea pixel cu pixel,
+astfel încât datele ascunse în fișier (inclusiv locația GPS unde a fost făcută poza) sunt eliminate definitiv.
+</li>
+<li>
+<strong>Conținutul publicat:</strong> Evenimentele create, comentariile, evaluările, părerile
+scrise și dorințele adăugate sunt publice, așa cum este firesc pe o platformă comunitară.
+</li>
+</ul>
 
-      <p>
-        Păstrăm numele, adresa de e-mail, telefonul, mesajul și adresa IP — ca să
-        îți putem răspunde și ca să oprim mesajele trimise în lanț.
-      </p>
+<h3>Când ne scrii prin formularul de contact</h3>
 
-      <h3>Ce se strânge singur</h3>
+<p>
+Păstrăm numele, adresa de e-mail, numărul de telefon, mesajul transmis și adresa IP —
+pentru a-ți putea răspunde și pentru a preveni mesajele trimise în lanț (spam).
+</p>
 
-      <ul>
-        <li>
-          <strong>Încercările de intrare în cont</strong> (adresa de e-mail și
-          IP-ul) — ca să blocăm ghicitul parolelor. Rândurile mai vechi de
-          <?= ZILE_PASTRARE_INCERCARI ?> de zile se șterg singure.
-        </li>
-        <li>
-          <strong>Scanările de abțibild care n-au nimerit nimic</strong> (doar
-          IP-ul) — ca să nu se poată câștiga o vânătoare încercând coduri de pe
-          canapea. Se șterg singure, la scanare.
-        </li>
-        <li>
-          <strong>Jurnalele serverului</strong>, ținute de găzduire, cum le ține
-          orice server.
-        </li>
-      </ul>
+<h3>Ce informații se colectează automat</h3>
 
-      <h2>Pe ce temei</h2>
+<ul>
+<li>
+<strong>Încercările de autentificare:</strong> Păstrăm adresa de e-mail și IP-ul pentru a
+bloca încercările de ghicire a parolelor. Aceste înregistrări se șterg automat după 30 de zile.
+</li>
+<li>
+<strong>Scanările de abțibilduri greșite:</strong> Păstrăm doar adresa IP pentru a preveni
+tentativele de a câștiga o vânătoare încercând coduri de pe canapea. Datele se șterg automat la fiecare scanare.
+</li>
+<li>
+<strong>Jurnalele tehnice ale serverului (logs):</strong> Menținute de furnizorul de găzduire web, așa cum le păstrează orice server pentru securitate.
+</li>
+</ul>
 
-      <ul>
-        <li><strong>Ca să-ți putem da site-ul</strong> (contract): contul, evenimentele, înscrierile, comentariile.</li>
-        <li><strong>Interesul nostru legitim</strong>: să ținem site-ul în picioare și să oprim abuzurile — limitele pe IP, moderarea, jurnalele.</li>
-        <li><strong>Acordul tău</strong>: e-mailul zilnic cu ce se întâmplă în oraș și celelalte două bife din setări. Ți-l poți lua înapoi oricând, dintr-o apăsare.</li>
-      </ul>
+<h2>3. Pe ce temei legal prelucrăm datele</h2>
 
-      <h2>Cine altcineva vede ceva</h2>
+<ul>
+<li>
+<strong>Executarea contractului:</strong> Pentru a-ți putea oferi acces la funcționalitățile site-ului (contul, evenimentele, înscrierile și comentariile).
+</li>
+<li>
+<strong>Interesul nostru legitim:</strong> Pentru a menține site-ul în siguranță și a opri abuzurile (limitările pe IP, moderarea, jurnalele de securitate).
+</li>
+<li>
+<strong>Consimțământul tău:</strong> Pentru e-mailul zilnic cu ce se întâmplă în oraș și pentru opțiunile bifate de tine în setări. Îți poți retrage consimțământul oricând, printr-o simplă apăsare din setările contului.
+</li>
+</ul>
 
-      <p>Lista e scurtă, și asta e tot:</p>
+<h2>4. Cine altcineva are acces la date</h2>
 
-      <ul>
-        <li>
-          <strong>Găzduirea</strong>, unde stă site-ul și baza de date, și
-          <strong>serverul de e-mail</strong> prin care pleacă mesajele.
-        </li>
-        <li>
-          <strong>Google Fonts.</strong> Site-ul aduce fontul de la Google
-          (<span class="mono">fonts.googleapis.com</span> și
-          <span class="mono">fonts.gstatic.com</span>), iar browserul tău îi
-          spune, prin asta, adresa ta IP. E singurul lucru care pleacă spre
-          altcineva doar fiindcă ai deschis o pagină.
-        </li>
-        <?php if ($areGoogle): ?>
-        <li>
-          <strong>Google</strong>, dacă alegi să intri cu contul tău de Google.
-          Atunci primim de la ei numele, adresa de e-mail și un identificator.
-          Dacă nu apeși butonul acela, Google nu află nimic despre contul tău.
-        </li>
-        <?php endif; ?>
-        <li>
-          <strong>Autoritățile</strong>, dacă legea ne obligă. Doar atunci, și
-          doar atât cât cere legea.
-        </li>
-      </ul>
+<p>Lista partenerilor noștri este foarte scurtă și limitată strict la ce este necesar:</p>
 
-      <p>
-        Datele stau pe servere din Uniunea Europeană. Nu le trimitem în afara ei.
-      </p>
+<ul>
+<li>
+<strong>Găzduirea web (Hosting):</strong> Unde este stocat site-ul, baza de date și serverul securizat prin care pleacă e-mailurile.
+</li>
+<li>
+<strong>Google Fonts:</strong> Site-ul încarcă fonturile grafice de la Google (<code>fonts.googleapis.com</code> și <code>fonts.gstatic.com</code>). Browserul tău îi transmite adresa ta IP în acest proces. Este singurul lucru care pleacă spre un terț doar pentru că ai deschis o pagină.
+</li>
+<li>
+<strong>Google (Autentificare opțională):</strong> Doar dacă alegi să te autentifici cu contul tău Google. Atunci primim de la ei numele, adresa de e-mail și un identificator. Dacă nu folosești acel buton, Google nu află nimic despre contul tău.
+</li>
+<li>
+<strong>Autoritățile statului:</strong> Doar în cazul în care legea ne obligă, și exclusiv în limita cerințelor legale.
+</li>
+</ul>
 
-      <h2>Ce vede lumea despre tine</h2>
+<p>
+Datele tale sunt stocate pe servere din <strong>Uniunea Europeană</strong> și nu le trimitem în afara acesteia.
+</p>
 
-      <p>
-        Pe profilul tău public se văd: numele prescurtat, poza, evenimentele pe
-        care le-ai organizat, cele la care ai fost, media notelor și părerile
-        scrise pe care le-ai primit. <strong>Nu se văd</strong>: adresa de
-        e-mail, telefonul, data nașterii și adresa IP.
-      </p>
+<h2>5. Ce informații sunt vizibile public</h2>
 
-      <p>
-        Profilurile nu sunt indexate de motoarele de căutare — le-am ținut
-        deoparte în <span class="mono">robots.txt</span>. Datele tale le-ai dat
-        ca să ieși prin oraș, nu ca să te găsească cineva după nume în Google.
-      </p>
+<p>
+Pe profilul tău public pot fi văzute de către ceilalți utilizatori: prenumele (numele prescurtat), fotografia de profil, evenimentele pe care le-ai organizat, cele la care ai fost, media evaluărilor și părerile scrise primite.
+</p>
 
-      <h2>Cât ținem datele</h2>
+<p>
+<strong>Confidențialitate garantată:</strong> Adresa de e-mail, numărul de telefon, data nașterii și adresa IP nu vor fi niciodată afișate public.
+</p>
 
-      <ul>
-        <li><strong>Contul</strong> — cât timp îl ai. Îl poți șterge oricând.</li>
-        <li>
-          <strong>După ce ceri ștergerea</strong> — mai sunt
-          <?= ZILE_RAGAZ_STERGERE ?> de zile în care nu se schimbă nimic și te
-          poți răzgândi intrând în cont. După ele, numele, adresa de e-mail,
-          telefonul, data nașterii și poza <strong>dispar definitiv</strong>, iar
-          poza se șterge și de pe disc.
-        </li>
-        <li>
-          <strong>Ce rămâne după ștergere</strong> — evenimentele la care ai fost
-          și comentariile rămân pe site, dar <strong>fără tine în ele</strong>: în
-          locul numelui scrie „Utilizator șters", fără poză și fără legătură spre
-          profil. Le păstrăm fiindcă de ele atârnă istoricul altor oameni — cine
-          a organizat o ieșire la care ai fost și tu are dreptul să și-o vadă mai
-          departe.
-        </li>
-        <li><strong>Mesajele de contact</strong> — cât ne trebuie ca să ne lămurim, apoi le ștergem.</li>
-        <li><strong>Încercările de intrare</strong> — <?= ZILE_PASTRARE_INCERCARI ?> de zile.</li>
-      </ul>
+<p>
+Profilurile de utilizator <strong>nu sunt indexate</strong> de motoarele de căutare (sunt protejate prin fișierul <code>robots.txt</code>). Datele tale au fost oferite pentru a ieși prin oraș, nu pentru a te găsi cineva după nume pe Google.
+</p>
 
-      <h2>Drepturile tale</h2>
+<h2>6. Cât timp păstrăm datele tale</h2>
 
-      <p>
-        După Regulamentul general privind protecția datelor (GDPR), ai dreptul:
-      </p>
+<ul>
+<li>
+<strong>Contul activ:</strong> Păstrăm datele atâta timp cât ai contul deschis. Îl poți șterge oricând.
+</li>
+<li>
+<strong>După solicitarea de ștergere:</strong> Există o perioadă de grație de <strong>30 de zile</strong> în care nu se schimbă nimic și te poți răzgândi prin simpla reautentificare. După cele 30 de zile, numele, adresa de e-mail, telefonul, data nașterii și poza dispar definitiv, fiind șterse și de pe disc.
+</li>
+<li>
+<strong>Istoricul rămas:</strong> Evenimentele la care ai fost prezent și comentariile scrise rămân pe site, dar anonimizate complet — în locul numelui va scrie <em>„Utilizator șters”</em>, fără poză și fără legătură spre profil. Le păstrăm deoarece de ele depinde istoricul altor persoane (cine a organizat o ieșire la care ai fost și tu are dreptul să și-o vadă în continuare).
+</li>
+<li>
+<strong>Mesajele din formularul de contact:</strong> Le păstrăm doar cât ne este necesar pentru a-ți oferi clarificări, apoi le ștergem.
+</li>
+<li>
+<strong>Încercările de autentificare:</strong> Se șterg automat după 30 de zile.
+</li>
+</ul>
 
-      <ul>
-        <li>să afli ce date avem despre tine și să primești o copie;</li>
-        <li>să le îndrepți, dacă sunt greșite — pe cele mai multe le poți schimba singur din <a href="/setari.php">setări</a>;</li>
-        <li>să ceri ștergerea — sau s-o faci singur, tot din setări;</li>
-        <li>să ceri să nu le mai folosim într-un anume fel;</li>
-        <li>să le primești într-o formă pe care o poți duce altundeva;</li>
-        <li>să te opui folosirii lor pe temeiul interesului legitim;</li>
-        <li>să-ți iei înapoi acordul pentru e-mailuri, oricând, fără să pierzi nimic altceva.</li>
-      </ul>
+<h2>7. Drepturile tale legale (GDPR)</h2>
 
-      <p>
-        Scrie-ne prin <a href="/contact.php">formularul de contact</a><?php
-        if ($operator['email'] !== '') {
-            echo ' sau la <a href="mailto:' . h($operator['email']) . '">'
-               . h($operator['email']) . '</a>';
-        } ?>. Răspundem în cel mult o lună, de obicei mult mai repede.
-      </p>
+<p>Conform Regulamentului General privind Protecția Datelor (GDPR), ai dreptul:</p>
 
-      <p>
-        Dacă ți se pare că nu ne purtăm cum trebuie cu datele tale, te poți plânge
-        la <strong>Autoritatea Națională de Supraveghere a Prelucrării Datelor cu
-        Caracter Personal</strong> (ANSPDCP) —
-        <a href="https://www.dataprotection.ro" rel="noopener" target="_blank">dataprotection.ro</a>.
-      </p>
+<ul>
+<li>să afli ce date avem despre tine și să primești o copie a acestora;</li>
+<li>să le corectezi dacă sunt greșite (pe cele mai multe le poți schimba singur din setări);</li>
+<li>să ceri ștergerea lor (sau să o faci singur, direct din setări);</li>
+<li>să soliciti restricționarea modului în care le folosim;</li>
+<li>să le primești într-un format structurat, ce poate fi transferat altundeva;</li>
+<li>să te opui utilizării lor pe temeiul interesului nostru legitim;</li>
+<li>să-ți retragi oricând consimțământul pentru e-mailuri, fără să pierzi accesul la celelalte opțiuni.</li>
+</ul>
 
-      <h2>Copiii</h2>
+<p>
+Pentru a-ți exercita oricare dintre aceste drepturi, ne poți scrie prin formularul de contact sau la adresa <a href="mailto:contact@pulsulorasului.ro">contact@pulsulorasului.ro</a>. Îți vom răspunde în cel mult o lună, de obicei mult mai repede.
+</p>
 
-      <p>
-        Contul se face de la <?= VARSTA_MIN ?> ani în sus. Sub 16 ani e nevoie de
-        acordul unui părinte sau al tutorelui. Dacă afli că un copil și-a făcut
-        cont fără acordul tău, <a href="/contact.php">scrie-ne</a> și ștergem
-        contul.
-      </p>
+<p>
+Dacă consideri că datele tale nu au fost prelucrate corect, ai dreptul de a adresa o plângere către <strong>Autoritatea Națională de Supraveghere a Prelucrării Datelor cu Caracter Personal (ANSPDCP)</strong> accesând <a href="https://www.dataprotection.ro" rel="noopener" target="_blank">dataprotection.ro</a>.
+</p>
 
-      <h2>Cum ținem datele în siguranță</h2>
+<h2>8. Protecția minorilor</h2>
 
-      <ul>
-        <li>Site-ul merge numai pe conexiune criptată (HTTPS).</li>
-        <li>Parolele sunt trecute prin bcrypt — nici noi nu le putem citi.</li>
-        <li>Token-urile din e-mailuri se păstrează tot ca amprentă, niciodată în clar, și expiră.</li>
-        <li>Fiecare acțiune care schimbă ceva e apărată împotriva cererilor puse la cale de pe alt site.</li>
-        <li>Pozele primite sunt redesenate pixel cu pixel, deci nu poate ajunge un fișier ascuns într-o poză.</li>
-      </ul>
+<p>
+Contul se poate crea de la vârsta de 10 ani în sus. Pentru persoanele sub 16 ani este necesar acordul unui părinte sau al tutorelui legal. Dacă afli că un copil și-a făcut cont fără acordul tău, te rugăm să ne scrii și vom șterge contul de îndată.
+</p>
+
+<h2>9. Securitatea datelor tale</h2>
+
+<ul>
+<li>Site-ul funcționează exclusiv prin conexiune criptată și securizată (<strong>HTTPS</strong>).</li>
+<li>Parolele sunt protejate prin criptare ireversibilă (<strong>bcrypt</strong>) — fiind imposibil de citit chiar și de către noi.</li>
+<li>Token-urile folosite în e-mailuri sunt stocate doar ca amprentă securizată și au o durată de valabilitate limitată.</li>
+<li>Fiecare acțiune de pe site este protejată împotriva cererilor nesolicitate trimise de pe alte site-uri (protecție CSRF).</li>
+<li>Fotografiile încărcate sunt redesenate pixel cu pixel, astfel încât nu poate ajunge un fișier ascuns într-o poză.</li>
+</ul>
 
       <p class="doc-legatura">
         Vezi și <a href="/termeni.php">termenii și condițiile</a>

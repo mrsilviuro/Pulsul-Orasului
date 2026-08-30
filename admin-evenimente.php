@@ -35,14 +35,6 @@ require __DIR__ . '/inc/antet.php';
   <div class="wrap">
     <?= randeazaMeniulAdmin('evenimente') ?>
 
-    <header class="page-head">
-      <h1>Evenimente</h1>
-      <p class="page-head__sub">
-        Ce așteaptă o hotărâre și ce a fost respins. Aprobarea se face pe pagina
-        anunțului, după ce l-ai citit.
-      </p>
-    </header>
-
     <!-- ==================== ÎN AȘTEPTARE ======================== -->
     <section class="admin-sect" data-admin data-csrf="<?= h(tokenCsrf()) ?>">
       <h2>În așteptare <span class="admin-sect__cate"><?= count($inAsteptare) ?></span></h2>
@@ -120,11 +112,6 @@ require __DIR__ . '/inc/antet.php';
     <!-- ====================== RESPINSE =========================== -->
     <section class="admin-sect" data-admin data-csrf="<?= h(tokenCsrf()) ?>">
       <h2>Respinse <span class="admin-sect__cate"><?= count($respinse) ?></span></h2>
-      <p class="admin-sect__vorba">
-        Un anunț respins n-a fost niciodată public, deci ștergerea lui nu lasă pe
-        nimeni în urmă. Pleacă tot: comentariile, înscrierile, notele,
-        excluderile și coperta de pe disc. Nu se poate lua înapoi.
-      </p>
 
       <?php if ($respinse === []): ?>
       <p class="admin-gol">Niciun anunț respins.</p>

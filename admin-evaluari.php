@@ -48,16 +48,6 @@ require __DIR__ . '/inc/antet.php';
   <div class="wrap">
     <?= randeazaMeniulAdmin('evaluari') ?>
 
-    <header class="page-head">
-      <h1>Evaluări</h1>
-      <p class="page-head__sub">
-        Notele pe care și le dau oamenii după un eveniment. Aici se văd toate,
-        și cele scrise, și stelele singure — pe profil se arată doar părerile
-        scrise, dar în medie intră amândouă. Ștergerea e definitivă și nu
-        înștiințează pe nimeni.
-      </p>
-    </header>
-
     <!-- ==================== CINE CÂTE A DAT ====================== -->
     <section class="admin-sect">
       <h2>Cine împarte note <span class="admin-sect__cate"><?= count($autori) ?></span></h2>
@@ -65,12 +55,6 @@ require __DIR__ . '/inc/antet.php';
       <?php if ($autori === []): ?>
       <p class="admin-gol">Nimeni n-a notat pe nimeni, încă.</p>
       <?php else: ?>
-      <p class="admin-sect__vorba">
-        Cei care au dat mai multe, primii. O singură notă de unu poate fi o
-        seară proastă; douăzeci sunt un obicei — și numai tabelul ăsta le pune
-        una lângă alta. „Automate" sunt însemnările de „Nu s-a prezentat", care
-        pun o stea fără să fie o părere.
-      </p>
       <div class="admin-scroll">
         <table class="admin-tabel">
           <thead>

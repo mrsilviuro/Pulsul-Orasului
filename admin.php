@@ -29,10 +29,6 @@ require __DIR__ . '/inc/antet.php';
 
     <header class="page-head">
       <h1>Zona de administrare</h1>
-      <p class="page-head__sub">
-        Bună, <?= h($membru['prenume']) ?>. Uneltele casei, toate într-un loc.
-        Cifrele arată câte lucruri așteaptă ceva de la tine.
-      </p>
     </header>
 
     <section class="admin-grila" aria-label="Secțiuni">
@@ -65,25 +61,6 @@ require __DIR__ . '/inc/antet.php';
         </span>
       </a>
       <?php endforeach; ?>
-    </section>
-
-    <!--
-      Ce NU se face de aici, ca să nu caute nimeni degeaba. Lista asta e scurtă
-      dinadins: când unul dintre rânduri capătă o pagină, rândul lui pleacă de
-      aici. Cât timp mai e scris, e adevărat.
-    -->
-    <section class="admin-nota">
-      <h2>Ce se face tot din phpMyAdmin</h2>
-      <ul>
-        <li>Steagul de om al casei (<code>membri.este_staff</code>) — nu se dă
-            din nicio pagină, dinadins.</li>
-        <li>Ridicarea unei interdicții de reînscriere
-            (<code>excluderi_evenimente.interzis</code>).</li>
-        <li>Ștergerea unei note date pe nedrept, sau a unui „Nu s-a prezentat"
-            pus din greșeală.</li>
-        <li>Ștergerea unui abțibild deja găsit — de el atârnă cifra de pe
-            profilul câștigătorului.</li>
-      </ul>
     </section>
   </div>
 </main>

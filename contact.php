@@ -46,7 +46,7 @@ require __DIR__ . '/inc/antet.php';
       <h1 class="page-title">Contact</h1>
       <p class="page-lead">
         Ai un eveniment de propus, o sesizare sau vrei să colaborăm? Scrie-ne direct
-        aici — răspundem, de regulă, în aceeași zi lucrătoare.
+        aici ... răspundem, de regulă, în aceeași zi lucrătoare.
       </p>
     </header>
 
@@ -129,7 +129,7 @@ require __DIR__ . '/inc/antet.php';
             <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
               <circle cx="12" cy="12" r="9"/><path d="m8.2 12.3 2.6 2.6 5-5.2"/>
             </svg>
-            <span>Mesajul a ajuns la noi. Mulțumim — îți răspundem cât putem de repede.</span>
+            <span>Mesajul a fost trimis. Îți mulțumim ... revenim cu un răspuns în cel mai scurt timp.</span>
           </p>
         </form>
       </section>
@@ -159,7 +159,7 @@ require __DIR__ . '/inc/antet.php';
             </span>
             <div>
               <span class="info-item__label">Telefon</span>
-              <a class="info-item__value" href="tel:+40700000000">+40 700 000 000</a>
+              <a class="info-item__value" href="tel:+40700000000">+40 750211209</a>
             </div>
           </li>
 
@@ -171,31 +171,10 @@ require __DIR__ . '/inc/antet.php';
             </span>
             <div>
               <span class="info-item__label">Adresă</span>
-              <span class="info-item__value">Str. Exemplu nr. 10<br>Oraș, România</span>
-            </div>
-          </li>
-
-          <li class="info-item">
-            <span class="info-item__ico" aria-hidden="true">
-              <svg class="ico" viewBox="0 0 24 24">
-                <circle cx="12" cy="12" r="9"/><path d="M12 7v5.2l3.4 2"/>
-              </svg>
-            </span>
-            <div>
-              <span class="info-item__label">Program</span>
-              <span class="info-item__value">Luni — Vineri, 09:00 — 18:00</span>
+              <span class="info-item__value">Loc. Roman, Jud. Neamt, România</span>
             </div>
           </li>
         </ul>
-
-        <div class="info-social">
-          <span class="info-item__label">Ne găsești și pe</span>
-          <div class="socials">
-            <a href="#" aria-label="Facebook"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 8.5V7a1.5 1.5 0 0 1 1.5-1.5H17V3h-2.2A3.8 3.8 0 0 0 11 6.8v1.7H9V11h2v10h3V11h2.2l.4-2.5H14Z" fill="currentColor" stroke="none"/></svg></a>
-            <a href="#" aria-label="Instagram"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17" cy="7" r="1.1" fill="currentColor" stroke="none"/></svg></a>
-            <a href="#" aria-label="YouTube"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="5.5" width="19" height="13" rx="4"/><path d="m10.5 9.5 5 2.5-5 2.5z"/></svg></a>
-          </div>
-        </div>
 
         <?php if ($eu === null): ?>
         <!-- Invitația la înscriere e doar pentru cine n-are cont. Unui membru

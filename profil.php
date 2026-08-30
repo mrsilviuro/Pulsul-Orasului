@@ -188,7 +188,7 @@ $cateCoduriQr = $p ? cateCoduriQrGasite((int) $p['id']) : 0;
 const EVENIMENTE_VIZIBILE = 4;
 
 $titlu     = $numeProfil . ' — Profil membru — PulsulOrasului.Ro';
-$descriere = 'Profilul membrului ' . $numeProfil . ' pe PulsulOrasului.Ro: evenimente organizate, participări și evaluări primite.';
+$descriere = 'Profilul membrului ' . $numeProfil . ' pe PulsulOrasului.Ro';
 
 require __DIR__ . '/inc/antet.php';
 ?>
@@ -200,7 +200,7 @@ require __DIR__ . '/inc/antet.php';
     <nav class="crumbs" aria-label="Navigare">
       <a href="/index.php">Acasă</a>
       <span aria-hidden="true">/</span>
-      <a href="#">Membri</a>
+     <span aria-hidden="true">Membri</span>
       <span aria-hidden="true">/</span>
       <span class="crumbs__current"><?= h($numeProfil) ?></span>
     </nav>
@@ -534,7 +534,7 @@ require __DIR__ . '/inc/antet.php';
         face cu el.
       -->
       <p class="feedback__nota">
-        Notele vin, anonim, de la oamenii cu care ai fost pe la evenimente.
+        Calificativele sunt complet anonime și vin din partea persoanelor alături de care ai participat la evenimente.
       </p>
       <?php endif; ?>
 

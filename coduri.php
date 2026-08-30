@@ -68,15 +68,6 @@ require __DIR__ . '/inc/antet.php';
   <div class="wrap">
     <?= randeazaMeniulAdmin('coduri') ?>
 
-    <header class="page-head">
-      <h1>Abțibilde FindMe</h1>
-      <p class="page-head__sub">
-        Fă un cod, tipărește abțibildul, lipește-l undeva prin oraș — și abia
-        pe urmă publică evenimentul cu codul ăsta în el. Vânătoarea începe în
-        clipa publicării.
-      </p>
-    </header>
-
     <?php if ($eroarea === 'sesiune'): ?>
     <p class="coduri__rau" role="alert">Sesiunea a expirat. Încearcă din nou.</p>
     <?php elseif ($eroarea === 'nereusit'): ?>
@@ -88,22 +79,18 @@ require __DIR__ . '/inc/antet.php';
          intrat pe pagină. Adresa e scrisă întreagă, ca să poată fi copiată
          într-o unealtă de făcut coduri QR. -->
     <section class="cod-nou">
-      <p class="cod-nou__eticheta">Codul tău nou</p>
+      <p class="cod-nou__eticheta">Noul cod "FindMe"</p>
       <p class="cod-nou__cod"><?= h($codNou) ?></p>
       <p class="cod-nou__adresa">
         Pune în codul QR adresa asta:
         <code><?= h($adresaCodului($codNou)) ?></code>
-      </p>
-      <p class="cod-nou__vorba">
-        Abțibildul poate sta pe stâlp de pe acum. Cine îl scanează înainte de
-        publicare află doar că vânătoarea n-a început încă.
       </p>
     </section>
     <?php endif; ?>
 
     <form class="cod-form" method="post" action="/coduri.php">
       <input type="hidden" name="csrf" value="<?= h(tokenCsrf()) ?>">
-      <button class="btn btn--primary" type="submit">Fă un cod nou</button>
+      <button class="btn btn--primary" type="submit">Generează un cod nou</button>
     </form>
 
     <!-- ============================ LISTA ============================= -->

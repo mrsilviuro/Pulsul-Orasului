@@ -217,7 +217,7 @@ $faraMaxim = $sursa === null || ($sursa['participanti_max'] ?? null) === null;
 $titlu = 'Publică un eveniment — PulsulOrasului.Ro';
 
 if ($eEditare) {
-    $titlu = 'Schimbă evenimentul — PulsulOrasului.Ro';
+    $titlu = 'Modifică evenimentul — PulsulOrasului.Ro';
 } elseif ($eRemake) {
     $titlu = 'Încă unul la fel — PulsulOrasului.Ro';
 }
@@ -260,15 +260,13 @@ require __DIR__ . '/inc/antet.php';
     <?php elseif ($eRemake): ?>
     <h1 class="setari__titlu">Încă unul la fel</h1>
     <p class="setari__lead">
-      Am adus tot ce scrisese „<?= h(inceputDeText((string) $refacut['titlu'], 60)) ?>".
-      Spune doar când are loc de data asta — și schimbă ce vrei, dacă s-a
-      schimbat ceva. Anunțul cel vechi rămâne la locul lui, neatins.
+      Am încărcat tot ce era scris în „<?= h(inceputDeText((string) $refacut['titlu'], 60)) ?>".
+      Modifică doar când are loc de data aceasta și schimbă ce mai consideri că este nevoie.
     </p>
     <?php else: ?>
     <h1 class="setari__titlu">Publică un eveniment</h1>
     <p class="setari__lead">
-      Completează ce știi acum. Anunțul intră la verificare și apare pe site
-      după ce îl citim.
+     Completează detaliile pe care le ai la îndemână. Anunțul tău va fi trimis spre verificare și va deveni vizibil pe site imediat ce este aprobat.
     </p>
     <?php endif; ?>
 
@@ -295,8 +293,8 @@ require __DIR__ . '/inc/antet.php';
       </ul>
 
       <p class="card-set__lead">
-        Un eveniment se încheie de la sine a doua zi după ce a avut loc. Până
-        atunci, tot ce ai de făcut e să te ocupi de el.
+        Un eveniment este considerat încheiat în mod automat următoarea zi ce urmează zilei în care a avut loc.
+        Până atunci, tot ce ai de făcut e să te ocupi de el.
       </p>
 
       <!--
@@ -443,7 +441,7 @@ require __DIR__ . '/inc/antet.php';
                  width="1600" height="900" decoding="async">
             <p class="coperta-acum__text">
               <?= $eRemake
-                    ? 'Poza de la anunțul dinainte. O păstrăm, dacă nu alegi alta.'
+                    ? 'Aceasta este imaginea de copertă actuală. O poți păstra sau poți alege alta.'
                     : 'Aceasta este imaginea de copertă actuală. O poți păstra sau poți alege alta.' ?>
             </p>
           </div>
@@ -739,7 +737,7 @@ require __DIR__ . '/inc/antet.php';
           </label>
           <p class="field__hint">
             Anunțul rămâne întreg pe site — pe prima pagină, în căutare și pe
-            pagina lui. Doar de pe profilul tău lipsește.
+            pagina lui. Doar de pe profilul tău lipsește. Bifează asta daca publici un event pe care nu-l organizezi tu.
           </p>
         </div>
         <?php endif; ?>
@@ -771,7 +769,7 @@ require __DIR__ . '/inc/antet.php';
              ascuns e paragraful întreg, nu doar linkul din el: un <p> gol tot
              ocupă un rând și împingea linia de despărțire de mai jos. -->
         <p class="ev-previz-link" id="ev-previz-rand" hidden>
-          <a id="ev-previz-link" href="#" target="_blank" rel="noopener">Deschide previzualizarea</a>
+          <a id="ev-previz-link" href="#" target="_blank" rel="noopener">Previzualizare</a>
         </p>
 
         <?php if ($eEditare && poateFiAnulat($ev)): ?>
@@ -813,8 +811,8 @@ require __DIR__ . '/inc/antet.php';
         <!-- Fără termen promis: nu există încă nimeni care să apese „aprobă",
              iar un „în aceeași zi" scris aici ar fi o vorbă goală. -->
         <p class="done__text"><?=
-          $eStaff ? 'Se vede de acum pe site, fără să mai treacă pe la nimeni.'
-                  : 'Îl citim și, dacă e totul în regulă, apare pe site.'
+          $eStaff ? 'Anunțul a fost publicat și este vizibil publicului larg.'
+                  : 'Aruncăm o privire rapidă peste anunț și, dacă toate detaliile sunt în regulă, îl vom publica pe site!'
         ?></p>
         <div class="done__actions">
           <!--

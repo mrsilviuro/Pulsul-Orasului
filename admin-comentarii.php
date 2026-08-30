@@ -93,29 +93,13 @@ require __DIR__ . '/inc/antet.php';
   <div class="wrap">
     <?= randeazaMeniulAdmin('comentarii') ?>
 
-    <header class="page-head">
-      <h1>Comentarii</h1>
-      <p class="page-head__sub">
-        Ce a fost raportat, și ce s-a scris de curând. Un comentariu cu
-        răspunsuri sub el se golește în loc să dispară, ca discuția să-și
-        păstreze începutul. La ștergere, autorul primește un e-mail — poți
-        scrie un motiv, sau îl poți lăsa gol.
-      </p>
-    </header>
-
     <!-- ====================== RAPORTATE ========================== -->
     <section class="admin-sect" data-admin data-csrf="<?= h(tokenCsrf()) ?>">
-      <h2>Raportate <span class="admin-sect__cate"><?= count($raportate) ?></span></h2>
+      <h2>Comentarii raportate <span class="admin-sect__cate"><?= count($raportate) ?></span></h2>
 
       <?php if ($raportate === []): ?>
       <p class="admin-gol">Nimic raportat. Liniște.</p>
       <?php else: ?>
-      <p class="admin-sect__vorba">
-        Cel mai raportat, primul. Numărul ăsta nu se vede nicăieri altundeva pe
-        site: pe pagina evenimentului omul află doar dacă el însuși a raportat.
-        „E în regulă" șterge raportările și lasă comentariul pe loc — se
-        raportează și din greșeală, sau doar fiindcă cineva n-a fost de acord.
-      </p>
       <div class="admin-scroll">
         <table class="admin-tabel">
           <thead>
@@ -138,7 +122,7 @@ require __DIR__ . '/inc/antet.php';
 
     <!-- =================== ULTIMELE CINCIZECI ==================== -->
     <section class="admin-sect" data-admin data-csrf="<?= h(tokenCsrf()) ?>">
-      <h2>Ultimele <?= ADMIN_COMENTARII ?>
+      <h2>Ultimele comentarii (max. <?= ADMIN_COMENTARII ?>)
           <span class="admin-sect__cate"><?= count($ultimele) ?></span></h2>
 
       <?php if ($ultimele === []): ?>
