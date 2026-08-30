@@ -121,11 +121,11 @@ function lacat(bool $pornit): void
 
 sectiune('adresa de e-mail');
 
-verifica('adresa goală nu trece', 'Scrie adresa de e-mail.', verificaEmail('')['eroare']);
-verifica('nici doar spații',      'Scrie adresa de e-mail.', verificaEmail('   ')['eroare']);
-verifica('nici altceva decât text', 'Scrie adresa de e-mail.', verificaEmail(null)['eroare']);
-verifica('una fără @',            'Adresa de e-mail nu pare validă.', verificaEmail('ion')['eroare']);
-verifica('una prea lungă', 'Adresa de e-mail e prea lungă.',
+verifica('adresa goală nu trece', 'Avem nevoie și de adresa ta de e-mail.', verificaEmail('')['eroare']);
+verifica('nici doar spații',      'Avem nevoie și de adresa ta de e-mail.', verificaEmail('   ')['eroare']);
+verifica('nici altceva decât text', 'Avem nevoie și de adresa ta de e-mail.', verificaEmail(null)['eroare']);
+verifica('una fără @',            'Adresa nu pare completă. Mai aruncă un ochi pe ea.', verificaEmail('ion')['eroare']);
+verifica('una prea lungă', 'Adresa asta e neobișnuit de lungă. Mai aruncă-i un ochi.',
     verificaEmail(str_repeat('a', EMAIL_MAX) . '@x.ro')['eroare']);
 
 verifica('una bună trece',   '',                verificaEmail('Ion@Email.ro')['eroare']);
