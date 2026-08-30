@@ -137,7 +137,8 @@ parola-uitata.php, parola-noua.php, google.php, finalizare.php, confirma.php,
 stergere.php, iesire.php, verifica.php, constructie.php,
 findme.php, admin.php, admin-evenimente.php, admin-comentarii.php,
 admin-contact.php, admin-useri.php, admin-evaluari.php, admin-dorinte.php,
-coduri.php, sitemap.php, robots.txt, dezabonare.php
+coduri.php, sitemap.php, robots.txt, dezabonare.php,
+termeni.php, confidentialitate.php, cookies.php
 
   dezabonare.php → ieșirea de la newsletterul zilnic, FĂRĂ CONT: cine s-a
                 săturat de un mesaj n-are chef să-și amintească parola ca să
@@ -819,6 +820,11 @@ teste/              → router.php: serverul de probă cu ADRESE FRUMOASE.
                       comandă nu există unul, și îl ia de acolo la sfârșit)
                       test-dorinte.php (tabla cu dorințe; cere baza, iar
                       partea de HTTP cere și serverul — se sare singură)
+                      test-documente.php (termeni, confidențialitate, cookies;
+                      cere SERVERUL, se sare singură fără el. Leagă vorbele din
+                      documente de lucrul din cod care le face adevărate — și
+                      păzește promisiunea „fără urmărire", căutând în cod
+                      Analytics, pixeli și celelalte)
                       test-tine-minte.php, test-setari.php, test-contact.php,
                       test-evenimente.php, test-prima-pagina.php,
                       test-constructie.php, test-anulare.php, test-moderare.php
@@ -953,8 +959,30 @@ sistem. Regulile care s-au strâns din trecerea de purificare:
 - Interdicția de reînscriere (`excluderi_evenimente.interzis`) nu se poate
   ridica din interfață — rândul se schimbă de mână, din phpMyAdmin. Nu există
   nici pagină care să-i arate omului de unde a fost scos: află doar din e-mail
-- Pagina de termeni și condiții nu există. Linkurile spre ea sunt `href="#"`
-  peste tot (înregistrare, subsol, confirmarea participării)
+- CELE TREI DOCUMENTE — `termeni.php`, `confidentialitate.php`, `cookies.php` —
+  sunt scrise după același tipar și duc una la alta. CIFRELE DIN ELE NU SE SCRIU
+  DE MÂNĂ: vin din constantele care hotărăsc purtarea site-ului
+  (`ZILE_RAGAZ_STERGERE`, `ORE_PENTRU_NOTE`, `VARSTA_MIN`, `ZILE_TINE_MINTE`,
+  `ZILE_PASTRARE_INCERCARI`, `COOKIE_TINE_MINTE`), tocmai ca documentul să nu
+  poată rămâne în urma codului. `teste/test-documente.php` prinde ziua în care
+  cineva scrie totuși o cifră de mână. CINE ȚINE SITE-UL se citește din
+  `config.php` (cheia `operator`), printr-un singur loc — `operatorulSite()` din
+  `inc/bootstrap.php`; cât timp numele e gol, paginile spun pe față că datele nu
+  sunt trecute, în loc să lase un gol sau un nume închipuit.
+  SUNT UȘI DESCHISE ÎN CONSTRUCȚIE (`usileDeschiseInConstructie`): afișul de
+  șantier cere o adresă de e-mail, iar o politică de confidențialitate încuiată
+  tocmai pentru omul de care e scrisă e o contradicție în termeni.
+  DE VERIFICAT LA FIECARE FUNCȚIE NOUĂ care strânge ceva despre om: dacă
+  `confidentialitate.php` nu se schimbă odată cu ea, documentul începe să mintă.
+  La fel, orice program de măsurare adăugat vreodată strică promisiunea „fără
+  urmărire" din `cookies.php` ȘI cere banner de acord — proba „nu e niciun
+  program de urmărire în cod" e acolo ca să nu treacă tăcut
+- VÂRSTA MINIMĂ E `VARSTA_MIN` = 10 ANI, iar asta e o problemă juridică
+  nerezolvată: sub GDPR, în România, un copil își poate da singur acordul pentru
+  prelucrarea datelor abia de la 16 ani. Documentele scriu ce face codul (de la
+  10 ani, cu acordul părintelui sub 16), dar site-ul NU cere și nu verifică
+  nicăieri acordul acela. De hotărât: ori se ridică `VARSTA_MIN` la 16, ori se
+  face un drum adevărat pentru acordul părintesc
 - Moderarea: fiecare eveniment intră cu `stare_moderare = 'in_asteptare'` și se
   vede organizatorului și staff-ului. Aprobarea, respingerea și „editare
   necesară" se fac de pe pagina evenimentului, din blocul dintre anunț și

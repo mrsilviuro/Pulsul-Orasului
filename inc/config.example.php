@@ -92,6 +92,32 @@ return [
     // expirarea linkurilor — se calculează după el.
     'fus_orar' => 'Europe/Bucharest',
 
+    // ------------------------------------------------------- cine ține site-ul
+    /**
+     * Cine răspunde, în fața legii, de site și de datele oamenilor.
+     *
+     * SE CITEȘTE DIN TREI PAGINI — termeni.php, confidentialitate.php și
+     * cookies.php — prin operatorulSite() din inc/bootstrap.php. Scris o
+     * singură dată aici, nu de trei ori în trei pagini, tocmai fiindcă e
+     * genul de rând care se schimbă rar și atunci trebuie schimbat peste tot.
+     *
+     * CÂT TIMP 'nume' E GOL, cele trei pagini o spun pe față: scriu că datele
+     * operatorului nu sunt încă trecute și trimit omul la pagina de contact.
+     * Mai bine un gol recunoscut decât un nume inventat într-un document care
+     * are putere juridică.
+     *
+     * 'tip' schimbă o singură vorbă din pagini: 'pf' pentru persoană fizică
+     * („CNP-ul nu se publică, deci scrie doar numele"), 'srl' pentru firmă.
+     */
+    'operator' => [
+        'tip'     => 'srl',            // 'srl' | 'pf'
+        'nume'    => '',               // ex: 'EXEMPLU MEDIA S.R.L.'
+        'cui'     => '',               // ex: 'RO12345678'
+        'reg_com' => '',               // ex: 'J27/123/2020'
+        'adresa'  => '',               // ex: 'Str. Ștefan cel Mare 1, Roman, Neamț'
+        'email'   => '',               // gol = se folosește 'email_raspuns' de mai jos
+    ],
+
     // ----------------------------------------------------------- dezvoltare
     /**
      * Cât timp e true:

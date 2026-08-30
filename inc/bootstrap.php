@@ -107,6 +107,48 @@ function urlSite(): string
 }
 
 /**
+ * Cine ține site-ul, așa cum e trecut în inc/config.php.
+ *
+ * O cer cele trei pagini cu putere juridică — termeni.php,
+ * confidentialitate.php și cookies.php. Scrisă o dată aici, nu de trei ori
+ * acolo: e genul de informație care se schimbă rar, dar când se schimbă
+ * trebuie schimbată peste tot deodată.
+ *
+ * ÎNTOARCE MEREU ACELEAȘI CHEI, ca paginile să nu fie nevoite să se apere de
+ * lipsa lor, plus una socotită: `are_date`. Cât timp e falsă, paginile spun pe
+ * față că datele operatorului nu sunt încă trecute, în loc să lase un gol sau,
+ * și mai rău, un nume închipuit într-un document pe care oamenii îl citesc ca
+ * pe o promisiune.
+ */
+function operatorulSite(): array
+{
+    global $config;
+
+    $o = $config['operator'] ?? [];
+    $o = is_array($o) ? $o : [];
+
+    $ia = static fn(string $cheie): string => trim((string) ($o[$cheie] ?? ''));
+
+    $email = $ia('email');
+
+    if ($email === '') {
+        $email = trim((string) ($config['email_raspuns'] ?? ''));
+    }
+
+    $nume = $ia('nume');
+
+    return [
+        'tip'      => $ia('tip') === 'pf' ? 'pf' : 'srl',
+        'nume'     => $nume,
+        'cui'      => $ia('cui'),
+        'reg_com'  => $ia('reg_com'),
+        'adresa'   => $ia('adresa'),
+        'email'    => $email,
+        'are_date' => $nume !== '',
+    ];
+}
+
+/**
  * O cale de-a noastră („assets/img/…"), făcută adresă întreagă.
  *
  * Facebook și WhatsApp nu se uită la pagină din browserul omului: o cer ele,

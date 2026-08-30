@@ -191,7 +191,10 @@ foreach (['constructie.php', 'login.php', 'iesire.php',
           'api/autentificare.php', 'api/newsletter.php',
           // A doua ușă de intrare: cine și-a făcut contul cu Google n-are
           // parolă la noi, deci fără ea n-ar avea pe unde intra deloc.
-          'google.php'] as $usa) {
+          'google.php',
+          // Afișul cere o adresă de e-mail; documentele care spun ce facem
+          // cu ea n-au voie să stea în spatele lacătului.
+          'termeni.php', 'confidentialitate.php', 'cookies.php'] as $usa) {
     verifica('„' . $usa . '" e deschisă', true, in_array($usa, $usi, true));
 }
 

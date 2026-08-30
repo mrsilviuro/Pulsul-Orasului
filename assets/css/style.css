@@ -1542,6 +1542,70 @@ main { padding-block: 46px 64px; }
   color: var(--text-faint);
 }
 
+/* ---- paginile cu putere juridică (termeni, confidențialitate, cookies) ----
+   Trei pagini de text lung, cu aceleași trei nevoi în plus față de `.prose`:
+   data ultimei schimbări în capul paginii, un tabel de cookie-uri și rândul de
+   la coadă care duce la celelalte două. */
+.doc-data {
+  margin-top: 14px;
+  font-size: 13.5px;
+  color: var(--text-faint);
+}
+
+/* Numele unui cookie sau al unui antet: se citește altfel decât o vorbă, deci
+   se și scrie altfel. */
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: .92em;
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+/* Tabelul are trei coloane și nu încape pe telefon. Se plimbă în cutia lui,
+   nu pe toată pagina — regula de la orice tabel lat de pe site. */
+.tabel-scroll { overflow-x: auto; margin: 0 0 22px; }
+
+.tabel-doc {
+  width: 100%;
+  min-width: 460px;
+  border-collapse: collapse;
+  font-size: 15px;
+  line-height: 1.6;
+}
+.tabel-doc th,
+.tabel-doc td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+  text-align: left;
+}
+.tabel-doc thead th {
+  font-size: 12.5px;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--text-faint);
+  border-bottom-width: 2px;
+}
+.tabel-doc tbody tr:last-child td { border-bottom: 0; }
+.tabel-doc td:first-child { white-space: nowrap; }
+.tabel-doc td:last-child  { white-space: nowrap; color: var(--text-soft); }
+
+@media (max-width: 560px) {
+  .tabel-doc td:last-child { white-space: normal; }
+}
+
+/* Rândul de la coada fiecăreia dintre cele trei, spre celelalte două. */
+.doc-legatura {
+  margin-top: 36px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+  font-size: 15px;
+  color: var(--text-soft);
+}
+
 .post__tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 30px; }
 .tag {
   padding: 5px 13px;

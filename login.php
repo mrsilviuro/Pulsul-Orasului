@@ -395,7 +395,7 @@ require __DIR__ . '/inc/antet.php';
             <div class="field">
               <label class="check">
                 <input type="checkbox" id="rg-terms" name="termeni" aria-describedby="err-rg-terms">
-                <span>Sunt de acord cu <a href="#">Termenii</a> și cu <a href="#">Politica de confidențialitate</a>.</span>
+                <span>Sunt de acord cu <a href="/termeni.php" target="_blank" rel="noopener">Termenii</a> și cu <a href="/confidentialitate.php" target="_blank" rel="noopener">Politica de confidențialitate</a>.</span>
               </label>
               <p class="field__error" id="err-rg-terms" hidden></p>
             </div>

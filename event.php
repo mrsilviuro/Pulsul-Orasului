@@ -835,16 +835,14 @@ require __DIR__ . '/inc/antet.php';
           </p>
 
           <!--
-            Legătura e `href="#"`, ca toate celelalte spre termeni de pe site
-            (înregistrare, finalizare, subsol): pagina nu există încă. Trimitea
-            spre „tc.php", care nu e nici măcar în lista de pagini — adică
-            singura dintre ele care ducea la un 404 în loc să nu ducă nicăieri.
-            Când se scrie pagina, se caută `href="#"` și se schimbă toate
-            deodată.
+            Se deschide în FILĂ NOUĂ, ca toate legăturile spre termeni pornite
+            din mijlocul unui formular: omul e la un pas de a apăsa „Da,
+            particip", iar o pagină care i-ar lua locul l-ar trimite înapoi la
+            început. Pe restul site-ului (subsol) se deschide normal.
           -->
           <p class="rsvp__confirm-text">
             Dacă mergi mai departe, înseamnă că ai citit și ești de acord cu
-            <a href="#">Termenii și condițiile</a> site-ului.
+            <a href="/termeni.php" target="_blank" rel="noopener">Termenii și condițiile</a> site-ului.
           </p>
 
           <?php if ($imiCereTelefon): ?>

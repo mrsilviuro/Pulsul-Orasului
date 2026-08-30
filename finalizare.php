@@ -128,8 +128,9 @@ require __DIR__ . '/inc/antet.php';
                 <label class="check">
                   <input type="checkbox" id="fn-terms" name="termeni"
                          aria-describedby="err-fn-terms">
-                  <span>Sunt de acord cu <a href="#">Termenii</a> și cu
-                        <a href="#">Politica de confidențialitate</a>.</span>
+                  <span>Sunt de acord cu
+                        <a href="/termeni.php" target="_blank" rel="noopener">Termenii</a> și cu
+                        <a href="/confidentialitate.php" target="_blank" rel="noopener">Politica de confidențialitate</a>.</span>
                 </label>
                 <p class="field__error" id="err-fn-terms" hidden></p>
               </div>
