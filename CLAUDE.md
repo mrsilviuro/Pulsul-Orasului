@@ -907,6 +907,38 @@ assets/css/style.css, assets/js/main.js, assets/img/
   reapariția unui secret vechi stinge toate amintirile membrului.
   Intrarea cu Google îl pornește din start (n-are unde sta bifa).
 
+## Cum se scrie către om
+
+Tot ce citește un utilizator — mesaje de sub câmpuri, bule de confirmare,
+e-mailuri, texte de pe pagini — se scrie ca și cum ar vorbi un om, nu un
+sistem. Regulile care s-au strâns din trecerea de purificare:
+
+- **Confirmările sunt la persoana întâi**: „Am șters comentariul.", nu
+  „Comentariul a fost șters." La pasiv, mesajul e un sistem care anunță o
+  stare; la activ, e cineva care spune ce a făcut.
+- **Verificările spun ce lipsește ȘI ce e de făcut**: „Numele pare cam scurt.
+  Mai adaugă câteva litere.", nu „Numele pare prea scurt." Când e o limită, se
+  scrie „cam lung — încape în cel mult N", nu „prea lung (maximum N)".
+- **Niciodată limbă de ghișeu.** Sunt de ocolit: „vă rugăm", „în cel mai scurt
+  timp", „prezenta acțiune", „își rezervă dreptul", „în mod automat", „în
+  cadrul", „nu s-a specificat", „menționat", „ulterior", „necesită".
+- **Vestea proastă are întotdeauna o ușă la capăt.** Un „nu" fără nicio cale
+  înainte e cel mai prost fel de a închide o discuție: la respingere se spune
+  „Nimic nu e pierdut: intră pe pagina de editare…".
+- **Un singur nume pentru un lucru**: „eveniment", nu „activitate"; „publică",
+  nu „postează"; „părere", nu „feedback".
+- **MESAJELE DE CÂMP SUNT SCRISE DE DOUĂ ORI**, o dată în `inc/validare.php` și
+  o dată în `assets/js/main.js` (verificarea din browser). SCHIMBATE ÎNTR-UN
+  SINGUR LOC, omul citește o vorbă înainte de trimitere și alta după, pe
+  același câmp, la o secundă distanță. S-a întâmplat: opt perechi rămăseseră în
+  urmă. Când schimbi un mesaj, caută-l în amândouă, plus în `api/` (unele API-uri
+  își au copia lor: autentificare, parola-uitata, parola-noua,
+  retrimite-confirmare).
+- Probele se uită la vorbele exacte. Un text schimbat înseamnă și o probă
+  mutată — niciodată una ștearsă. Uneori proba are dreptate: la trimiterea unui
+  anunț, vorba TREBUIE să spună „merge spre aprobare", fiindcă acolo se
+  desparte omul de casă (publică direct) de restul.
+
 ## Convenții de nume/date
 
 - Nume proprii: capitalizare per cuvânt, diacritice ș/ț cu virgulă (nu ş/ţ cu sedilă)

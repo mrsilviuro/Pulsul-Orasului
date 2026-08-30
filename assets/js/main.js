@@ -3764,7 +3764,7 @@
         },
         {
           id: 'lg-password', error: 'err-lg-password',
-          check: function (v) { return v ? '' : 'Scrie parola.'; }
+          check: function (v) { return v ? '' : 'Scrie-ți și parola.'; }
         }
       ], trimiteAutentificarea);
     }

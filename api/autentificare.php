@@ -53,11 +53,11 @@ if ($email === '') {
 }
 
 if ($parola === '') {
-    $erori['parola'] = 'Scrie parola.';
+    $erori['parola'] = 'Scrie-ți și parola.';
 } elseif (strlen($parola) > 4096) {
     // Nimeni nu are o parolă atât de lungă. Limita oprește cererile trimise
     // doar ca să încarce serverul cu calcule de hash.
-    $erori['parola'] = 'Parola nu este validă.';
+    $erori['parola'] = 'Parola asta nu poate fi bună — e mult prea lungă.';
 }
 
 if ($erori !== []) {
