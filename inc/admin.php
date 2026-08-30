@@ -64,7 +64,7 @@ function sectiuniAdmin(): array
         [
             'cheie'  => 'coduri',
             'href'   => '/coduri.php',
-            'titlu'  => 'Abțibilduri',
+            'titlu'  => 'Coduri FindMe',
             'vorba'  => 'Codurile QR „FindMe": fă unele noi, vezi care sunt în joc.',
             'cifra'  => 'coduri',
             'unitate'=> 'în joc',

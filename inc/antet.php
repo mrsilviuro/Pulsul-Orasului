@@ -137,7 +137,7 @@ if ($logat) {
 } else {
     $meniu[] = [
         'cheie' => 'cont',
-        'href'  => '/login.php#inregistrare',
+        'href'  => '/login.php',
         'text'  => 'Alătură-te și tu',
         'clasa' => 'nav__link--alatura',
         'ico'   => '<circle cx="9.5" cy="8.5" r="3.5"/><path d="M3 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/>'
