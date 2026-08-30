@@ -955,7 +955,8 @@ function evenimentDupaSlug(string $slug): ?array
                 c.nume AS categorie, c.slug AS categorie_slug, c.imagine_default,
                 c.joc_qr AS categorie_joc_qr,
                 m.permalink AS org_permalink, m.nume AS org_nume, m.prenume AS org_prenume,
-                m.poza AS org_poza, m.poza_actualizata_la AS org_poza_actualizata_la
+                m.poza AS org_poza, m.poza_actualizata_la AS org_poza_actualizata_la,
+                m.stare AS org_stare
            FROM evenimente e
            JOIN categorii c ON c.id = e.categorie_id
            JOIN membri m    ON m.id = e.membru_id

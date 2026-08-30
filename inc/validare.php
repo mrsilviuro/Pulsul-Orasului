@@ -1519,6 +1519,39 @@ function numeAfisat(string $nume, string $prenume): string
 }
 
 /**
+ * Ce scrie în locul numelui, când omul din spatele rândului nu mai e.
+ *
+ * Contul șters se ANONIMIZEAZĂ, nu se șterge (inc/stergere.php): rândul rămâne,
+ * fiindcă de el atârnă evenimentele organizate și participările altora, dar
+ * omul din el se golește — `nume = 'Șters'`, `prenume = 'Utilizator'`.
+ *
+ * Numai că prin numeAfisat() cele două ieșeau „Ș. Utilizator": o inițială
+ * urmată de un prenume, adică o prescurtare care arată exact ca un nume de om
+ * adevărat, doar că unul pe care nu-l cheamă nimeni așa. De aceea vorba se
+ * scrie de-a dreptul, într-un singur loc.
+ */
+const NUME_CONT_STERS = 'Utilizator șters';
+
+/**
+ * S-a dus omul din rândul ăsta?
+ *
+ * ÎNTREABĂ DOAR DE `stare`, nu și de `cerere_stergere`. Cele treizeci de zile
+ * de răgaz sunt dinadins un răstimp în care nu se schimbă NIMIC: contul e
+ * întreg, iar simpla intrare în el anulează ștergerea (vezi autentifica()).
+ * Un anunț care și-ar pierde organizatorul în ziua în care omul a apăsat
+ * butonul i-ar lăsa pe cei înscriși fără să știe cu cine se întâlnesc — la un
+ * eveniment care poate are loc mâine, și cu un om care poate se răzgândește
+ * poimâine.
+ *
+ * Aceeași întrebare o pune și omulCuLegatura() din inc/admin.php, tot pe
+ * `stare`: acolo un cont șters își pierde legătura către profil.
+ */
+function esteContSters(?string $stare): bool
+{
+    return $stare === 'sters';
+}
+
+/**
  * Vârsta în ani împliniți, dintr-o dată de forma „1990-05-17".
  *
  * Întoarce null dacă data lipsește sau nu se înțelege — mai bine nu afișăm

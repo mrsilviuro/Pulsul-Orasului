@@ -87,6 +87,18 @@ Site live: https://pulsulorasului.ro
    rămâne pentru totdeauna: de el atârnă evenimentele organizate și participările.
    Se golește omul din el (`inc/stergere.php`), nu rândul. Ștergerea are răgaz de
    30 de zile, iar simpla intrare în cont o anulează — vezi `autentifica()`.
+   DE AICI DECURGE: oriunde se scrie un nume, rândul golit trebuie întrebat
+   întâi dacă mai are un om în el — `esteContSters($stare)` din `inc/validare.php`,
+   iar în locul numelui se scrie `NUME_CONT_STERS` („Utilizator șters"). Fără
+   întrebarea asta, `numeAfisat('Șters', 'Utilizator')` scotea „Ș. Utilizator":
+   o prescurtare care arată exact ca un nume de om adevărat, cu legătură cu tot
+   spre un profil gol. Se întreabă DOAR de `stare`, niciodată de
+   `cerere_stergere`: cele 30 de zile sunt dinadins un răstimp în care nu se
+   schimbă nimic. Azi o fac antetul unui eveniment (`evenimentDinBaza` din
+   `inc/afisare-eveniment.php`) și zona de administrare (`omulCuLegatura`);
+   listele de participanți nici n-au nevoie, fiindcă `INTERESE_DOAR_ACTIVI` taie
+   din bază tot ce nu e `activ`. COMENTARIILE ÎNCĂ NU o pun (`inc/comentarii.php`
+   face `JOIN membri` fără nicio condiție de stare) — vezi roadmap-ul.
 
 8. **Poze de profil: niciodată nu se salvează fișierul primit așa cum a venit.**
    Se redesenează pixel cu pixel (`inc/imagini.php`), EXIF dispare, nume random hex.
@@ -926,6 +938,12 @@ assets/css/style.css, assets/js/main.js, assets/img/
   Limita de evenimente active NU i se aplică: poatePublicaEveniment() îl lasă
   să treacă peste ea, fiindcă e făcută împotriva celui care ar umple prima
   pagină, iar el publică tocmai zece anunțuri ale orașului
+- Comentariile unui cont șters încă scriu „Ș. Utilizator", cu legătură spre un
+  profil gol: `inc/comentarii.php` face `JOIN membri` fără nicio condiție de
+  stare, iar `numeAfisat()` e chemat direct, fără `esteContSters()`. Antetul
+  evenimentului a fost îndreptat, discuția de sub el nu încă. Aceeași
+  îndreptare, în același fel, ar trebui și la părerile scrise de pe profil
+  (`inc/evaluari.php`) și la câștigătorul unei vânători (`inc/coduri-qr.php`)
 - Curățenia evenimentelor anulate: rândul cu `stare_moderare = 'anulat'` rămâne
   în bază pentru totdeauna, iar pagina lui se vede de oricine (cu banda și
   motivul). Ștergerea lui (cu tot cu coperta de pe disc, înscrieri și
