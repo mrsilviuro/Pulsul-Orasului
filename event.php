@@ -648,9 +648,9 @@ require __DIR__ . '/inc/antet.php';
                   <strong>Sigur vrei să încheii evenimentul?</strong>
                 </p>
                 <p class="incheiere-confirm__text">
-                  Anunțul rămâne pe site și se poate citi mai departe, dar
-                  nimeni nu se mai poate înscrie, iar tu vei putea publica un
-                  eveniment nou. Nu se mai poate lua înapoi.
+                  Evenimentul rămâne disponibil pentru cititori, dar nu se vor mai
+                  putea face înscrieri noi. Astfel, eliberezi un loc pentru un
+                  eveniment nou. Reține că această modificare este definitivă.
                 </p>
 
                 <div class="incheiere-confirm__actiuni">
@@ -813,7 +813,7 @@ require __DIR__ . '/inc/antet.php';
         <?php endif; ?>
 
         <?php if (!$maiSuntLocuri && $stareaMea !== 'participant'): ?>
-        <p class="rsvp__plin">Nu mai sunt locuri disponibile.</p>
+        <p class="rsvp__plin">S-au ocupat toate locurile.</p>
         <?php endif; ?>
 
         <!-- ------------------- confirmarea participării -------------------
@@ -829,21 +829,20 @@ require __DIR__ . '/inc/antet.php';
           <p class="rsvp__confirm-titlu"><strong>Confirmi participarea?</strong></p>
 
           <p class="rsvp__confirm-text">
-            Numele tău complet și numărul de telefon vor fi văzute de
-            organizator. Acesta te va putea contacta sau îți va putea scrie pe WhatsApp. Daca nu vei fi de găsit, organizatorul își rezervă dreptul să te șteargă din lista de participanți pentru a elibera locul.
+            Organizatorul o să-ți vadă numele întreg și numărul de telefon, ca să
+            te poată suna sau scrie pe WhatsApp. Dacă nu te găsește, s-ar putea
+            să te scoată de pe listă, ca locul să ajungă la altcineva.
           </p>
 
           <!--
-            Legătura e `href="#"`, ca toate celelalte spre termeni de pe site
-            (înregistrare, finalizare, subsol): pagina nu există încă. Trimitea
-            spre „tc.php", care nu e nici măcar în lista de pagini — adică
-            singura dintre ele care ducea la un 404 în loc să nu ducă nicăieri.
-            Când se scrie pagina, se caută `href="#"` și se schimbă toate
-            deodată.
+            Se deschide în FILĂ NOUĂ, ca toate legăturile spre termeni pornite
+            din mijlocul unui formular: omul e la un pas de a apăsa „Da,
+            particip", iar o pagină care i-ar lua locul l-ar trimite înapoi la
+            început. Pe restul site-ului (subsol) se deschide normal.
           -->
           <p class="rsvp__confirm-text">
-            Confirmând această acțiune, declari în mod automat ca ai citit și ești de acord cu
-            <a href="#">Termenii și condițiile</a> platformei PulsulOrasului.Ro
+            Dacă mergi mai departe, înseamnă că ai citit și ești de acord cu
+            <a href="/termeni.php" target="_blank" rel="noopener">Termenii și condițiile</a> site-ului.
           </p>
 
           <?php if ($imiCereTelefon): ?>
@@ -957,9 +956,9 @@ require __DIR__ . '/inc/antet.php';
         </div>
 
         <p class="moderare__lamurire">
-          Organizatorul primește un e-mail cu hotărârea. Se poate schimba
-          oricând: un anunț respins din greșeală poate fi aprobat, iar unul
-          aprobat prea repede poate fi oprit.
+          Organizatorul primește un e-mail cu ce ai hotărât. Te poți răzgândi
+          oricând: un anunț respins din greșeală poate fi aprobat la loc, iar
+          unul aprobat prea repede poate fi oprit.
         </p>
 
         <div class="moderare__butoane">
@@ -1011,8 +1010,8 @@ require __DIR__ . '/inc/antet.php';
                     data-moderare-motiv aria-describedby="moderare-motiv-hint"></textarea>
 
           <p class="field__hint" id="moderare-motiv-hint">
-            Textul ăsta pleacă întreg în e-mailul organizatorului. Fără el,
-            mesajul spune că nu s-a specificat niciun motiv.
+            Textul ăsta pleacă întreg în e-mailul organizatorului. Dacă îl lași
+            gol, mesajul o să spună limpede că nu s-a scris niciun motiv.
           </p>
 
           <!-- ================== EDITARE NECESARĂ ======================
@@ -1154,7 +1153,7 @@ require __DIR__ . '/inc/antet.php';
                         aria-describedby="err-comentariu"></textarea>
               <p class="field__error" id="err-comentariu" hidden></p>
               <div class="comment-form__actions">
-                <p class="comment-form__hint">Te rugăm să fii civilizat! Comentariile răutăcioase se șterg și pot aduce restricții ulterioare!</p>
+                <p class="comment-form__hint">Hai să ne purtăm frumos unii cu alții. Comentariile urâte se șterg, iar dacă se repetă, contul poate fi suspendat.</p>
                 <button class="btn btn--primary btn--sm" type="submit">Publică</button>
               </div>
             </div>
@@ -1329,10 +1328,10 @@ require __DIR__ . '/inc/antet.php';
 
               <label class="sr-only" for="scoate-motiv">De ce îl scoți</label>
               <textarea id="scoate-motiv" rows="3" maxlength="<?= MOTIV_EXCLUDERE_MAX ?>"
-                        placeholder="Această acțiune necesită un motiv. Care ar fi acesta? (cel puțin <?= MOTIV_EXCLUDERE_MIN ?> caractere)"
+                        placeholder="Spune-ne de ce îl scoți (cel puțin <?= MOTIV_EXCLUDERE_MIN ?> caractere)…"
                         aria-describedby="scoate-motiv-hint err-scoate"></textarea>
               <p class="field__hint" id="scoate-motiv-hint">
-                Aceasta va primi un email de informare în care vom include și motivul menționat.
+                Îi trimitem un e-mail ca să afle, iar motivul scris aici merge în el.
               </p>
               <p class="field__error" id="err-scoate" hidden></p>
 
@@ -1345,7 +1344,7 @@ require __DIR__ . '/inc/antet.php';
               -->
               <label class="check scoate-form__bifa">
                 <input type="checkbox" data-scoate-interzis>
-                <span>Doresc să previn reînscrierea lui în cadrul acestui eveniment sau activități!</span>
+                <span>Nu vreau să se mai poată înscrie la acest eveniment</span>
               </label>
 
               <div class="scoate-form__actiuni">
@@ -1380,7 +1379,8 @@ require __DIR__ . '/inc/antet.php';
               </p>
 
               <p class="field__hint">
-                Aceasta va primi automat 1 stea împreună cu un feedback negativ pe profilul lui. Acțiunea este definitivă și nu se poate revoca!
+                O să primească automat o stea și o însemnare pe profil. Nu se mai
+                poate lua înapoi, așa că mai gândește-te o clipă.
               </p>
 
               <div class="scoate-form__actiuni">
@@ -1429,7 +1429,7 @@ require __DIR__ . '/inc/antet.php';
                         placeholder="Spune pe scurt cum a fost…"
                         aria-describedby="parere-hint err-parere"></textarea>
               <p class="field__hint" id="parere-hint">
-                Textul apare SEMNAT pe profilul lui, spre deosebire de stele,
+                Textul apare semnat pe profilul lui — spre deosebire de stele,
                 care rămân anonime. Îl poți schimba oricând.
               </p>
               <p class="field__error" id="err-parere" hidden></p>

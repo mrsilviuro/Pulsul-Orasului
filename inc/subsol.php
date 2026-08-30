@@ -42,9 +42,9 @@ if (session_status() === PHP_SESSION_ACTIVE && !empty($_SESSION['mesaj_bun'])) {
       <nav class="footer__col" aria-label="Secțiuni">
         <h3>Secțiuni</h3>
         <ul>
-          <li><a href="#">Termeni și Condiții</a></li>
-          <li><a href="#">Confidențialitate</a></li>
-          <li><a href="#">Cookies</a></li>
+          <li><a href="/termeni.php">Termeni și Condiții</a></li>
+          <li><a href="/confidentialitate.php">Confidențialitate</a></li>
+          <li><a href="/cookies.php">Cookies</a></li>
         </ul>
       </nav>
 
@@ -101,6 +101,6 @@ if (session_status() === PHP_SESSION_ACTIVE && !empty($_SESSION['mesaj_bun'])) {
   </button>
 </div>
 
-<script src="/assets/js/main.js?v=87"></script>
+<script src="/assets/js/main.js?v=90"></script>
 </body>
 </html>

@@ -347,7 +347,7 @@ require __DIR__ . '/inc/antet.php';
           </div>
 
           <p class="dorinta-form__lege">
-            Trimițând-o, ești de acord cu <a href="#">termenii și condițiile</a> site-ului.
+            Trimițând-o, ești de acord cu <a href="/termeni.php" target="_blank" rel="noopener">termenii și condițiile</a> site-ului.
           </p>
         </form>
 

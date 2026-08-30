@@ -993,9 +993,9 @@ function emailExcludereParticipant(
     $blocuri = [
         'salut'     => 'Bună, ' . $prenume . '!',
         'paragrafe' => [
-            'Ai fost ' . $scos . ' de pe lista de participanți la „' . $titluEveniment . '", '
-            . 'de către ' . $cineA . '. Locul tău s-a eliberat.',
-            'Motivul, așa cum a fost scris:',
+            'Am o veste mai puțin plăcută: ' . $cineA . ' te-a ' . $scos . ' de pe lista '
+            . 'de participanți la „' . $titluEveniment . '", iar locul tău s-a eliberat.',
+            'Uite ce s-a scris:',
             $motiv,
         ],
         'buton'     => ['text' => 'Vezi evenimentul', 'href' => $adresaEveniment],
@@ -1009,12 +1009,12 @@ function emailExcludereParticipant(
      * deci nu are ce căuta topită într-un paragraf.
      */
     if ($interzis) {
-        $blocuri['atentie'] = 'Nu te mai poți înscrie la acest eveniment. '
-                            . 'Celelalte evenimente de pe site rămân deschise pentru tine.';
+        $blocuri['atentie'] = 'La acest eveniment nu te mai poți înscrie. Toate celelalte de pe site '
+                            . 'te așteaptă mai departe.';
     } else {
-        $blocuri['incheiere'] = 'Te poți înscrie din nou, dacă mai sunt locuri. '
-                              . 'Dacă ți se pare o greșeală, scrie-i organizatorului '
-                              . 'de pe pagina evenimentului.';
+        $blocuri['incheiere'] = 'Te poți înscrie din nou, dacă mai sunt locuri. Iar dacă ți se pare o '
+                              . 'greșeală, scrie-i organizatorului de pe pagina evenimentului — '
+                              . 'de obicei se lămurește din două vorbe.';
     }
 
     return trimiteEmail($catre, 'Ai fost ' . $scos . ' de pe lista de la „' . $titluEveniment . '"', $blocuri);
@@ -1075,8 +1075,8 @@ function emailMultumireParticipare(
             'href' => $adresaParticipanti,
         ],
         'link_gol'  => $adresaParticipanti,
-        'incheiere' => 'Nu ești obligat să notezi pe nimeni. E doar felul în care '
-                     . 'oamenii de aici află cu cine merg data viitoare.',
+        'incheiere' => 'Nu ești obligat să notezi pe nimeni. E doar felul în care oamenii de '
+                     . 'aici află cu cine merg data viitoare.',
     ];
 
     $subiect = $eOrganizator
@@ -1209,7 +1209,7 @@ function emailAnulareEveniment(
         $paragrafe[] = 'Era programat pentru ' . $candAvutLoc . '.';
     }
 
-    $paragrafe[] = 'Motivul, așa cum a fost scris de organizator:';
+    $paragrafe[] = 'Uite ce a scris organizatorul:';
     $paragrafe[] = $motiv;
 
     $blocuri = [
@@ -1220,8 +1220,8 @@ function emailAnulareEveniment(
             'href' => $adresaSite,
         ],
         'link_gol'  => $adresaSite,
-        'incheiere' => 'Nu trebuie să faci nimic — locul tău s-a eliberat singur. '
-                     . 'Dacă evenimentul se reia altă dată, va fi un anunț nou.',
+        'incheiere' => 'Nu ai nimic de făcut — locul tău s-a eliberat singur. Dacă evenimentul '
+                     . 'se reia altă dată, o să apară ca anunț nou.',
     ];
 
     return trimiteEmail($catre, '„' . $titluEveniment . '" a fost anulat', $blocuri);
@@ -1251,7 +1251,7 @@ function emailAnulareEveniment(
  * „aproape".
  *
  * MOTIVUL E OPȚIONAL, și numai la ultimele două. Aprobarea n-are ce explica.
- * Când lipsește, nu se tace: se spune pe față că nu s-a specificat niciunul și
+ * Când lipsește, nu se tace: se spune pe față că nu s-a scris niciunul și
  * omul e trimis să ne scrie — altfel ar rămâne cu un „nu" fără nicio ușă.
  *
  * Ce NU spune mesajul de respingere: că odată cu hotărârea s-au șters
@@ -1274,21 +1274,21 @@ function emailModerareAnunt(
 
     if ($hotarare === 'editare') {
         $paragrafe = [
-            'Anunțul tău, „' . $titluEveniment . '", e aproape gata — dar mai are '
-            . 'nevoie de câteva schimbări înainte să-l putem publica. Nu l-am '
-            . 'respins: te așteaptă acolo unde l-ai lăsat.',
+            '„' . $titluEveniment . '" e aproape gata! Mai are nevoie de câteva '
+            . 'schimbări înainte să-l putem publica. Nu l-am respins — te '
+            . 'așteaptă exact acolo unde l-ai lăsat.',
         ];
 
         if ($motiv !== '') {
-            $paragrafe[] = 'Ce ar trebui schimbat:';
+            $paragrafe[] = 'Uite ce ar mai fi de pus la punct:';
             $paragrafe[] = $motiv;
         } else {
-            $paragrafe[] = 'Nu s-a specificat nici un motiv. Pentru orice nelămurire, '
-                         . 'te rugăm să ne contactezi.';
+            $paragrafe[] = 'Nu a fost scris un motiv anume. Dacă vrei să afli mai multe, '
+                         . 'scrie-ne și îți răspundem.';
         }
 
         $paragrafe[] = 'Intră pe pagina lui, apasă „Editează" și trimite-l din nou. '
-                     . 'Îl citim iar imediat ce e gata.';
+                     . 'Îl recitim imediat ce e gata.';
 
         return trimiteEmail(
             $catre,
@@ -1298,8 +1298,7 @@ function emailModerareAnunt(
                 'paragrafe' => $paragrafe,
                 'buton'     => ['text' => 'Vezi anunțul', 'href' => $adresaEveniment],
                 'link_gol'  => $adresaEveniment,
-                'incheiere' => 'Nu trebuie s-o iei de la capăt — anunțul e tot al tău, '
-                             . 'așa cum l-ai scris.',
+                'incheiere' => 'Nu o iei de la capăt: anunțul e tot acolo, așa cum l-ai scris.',
             ]
         );
     }
@@ -1308,26 +1307,26 @@ function emailModerareAnunt(
         $blocuri = [
             'salut'     => 'Bună, ' . $prenume . '!',
             'paragrafe' => [
-                'Anunțul tău, „' . $titluEveniment . '", a fost aprobat și se vede '
-                . 'de acum pe site. Oamenii îl pot găsi și se pot înscrie.',
-                'Dacă îl schimbi, trece din nou pe la noi înainte să reapară — '
-                . 'așa se poate publica orice, iar verificarea rămâne ceva.',
+                'Vești bune: „' . $titluEveniment . '" e aprobat și se vede de acum pe '
+                . 'site. Oamenii îl pot găsi și se pot înscrie.',
+                'Dacă mai umbli la el, o să mai treacă o dată pe la noi înainte să '
+                . 'reapară. Nu durează mult.',
             ],
             'buton'     => ['text' => 'Vezi anunțul', 'href' => $adresaEveniment],
             'link_gol'  => $adresaEveniment,
-            'incheiere' => 'Mulțumim că pui ceva la cale pentru oraș.',
+            'incheiere' => 'Mulțumim că pui ceva la cale pentru oraș. Sperăm să iasă o seară bună.',
         ];
 
         return trimiteEmail($catre, '„' . $titluEveniment . '" a fost aprobat', $blocuri);
     }
 
     $paragrafe = [
-        'Anunțul tău, „' . $titluEveniment . '", nu a fost aprobat, deci nu se vede '
-        . 'pe site. Îl vezi în continuare tu, pe pagina lui.',
+        'De data asta nu putem publica „' . $titluEveniment . '", așa că nu se '
+        . 'vede pe site. Tu îl vezi în continuare, pe pagina lui.',
     ];
 
     if ($motiv !== '') {
-        $paragrafe[] = 'Motivul, așa cum a fost scris:';
+        $paragrafe[] = 'Uite ce s-a scris:';
         $paragrafe[] = $motiv;
     } else {
         /**
@@ -1337,12 +1336,12 @@ function emailModerareAnunt(
          * de a închide o discuție. Așa, omul știe și că n-a fost scris nimic,
          * și pe unde să întrebe.
          */
-        $paragrafe[] = 'Nu s-a specificat nici un motiv. Pentru orice nelămurire, '
-                     . 'te rugăm să ne contactezi.';
+        $paragrafe[] = 'Nu a fost scris un motiv anume. Dacă vrei să afli mai multe, '
+                     . 'scrie-ne și îți răspundem.';
     }
 
-    $paragrafe[] = 'Poți să-l îndrepți din pagina de editare și să-l trimiți din nou: '
-                 . 'orice schimbare îl pune înapoi în așteptare, iar noi îl citim iar.';
+    $paragrafe[] = 'Nimic nu e pierdut: intră pe pagina de editare, îndreaptă ce trebuie și '
+                 . 'trimite-l din nou. Îl recitim imediat ce ajunge la noi.';
 
     $blocuri = [
         'salut'     => 'Bună, ' . $prenume . '!',
@@ -1471,14 +1470,14 @@ function emailFeedbackNou(
  *
  * Întoarce paragrafele care se lipesc la coada mesajului.
  */
-function paragrafeleMotivului(string $motiv, string $intrebare = 'Motivul'): array
+function paragrafeleMotivului(string $motiv, string $intrebare = 'Uite ce s-a scris'): array
 {
     $motiv = trim($motiv);
 
     if ($motiv === '') {
         return [
-            'Nu s-a specificat niciun motiv. Pentru orice nelămurire, '
-            . 'te rugăm să ne contactezi.',
+            'Nu a fost scris un motiv anume. Dacă vrei să afli mai multe, '
+            . 'scrie-ne și îți răspundem.',
         ];
     }
 
@@ -1504,8 +1503,7 @@ function emailComentariuSters(string $catre, string $prenume, string $titluEveni
 
     $paragrafe = array_merge(
         [
-            'Un comentariu scris de tine la anunțul „' . $titluEveniment . '" a fost '
-            . 'șters de echipa PulsulOrasului.Ro.',
+            'Am șters un comentariu scris de tine la anunțul „' . $titluEveniment . '".',
         ],
         paragrafeleMotivului($motiv)
     );
@@ -1514,7 +1512,7 @@ function emailComentariuSters(string $catre, string $prenume, string $titluEveni
         'salut'     => 'Bună, ' . $prenume . '!',
         'paragrafe' => $paragrafe,
         'buton'     => ['text' => 'Scrie-ne', 'href' => $site . '/contact.php'],
-        'incheiere' => 'Contul tău nu e atins: poți scrie mai departe pe site.',
+        'incheiere' => 'Contul tău e neatins — poți scrie mai departe pe site.',
     ]);
 }
 
@@ -1531,17 +1529,17 @@ function emailPozaStearsa(string $catre, string $prenume, string $motiv = ''): b
     $site = rtrim((string) ($config['url_site'] ?? ''), '/');
 
     $paragrafe = array_merge(
-        ['Poza ta de profil de pe PulsulOrasului.Ro a fost ștearsă de echipa noastră.'],
+        ['Am șters poza ta de profil de pe PulsulOrasului.Ro.'],
         paragrafeleMotivului($motiv)
     );
 
-    $paragrafe[] = 'Poți încărca oricând alta din pagina profilului tău.';
+    $paragrafe[] = 'Poți pune oricând alta, din pagina profilului tău.';
 
     return trimiteEmail($catre, 'Poza ta de profil a fost ștearsă', [
         'salut'     => 'Bună, ' . $prenume . '!',
         'paragrafe' => $paragrafe,
         'buton'     => ['text' => 'Încarcă altă poză', 'href' => $site . '/poza.php'],
-        'incheiere' => 'Restul contului tău e neatins.',
+        'incheiere' => 'În rest, contul tău a rămas neatins.',
     ]);
 }
 
@@ -1559,8 +1557,8 @@ function emailContSuspendat(string $catre, string $prenume, string $motiv = ''):
 
     $paragrafe = array_merge(
         [
-            'Contul tău de pe PulsulOrasului.Ro a fost suspendat de echipa noastră. '
-            . 'Până la o nouă hotărâre nu te mai poți conecta.',
+            'Am suspendat contul tău de pe PulsulOrasului.Ro. Până lămurim lucrurile, '
+            . 'nu te mai poți conecta.',
         ],
         paragrafeleMotivului($motiv)
     );
@@ -1568,9 +1566,9 @@ function emailContSuspendat(string $catre, string $prenume, string $motiv = ''):
     return trimiteEmail($catre, 'Contul tău a fost suspendat', [
         'salut'     => 'Bună, ' . $prenume . '!',
         'paragrafe' => $paragrafe,
-        'atentie'   => 'Dacă ți se pare o greșeală, scrie-ne — citim tot ce ne vine.',
+        'atentie'   => 'Dacă ți se pare o greșeală, scrie-ne. Citim tot ce ne vine și răspundem.',
         'buton'     => ['text' => 'Scrie-ne', 'href' => $site . '/contact.php'],
-        'incheiere' => 'Evenimentele și participările tale rămân neatinse.',
+        'incheiere' => 'Evenimentele și participările tale au rămas neatinse.',
     ]);
 }
 
@@ -1608,13 +1606,12 @@ function emailDorintaHotarata(string $catre, string $prenume, string $dorinta,
 
     $paragrafe = array_merge(
         [
-            'Am citit dorința pe care ne-ai trimis-o, dar de data asta n-o putem pune '
-            . 'pe tablă.',
+            'Ți-am citit dorința, dar de data asta n-o putem pune pe tablă.',
         ],
         paragrafeleMotivului($motiv)
     );
 
-    $paragrafe[] = 'Poți scrie oricând alta — nu e nicio urmă și nicio așteptare.';
+    $paragrafe[] = 'Poți scrie oricând alta — nu rămâne nicio urmă și nu aștepți nimic.';
 
     return trimiteEmail($catre, 'Despre dorința ta', [
         'salut'     => 'Bună, ' . $prenume . '!',

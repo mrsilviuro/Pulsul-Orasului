@@ -391,7 +391,7 @@ echo "\n=== UN SINGUR EVENIMENT ACTIV ===\n";
 
 $r = trimite($c, ['titlu' => 'Al doilea eveniment, care nu trebuie să intre']);
 verifica('al doilea e oprit', false, $r['ok'] ?? true);
-verifica('cu mesajul cerut', 'Ai deja un eveniment activ. Poți posta unul nou după ce acesta se încheie.',
+verifica('cu mesajul cerut', 'Ai deja un eveniment activ. Poți publica altul după ce se încheie ăsta.',
     $r['mesaj'] ?? '');
 verifica('n-a ajuns în bază', 1, cateEvenimente());
 
@@ -1805,7 +1805,7 @@ verifica('organizatorul îl poate anula', true, $r['ok'] ?? false);
  * mers, și exact ce vor citi oamenii care intră după el.
  */
 verifica('și e trimis înapoi la anunț', urlEveniment($slugDeAnulat), $r['redirect'] ?? '');
-verifica('cu mesajul cerut', 'Evenimentul a fost anulat.', $r['mesaj'] ?? '');
+verifica('cu mesajul cerut', 'Am anulat evenimentul.', $r['mesaj'] ?? '');
 
 /**
  * NU se mai șterge nimic. Rândul rămâne, cu o stare nouă și cu motivul lângă
@@ -1842,7 +1842,7 @@ verifica('cu banda de anulat', true, str_contains($rOrg['corp'], 'stare-anunt--a
  * apăsare — iar aceea e chiar pagina evenimentului, unde îl trimite API-ul.
  */
 verifica('cu mesajul de o singură dată', true,
-    str_contains($rOrg['corp'], 'data-mesaj="Evenimentul a fost anulat."'));
+    str_contains($rOrg['corp'], 'data-mesaj="Am anulat evenimentul."'));
 
 $rStrain = cerere($baza . urlEveniment($slugDeAnulat), $altul);
 verifica('și un alt membru, la fel', 200, $rStrain['stare']);
@@ -2389,7 +2389,7 @@ intra($c3, 'al-treilea@exemplu-test.ro');
 
 $r = apasa($c3, $slugEv, 'participant', ['confirmat' => '1']);
 verifica('locul e ocupat, deci e oprit', false, $r['ok'] ?? true);
-verifica('cu mesajul cerut', 'Nu mai sunt locuri disponibile la acest eveniment.', $r['mesaj'] ?? '');
+verifica('cu mesajul cerut', 'S-au ocupat toate locurile la acest eveniment.', $r['mesaj'] ?? '');
 verifica('și cu semnul că e plin', true, $r['plin'] ?? false);
 verifica('nimic în bază', null, stareaDinBaza($idEv, $alTreilea));
 
@@ -2438,7 +2438,7 @@ verifica('și butonul apăsat e însemnat ca atare', true,
 verifica('caseta de confirmare e în pagină, ascunsă', true,
     preg_match('/id="rsvp-confirm"[^>]*hidden/', $pagina) === 1);
 verifica('spune ce vede organizatorul', true,
-    str_contains($pagina, 'văzute de'));
+    str_contains($pagina, 'numele întreg și numărul de telefon'));
 verifica('și pomenește WhatsApp', true, str_contains($pagina, 'WhatsApp'));
 verifica('cu trimitere la termeni', true, str_contains($pagina, 'Termenii și condițiile'));
 verifica('cine are telefon în cont nu mai e întrebat', false,
@@ -2456,7 +2456,7 @@ verifica('și cu chipuri, fără link', true,
 $idPustiu = pune($idOrg, 'La care nu vine nimeni', 'aprobat', 16);
 $pustiu = cerere($baza . urlEveniment($slugul($idPustiu)), $altul)['corp'];
 verifica('fără nimeni, o invitație', true,
-    str_contains($pustiu, 'Fii primul interesat de această activitate!'));
+    str_contains($pustiu, 'Fii primul care se arată interesat!'));
 verifica('fără cercuri goale', false, str_contains($pustiu, 'class="facepile"'));
 
 // La unul neaprobat, secțiunea lipsește cu totul.
@@ -2760,7 +2760,7 @@ verifica('unul neaprobat nu se poate încheia', false,
 
 $r = incheie($c, $slugInch);
 verifica('organizatorul îl poate încheia', true, $r['ok'] ?? false);
-verifica('cu mesajul cerut', 'Evenimentul a fost încheiat.', $r['mesaj'] ?? '');
+verifica('cu mesajul cerut', 'Am încheiat evenimentul.', $r['mesaj'] ?? '');
 verifica('și e trimis înapoi pe pagina lui',
     urlEveniment($slugInch), $r['redirect'] ?? '');
 verifica('starea din bază s-a schimbat', 'incheiat', $stareaLui($idInch));

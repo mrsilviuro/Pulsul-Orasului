@@ -85,7 +85,7 @@ if ($sectiune === 'telefon') {
     raspunsJson([
         'ok'      => true,
         'telefon' => (string) $valoare,
-        'mesaj'   => $valoare === null ? 'Numărul a fost șters.' : 'Numărul a fost salvat.',
+        'mesaj'   => $valoare === null ? 'Am șters numărul.' : 'Am salvat numărul.',
     ]);
 }
 

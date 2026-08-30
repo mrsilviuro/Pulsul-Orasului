@@ -132,7 +132,7 @@ if (!$membru) {
 
 if ($membru) {
     if ($membru['stare'] === 'suspendat') {
-        inapoiCuNecaz('Contul este suspendat. Scrie-ne dacă vrei lămuriri.');
+        inapoiCuNecaz('Contul tău e suspendat momentan. Scrie-ne și lămurim împreună.');
     }
 
     if ($membru['stare'] !== 'activ') {

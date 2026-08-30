@@ -50,6 +50,12 @@ $paginiFixe = [
     ['cale' => '/',           'freq' => 'daily',   'prio' => '1.0'],
     ['cale' => 'despre.php',  'freq' => 'yearly',  'prio' => '0.5'],
     ['cale' => 'contact.php', 'freq' => 'yearly',  'prio' => '0.5'],
+    // Cele trei documente. Se schimbă rar și nu le caută nimeni anume,
+    // dar trebuie să se poată găsi — sunt paginile pe care omul le caută
+    // tocmai când are o nelămurire despre datele lui.
+    ['cale' => 'termeni.php',           'freq' => 'yearly', 'prio' => '0.3'],
+    ['cale' => 'confidentialitate.php', 'freq' => 'yearly', 'prio' => '0.3'],
+    ['cale' => 'cookies.php',           'freq' => 'yearly', 'prio' => '0.3'],
 ];
 
 /**

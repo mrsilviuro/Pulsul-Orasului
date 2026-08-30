@@ -180,15 +180,15 @@ function verificaEmail($cerut): array
     $email = curataSpatii(is_string($cerut) ? $cerut : '');
 
     if ($email === '') {
-        return ['eroare' => 'Scrie adresa de e-mail.', 'email' => ''];
+        return ['eroare' => 'Avem nevoie și de adresa ta de e-mail.', 'email' => ''];
     }
 
     if (mb_strlen($email, 'UTF-8') > EMAIL_MAX) {
-        return ['eroare' => 'Adresa de e-mail e prea lungă.', 'email' => ''];
+        return ['eroare' => 'Adresa asta e neobișnuit de lungă. Mai aruncă-i un ochi.', 'email' => ''];
     }
 
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        return ['eroare' => 'Adresa de e-mail nu pare validă.', 'email' => ''];
+        return ['eroare' => 'Adresa nu pare completă. Mai aruncă un ochi pe ea.', 'email' => ''];
     }
 
     return ['eroare' => '', 'email' => mb_strtolower($email, 'UTF-8')];
@@ -212,7 +212,7 @@ function verificaDataNasterii(string $data, ?DateTimeImmutable $azi = null): str
     $data = trim($data);
 
     if ($data === '') {
-        return 'Scrie data nașterii.';
+        return 'Spune-ne și când te-ai născut.';
     }
 
     // dataDinFormular() ține și forma, și adevărul datei: „30-02-2000" nu trece,
@@ -221,22 +221,22 @@ function verificaDataNasterii(string $data, ?DateTimeImmutable $azi = null): str
     $iso = dataDinFormular($data);
 
     if ($iso === '') {
-        return 'Data nașterii nu e validă. Scrie-o ca 25-12-1990.';
+        return 'Data asta nu ne iese. Scrie-o ca 25-12-1990.';
     }
 
     $d = new DateTimeImmutable($iso);
 
     if ($d > $azi) {
-        return 'Data nașterii nu poate fi în viitor.';
+        return 'Data e în viitor — probabil s-a strecurat o greșeală.';
     }
 
     $ani = (int) $d->diff($azi)->y;
 
     if ($ani < VARSTA_MIN) {
-        return 'Trebuie să ai cel puțin ' . VARSTA_MIN . ' ani ca să îți faci cont.';
+        return 'Ne pare rău, contul se poate face de la ' . VARSTA_MIN . ' ani în sus.';
     }
     if ($ani > VARSTA_MAX) {
-        return 'Data nașterii nu pare reală.';
+        return 'Anul acesta nu prea se potrivește. Mai verifică-l.';
     }
 
     return '';
@@ -266,13 +266,13 @@ function verificaInregistrare(array $date, ?DateTimeImmutable $azi = null): arra
     $nume = pregatesteText($citeste('nume'));
 
     if ($nume === '') {
-        $erori['nume'] = 'Scrie numele de familie.';
+        $erori['nume'] = 'Ne trebuie și numele tău de familie.';
     } elseif (mb_strlen($nume, 'UTF-8') < NUME_MIN) {
-        $erori['nume'] = 'Numele pare prea scurt.';
+        $erori['nume'] = 'Numele pare cam scurt. Mai adaugă câteva litere.';
     } elseif (mb_strlen($nume, 'UTF-8') > NUME_MAX) {
-        $erori['nume'] = 'Numele e prea lung (maximum ' . NUME_MAX . ' de caractere).';
+        $erori['nume'] = 'Numele e cam lung — încape în cel mult ' . NUME_MAX . ' de caractere).';
     } elseif (!esteNumeValid($nume)) {
-        $erori['nume'] = 'Numele poate conține doar litere, spații și cratime.';
+        $erori['nume'] = 'La nume merg doar litere, spații și cratime.';
     } else {
         $curat['nume'] = numeCuMajuscula($nume);
     }
@@ -281,13 +281,13 @@ function verificaInregistrare(array $date, ?DateTimeImmutable $azi = null): arra
     $prenume = pregatesteText($citeste('prenume'));
 
     if ($prenume === '') {
-        $erori['prenume'] = 'Scrie prenumele.';
+        $erori['prenume'] = 'Spune-ne și prenumele tău.';
     } elseif (mb_strlen($prenume, 'UTF-8') < NUME_MIN) {
-        $erori['prenume'] = 'Prenumele pare prea scurt.';
+        $erori['prenume'] = 'Prenumele pare cam scurt. Mai adaugă câteva litere.';
     } elseif (mb_strlen($prenume, 'UTF-8') > NUME_MAX) {
-        $erori['prenume'] = 'Prenumele e prea lung (maximum ' . NUME_MAX . ' de caractere).';
+        $erori['prenume'] = 'Prenumele e cam lung — încape în cel mult ' . NUME_MAX . ' de caractere).';
     } elseif (!esteNumeValid($prenume)) {
-        $erori['prenume'] = 'Prenumele poate conține doar litere, spații și cratime.';
+        $erori['prenume'] = 'La prenume merg doar litere, spații și cratime.';
     } else {
         $curat['prenume'] = numeCuMajuscula($prenume);
     }
@@ -320,9 +320,9 @@ function verificaInregistrare(array $date, ?DateTimeImmutable $azi = null): arra
     $echivalente = ['M' => 'M', 'MASCULIN' => 'M', 'F' => 'F', 'FEMININ' => 'F'];
 
     if ($sex === '') {
-        $erori['sex'] = 'Alege o opțiune.';
+        $erori['sex'] = 'Alege una dintre variante.';
     } elseif (!isset($echivalente[$sex])) {
-        $erori['sex'] = 'Alege o opțiune validă.';
+        $erori['sex'] = 'Varianta asta nu e dintre cele de mai sus.';
     } else {
         $curat['sex'] = $echivalente[$sex];
     }
@@ -333,13 +333,13 @@ function verificaInregistrare(array $date, ?DateTimeImmutable $azi = null): arra
     $octeti  = strlen($parola);           // octeți, nu caractere: bcrypt taie la 72
 
     if ($parola === '') {
-        $erori['parola'] = 'Alege o parolă.';
+        $erori['parola'] = 'Alege-ți o parolă.';
     } elseif (mb_strlen($parola, 'UTF-8') < PAROLA_MIN) {
-        $erori['parola'] = 'Parola trebuie să aibă minimum ' . PAROLA_MIN . ' caractere.';
+        $erori['parola'] = 'Parola are nevoie de cel puțin ' . PAROLA_MIN . ' caractere.';
     } elseif ($octeti > PAROLA_MAX) {
-        $erori['parola'] = 'Parola e prea lungă. Alege una de cel mult ' . PAROLA_MAX . ' de caractere.';
+        $erori['parola'] = 'Parola e cam lungă — alege una de cel mult ' . PAROLA_MAX . ' de caractere.';
     } elseif (preg_match('/^\s+$/u', $parola)) {
-        $erori['parola'] = 'Parola nu poate fi formată doar din spații.';
+        $erori['parola'] = 'O parolă numai din spații n-o să te apere prea mult.';
     } else {
         $curat['parola'] = $parola;
     }
@@ -348,9 +348,9 @@ function verificaInregistrare(array $date, ?DateTimeImmutable $azi = null): arra
     // marcheze exact aceleași câmpuri. Nepotrivirea are sens doar dacă
     // parola în sine a trecut de verificări.
     if ($parola2 === '') {
-        $erori['parola_confirmare'] = 'Scrie parola din nou.';
+        $erori['parola_confirmare'] = 'Mai scrie o dată parola, ca să fim siguri.';
     } elseif (!isset($erori['parola']) && !hash_equals($parola, $parola2)) {
-        $erori['parola_confirmare'] = 'Cele două parole nu coincid.';
+        $erori['parola_confirmare'] = 'Cele două parole nu se potrivesc. Mai încearcă o dată.';
     }
 
     /* ------------------------------ Termeni --------------------------- */
@@ -358,7 +358,7 @@ function verificaInregistrare(array $date, ?DateTimeImmutable $azi = null): arra
     $acceptat = in_array($termeni, [true, 1, '1', 'on', 'true', 'da'], true);
 
     if (!$acceptat) {
-        $erori['termeni'] = 'Trebuie să accepți termenii ca să continui.';
+        $erori['termeni'] = 'Ca să mergem mai departe, avem nevoie să accepți termenii.';
     }
 
     return ['erori' => $erori, 'curat' => $curat];
@@ -509,9 +509,9 @@ function verificaEveniment(array $date, array $categoriiValide, array $oraseVali
     if ($titlu === '') {
         $erori['titlu'] = 'Scrie un titlu.';
     } elseif (mb_strlen($titlu, 'UTF-8') < TITLU_EVENIMENT_MIN) {
-        $erori['titlu'] = 'Titlul e prea scurt — spune în câteva cuvinte despre ce e vorba.';
+        $erori['titlu'] = 'Titlul e cam scurt. Spune în câteva cuvinte despre ce e vorba.';
     } elseif (mb_strlen($titlu, 'UTF-8') > TITLU_EVENIMENT_MAX) {
-        $erori['titlu'] = 'Titlul e prea lung (cel mult ' . TITLU_EVENIMENT_MAX . ' de caractere).';
+        $erori['titlu'] = 'Titlul e cam lung — încape în cel mult ' . TITLU_EVENIMENT_MAX . ' de caractere).';
     } else {
         $curat['titlu'] = $titlu;
     }
@@ -524,7 +524,7 @@ function verificaEveniment(array $date, array $categoriiValide, array $oraseVali
     } elseif (!in_array($categorie, $categoriiValide, true)) {
         // Lista vine din baza de date, nu din formular: cine trimite un id
         // inventat nu poate strecura un eveniment într-o categorie care nu e.
-        $erori['categorie_id'] = 'Alege o categorie din listă.';
+        $erori['categorie_id'] = 'Alege categoria care se potrivește cel mai bine.';
     } else {
         $curat['categorie_id'] = $categorie;
     }
@@ -580,16 +580,16 @@ function verificaEveniment(array $date, array $categoriiValide, array $oraseVali
     if (trim($citeste('data_eveniment')) === '') {
         $erori['data_eveniment'] = 'Alege data.';
     } elseif ($data === '') {
-        $erori['data_eveniment'] = 'Data nu e validă. Scrie-o ca 25-12-2026.';
+        $erori['data_eveniment'] = 'Data asta nu ne iese. Scrie-o ca 25-12-2026.';
     } else {
         $d = DateTimeImmutable::createFromFormat('!Y-m-d', $data);
 
         if ($d === false) {
             $erori['data_eveniment'] = 'Data nu e validă.';
         } elseif ($d < $azi) {
-            $erori['data_eveniment'] = 'Data a trecut deja. Alege una de azi înainte.';
+            $erori['data_eveniment'] = 'Ziua asta a trecut deja. Alege una de azi înainte.';
         } elseif ($d > $azi->modify('+' . ANI_INAINTE_MAX . ' years')) {
-            $erori['data_eveniment'] = 'Data e prea departe în viitor.';
+            $erori['data_eveniment'] = 'Data e cam departe în viitor.';
         } else {
             $curat['data_eveniment'] = $data;
         }
@@ -599,9 +599,9 @@ function verificaEveniment(array $date, array $categoriiValide, array $oraseVali
     $inceput = trim($citeste('ora_inceput'));
 
     if ($inceput === '') {
-        $erori['ora_inceput'] = 'Scrie ora de început.';
+        $erori['ora_inceput'] = 'Spune-ne și de la ce oră începe.';
     } elseif (!preg_match('/^([01][0-9]|2[0-3]):[0-5][0-9]$/', $inceput)) {
-        $erori['ora_inceput'] = 'Ora nu e validă.';
+        $erori['ora_inceput'] = 'Ora asta nu ne iese. Scrie-o ca 19:00.';
     } else {
         $curat['ora_inceput'] = $inceput . ':00';
     }
@@ -632,9 +632,9 @@ function verificaEveniment(array $date, array $categoriiValide, array $oraseVali
         if ($sfarsit === '') {
             // Bifa se cheamă în pagină „Nu se știe până când ține". Mesajul o
             // numește la fel: altfel omul caută în formular ceva ce nu există.
-            $erori['ora_sfarsit'] = 'Scrie ora de sfârșit, sau bifează „Nu se știe până când ține".';
+            $erori['ora_sfarsit'] = 'Spune până la ce oră ține, sau bifează „Nu se știe până când ține".';
         } elseif (!preg_match('/^([01][0-9]|2[0-3]):[0-5][0-9]$/', $sfarsit)) {
-            $erori['ora_sfarsit'] = 'Ora nu e validă.';
+            $erori['ora_sfarsit'] = 'Ora asta nu ne iese. Scrie-o ca 19:00.';
         } else {
             // Nu comparăm cele două ore: un eveniment poate începe la 22:00 și
             // se poate termina la 02:00. Ar fi o „greșeală" care nu e greșeală.
@@ -675,8 +675,8 @@ function verificaEveniment(array $date, array $categoriiValide, array $oraseVali
 
             if ($clipa !== false && $clipa < $prag) {
                 $erori['ora_inceput'] =
-                    'Alege o oră cu cel puțin ' . ORE_MINIM_INAINTE
-                  . ' ore înainte — cel mai devreme ' . date('H:i', $prag)
+                    'Mai lasă-le oamenilor puțin timp: alege o oră cu cel puțin ' . ORE_MINIM_INAINTE
+                  . ' ore înainte, deci cel mai devreme ' . date('H:i', $prag)
                   . ', ' . dataLunga(date('Y-m-d', $prag), false) . '.';
             }
         }
@@ -697,7 +697,7 @@ function verificaEveniment(array $date, array $categoriiValide, array $oraseVali
     if ($oras === '') {
         $erori['oras'] = 'Alege orașul.';
     } elseif (!in_array($oras, $oraseValide, true)) {
-        $erori['oras'] = 'Alege un oraș din listă.';
+        $erori['oras'] = 'Alege orașul din listă.';
     } else {
         $curat['oras'] = $oras;
     }
@@ -706,11 +706,11 @@ function verificaEveniment(array $date, array $categoriiValide, array $oraseVali
     $locatie = curataTextLiber($citeste('locatie'));
 
     if ($locatie === '') {
-        $erori['locatie'] = 'Scrie unde are loc.';
+        $erori['locatie'] = 'Spune-ne și unde are loc.';
     } elseif (mb_strlen($locatie, 'UTF-8') < LOCATIE_MIN) {
-        $erori['locatie'] = 'Locația e prea scurtă.';
+        $erori['locatie'] = 'Locul e scris cam pe scurt. Mai dă câteva detalii.';
     } elseif (mb_strlen($locatie, 'UTF-8') > LOCATIE_MAX) {
-        $erori['locatie'] = 'Locația e prea lungă (cel mult ' . LOCATIE_MAX . ' de caractere).';
+        $erori['locatie'] = 'Locul e scris cam pe lung — încape în cel mult ' . LOCATIE_MAX . ' de caractere).';
     } else {
         $curat['locatie'] = $locatie;
     }
@@ -729,11 +729,11 @@ function verificaEveniment(array $date, array $categoriiValide, array $oraseVali
         $cost = str_replace(',', '.', trim($citeste('cost')));
 
         if ($cost === '') {
-            $erori['cost'] = 'Scrie cât costă, sau bifează „Gratuit".';
+            $erori['cost'] = 'Spune-ne cât costă, sau bifează „Gratuit".';
         } elseif (!preg_match('/^[0-9]{1,5}(\.[0-9]{1,2})?$/', $cost)) {
-            $erori['cost'] = 'Scrie o sumă, de forma 25 sau 25.50.';
+            $erori['cost'] = 'Scrie suma ca 25 sau ca 25.50.';
         } elseif ((float) $cost > COST_MAX) {
-            $erori['cost'] = 'Suma e prea mare.';
+            $erori['cost'] = 'Suma asta pare prea mare.';
         } else {
             $curat['cost'] = number_format((float) $cost, 2, '.', '');
         }
@@ -773,11 +773,11 @@ function verificaEveniment(array $date, array $categoriiValide, array $oraseVali
         if ($valoare === '') {
             $erori[$camp] = $eticheta . ' lipsește. Scrie-l, sau bifează „Nespecificat".';
         } elseif (!preg_match('/^[0-9]{1,5}$/', $valoare)) {
-            $erori[$camp] = 'Scrie un număr întreg.';
+            $erori[$camp] = 'Aici merge doar un număr întreg.';
         } elseif ((int) $valoare < 1) {
-            $erori[$camp] = 'Numărul trebuie să fie cel puțin 1.';
+            $erori[$camp] = 'Numărul trebuie să fie măcar 1.';
         } elseif ((int) $valoare > PARTICIPANTI_MAX) {
-            $erori[$camp] = 'Numărul e prea mare.';
+            $erori[$camp] = 'Numărul ăsta pare prea mare.';
         } else {
             $curat[$camp] = (int) $valoare;
         }
@@ -803,12 +803,12 @@ function verificaEveniment(array $date, array $categoriiValide, array $oraseVali
     $cateCaractere = mb_strlen($descriere, 'UTF-8');
 
     if ($descriere === '') {
-        $erori['descriere'] = 'Scrie câteva rânduri despre eveniment.';
+        $erori['descriere'] = 'Povestește-ne în câteva rânduri despre ce e vorba.';
     } elseif ($cateCaractere < DESCRIERE_MIN) {
         $erori['descriere'] = 'Mai scrie puțin: ai ' . $cateCaractere . ' caractere din '
                             . DESCRIERE_MIN . ' cerute.';
     } elseif ($cateCaractere > DESCRIERE_MAX) {
-        $erori['descriere'] = 'Descrierea e prea lungă (cel mult ' . DESCRIERE_MAX . ' de caractere).';
+        $erori['descriere'] = 'Descrierea e cam lungă — încape în cel mult ' . DESCRIERE_MAX . ' de caractere).';
     } else {
         $curat['descriere'] = $descriere;
     }
@@ -996,7 +996,7 @@ function verificaMotivAnulare($cerut): array
     $cate  = mb_strlen($motiv, 'UTF-8');
 
     if ($motiv === '') {
-        return ['eroare' => 'Scrie de ce anulezi. Cei care voiau să vină vor primi textul ăsta.', 'text' => ''];
+        return ['eroare' => 'Spune-ne de ce anulezi. Le trimitem textul ăsta celor care voiau să vină.', 'text' => ''];
     }
 
     if ($cate < MOTIV_ANULARE_MIN) {
@@ -1060,7 +1060,7 @@ function verificaMotivExcludere($cerut): array
 
     if ($motiv === '') {
         return [
-            'eroare' => 'Scrie de ce îl scoți de pe listă. Omul primește textul ăsta pe e-mail.',
+            'eroare' => 'Spune-ne de ce îl scoți de pe listă. Îi trimitem textul ăsta pe e-mail.',
             'text'   => '',
         ];
     }
@@ -1157,7 +1157,7 @@ function verificaComentariu($cerut): array
     $cate = mb_strlen($text, 'UTF-8');
 
     if ($text === '' || $cate < COMENTARIU_MIN) {
-        return ['eroare' => 'Scrie ceva înainte de a trimite.', 'text' => ''];
+        return ['eroare' => 'Scrie ceva mai întâi.', 'text' => ''];
     }
 
     if ($cate > COMENTARIU_MAX) {
@@ -1192,7 +1192,7 @@ function verificaDorinta(array $date, array $oraseValide): array
     if ($oras === '') {
         $erori['oras'] = 'Alege orașul.';
     } elseif (!in_array($oras, $oraseValide, true)) {
-        $erori['oras'] = 'Alege un oraș din listă.';
+        $erori['oras'] = 'Alege orașul din listă.';
     } else {
         $curat['oras'] = $oras;
     }
@@ -1213,7 +1213,7 @@ function verificaDorinta(array $date, array $oraseValide): array
     $cate = mb_strlen($text, 'UTF-8');
 
     if ($text === '') {
-        $erori['dorinta'] = 'Scrie ce ți-ai dori.';
+        $erori['dorinta'] = 'Spune-ne ce ți-ai dori.';
     } elseif ($cate < DORINTA_MIN) {
         $erori['dorinta'] = 'Mai scrie puțin: ai ' . $cate . ' caractere din '
                           . DORINTA_MIN . ' cerute.';
@@ -1363,7 +1363,7 @@ function verificaContact(array $date, array $dinCont = []): array
         } elseif (mb_strlen($intreg, 'UTF-8') > NUME_MAX * 2) {
             $erori['nume'] = 'Numele e prea lung.';
         } elseif (!esteNumeValid($nume) || !esteNumeValid($prenume)) {
-            $erori['nume'] = 'Numele poate conține doar litere, spații și cratime.';
+            $erori['nume'] = 'La nume merg doar litere, spații și cratime.';
         } else {
             $curat['nume']    = numeCuMajuscula($nume);
             $curat['prenume'] = numeCuMajuscula($prenume);
@@ -1462,7 +1462,7 @@ function verificaTelefon(string $telefon): array
     // Orice altceva rămas în afară de cifre și un plus la început e semn că
     // n-a fost un număr de telefon.
     if (!preg_match('/^\+?[0-9]+$/', $cifre)) {
-        return ['ok' => false, 'curat' => '', 'eroare' => 'Scrie doar cifre, de forma 0722334455.'];
+        return ['ok' => false, 'curat' => '', 'eroare' => 'Scrie doar cifre, ca 0722334455.'];
     }
 
     // Cele trei feluri de a scrie prefixul de țară duc la aceeași formă.
@@ -1478,7 +1478,7 @@ function verificaTelefon(string $telefon): array
         return [
             'ok'     => false,
             'curat'  => '',
-            'eroare' => 'Numărul nu pare românesc. Zece cifre, începând cu 07, 02 sau 03.',
+            'eroare' => 'Numărul nu pare românesc — zece cifre, care încep cu 07, 02 sau 03.',
         ];
     }
 

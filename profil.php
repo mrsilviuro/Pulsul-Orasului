@@ -534,8 +534,7 @@ require __DIR__ . '/inc/antet.php';
         face cu el.
       -->
       <p class="feedback__nota">
-        Notele sunt date în mod anonim de oamenii cu care ai participat la
-        evenimente.
+        Notele vin, anonim, de la oamenii cu care ai fost pe la evenimente.
       </p>
       <?php endif; ?>
 

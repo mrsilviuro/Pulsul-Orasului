@@ -62,7 +62,7 @@ $membru = membruCurent();
 if ($membru === null) {
     raspunsJson([
         'ok'    => false,
-        'mesaj' => 'Trebuie să fii conectat ca să îți schimbi poza.',
+        'mesaj' => 'Intră în cont ca să-ți poți schimba poza.',
     ], 401);
 }
 
@@ -162,5 +162,5 @@ raspunsJson([
     'ok'        => true,
     'poza'      => urlPoza($rezultat['nume']),
     'poza_mica' => urlPoza($rezultat['nume'], true),
-    'mesaj'     => 'Poza de profil a fost schimbată.',
+    'mesaj'     => 'Am schimbat poza de profil.',
 ]);

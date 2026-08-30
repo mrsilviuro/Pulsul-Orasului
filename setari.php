@@ -219,13 +219,13 @@ require __DIR__ . '/inc/antet.php';
           <label class="check">
             <input type="checkbox" id="st-feedback" name="email_feedback"
                    <?= $emailFeedback ? 'checked' : '' ?>>
-            <span>Doresc să fiu informat prin e-mail când cineva îmi lasă un feedback
-                  scris pe profilul meu. (Notele cu stele rămân anonime — despre
-                  ele nu-ți scriem.)</span>
+            <span>Vreau să primesc e-mail când cineva îmi lasă o părere scrisă pe
+                  profil. (Notele cu stele rămân anonime — despre ele nu-ți
+                  scriem.)</span>
           </label>
         </div>
 
-        <button class="btn btn--primary" type="submit">Salvează preferințele</button>
+        <button class="btn btn--primary" type="submit">Salvează</button>
       </form>
     </section>
 

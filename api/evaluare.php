@@ -249,7 +249,7 @@ $raspuns = [
     'ok'     => true,
     'membru' => $tintaId,
     'stele'  => $stele,
-    'mesaj'  => $fapta === 'scrie' ? 'Evaluarea ta a fost trimisă.' : 'Nota ta a fost trimisă.',
+    'mesaj'  => $fapta === 'scrie' ? 'Am primit nota ta. Mulțumim!' : 'Am primit nota ta. Mulțumim!',
 ];
 
 if ($fapta === 'scrie') {

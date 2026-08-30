@@ -208,10 +208,10 @@ if (empty($config['dezvoltare'])) {
         str_contains($nou, 'Fotbal în parc" nu a fost aprobat'));
     verifica('motivul scris ajunge întreg', true,
         str_contains($nou, 'Lipsește adresa exactă.'));
-    verifica('și se spune al cui e', true, str_contains($nou, 'Motivul, așa cum a fost scris'));
+    verifica('și se spune al cui e', true, str_contains($nou, 'Uite ce s-a scris'));
     verifica('fără vorba pentru lipsa lui', false,
-        str_contains($nou, 'Nu s-a specificat nici un motiv'));
-    verifica('cu îndemnul de a-l îndrepta', true, str_contains($nou, 'îndrepți'));
+        str_contains($nou, 'Nu a fost scris un motiv anume'));
+    verifica('cu îndemnul de a-l îndrepta', true, str_contains($nou, 'îndreaptă ce trebuie'));
 
     /* --- respins FĂRĂ motiv --- */
     $nou = $citeste(function () {
@@ -221,10 +221,10 @@ if (empty($config['dezvoltare'])) {
 
     verifica('fără motiv, se spune pe față', true,
         str_contains($faraRupturi($nou),
-            'Nu s-a specificat nici un motiv. Pentru orice nelămurire, '
-            . 'te rugăm să ne contactezi.'));
+            'Nu a fost scris un motiv anume. Dacă vrei să afli mai multe, '
+            . 'scrie-ne și îți răspundem.'));
     verifica('și nu se pretinde că ar fi unul', false,
-        str_contains($nou, 'Motivul, așa cum a fost scris'));
+        str_contains($nou, 'Uite ce s-a scris'));
 
     /* --- editare necesară: nici „da", nici „nu" --- */
     $nou = $citeste(function () {
@@ -248,7 +248,7 @@ if (empty($config['dezvoltare'])) {
             'https://exemplu.test/event.php?slug=x', 'editare', '');
     });
     verifica('la editare fără motiv, se spune la fel', true,
-        str_contains($faraRupturi($nou), 'Nu s-a specificat nici un motiv.'));
+        str_contains($faraRupturi($nou), 'Nu a fost scris un motiv anume.'));
 
     /* Motivul e text de la om: scăpat în HTML, ca orice paragraf. */
     $sablon = sablonEmail('Test', [
@@ -775,9 +775,10 @@ if ($BAZA === '') {
             (json_decode($r['corp'], true) ?: [])['ok'] ?? false);
 
         if (!empty($config['dezvoltare'])) {
-            $nou = substr((string) file_get_contents($logEmail), $inainte);
+            $nou = (string) preg_replace('/\s+/u', ' ',
+                substr((string) file_get_contents($logEmail), $inainte));
             verifica('iar e-mailul spune că n-a fost niciunul', true,
-                str_contains($nou, 'Nu s-a specificat nici un motiv'));
+                str_contains($nou, 'Nu a fost scris un motiv anume'));
         }
 
         /* --- „editare necesară": rămâne în așteptare --- */
@@ -1063,7 +1064,7 @@ if ($BAZA === '') {
         ]), $formSef['cookie']);
 
         verifica('staff-ul publică, deși e peste limită', 200, $r['cod']);
-        verifica('iar mesajul nu mai vorbește de aprobare', 'Evenimentul a fost publicat.',
+        verifica('iar mesajul nu mai vorbește de aprobare', 'Gata, evenimentul e publicat!',
             (string) ($r['corp']['mesaj'] ?? ''));
 
         $pus = evenimentDupaSlug($slugDinUrl($r['corp']['url'] ?? ''));
@@ -1090,7 +1091,7 @@ if ($BAZA === '') {
 
         verifica('și el poate publica', 200, $r['cod']);
         verifica('dar mesajul lui vorbește de aprobare',
-            'Evenimentul tău a fost trimis spre aprobare.',
+            'Gata! Anunțul tău merge spre aprobare — îți dăm de veste imediat ce l-am citit.',
             (string) ($r['corp']['mesaj'] ?? ''));
 
         $pus = evenimentDupaSlug($slugDinUrl($r['corp']['url'] ?? ''));

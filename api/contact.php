@@ -64,7 +64,7 @@ if ($capcana !== '') {
         . ' — a scris „' . mb_substr($capcana, 0, 60) . '"'
         . ($membru !== null ? ' (membrul #' . (int) $membru['id'] . ')' : ''));
 
-    raspunsJson(['ok' => true, 'mesaj' => 'Mesajul a fost trimis.']);
+    raspunsJson(['ok' => true, 'mesaj' => 'Am trimis mesajul.']);
 }
 
 /* ======================== 2. CÂT DE DES SCRIE ========================= */
@@ -94,7 +94,7 @@ if ($membru !== null) {
     if ((int) $q->fetchColumn() > 0) {
         raspunsJson([
             'ok'    => false,
-            'mesaj' => 'Ai trimis un mesaj chiar acum. Mai așteaptă câteva minute '
+            'mesaj' => 'Ne-ai scris chiar acum. Mai așteaptă câteva minute '
                      . 'înainte de următorul.',
         ], 429);
     }
@@ -110,7 +110,7 @@ if ($membru !== null) {
         if ((int) $q->fetchColumn() >= MESAJE_PE_ORA_PE_IP) {
             raspunsJson([
                 'ok'    => false,
-                'mesaj' => 'Ai trimis prea multe mesaje recent. Te rugăm încearcă mai târziu.',
+                'mesaj' => 'Ai trimis cam multe mesaje în ultima vreme. Mai încearcă puțin mai târziu.',
             ], 429);
         }
     }
@@ -179,5 +179,5 @@ emailMesajDeContact($curat, $membru !== null ? (int) $membru['id'] : null);
 
 raspunsJson([
     'ok'    => true,
-    'mesaj' => 'Mesajul a fost trimis. Îți mulțumim — revenim cu un răspuns în cel mai scurt timp.',
+    'mesaj' => 'Mesajul a ajuns la noi. Mulțumim — îți răspundem cât putem de repede.',
 ]);

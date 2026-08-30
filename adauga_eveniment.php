@@ -295,8 +295,8 @@ require __DIR__ . '/inc/antet.php';
       </ul>
 
       <p class="card-set__lead">
-        Un eveniment este considerat încheiat în mod automat următoarea zi ce urmează zilei în care a avut loc.
-        Până atunci, tot ce ai de făcut e să te ocupi de el.
+        Un eveniment se încheie de la sine a doua zi după ce a avut loc. Până
+        atunci, tot ce ai de făcut e să te ocupi de el.
       </p>
 
       <!--

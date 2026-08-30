@@ -121,11 +121,11 @@ function lacat(bool $pornit): void
 
 sectiune('adresa de e-mail');
 
-verifica('adresa goală nu trece', 'Scrie adresa de e-mail.', verificaEmail('')['eroare']);
-verifica('nici doar spații',      'Scrie adresa de e-mail.', verificaEmail('   ')['eroare']);
-verifica('nici altceva decât text', 'Scrie adresa de e-mail.', verificaEmail(null)['eroare']);
-verifica('una fără @',            'Adresa de e-mail nu pare validă.', verificaEmail('ion')['eroare']);
-verifica('una prea lungă', 'Adresa de e-mail e prea lungă.',
+verifica('adresa goală nu trece', 'Avem nevoie și de adresa ta de e-mail.', verificaEmail('')['eroare']);
+verifica('nici doar spații',      'Avem nevoie și de adresa ta de e-mail.', verificaEmail('   ')['eroare']);
+verifica('nici altceva decât text', 'Avem nevoie și de adresa ta de e-mail.', verificaEmail(null)['eroare']);
+verifica('una fără @',            'Adresa nu pare completă. Mai aruncă un ochi pe ea.', verificaEmail('ion')['eroare']);
+verifica('una prea lungă', 'Adresa asta e neobișnuit de lungă. Mai aruncă-i un ochi.',
     verificaEmail(str_repeat('a', EMAIL_MAX) . '@x.ro')['eroare']);
 
 verifica('una bună trece',   '',                verificaEmail('Ion@Email.ro')['eroare']);
@@ -191,7 +191,10 @@ foreach (['constructie.php', 'login.php', 'iesire.php',
           'api/autentificare.php', 'api/newsletter.php',
           // A doua ușă de intrare: cine și-a făcut contul cu Google n-are
           // parolă la noi, deci fără ea n-ar avea pe unde intra deloc.
-          'google.php'] as $usa) {
+          'google.php',
+          // Afișul cere o adresă de e-mail; documentele care spun ce facem
+          // cu ea n-au voie să stea în spatele lacătului.
+          'termeni.php', 'confidentialitate.php', 'cookies.php'] as $usa) {
     verifica('„' . $usa . '" e deschisă', true, in_array($usa, $usi, true));
 }
 

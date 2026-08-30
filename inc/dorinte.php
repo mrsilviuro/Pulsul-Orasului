@@ -62,8 +62,8 @@ const DORINTE_DEODATA = 3;
 
 /** Ce i se spune omului după ce a trimis. Scris o dată, folosit în trei locuri. */
 const MESAJ_DORINTA_TRIMISA =
-    'Dorința ta a ajuns la noi. O vom citi, iar dacă respectă regulamentul '
-  . 'nostru, o vom publica de îndată.';
+    'Dorința ta a ajuns la noi. O citim și, dacă e în regulă, o punem pe '
+  . 'tablă.';
 
 /**
  * Ce i se spune omului de casă, a cărui dorință nu trece pe la nimeni.

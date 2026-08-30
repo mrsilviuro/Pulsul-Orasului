@@ -129,7 +129,7 @@ require __DIR__ . '/inc/antet.php';
             <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
               <circle cx="12" cy="12" r="9"/><path d="m8.2 12.3 2.6 2.6 5-5.2"/>
             </svg>
-            <span>Mesajul a fost trimis. Îți mulțumim — revenim cu un răspuns în cel mai scurt timp.</span>
+            <span>Mesajul a ajuns la noi. Mulțumim — îți răspundem cât putem de repede.</span>
           </p>
         </form>
       </section>

@@ -71,6 +71,12 @@ function usileDeschiseInConstructie(): array
         'api/autentificare.php',
         'api/newsletter.php',
         'google.php',
+        // Afișul cere o adresă de e-mail, deci documentele care spun ce
+        // facem cu ea trebuie să se poată citi de acolo. O politică de
+        // confidențialitate încuiată e o contradicție în termeni.
+        'termeni.php',
+        'confidentialitate.php',
+        'cookies.php',
     ];
 }
 

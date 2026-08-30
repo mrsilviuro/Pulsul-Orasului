@@ -376,7 +376,7 @@ require __DIR__ . '/inc/antet.php';
               <label for="rg-password2">Confirmă parola</label>
               <div class="input-pass">
                 <input type="password" id="rg-password2" name="parola_confirmare" autocomplete="new-password"
-                       placeholder="Scrie parola din nou" required aria-describedby="err-rg-password2">
+                       placeholder="Scrie parola încă o dată" required aria-describedby="err-rg-password2">
                 <button class="input-pass__toggle" type="button" data-toggle-pass="rg-password2"
                         aria-label="Arată parola" aria-pressed="false">
                   <svg class="ico ico--eye" viewBox="0 0 24 24" aria-hidden="true">
@@ -395,7 +395,7 @@ require __DIR__ . '/inc/antet.php';
             <div class="field">
               <label class="check">
                 <input type="checkbox" id="rg-terms" name="termeni" aria-describedby="err-rg-terms">
-                <span>Sunt de acord cu <a href="#">Termenii</a> și cu <a href="#">Politica de confidențialitate</a>.</span>
+                <span>Sunt de acord cu <a href="/termeni.php" target="_blank" rel="noopener">Termenii</a> și cu <a href="/confidentialitate.php" target="_blank" rel="noopener">Politica de confidențialitate</a>.</span>
               </label>
               <p class="field__error" id="err-rg-terms" hidden></p>
             </div>

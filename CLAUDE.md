@@ -137,7 +137,8 @@ parola-uitata.php, parola-noua.php, google.php, finalizare.php, confirma.php,
 stergere.php, iesire.php, verifica.php, constructie.php,
 findme.php, admin.php, admin-evenimente.php, admin-comentarii.php,
 admin-contact.php, admin-useri.php, admin-evaluari.php, admin-dorinte.php,
-coduri.php, sitemap.php, robots.txt, dezabonare.php
+coduri.php, sitemap.php, robots.txt, dezabonare.php,
+termeni.php, confidentialitate.php, cookies.php
 
   dezabonare.php → ieșirea de la newsletterul zilnic, FĂRĂ CONT: cine s-a
                 săturat de un mesaj n-are chef să-și amintească parola ca să
@@ -819,6 +820,11 @@ teste/              → router.php: serverul de probă cu ADRESE FRUMOASE.
                       comandă nu există unul, și îl ia de acolo la sfârșit)
                       test-dorinte.php (tabla cu dorințe; cere baza, iar
                       partea de HTTP cere și serverul — se sare singură)
+                      test-documente.php (termeni, confidențialitate, cookies;
+                      cere SERVERUL, se sare singură fără el. Leagă vorbele din
+                      documente de lucrul din cod care le face adevărate — și
+                      păzește promisiunea „fără urmărire", căutând în cod
+                      Analytics, pixeli și celelalte)
                       test-tine-minte.php, test-setari.php, test-contact.php,
                       test-evenimente.php, test-prima-pagina.php,
                       test-constructie.php, test-anulare.php, test-moderare.php
@@ -907,6 +913,38 @@ assets/css/style.css, assets/js/main.js, assets/img/
   reapariția unui secret vechi stinge toate amintirile membrului.
   Intrarea cu Google îl pornește din start (n-are unde sta bifa).
 
+## Cum se scrie către om
+
+Tot ce citește un utilizator — mesaje de sub câmpuri, bule de confirmare,
+e-mailuri, texte de pe pagini — se scrie ca și cum ar vorbi un om, nu un
+sistem. Regulile care s-au strâns din trecerea de purificare:
+
+- **Confirmările sunt la persoana întâi**: „Am șters comentariul.", nu
+  „Comentariul a fost șters." La pasiv, mesajul e un sistem care anunță o
+  stare; la activ, e cineva care spune ce a făcut.
+- **Verificările spun ce lipsește ȘI ce e de făcut**: „Numele pare cam scurt.
+  Mai adaugă câteva litere.", nu „Numele pare prea scurt." Când e o limită, se
+  scrie „cam lung — încape în cel mult N", nu „prea lung (maximum N)".
+- **Niciodată limbă de ghișeu.** Sunt de ocolit: „vă rugăm", „în cel mai scurt
+  timp", „prezenta acțiune", „își rezervă dreptul", „în mod automat", „în
+  cadrul", „nu s-a specificat", „menționat", „ulterior", „necesită".
+- **Vestea proastă are întotdeauna o ușă la capăt.** Un „nu" fără nicio cale
+  înainte e cel mai prost fel de a închide o discuție: la respingere se spune
+  „Nimic nu e pierdut: intră pe pagina de editare…".
+- **Un singur nume pentru un lucru**: „eveniment", nu „activitate"; „publică",
+  nu „postează"; „părere", nu „feedback".
+- **MESAJELE DE CÂMP SUNT SCRISE DE DOUĂ ORI**, o dată în `inc/validare.php` și
+  o dată în `assets/js/main.js` (verificarea din browser). SCHIMBATE ÎNTR-UN
+  SINGUR LOC, omul citește o vorbă înainte de trimitere și alta după, pe
+  același câmp, la o secundă distanță. S-a întâmplat: opt perechi rămăseseră în
+  urmă. Când schimbi un mesaj, caută-l în amândouă, plus în `api/` (unele API-uri
+  își au copia lor: autentificare, parola-uitata, parola-noua,
+  retrimite-confirmare).
+- Probele se uită la vorbele exacte. Un text schimbat înseamnă și o probă
+  mutată — niciodată una ștearsă. Uneori proba are dreptate: la trimiterea unui
+  anunț, vorba TREBUIE să spună „merge spre aprobare", fiindcă acolo se
+  desparte omul de casă (publică direct) de restul.
+
 ## Convenții de nume/date
 
 - Nume proprii: capitalizare per cuvânt, diacritice ș/ț cu virgulă (nu ş/ţ cu sedilă)
@@ -921,8 +959,30 @@ assets/css/style.css, assets/js/main.js, assets/img/
 - Interdicția de reînscriere (`excluderi_evenimente.interzis`) nu se poate
   ridica din interfață — rândul se schimbă de mână, din phpMyAdmin. Nu există
   nici pagină care să-i arate omului de unde a fost scos: află doar din e-mail
-- Pagina de termeni și condiții nu există. Linkurile spre ea sunt `href="#"`
-  peste tot (înregistrare, subsol, confirmarea participării)
+- CELE TREI DOCUMENTE — `termeni.php`, `confidentialitate.php`, `cookies.php` —
+  sunt scrise după același tipar și duc una la alta. CIFRELE DIN ELE NU SE SCRIU
+  DE MÂNĂ: vin din constantele care hotărăsc purtarea site-ului
+  (`ZILE_RAGAZ_STERGERE`, `ORE_PENTRU_NOTE`, `VARSTA_MIN`, `ZILE_TINE_MINTE`,
+  `ZILE_PASTRARE_INCERCARI`, `COOKIE_TINE_MINTE`), tocmai ca documentul să nu
+  poată rămâne în urma codului. `teste/test-documente.php` prinde ziua în care
+  cineva scrie totuși o cifră de mână. CINE ȚINE SITE-UL se citește din
+  `config.php` (cheia `operator`), printr-un singur loc — `operatorulSite()` din
+  `inc/bootstrap.php`; cât timp numele e gol, paginile spun pe față că datele nu
+  sunt trecute, în loc să lase un gol sau un nume închipuit.
+  SUNT UȘI DESCHISE ÎN CONSTRUCȚIE (`usileDeschiseInConstructie`): afișul de
+  șantier cere o adresă de e-mail, iar o politică de confidențialitate încuiată
+  tocmai pentru omul de care e scrisă e o contradicție în termeni.
+  DE VERIFICAT LA FIECARE FUNCȚIE NOUĂ care strânge ceva despre om: dacă
+  `confidentialitate.php` nu se schimbă odată cu ea, documentul începe să mintă.
+  La fel, orice program de măsurare adăugat vreodată strică promisiunea „fără
+  urmărire" din `cookies.php` ȘI cere banner de acord — proba „nu e niciun
+  program de urmărire în cod" e acolo ca să nu treacă tăcut
+- VÂRSTA MINIMĂ E `VARSTA_MIN` = 10 ANI, iar asta e o problemă juridică
+  nerezolvată: sub GDPR, în România, un copil își poate da singur acordul pentru
+  prelucrarea datelor abia de la 16 ani. Documentele scriu ce face codul (de la
+  10 ani, cu acordul părintelui sub 16), dar site-ul NU cere și nu verifică
+  nicăieri acordul acela. De hotărât: ori se ridică `VARSTA_MIN` la 16, ori se
+  face un drum adevărat pentru acordul părintesc
 - Moderarea: fiecare eveniment intră cu `stare_moderare = 'in_asteptare'` și se
   vede organizatorului și staff-ului. Aprobarea, respingerea și „editare
   necesară" se fac de pe pagina evenimentului, din blocul dintre anunț și

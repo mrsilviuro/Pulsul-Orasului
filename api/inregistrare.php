@@ -80,7 +80,7 @@ if ($ip !== null) {
     if ((int) $q->fetchColumn() >= $limita) {
         raspunsJson([
             'ok'    => false,
-            'mesaj' => 'S-au creat prea multe conturi de pe această conexiune. Încearcă peste o oră.',
+            'mesaj' => 'S-au făcut cam multe conturi de aici în ultima vreme. Mai încearcă peste o oră.',
         ], 429);
     }
 }
@@ -113,7 +113,7 @@ $tokenExpira = (new DateTimeImmutable("+{$oreValid} hours"))->format('Y-m-d H:i:
 $parolaHash = password_hash($curat['parola'], PASSWORD_DEFAULT);
 
 if ($parolaHash === false) {
-    raspunsJson(['ok' => false, 'mesaj' => 'Nu am putut crea contul. Încearcă din nou.'], 500);
+    raspunsJson(['ok' => false, 'mesaj' => 'N-am reușit să-ți facem contul. Mai încearcă o dată.'], 500);
 }
 
 $sql = 'INSERT INTO membri
@@ -172,7 +172,7 @@ for ($incercare = 1; $incercare <= 5 && !$reusit; $incercare++) {
 }
 
 if (!$reusit) {
-    raspunsJson(['ok' => false, 'mesaj' => 'Nu am putut crea contul. Încearcă din nou.'], 500);
+    raspunsJson(['ok' => false, 'mesaj' => 'N-am reușit să-ți facem contul. Mai încearcă o dată.'], 500);
 }
 
 /* ------------------------- 8. E-mailul de confirmare ------------------ */
@@ -203,7 +203,7 @@ $u->execute([acum(), $curat['email']]);
 $raspuns = [
     'ok'    => true,
     'email' => $curat['email'],
-    'mesaj' => 'Contul a fost creat. Ți-am trimis un e-mail de confirmare.',
+    'mesaj' => 'Gata, contul e făcut! Ți-am trimis un e-mail de confirmare.',
 ];
 
 // Doar în dezvoltare: linkul e trimis înapoi, ca să poți încheia

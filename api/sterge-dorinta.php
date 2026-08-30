@@ -71,4 +71,4 @@ if (!stergeDorintaOmului((int) $membru['id'], $id)) {
     ], 404);
 }
 
-raspunsJson(['ok' => true, 'mesaj' => 'Dorința a fost ștearsă.']);
+raspunsJson(['ok' => true, 'mesaj' => 'Am șters dorința.']);

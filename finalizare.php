@@ -29,7 +29,7 @@ $nou = $_SESSION['google_nou'] ?? null;
  * sesiunea s-a închis. Îl trimitem să ia drumul de la capăt.
  */
 if (!is_array($nou) || empty($nou['sub']) || empty($nou['email'])) {
-    $_SESSION['google_necaz'] = 'A trecut prea mult timp. Încearcă din nou cu Google.';
+    $_SESSION['google_necaz'] = 'A trecut cam mult timp. Ia-o o dată de la capăt, cu Google.';
     header('Location: /login.php');
     exit;
 }
@@ -37,13 +37,13 @@ if (!is_array($nou) || empty($nou['sub']) || empty($nou['email'])) {
 // Un sfert de oră e destul pentru completarea a două câmpuri.
 if ((time() - (int) ($nou['la'] ?? 0)) > 900) {
     unset($_SESSION['google_nou']);
-    $_SESSION['google_necaz'] = 'A trecut prea mult timp. Încearcă din nou cu Google.';
+    $_SESSION['google_necaz'] = 'A trecut cam mult timp. Ia-o o dată de la capăt, cu Google.';
     header('Location: /login.php');
     exit;
 }
 
 $titlu     = 'Încă un pas — PulsulOrasului.Ro';
-$descriere = 'Completează ultimele două date și contul e gata.';
+$descriere = 'Mai avem nevoie de două lucruri și contul e gata.';
 $pagina    = 'cont';
 $noindex   = true;
 
@@ -128,8 +128,9 @@ require __DIR__ . '/inc/antet.php';
                 <label class="check">
                   <input type="checkbox" id="fn-terms" name="termeni"
                          aria-describedby="err-fn-terms">
-                  <span>Sunt de acord cu <a href="#">Termenii</a> și cu
-                        <a href="#">Politica de confidențialitate</a>.</span>
+                  <span>Sunt de acord cu
+                        <a href="/termeni.php" target="_blank" rel="noopener">Termenii</a> și cu
+                        <a href="/confidentialitate.php" target="_blank" rel="noopener">Politica de confidențialitate</a>.</span>
                 </label>
                 <p class="field__error" id="err-fn-terms" hidden></p>
               </div>

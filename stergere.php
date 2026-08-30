@@ -19,7 +19,7 @@ $membru = confirmaStergereaContului($token);
 
 if ($membru === null) {
     $titlu  = 'Link invalid';
-    $mesaj  = 'Linkul nu mai e valabil. Poate a fost deja folosit sau i-a trecut vremea. '
+    $mesaj  = 'Linkul nu mai e bun — se poate să fi fost deja folosit, sau i-a trecut vremea. '
             . 'Poți cere altul din pagina de setări.';
     $reusit = false;
 } else {
