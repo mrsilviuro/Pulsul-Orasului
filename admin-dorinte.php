@@ -53,9 +53,7 @@ $vorbeStare = [
 ];
 
 /**
- * Ce se poate alege din listă. ACELEAȘI trei stări, dar scrise ca fapte —
- * lista e un loc din care se face ceva, nu unul care doar spune cum stau
- * lucrurile. Aceea e coloana de alături, cu vorbele de mai sus.
+ * Ce se poate alege din listă — FAPTELE care se pot face de aici.
  *
  * „Așteptare" e și starea în care intră orice dorință nouă, și drumul înapoi
  * pentru una hotărâtă din greșeală.
@@ -65,6 +63,23 @@ $hotarari = [
     'aprobat'      => 'Aprobă',
     'respins'      => 'Respinge',
 ];
+
+/**
+ * ACELEAȘI trei, dar scrise ca STĂRI — pentru rândul în care dorința se află
+ * deja.
+ *
+ * O listă strânsă arată un singur rând: cel ales. Cu vorbele de sus, o dorință
+ * aprobată scria „Aprobă" pe ea — adică o poruncă, un lucru rămas de făcut,
+ * tocmai despre ceva ce se făcuse. Deschisă, lista se citește acum firesc: „e
+ * Aprobat; pot Respinge".
+ *
+ * „Așteptare" e la fel în amândouă, fiindcă e un nume, nu o faptă — de aceea
+ * lipsește de aici și se ia din tabloul de sus.
+ */
+$hotarariAcum = array_merge($hotarari, [
+    'aprobat' => 'Aprobat',
+    'respins' => 'Respins',
+]);
 
 $titlu   = 'Dorințe — Admin';
 $pagina  = 'admin';
@@ -172,10 +187,13 @@ require __DIR__ . '/inc/antet.php';
                   -->
                   <option selected disabled>retrasă</option>
                   <?php else: ?>
-                  <?php foreach ($hotarari as $val => $vorba): ?>
-                  <option value="<?= h($val) ?>"
-                          <?= $d['stare_moderare'] === $val ? 'selected' : '' ?>>
-                    <?= h($vorba) ?>
+                  <?php foreach ($hotarari as $val => $vorba):
+                    /* Rândul în care dorința se află deja se scrie ca stare
+                       („Aprobat"), celelalte ca fapte („Respinge"). */
+                    $acumAici = $d['stare_moderare'] === $val;
+                  ?>
+                  <option value="<?= h($val) ?>" <?= $acumAici ? 'selected' : '' ?>>
+                    <?= h($acumAici ? $hotarariAcum[$val] : $vorba) ?>
                   </option>
                   <?php endforeach; ?>
                   <?php endif; ?>

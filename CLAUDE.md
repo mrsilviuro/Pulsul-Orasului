@@ -959,7 +959,12 @@ assets/css/style.css, assets/js/main.js, assets/img/
   la un eveniment, când se apreciază un comentariu sau când se raportează ceva
 - Tabla cu dorințe se moderează din `admin-dorinte.php`, DINTR-O SINGURĂ LISTĂ
   DE ALES (aceeași unealtă ca starea contului din `admin-useri.php`), cu patru
-  rânduri: „Așteptare", „Aprobă", „Respinge", „Șterge". Erau trei butoane, și
+  rânduri: „Așteptare", „Aprobă", „Respinge", „Șterge". RÂNDUL ÎN CARE DORINȚA
+  E DEJA se scrie ca STARE, nu ca poruncă („Aprobat", „Respins" — tabloul
+  `$hotarariAcum` lângă `$hotarari`): o listă strânsă arată un singur rând, iar
+  „Aprobă" pe o dorință aprobată era un lucru rămas de făcut tocmai despre ceva
+  făcut. „Așteptare" e la fel în amândouă, fiindcă e un nume, nu o faptă.
+  Erau trei butoane, și
   două dintre ele se vedeau numai cât dorința aștepta: o dată hotărâtă, nu mai
   era nicio cale înapoi din interfață. De aceea `modereaza-dorinta` primește
   acum și `in_asteptare`, iar starea DIN CARE se pleacă a intrat în `WHERE`
