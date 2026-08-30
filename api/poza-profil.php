@@ -162,5 +162,5 @@ raspunsJson([
     'ok'        => true,
     'poza'      => urlPoza($rezultat['nume']),
     'poza_mica' => urlPoza($rezultat['nume'], true),
-    'mesaj'     => 'Poza de profil a fost schimbată.',
+    'mesaj'     => 'Am schimbat poza de profil.',
 ]);

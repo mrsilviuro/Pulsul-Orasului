@@ -251,8 +251,8 @@ if ($organizator !== null) {
 
 $vorba = match (true) {
     $editare            => 'I-am cerut organizatorului o îndreptare. Anunțul rămâne în așteptare.',
-    $stare === 'aprobat' => 'Anunțul a fost aprobat și se vede pe site.',
-    default             => 'Anunțul a fost respins.',
+    $stare === 'aprobat' => 'Am aprobat anunțul. Se vede de acum pe site.',
+    default             => 'Am respins anunțul.',
 };
 
 // Mesajul îl citește inc/subsol.php pe pagina următoare și îl arată o singură

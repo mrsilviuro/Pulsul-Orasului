@@ -64,7 +64,7 @@ if ($capcana !== '') {
         . ' — a scris „' . mb_substr($capcana, 0, 60) . '"'
         . ($membru !== null ? ' (membrul #' . (int) $membru['id'] . ')' : ''));
 
-    raspunsJson(['ok' => true, 'mesaj' => 'Mesajul a fost trimis.']);
+    raspunsJson(['ok' => true, 'mesaj' => 'Am trimis mesajul.']);
 }
 
 /* ======================== 2. CÂT DE DES SCRIE ========================= */

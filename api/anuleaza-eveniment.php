@@ -157,7 +157,7 @@ if ($picate > 0) {
 // Mesajul îl citește inc/subsol.php pe pagina următoare și îl arată o
 // singură dată, ca la intrarea cu Google.
 pornesteSesiunea();
-$_SESSION['mesaj_bun'] = 'Evenimentul a fost anulat.';
+$_SESSION['mesaj_bun'] = 'Am anulat evenimentul.';
 
 /**
  * Înapoi pe pagina evenimentului, nu pe profil.
@@ -171,7 +171,7 @@ $_SESSION['mesaj_bun'] = 'Evenimentul a fost anulat.';
 raspunsJson([
     'ok'       => true,
     'redirect' => urlEveniment((string) $eveniment['slug']),
-    'mesaj'    => 'Evenimentul a fost anulat.',
+    'mesaj'    => 'Am anulat evenimentul.',
 
     // Câți au aflat — pagina nu-l arată deocamdată, dar proba îl citește, iar
     // organizatorul are dreptul să știe că vestea chiar a plecat.

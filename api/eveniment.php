@@ -307,7 +307,7 @@ if ($idSalvat > 0) {
 raspunsJson([
     'ok'    => true,
     'mesaj' => ($eStaff
-        ? 'Evenimentul a fost publicat.'
-        : 'Evenimentul tău a fost trimis spre aprobare.') . $necazQr,
+        ? 'Gata, evenimentul e publicat!'
+        : 'Gata! Anunțul tău merge spre aprobare — îți dăm de veste imediat ce l-am citit.') . $necazQr,
     'url'   => $slug !== '' ? urlEveniment($slug) : '',
 ]);

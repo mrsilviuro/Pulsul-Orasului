@@ -1064,7 +1064,7 @@ if ($BAZA === '') {
         ]), $formSef['cookie']);
 
         verifica('staff-ul publică, deși e peste limită', 200, $r['cod']);
-        verifica('iar mesajul nu mai vorbește de aprobare', 'Evenimentul a fost publicat.',
+        verifica('iar mesajul nu mai vorbește de aprobare', 'Gata, evenimentul e publicat!',
             (string) ($r['corp']['mesaj'] ?? ''));
 
         $pus = evenimentDupaSlug($slugDinUrl($r['corp']['url'] ?? ''));
@@ -1091,7 +1091,7 @@ if ($BAZA === '') {
 
         verifica('și el poate publica', 200, $r['cod']);
         verifica('dar mesajul lui vorbește de aprobare',
-            'Evenimentul tău a fost trimis spre aprobare.',
+            'Gata! Anunțul tău merge spre aprobare — îți dăm de veste imediat ce l-am citit.',
             (string) ($r['corp']['mesaj'] ?? ''));
 
         $pus = evenimentDupaSlug($slugDinUrl($r['corp']['url'] ?? ''));

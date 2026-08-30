@@ -196,8 +196,8 @@ case 'sterge-comentariu':
         // veste" numai dacă a plecat ceva. Altfel omul de casă ar fi rămas cu
         // gândul că autorul a aflat, când de fapt n-a aflat nimeni.
         'mesaj' => ($ce['fel'] === 'golit'
-            ? 'Comentariul a fost golit — avea răspunsuri sub el.'
-            : 'Comentariul a fost șters.')
+            ? 'Am golit comentariul — avea răspunsuri sub el.'
+            : 'Am șters comentariul.')
             . ($aPlecatVestea ? ' I-am dat de veste autorului.' : ''),
     ]);
     break;
@@ -265,7 +265,7 @@ case 'sterge-mesaj':
         raspunsJson(['ok' => false, 'mesaj' => 'Mesajul nu mai există.'], 404);
     }
 
-    raspunsJson(['ok' => true, 'mesaj' => 'Mesajul a fost șters.']);
+    raspunsJson(['ok' => true, 'mesaj' => 'Am șters mesajul.']);
     break;
 
 /* ============================= o notă ================================ */
@@ -299,7 +299,7 @@ case 'sterge-evaluare':
 
     raspunsJson([
         'ok'    => true,
-        'mesaj' => 'Nota a fost ștearsă. Media lui '
+        'mesaj' => 'Am șters nota. Media lui '
                  . ($nota['tinta_prenume'] !== null && $nota['tinta_prenume'] !== ''
                     ? $nota['tinta_prenume'] : 'cel notat')
                  . ' s-a schimbat pe loc.',
@@ -316,7 +316,7 @@ case 'sterge-dorinta':
         raspunsJson(['ok' => false, 'mesaj' => 'Dorința nu mai există.'], 404);
     }
 
-    raspunsJson(['ok' => true, 'mesaj' => 'Dorința a fost ștearsă.']);
+    raspunsJson(['ok' => true, 'mesaj' => 'Am șters dorința.']);
     break;
 
 case 'modereaza-dorinta':
@@ -414,9 +414,9 @@ case 'modereaza-dorinta':
     if ($hotarare === 'in_asteptare') {
         $vorba = 'Dorința s-a întors în așteptare. Nu i-am scris nimic omului.';
     } elseif ($hotarare === 'aprobat') {
-        $vorba = 'Dorința a fost aprobată. Apare pe tablă de la prima încărcare a primei pagini.';
+        $vorba = 'Am aprobat dorința. Apare pe tablă de la prima încărcare a primei pagini.';
     } else {
-        $vorba = 'Dorința a fost respinsă. Omul poate pune alta.';
+        $vorba = 'Am respins dorința. Omul poate pune alta.';
     }
 
     raspunsJson([
@@ -470,7 +470,7 @@ case 'sterge-poza':
         // scris cu mâna în JS, ar fi fost al doilea loc care știe cum arată
         // inițiala cuiva.
         'poza'  => urlPoza(null, true),
-        'mesaj' => 'Poza a fost ștearsă.'
+        'mesaj' => 'Am șters poza.'
                  . ($omulPozei !== null ? ' I-am dat de veste.' : ''),
     ]);
     break;

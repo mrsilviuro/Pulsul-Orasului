@@ -161,5 +161,5 @@ emailParolaSchimbata((string) $membru['email'], (string) $membru['prenume']);
 raspunsJson([
     'ok'       => true,
     'redirect' => '/index.php',
-    'mesaj'    => $areParola ? 'Parola a fost schimbată.' : 'Parola a fost salvată.',
+    'mesaj'    => $areParola ? 'Am schimbat parola.' : 'Am salvat parola.',
 ]);

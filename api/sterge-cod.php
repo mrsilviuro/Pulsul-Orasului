@@ -77,4 +77,4 @@ if (!stergeCodulQr((int) $cod['id'])) {
     ], 409);
 }
 
-raspunsJson(['ok' => true, 'mesaj' => 'Codul a fost șters.']);
+raspunsJson(['ok' => true, 'mesaj' => 'Am șters codul.']);

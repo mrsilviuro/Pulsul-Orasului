@@ -289,7 +289,7 @@ function adaugaComentariul(array $date, array $eveniment, int $membruId, bool $e
                   . randeazaComentariu($rand, $desenat['context'])
                   . '</li>',
         'numar'  => numaraComentarii($evenimentId),
-        'mesaj'  => $catre === null ? 'Comentariul tău a fost publicat.' : 'Răspunsul tău a fost publicat.',
+        'mesaj'  => $catre === null ? 'Gata, comentariul tău e publicat.' : 'Gata, răspunsul tău e publicat.',
     ]);
 }
 
@@ -370,7 +370,7 @@ function editeazaComentariul(array $date, array $eveniment, int $membruId, bool 
         'ok'    => true,
         'id'    => (int) $comentariu['id'],
         'html'  => randeazaComentariu($desenat['rand'], $desenat['context']),
-        'mesaj' => 'Comentariul a fost salvat.',
+        'mesaj' => 'Am salvat comentariul.',
     ]);
 }
 
@@ -411,7 +411,7 @@ function stergeComentariul(array $date, array $eveniment, int $membruId, bool $e
         // ea: rămăsese doar ca să țină discuția legată.
         'parinte_sters' => $ce['parinte_sters'],
         'numar'         => numaraComentarii($evenimentId),
-        'mesaj'         => 'Comentariul a fost șters.',
+        'mesaj'         => 'Am șters comentariul.',
     ]);
 }
 
@@ -458,7 +458,7 @@ function raporteazaComentariul(array $date, array $eveniment, int $membruId): vo
         'id'       => (int) $comentariu['id'],
         'raportat' => $rezultat['raportat'],
         'mesaj'    => $rezultat['raportat']
-            ? 'Mulțumim. Comentariul a fost trimis spre verificare.'
+            ? 'Mulțumim! Comentariul merge la verificare.'
             : 'Ai retras raportul.',
     ]);
 }
@@ -469,7 +469,7 @@ function apreciazaComentariul(array $date, array $eveniment, int $membruId): voi
 
     // Un comentariu golit n-are ce să fie apreciat: nu mai scrie nimic acolo.
     if ((int) $comentariu['sters'] === 1) {
-        raspunsJson(['ok' => false, 'mesaj' => 'Comentariul a fost șters.'], 409);
+        raspunsJson(['ok' => false, 'mesaj' => 'Am șters comentariul.'], 409);
     }
 
     $rezultat = comutaApreciere((int) $comentariu['id'], $membruId);

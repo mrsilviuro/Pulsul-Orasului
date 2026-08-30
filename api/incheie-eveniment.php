@@ -109,7 +109,7 @@ incheieEveniment($eveniment);
 // Mesajul îl citește inc/subsol.php pe pagina următoare și îl arată o singură
 // dată, ca la anulare.
 pornesteSesiunea();
-$_SESSION['mesaj_bun'] = 'Evenimentul a fost încheiat.';
+$_SESSION['mesaj_bun'] = 'Am încheiat evenimentul.';
 
 /**
  * Înapoi pe aceeași pagină, nu pe profil.
@@ -121,5 +121,5 @@ $_SESSION['mesaj_bun'] = 'Evenimentul a fost încheiat.';
 raspunsJson([
     'ok'       => true,
     'redirect' => urlEveniment((string) $eveniment['slug']),
-    'mesaj'    => 'Evenimentul a fost încheiat.',
+    'mesaj'    => 'Am încheiat evenimentul.',
 ]);

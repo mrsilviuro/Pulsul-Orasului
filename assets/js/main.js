@@ -1562,7 +1562,7 @@
         if (!c.ok) { gata(); toast(c.mesaj || 'Nu am putut încheia evenimentul.'); return; }
 
         // Butonul rămâne stins: nu mai e nimic de apăsat cât se reîncarcă.
-        toastSiDupa(c.mesaj || 'Evenimentul a fost încheiat.');
+        toastSiDupa(c.mesaj || 'Am încheiat evenimentul.');
         setTimeout(function () {
           window.location.href = c.redirect || window.location.href;
         }, 700);
@@ -2207,7 +2207,7 @@
           function (c) {
             campComentariu.value = '';
             adaugaInLista(c);
-            toast(c.mesaj || 'Comentariul tău a fost publicat.');
+            toast(c.mesaj || 'Gata, comentariul tău e publicat.');
           }
         );
       });
@@ -2367,7 +2367,7 @@
           function (c) {
             inchideRaspunsul();
             adaugaInLista(c);
-            toast(c.mesaj || 'Răspunsul tău a fost publicat.');
+            toast(c.mesaj || 'Gata, răspunsul tău e publicat.');
           }
         );
       });
@@ -2441,7 +2441,7 @@
           function (c) {
             inchideEditarea();
             inlocuiesteArticolul(c.id, c.html);
-            toast(c.mesaj || 'Comentariul a fost salvat.');
+            toast(c.mesaj || 'Am salvat comentariul.');
           }
         );
       });
@@ -2502,7 +2502,7 @@
 
         potrivesteAscunsul();
         setContor(c.numar);
-        toast(c.mesaj || 'Comentariul a fost șters.');
+        toast(c.mesaj || 'Am șters comentariul.');
       });
     }
 
@@ -2556,7 +2556,7 @@
 
         if (vorba) vorba.textContent = raportat ? 'Raportat' : 'Raportează';
 
-        toast(c.mesaj || (raportat ? 'Comentariul a fost raportat.' : 'Ai retras raportul.'));
+        toast(c.mesaj || (raportat ? 'Am primit raportul. Mulțumim.' : 'Ai retras raportul.'));
       });
     }
 
@@ -3059,7 +3059,7 @@
       }, null, null, function (c) {
         cutie.setAttribute('data-nota', String(c.stele));
         aratInvitatia(cutie, permalink);
-        toast(c.mesaj || 'Nota ta a fost trimisă.');
+        toast(c.mesaj || 'Am primit nota ta. Mulțumim!');
       });
     });
 
@@ -3172,7 +3172,7 @@
           inchideCaseta(panou);
           toast(text.trim() === ''
             ? 'Gata, ți-am șters vorbele. Nota rămâne.'
-            : 'Feedback-ul tău a fost salvat.');
+            : 'Am salvat ce ai scris.');
         });
       });
     });
@@ -3369,7 +3369,7 @@
           if (panou && panou.__descopera) panou.__descopera();
         }
 
-        toast(c.mesaj || 'Evaluarea ta a fost trimisă.');
+        toast(c.mesaj || 'Am primit nota ta. Mulțumim!');
       });
     });
   }
@@ -3615,7 +3615,7 @@
         }
 
         if (successBox) successBox.hidden = false;
-        toast(c.mesaj || 'Mesajul a fost trimis.');
+        toast(c.mesaj || 'Am trimis mesajul.');
       })
       .catch(function () {
         gata();
@@ -4335,7 +4335,7 @@
         gata.hidden = false;
         gata.setAttribute('tabindex', '-1');
         gata.focus();
-        toast(c.mesaj || 'Parola a fost schimbată.');
+        toast(c.mesaj || 'Am schimbat parola.');
       })
       .catch(function () {
         buton.disabled = false;
@@ -5047,7 +5047,7 @@
         actualizeazaPeste(c.poza, c.poza_mica);
         ascundeDecuparea();
         spune(c.mesaj || 'Poza a fost schimbată.', 'bun');
-        toast('Poza de profil a fost schimbată.');
+        toast('Am schimbat poza de profil.');
       });
     });
 
@@ -5079,7 +5079,7 @@
         cere(date, function (c) {
           actualizeazaPeste(c.poza, c.poza_mica);
           spune(c.mesaj || 'Am șters poza.', 'bun');
-          toast('Poza de profil a fost ștearsă.');
+          toast('Am șters poza de profil.');
         });
       });
     }
@@ -5421,7 +5421,7 @@
 
           // Butonul rămâne stins: hotărârea e luată, n-are rost să se poată
           // apăsa încă o dată cât se face mutarea.
-          toastSiDupa(c.mesaj || 'Evenimentul a fost anulat.');
+          toastSiDupa(c.mesaj || 'Am anulat evenimentul.');
           setTimeout(function () {
             window.location.href = c.redirect || '/profil.php';
           }, 700);
