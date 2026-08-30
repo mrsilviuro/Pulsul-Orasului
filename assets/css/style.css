@@ -688,26 +688,29 @@ button { cursor: pointer; border: 0; background: none; }
 .tabla__cutie:target,
 .tabla__cutie.e-deschis { display: block; }
 
-/* „×"-ul de pe panoul de mulțumire închide TOT: și panoul, și formularul de
-   deasupra lui. Numai că adresa se termină în `#dorinta-formular` — omul a
-   ajuns acolo apăsând „Pune-ți o dorință" — iar `:target` de mai sus ține
-   cutia deschisă oricâte clase i-ar scoate JS-ul.
+/* Semnul de oprire către care sare „Pune-ți o dorință". ÎL PUNE JAVASCRIPT-UL,
+   nu HTML-ul: la încărcare, main.js ia `id="dorinta-formular"` de pe cutie și
+   îl mută pe un `<span>` gol, așezat chiar înaintea ei.
 
-   De aceea închiderea are clasa ei, scrisă cu un selector mai greu (o clasă în
-   plus, `.tabla`), ca să treacă înaintea lui `:target` fără `!important`. */
-.tabla .tabla__cutie.e-inchis { display: none; }
+   DE CE. `:target` de mai sus e portița celor fără JavaScript, și trebuie să
+   rămână. Dar el se prinde de cutie și NU MAI DĂ DRUMUL: adresa se curăță cu
+   `replaceState`, care n-o clatină (nici scoaterea și punerea la loc a
+   `id`-ului n-o clatină — s-a încercat). Așa, cutia rămânea „ținta" paginii și
+   după ce JS-ul o închisese, iar tot ce ascundea ea cât era deschisă — tabla,
+   „Dorințele mele" — rămânea ascuns până la un F5.
 
-/* Și, odată închisă, se vede din nou TOT ce ascunsese cutia deschisă: și
-   tabla, și vorba de sub ea.
-   Regula de mai jos le ascunde cât cutia e deschisă — dar `:target` rămâne pe
-   cutie și după ce JS-ul a închis-o (adresa se curăță cu `replaceState`, care
-   nu clatină `:target`). Fără rândurile astea, tabla și „Dorințele mele" ar fi
-   rămas nevăzute până la prima reîncărcare, adică exact lucrul pe care îl
-   reparăm. AMÂNDOUĂ sau niciuna: o dorință proaspăt trimisă face tabla să aibă
-   ce arăta, iar „×"-ul care lasă în urmă un gol e mai rău decât unul care nu
-   face nimic. */
-.tabla .tabla__cutie.e-inchis ~ .tabla__slide  { display: block; }
-.tabla .tabla__cutie.e-inchis ~ .tabla__unelte { display: flex; }
+   S-a încercat întâi cu contra-reguli, una pentru fiecare vecin ascuns. Merg,
+   dar sunt o listă din care lipsește mereu cea scrisă mâine: un vecin nou se
+   ascunde singur și se arată doar dacă cineva își aduce aminte de el.
+
+   Mutat `id`-ul, ținta e span-ul, nu cutia. Săritura ajunge în același loc,
+   dar `:target` nu mai are de ce să se certe cu clasa: cu JavaScript
+   deschiderea o face NUMAI `.e-deschis`, iar închiderea e scoaterea ei. */
+.tabla__ancora {
+  display: block;
+  height: 0;
+  scroll-margin-top: calc(var(--header-h) + 16px);
+}
 
 /* Deschisă, ia locul tablei. `~` merge fiindcă în HTML cutia stă înaintea
    slide-ului — de aceea e scrisă acolo, deși pe ecran apare în același loc. */
