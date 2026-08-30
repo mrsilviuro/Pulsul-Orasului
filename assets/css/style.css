@@ -697,11 +697,16 @@ button { cursor: pointer; border: 0; background: none; }
    plus, `.tabla`), ca să treacă înaintea lui `:target` fără `!important`. */
 .tabla .tabla__cutie.e-inchis { display: none; }
 
-/* Și, odată închisă, vorba de sub tablă se vede din nou.
-   Regula de mai jos o ascunde cât cutia e deschisă — dar `:target` rămâne pe
+/* Și, odată închisă, se vede din nou TOT ce ascunsese cutia deschisă: și
+   tabla, și vorba de sub ea.
+   Regula de mai jos le ascunde cât cutia e deschisă — dar `:target` rămâne pe
    cutie și după ce JS-ul a închis-o (adresa se curăță cu `replaceState`, care
-   nu clatină `:target`). Fără rândul ăsta, „Dorințele mele" ar fi rămas
-   nevăzut până la prima reîncărcare, adică exact lucrul pe care îl reparăm. */
+   nu clatină `:target`). Fără rândurile astea, tabla și „Dorințele mele" ar fi
+   rămas nevăzute până la prima reîncărcare, adică exact lucrul pe care îl
+   reparăm. AMÂNDOUĂ sau niciuna: o dorință proaspăt trimisă face tabla să aibă
+   ce arăta, iar „×"-ul care lasă în urmă un gol e mai rău decât unul care nu
+   face nimic. */
+.tabla .tabla__cutie.e-inchis ~ .tabla__slide  { display: block; }
 .tabla .tabla__cutie.e-inchis ~ .tabla__unelte { display: flex; }
 
 /* Deschisă, ia locul tablei. `~` merge fiindcă în HTML cutia stă înaintea
