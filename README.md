@@ -216,22 +216,60 @@ panoul e desenat de server fiindcă adresa poartă `?dorinta=trimisa`, iar o
 Cu JavaScript, `main.js` îi ia locul și **închide tot** — și panoul, și
 formularul de deasupra lui.
 
-Scoaterea clasei `e-deschis` nu era de ajuns: omul a ajuns acolo apăsând
-„Pune-ți o dorință", deci adresa se termină în `#dorinta-formular`, iar
-`:target` ținea cutia deschisă mai departe. Panoul pleca și **rămânea
-formularul gol** pe ecran. De aceea închiderea are clasa ei, `e-inchis`,
-scrisă în CSS cu un selector mai greu decât `:target` (`.tabla .tabla__cutie.e-inchis`),
-ca să treacă înaintea lui fără `!important`.
+#### Semnul de oprire se mută de pe cutie pe un span gol
 
-Adresa se curăță și ea, cu `replaceState`: fără asta, un F5 ar fi redeschis tot
-ce omul tocmai a închis — `:target` din adresă, iar panoul din întrebarea de pe
-server. Apăsat din nou „Pune-ți o dorință", se redeschide.
+Aici a fost un cui de care s-a agățat totul, de două ori la rând.
 
-**Și se golesc câmpurile.** Fără asta, cine apăsa din nou „Pune-ți o dorință"
-fără să reîncarce pagina găsea acolo dorința pe care tocmai o trimisese — și
-era ușor s-o trimită a doua oară crezând că n-a mers prima. `reset()` întoarce
-câmpurile la ce era în HTML, iar contorul de caractere se socotește din nou
-(altfel ar fi rămas scris „63 din 100").
+`:target` e portița celor **fără** JavaScript: fără el, „Pune-ți o dorință"
+n-ar deschide nimic. Necazul e că se prinde de cutie și **nu mai dă drumul**.
+Adresa se curăță cu `replaceState`, dar aceea nu-l clatină; nici scoaterea cu
+punerea la loc a `id`-ului nu-l clatină (s-a încercat — în Chromium ținta
+rămâne ținta). Cutia rămânea deci „deschisă" pentru CSS și după ce JS-ul o
+închisese, iar tot ce ascunde ea cât e deschisă — tabla, „Dorințele mele" —
+rămânea nevăzut până la un F5.
+
+S-a încercat întâi cu **contra-reguli**, una pentru fiecare vecin ascuns
+(`.e-inchis ~ .tabla__unelte`, apoi și `~ .tabla__slide`). Merg, dar sunt o
+listă din care lipsește mereu cea scrisă mâine: un vecin nou se ascunde singur
+și se arată doar dacă cineva își aduce aminte de el. De două ori a lipsit câte
+una.
+
+Acum `main.js` ia, la încărcare, `id="dorinta-formular"` de pe cutie și îl
+mută pe un `<span class="tabla__ancora">` gol, așezat chiar înaintea ei. Ținta
+paginii e span-ul, nu cutia. Săritura ajunge în același loc — e lipit de ea,
+cu același `scroll-margin-top` — dar cu JavaScript deschiderea o face **numai**
+`.e-deschis`: pusă, e deschis; scoasă, e închis. Nimic altceva n-are un cuvânt
+de spus, deci n-are ce rămâne agățat. Clasa `e-inchis` a dispărut cu totul, și
+odată cu ea contra-regulile.
+
+Fără JavaScript nu se mută nimic: `id`-ul rămâne pe cutie, `:target` o
+deschide ca înainte, iar „×"-ul, fiind o legătură adevărată, o închide cu o
+încărcare curată.
+
+Proba e că, după „×", pagina arată **la fel ca după un refresh** — cutia nu
+poartă nicio clasă, exact ca la prima încărcare.
+
+Adresa se curăță și ea, cu `replaceState`: fără asta, un F5 ar fi redeschis
+panoul, din întrebarea de pe server. Apăsat din nou „Pune-ți o dorință", se
+redeschide.
+
+#### Câmpurile se golesc la trimitere, nu doar la „×"
+
+Cine trimitea o dorință și apăsa din nou „Pune-ți o dorință", fără să
+reîncarce pagina, găsea formularul completat cu ce tocmai trimisese — și era
+ușor s-o trimită a doua oară crezând că n-a mers prima. Iar o dorință nu e
+ceva ce vrei de două ori pe tablă.
+
+Golirea stă acum într-un singur loc, `curataFormularulDorintei()`, chemat din
+**amândouă**: din „×" și din trimiterea reușită. `reset()` întoarce câmpurile
+la ce scria în HTML, greșelile rămase pe ele se sting, iar contorul de
+caractere se socotește din nou (altfel rămânea scris „63 din 100" sub o casetă
+goală).
+
+Tot de aceea „Pune-ți o dorință" înseamnă acum **întotdeauna** un formular
+gol: butonul ascunde vestea și dă la iveală casetele, oricare ar fi fost
+starea cutiei. Altfel, apăsat imediat după o trimitere, arăta mai departe
+vestea în locul formularului.
 
 ### Vorba de sub tablă se împrospătează fără refresh
 

@@ -889,14 +889,41 @@
     var numarDorinta = document.getElementById('dorinta-numar');
 
     /**
-     * `:target` deschide cutia singur, dar numai cât timp adresa se termină
-     * în `#dorinta-formular`. Clasa o ține deschisă și după aceea — de pildă
-     * după o trimitere reușită, când tot ce trebuie să vadă omul e mulțumirea.
+     * MUTĂ SEMNUL DE OPRIRE DE PE CUTIE PE UN SPAN GOL DINAINTEA EI.
+     *
+     * `:target` e portița celor fără JavaScript: fără el, „Pune-ți o dorință"
+     * n-ar deschide nimic. Necazul e că se prinde de cutie și nu mai dă
+     * drumul — `replaceState` curăță adresa, dar nu-l clatină, și nici
+     * scoaterea cu punerea la loc a `id`-ului nu-l clatină (s-a încercat, în
+     * Chromium ținta rămâne ținta). Cutia rămânea deci „deschisă" pentru CSS
+     * și după ce JS-ul o închisese, iar tabla și „Dorințele mele", pe care
+     * cutia deschisă le ascunde, rămâneau nevăzute până la un F5.
+     *
+     * Cu `id`-ul mutat, ținta e span-ul. Săritura ajunge în același loc — e
+     * lipit de cutie — dar deschiderea rămâne, cu JavaScript, treaba unei
+     * singure clase: `.e-deschis`. Pusă, e deschis; scoasă, e închis. Nimic
+     * altceva n-are un cuvânt de spus, deci n-are ce rămâne agățat.
+     *
+     * Se face ÎNAINTE de orice: dacă adresa vine deja cu „#dorinta-formular"
+     * (întoarcerea de la o trimitere fără JavaScript), cutia poartă deja
+     * `.e-deschis` scrisă de server, deci nu se pierde nimic.
      */
+    var ancoraDorintei = document.createElement('span');
+    ancoraDorintei.id = 'dorinta-formular';
+    ancoraDorintei.className = 'tabla__ancora';
+    cutiaDorintei.removeAttribute('id');
+    cutiaDorintei.parentNode.insertBefore(ancoraDorintei, cutiaDorintei);
+
     document.querySelectorAll('a[href="#dorinta-formular"]').forEach(function (a) {
       a.addEventListener('click', function () {
-        // Închisă mai devreme din „×"? Se deschide din nou.
-        cutiaDorintei.classList.remove('e-inchis');
+        /**
+         * „Pune-ți o dorință" înseamnă ÎNTOTDEAUNA un formular gol, oricare ar
+         * fi fost starea cutiei. Cine tocmai a trimis una și apasă din nou
+         * butonul găsea altfel vestea de dinainte în loc de casete — sau,
+         * după „×", casetele pline cu ce trimisese.
+         */
+        if (gataDorinta) gataDorinta.hidden = true;
+        formDorinta.hidden = false;
         cutiaDorintei.classList.add('e-deschis');
         // Focusul intră în formular abia după ce browserul a sărit acolo.
         setTimeout(function () {
@@ -913,6 +940,27 @@
     });
 
     /**
+     * Golește câmpurile dorinței și tot ce atârnă de ele.
+     *
+     * SE CHEAMĂ DIN DOUĂ LOCURI: din „×", și din trimiterea reușită. Al doilea
+     * e cel care lipsea. Cine trimitea o dorință și apăsa din nou „Pune-ți o
+     * dorință", fără să reîncarce pagina, găsea formularul completat cu ce
+     * tocmai trimisese — și era ușor s-o trimită a doua oară crezând că n-a
+     * mers prima. Iar dorința nu e ceva ce vrei de două ori pe tablă.
+     *
+     * `reset()` întoarce câmpurile la ce scria în HTML, deci contorul de
+     * caractere trebuie socotit din nou (altfel rămânea scris „63 din 100" sub
+     * o casetă goală), iar greșelile rămase pe câmpuri se sting de mână.
+     */
+    function curataFormularulDorintei() {
+      formDorinta.reset();
+      setError('dorinta-oras', 'err-dorinta-oras', '');
+      setError('dorinta-text', 'err-dorinta-text', '');
+      if (rauDorinta) { rauDorinta.textContent = ''; rauDorinta.hidden = true; }
+      if (typeof numaraDorinta === 'function') { numaraDorinta(); }
+    }
+
+    /**
      * „×"-ul de pe panoul de mulțumire.
      *
      * E o legătură adevărată către /index.php, ca să meargă și fără JS: acolo
@@ -926,44 +974,24 @@
       xDorintaGata.addEventListener('click', function (e) {
         e.preventDefault();
 
-        /**
-         * ÎNCHIDE TOT, nu doar vestea: și formularul de deasupra ei.
-         *
-         * `e-deschis` scoasă nu era de ajuns. Omul a ajuns aici apăsând
-         * „Pune-ți o dorință", deci adresa se termină în `#dorinta-formular`,
-         * iar `:target` ținea cutia deschisă mai departe: panoul pleca și
-         * rămânea formularul gol pe ecran. De aceea închiderea are clasa ei,
-         * `e-inchis`, scrisă în CSS cu un selector mai greu decât `:target`.
-         */
+        /* ÎNCHIDE TOT, nu doar vestea: și formularul de deasupra ei. Și, odată
+           închisă cutia, se văd din nou tabla și „Dorințele mele" — pe care
+           cutia deschisă le ascundea. */
         if (gataDorinta) gataDorinta.hidden = true;
         formDorinta.hidden = false;
 
+        // O singură clasă hotărăște dacă e deschis. Scoasă, e închis.
         cutiaDorintei.classList.remove('e-deschis');
-        cutiaDorintei.classList.add('e-inchis');
 
-        /**
-         * ȘI SE GOLESC CÂMPURILE.
-         *
-         * Fără asta, cine apăsa din nou „Pune-ți o dorință" fără să reîncarce
-         * pagina găsea acolo dorința pe care tocmai o trimisese — și era ușor
-         * s-o trimită a doua oară crezând că n-a mers prima.
-         *
-         * `reset()` întoarce câmpurile la ce era în HTML, deci se duc și
-         * greșelile rămase pe ele, și contorul de caractere trebuie socotit din
-         * nou (altfel ar fi rămas scris „63 din 100").
-         */
-        formDorinta.reset();
-        setError('dorinta-oras', 'err-dorinta-oras', '');
-        setError('dorinta-text', 'err-dorinta-text', '');
-        if (rauDorinta) { rauDorinta.textContent = ''; rauDorinta.hidden = true; }
-        if (typeof numaraDorinta === 'function') { numaraDorinta(); }
+        curataFormularulDorintei();
 
         /**
          * Și adresa se curăță de „#dorinta-formular" și de „?dorinta=trimisa".
          *
-         * Fără asta, un F5 ar fi redeschis tot ce omul tocmai a închis — `:target`
-         * din adresă, iar panoul din întrebarea de pe server. `replaceState` nu
-         * lasă urmă în istoric: „înapoi" duce tot de unde a venit.
+         * Fără asta, un F5 ar fi redeschis panoul, din întrebarea de pe server.
+         * `replaceState` nu lasă urmă în istoric: „înapoi" duce tot de unde a
+         * venit. (De `:target` nu-i mai pasă nimănui: ținta e span-ul de sus,
+         * nu cutia.)
          */
         if (window.history && history.replaceState) {
           history.replaceState(null, '', window.location.pathname);
@@ -1031,6 +1059,12 @@
             formDorinta.hidden = true;
             if (gataDorinta) gataDorinta.hidden = false;
             cutiaDorintei.classList.add('e-deschis');
+
+            /* Dorința a plecat, deci n-are ce mai căuta în casete. Golite
+               ACUM, nu abia la „×": cine închide vestea altfel decât din „×"
+               — apăsând iar „Pune-ți o dorință" — găsea altfel formularul plin
+               cu ce tocmai trimisese. */
+            curataFormularulDorintei();
 
             /* Vorba de sub tablă și „Dorințele mele" s-au schimbat odată cu
                dorința tocmai scrisă. Vin gata desenate de pe server. */
