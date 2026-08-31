@@ -35,6 +35,8 @@ require_once __DIR__ . '/validare.php';
  *   organizator_url                                — link spre profil, sau ''
  *   organizator_poza                               — numele pozei de profil, sau null
  *   creat_la                                       — data publicării, sau null
+ *   urmarire                                       — butonul „Urmărește", gata
+ *                                                    scris, sau lipsă
  *
  * Rândul din bază nu are chiar formele astea (are `coperta`, `org_nume`…), de
  * aceea există evenimentDinBaza(), mai jos.
@@ -92,18 +94,36 @@ function afiseazaEveniment(array $e, ?array $banda = null, ?callable $actiuni = 
             </div>
           </div>
 
-          <?php if (($e['urmarire'] ?? '') !== ''): ?>
           <!--
-            „Urmărește", lângă numele organizatorului. Vine GATA SCRIS din
-            event.php: funcția asta n-are de unde ști cine se uită la pagină,
-            iar previzualizarea, care o cheamă la fel, n-are pe cine urmări —
-            omul își previzualizează propriul anunț. Fără cheia asta nu se
-            desenează nimic, deci previzualizarea rămâne cum era.
-          -->
-          <?= $e['urmarire'] ?>
-          <?php endif; ?>
+            RÂNDUL DE BUTOANE din antet, scris DINTR-UN SINGUR LOC deși ce
+            intră în el vine din două:
 
-          <?php if ($actiuni !== null) { $actiuni(); } ?>
+            • „Urmărește" — gata scris în event.php, unde se știe cine citește
+              pagina. Funcția asta n-are de unde ști, iar previzualizarea, care
+              o cheamă la fel, n-are pe cine urmări: omul își vede propriul
+              anunț. Fără cheia asta nu se desenează nimic.
+            • butoanele organizatorului și ale omului casei („Fixează",
+              „Editează", „Remake", „Încheie evenimentul") — scrise de $actiuni.
+
+            Nu se amestecă niciodată mai mult de câte două-trei: cine poate
+            urmări nu e organizatorul, deci n-are „Editează", iar cine e
+            organizator nu se poate urmări pe sine.
+
+            Butonul de urmărire a stat o vreme în rândul cu numele, împins la
+            dreapta. Pe un ecran îngust numele și data ocupau rândul întreg,
+            deci butonul cădea oricum pe rândul lui — dar deasupra celorlalte
+            butoane, singur, cu un rând de-al lui în mijlocul antetului. Toate
+            fiind lucruri de apăsat, stau împreună.
+
+            Wrapper-ul e scris aici, nu în $actiuni: altfel, la un vizitator
+            fără drepturi de editare, n-ar mai fi avut cine-l desena.
+          -->
+          <?php if (($e['urmarire'] ?? '') !== '' || $actiuni !== null): ?>
+          <div class="post__actiuni">
+            <?= $e['urmarire'] ?? '' ?>
+            <?php if ($actiuni !== null) { $actiuni(); } ?>
+          </div>
+          <?php endif; ?>
         </div>
       </header>
 

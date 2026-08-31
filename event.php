@@ -558,7 +558,8 @@ require __DIR__ . '/inc/antet.php';
          * Butonul „Urmărește" al organizatorului.
          *
          * Se scrie AICI, unde se știe cine citește pagina, și se dă mai departe
-         * prin tabloul de afișare — vezi lămurirea din inc/afisare-eveniment.php.
+         * prin tabloul de afișare, care îl pune în același rând cu butoanele de
+         * mai jos — vezi lămurirea din inc/afisare-eveniment.php.
          * Omului i se dau doar cele trei lucruri de care are nevoie butonul;
          * restul rândului lui n-are ce căuta în plus prin pagină.
          */
@@ -574,7 +575,6 @@ require __DIR__ . '/inc/antet.php';
             ? function () use ($eveniment, $poateEdita, $poateIncheia, $poateReface,
                               $poateFixa, $eFixat) {
             ?>
-            <div class="post__actiuni">
               <?php if ($poateFixa): ?>
               <!--
                 Butonul comută, și SPUNE ce e acum: apăsat, scrie „Fixat" și e
@@ -675,7 +675,6 @@ require __DIR__ . '/inc/antet.php';
                 </div>
               </div>
               <?php endif; ?>
-            </div>
             <?php
         } : null);
       ?>
