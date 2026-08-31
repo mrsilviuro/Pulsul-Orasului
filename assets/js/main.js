@@ -777,6 +777,69 @@
      venit desenat de pe server (randeazaTablaDorinte din inc/dorinte.php).
   ------------------------------------------------------------------------ */
 
+  /* ========================================================================
+     BUTONUL „URMĂREȘTE"
+
+     Stă în două locuri — pe profilul cuiva și pe pagina unui eveniment, lângă
+     organizator — dar e același buton și aceeași faptă: prima apăsare începe
+     urmărirea, a doua o oprește. Serverul hotărăște care dintre ele e (vezi
+     comutaUrmarirea din inc/urmariri.php) și întoarce starea de DUPĂ; aici nu
+     se ghicește nimic, doar se scrie pe buton ce a răspuns el.
+
+     Fără JavaScript butonul nu face nimic — și e singurul loc de pe site unde
+     asta e în regulă: nu se pierde nimic din ce se putea face înainte, iar
+     paginile se citesc mai departe întregi.
+  ------------------------------------------------------------------------ */
+
+  document.addEventListener('click', function (e) {
+    var buton = e.target.closest('[data-urmareste]');
+    if (!buton || buton.disabled) { return; }
+
+    var idOm = parseInt(buton.getAttribute('data-urmareste'), 10) || 0;
+    if (idOm <= 0) { return; }
+
+    buton.disabled = true;
+
+    fetch('/api/urmareste.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({
+        csrf:   buton.getAttribute('data-csrf') || '',
+        membru: idOm
+      })
+    })
+      .then(citesteRaspuns)
+      .then(function (rez) {
+        buton.disabled = false;
+
+        var c = rez.corp;
+
+        if (!c || !c.ok) {
+          toast((c && c.mesaj) || mesajRaspunsNeasteptat(rez));
+          return;
+        }
+
+        /* Textul, cifra și starea, toate din răspuns. Butonul nu ține minte
+           nimic între apăsări: dacă altcineva ar fi apăsat între timp de pe
+           altă filă, ce se vede aici ar fi rămas în urmă. */
+        var text = buton.querySelector('[data-urmarire-text]');
+        var cati = buton.querySelector('[data-urmarire-cati]');
+
+        if (text) { text.textContent = c.urmareste ? 'Urmărești' : 'Urmărește'; }
+        if (cati) { cati.textContent = c.cati; }
+
+        buton.classList.toggle('urmarire--merge', !!c.urmareste);
+        buton.setAttribute('aria-pressed', c.urmareste ? 'true' : 'false');
+
+        toast(c.mesaj || 'Gata.');
+      })
+      .catch(function () {
+        buton.disabled = false;
+        toast(mesajFaraLegatura());
+      });
+  });
+
   var tabla = document.querySelector('[data-tabla]');
 
   if (tabla) {

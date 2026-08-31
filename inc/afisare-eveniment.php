@@ -92,6 +92,17 @@ function afiseazaEveniment(array $e, ?array $banda = null, ?callable $actiuni = 
             </div>
           </div>
 
+          <?php if (($e['urmarire'] ?? '') !== ''): ?>
+          <!--
+            „Urmărește", lângă numele organizatorului. Vine GATA SCRIS din
+            event.php: funcția asta n-are de unde ști cine se uită la pagină,
+            iar previzualizarea, care o cheamă la fel, n-are pe cine urmări —
+            omul își previzualizează propriul anunț. Fără cheia asta nu se
+            desenează nimic, deci previzualizarea rămâne cum era.
+          -->
+          <?= $e['urmarire'] ?>
+          <?php endif; ?>
+
           <?php if ($actiuni !== null) { $actiuni(); } ?>
         </div>
       </header>

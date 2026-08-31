@@ -53,7 +53,8 @@ require __DIR__ . '/inc/antet.php';
 
     <div class="prose">
 
-    <h2>Politica de confidențialitate</h2>
+    <h1>Politica de confidențialitate</h1>
+    <p class="doc-data">Ultima actualizare: <?= h($dataDocumentului) ?></p>
 
     <p>
     Ce informații colectăm despre tine, de ce avem nevoie de ele, cât timp le păstrăm și
@@ -134,6 +135,12 @@ astfel încât datele ascunse în fișier (inclusiv locația GPS unde a fost fă
 <li>
 <strong>Conținutul publicat:</strong> Evenimentele create, comentariile, evaluările, părerile
 scrise și dorințele adăugate sunt publice, așa cum este firesc pe o platformă comunitară.
+</li>
+<li>
+<strong>Pe cine urmărești:</strong> Dacă apeși „Urmărește" pe profilul cuiva, păstrăm
+perechea (tu, el), ca să-ți putem trimite un e-mail când publică un eveniment nou.
+Pe profilul lui se vede doar <em>câți</em> îl urmăresc, niciodată cine anume. Apeși din
+nou același buton și legătura se șterge pe loc, cu tot cu mesajele viitoare.
 </li>
 </ul>
 

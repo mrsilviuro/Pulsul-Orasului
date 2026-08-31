@@ -50,6 +50,7 @@ require __DIR__ . '/inc/antet.php';
   <span class="crumbs__current">Politica de cookies</span>
   </nav>
   <h1>Politica de cookies</h1>
+  <p class="doc-data">Ultima actualizare: <?= h($dataDocumentului) ?></p>
 
     <div class="prose">
 

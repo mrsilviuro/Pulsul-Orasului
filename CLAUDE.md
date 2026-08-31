@@ -548,6 +548,32 @@ inc/
                       interogare), fiindcă el n-a pus nimic la cale. Restul
                       bifei rămâne unde-i e rostul: „Ieșiri organizate"
                       (evenimenteDePeProfil, cateEvenimenteOrganizate)
+  urmariri.php      → URMĂRIREA UNUI ORGANIZATOR: butonul „Urmărește" de pe
+                      profil și de pe pagina unui eveniment, cifra
+                      urmăritorilor, și vestea pe e-mail la fiecare anunț nou
+                      al omului urmărit — UN SINGUR CARTONAȘ, desenat de
+                      randuriPentruNewsletter(), nu o listă. Ăsta e tot rostul
+                      lui față de newsletterul zilnic: cine ține la un singur
+                      om vrea să afle despre EL, nu despre tot orașul.
+                      NU EXISTĂ „DEZ-URMĂRIRE": a doua apăsare șterge rândul,
+                      iar comutaUrmarirea() lasă cheia unică din sql/033 să
+                      hotărască — se încearcă întâi scrierea, nu se întreabă
+                      întâi. De aceea nu e nici bifă nouă în setări: ieșirea e
+                      chiar butonul din care s-a intrat.
+                      VESTEA PLEACĂ O SINGURĂ DATĂ PE ANUNȚ
+                      (`urmaritori_instiintati_la`, sql/033), cu ștampila pusă
+                      ÎNAINTE de trimitere și hotărârea în `WHERE`, ca la
+                      newsletter. Fără ea, un anunț respins și aprobat din nou
+                      ar scrie de două ori acelorași oameni. SE CHEAMĂ DIN DOUĂ
+                      LOCURI, fiindcă atâtea fac un anunț să se vadă:
+                      api/eveniment.php (omul de casă publică direct) și
+                      api/modereaza-eveniment.php (aprobarea). Amândouă cheamă
+                      necondiționat — funcția întreabă singură.
+                      CE SE CERE nu e doar „publicat": și `!evenimentIncheiat()`.
+                      `evenimentPublicat()` spune DA și pentru unul încheiat,
+                      fiindcă pagina lui se vede mai departe — dar „X a pus un
+                      anunț nou" despre o seară care a trecut sună a bătaie de
+                      joc. S-a găsit la scriere, e păzit de o probă
   newsletter.php    → NEWSLETTERUL ZILNIC: „ce se întâmplă azi în oraș". O dată
                       pe zi, la 12, către cine are bifa `membri.newsletter`.
                       Evenimentele se scriu ca niște CARTONAȘE ca pe prima
@@ -760,7 +786,7 @@ sql/                → schema.sql + migrări numerotate (002, 003, 004, 005-goo
                       026-corectura-eveniment, 027-instiintari-feedback,
                       028-feedback-instiintat, 029-eveniment-fixat,
                       030-incercari-qr, 031-newsletter-zilnic,
-                      032-dorinte-mai-multe)
+                      032-dorinte-mai-multe, 033-urmariri)
                       `dorinte.sters_la` (032) e tot ce trebuie ca omul să-și
                       poată lua o dorință înapoi: ștergerea e MOALE, rândul
                       rămâne pentru numărătoarea de mai târziu. Cele TREI
@@ -820,6 +846,12 @@ teste/              → router.php: serverul de probă cu ADRESE FRUMOASE.
                       comandă nu există unul, și îl ia de acolo la sfârșit)
                       test-dorinte.php (tabla cu dorințe; cere baza, iar
                       partea de HTTP cere și serverul — se sare singură)
+                      test-urmariri.php (urmărirea unui organizator; cere baza,
+                      iar paza punctului de intrare cere și serverul — se sare
+                      singură. Păzește mai presus de orice că VESTEA PLEACĂ O
+                      SINGURĂ DATĂ pe anunț: butonul se vede pe ecran și se
+                      descoperă repede dacă se strică, dar un al doilea e-mail
+                      către aceiași oameni nu se vede nicăieri)
                       test-documente.php (termeni, confidențialitate, cookies;
                       cere SERVERUL, se sare singură fără el. Leagă vorbele din
                       documente de lucrul din cod care le face adevărate — și
@@ -1030,7 +1062,9 @@ sistem. Regulile care s-au strâns din trecerea de purificare:
   omDeInstiintatLaFeedback, cu bifa `email_feedback`; stelele singure NU
   vestesc nimic, fiindcă sunt anonime). PLUS CELE PATRU ALE ZONEI DE ADMINISTRARE, toate cu motiv care
   poate lipsi (api/admin.php): comentariul șters, poza ștearsă, contul
-  suspendat și hotărârea unei dorințe. PLUS NEWSLETTERUL ZILNIC
+  suspendat și hotărârea unei dorințe. PLUS VESTEA CĂTRE URMĂRITORI (inc/urmariri.php →
+  instiinteazaUrmaritorii, la fiecare anunț nou al cuiva urmărit; ieșirea nu e
+  o bifă, ci butonul de pe profilul lui). PLUS NEWSLETTERUL ZILNIC
   (cron/newsletter-zilnic.php, cu bifa `newsletter`) — SINGURUL mesaj de pe
   site care vine nechemat, și de aceea singurul cu link de dezabonare și cu
   antetul `List-Unsubscribe`. Celelalte sunt răspunsuri la ceva ce a făcut
