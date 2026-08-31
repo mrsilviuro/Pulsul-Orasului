@@ -269,6 +269,47 @@ verifica('cifra zero se scrie', true,
                  '>0</span>'));
 
 /* ==================================================================== */
+sectiune('unde stă butonul pe pagina unui eveniment');
+
+/**
+ * BUTONUL STĂ ÎN RÂNDUL DE BUTOANE din antet, lângă „Fixează" și „Editează",
+ * nu singur în rândul cu numele organizatorului.
+ *
+ * Cine se uită la anunțul altcuiva n-are niciun buton de-al lui acolo, deci
+ * rândul are un singur locatar. Tocmai ăsta e cazul care s-a rupt o dată:
+ * wrapper-ul era scris de $actiuni, iar $actiuni lipsește la un vizitator
+ * oarecare — butonul rămânea pe dinafară. De aceea rândul se desenează acum
+ * din inc/afisare-eveniment.php, care le vede pe amândouă.
+ */
+require_once __DIR__ . '/../inc/afisare-eveniment.php';
+
+$deDesenat = [
+    'titlu' => 'Proba', 'categorie' => 'Sport', 'oras' => 'Roman',
+    'locatie' => 'La pod', 'descriere' => 'Text.', 'organizator' => 'P. Probă',
+    'data_eveniment' => date('Y-m-d', strtotime('+7 days')), 'ora_inceput' => '19:00',
+    'urmarire' => randeazaButonUrmarire(['id' => $fan], $randOrg),
+];
+
+ob_start();
+afiseazaEveniment($deDesenat);
+$antet = (string) ob_get_clean();
+
+/* Rândul există chiar dacă nu i s-a dat niciun buton de organizator. */
+verifica('rândul de butoane se desenează', 1, substr_count($antet, 'class="post__actiuni"'));
+
+/* Și butonul e ÎNĂUNTRUL lui, nu înaintea lui. */
+$dupaRand = substr($antet, (int) strpos($antet, 'class="post__actiuni"'));
+verifica('butonul e în rând', true, str_contains($dupaRand, 'data-urmareste="' . $org . '"'));
+
+/* FĂRĂ BUTON, FĂRĂ RÂND: previzualizarea nu-l cheamă cu nimic în el, iar un
+   rând gol ar fi lăsat o gaură în antet. */
+unset($deDesenat['urmarire']);
+ob_start();
+afiseazaEveniment($deDesenat);
+verifica('fără nimic de pus, niciun rând', false,
+    str_contains((string) ob_get_clean(), 'post__actiuni'));
+
+/* ==================================================================== */
 if ($BAZA === '') {
     echo "\n(sar peste HTTP: dă adresa serverului ca argument)\n";
 } else {

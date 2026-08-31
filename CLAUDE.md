@@ -560,6 +560,23 @@ inc/
                       hotărască — se încearcă întâi scrierea, nu se întreabă
                       întâi. De aceea nu e nici bifă nouă în setări: ieșirea e
                       chiar butonul din care s-a intrat.
+                      UNDE STĂ BUTONUL, în amândouă paginile: nu pe rândul unui
+                      nume, ci pe rândul lui. Pe PROFIL, SUB nume la orice
+                      lățime — a stat o vreme în dreapta, rupt de `flex-wrap`
+                      doar când nu mai încăpea, adică locul lui îl hotăra
+                      lungimea numelui: la unul scurt rămânea sus, la unul lung
+                      cobora, iar același om vedea altceva pe telefon și pe
+                      calculator. Pe PAGINA UNUI EVENIMENT, în rândul de butoane
+                      din antet (`.post__actiuni`), lângă „Fixează", „Editează",
+                      „Remake" și „Încheie evenimentul": toate sunt lucruri de
+                      apăsat, deci stau împreună. Nu se adună niciodată mai mult
+                      de două-trei — cine poate urmări nu e organizatorul, iar
+                      organizatorul nu se poate urmări pe sine. RÂNDUL SE
+                      DESENEAZĂ ÎN inc/afisare-eveniment.php, nu în callback-ul
+                      din event.php, fiindcă ce intră în el vine din două locuri
+                      și unul dintre ele lipsește tocmai la vizitatorul obișnuit
+                      — wrapper-ul scris de callback l-ar fi lăsat pe dinafară.
+                      Fără niciunul (previzualizarea) nu se desenează deloc
                       VESTEA PLEACĂ O SINGURĂ DATĂ PE ANUNȚ
                       (`urmaritori_instiintati_la`, sql/033), cu ștampila pusă
                       ÎNAINTE de trimitere și hotărârea în `WHERE`, ca la

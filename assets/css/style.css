@@ -3119,15 +3119,19 @@ body { overscroll-behavior-y: none; }
   margin-bottom: 10px;
 }
 
-/* Numele și butonul „Urmărește", pe același rând.
-   `baseline` ca butonul să stea pe linia numelui, nu la mijlocul lui: la un
-   titlu de 30px, centrat, ar fi părut că plutește. Pe telefon rândul se rupe,
-   iar butonul trece dedesubt — de aceea `flex-wrap`. */
+/* Numele și butonul „Urmărește", unul sub altul — LA ORICE LĂȚIME.
+   A stat o vreme pe rând cu numele, rupt de `flex-wrap` doar când nu mai
+   încăpea. Asta însemna că locul butonului îl hotăra lungimea numelui: la
+   „A. Denis" rămânea loc și butonul se lipea în dreapta, la unul lung
+   cobora — același ecran, două așezări. Iar cine se uita pe telefon și pe
+   calculator vedea altceva de fiecare dată, fără să știe de ce.
+   Acum coloana e scrisă o dată, aici, și nu mai depinde de nimic;
+   alinierea o dă `.profile__id`, care pe telefon centrează tot antetul. */
 .profile__nume-rand {
   display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 8px 14px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
 }
 .profile__nume-rand .profile__name { margin-bottom: 0; }
 .profile__nume-rand + .facts { margin-top: 10px; }
@@ -3168,9 +3172,10 @@ body { overscroll-behavior-y: none; }
 
 [data-theme="dark"] .urmarire--merge .urmarire__cati { background: rgba(0, 0, 0, .28); }
 
-/* Pe pagina unui eveniment stă lângă organizator, împins spre dreapta ca
-   butoanele lui de administrare — dar înaintea lor. */
-.post__meta > .urmarire { margin-left: auto; }
+/* Pe pagina unui eveniment stă în rândul de butoane din antet, primul, lângă
+   „Fixează" și „Editează" — vezi `.post__actiuni`. `flex: none` ca al lui, ca
+   să nu se strângă când rândul se umple. */
+.post__actiuni > .urmarire { flex: none; }
 
 /* datele scurte: vârstă, localitate, sex, vechime */
 .facts { display: flex; flex-wrap: wrap; gap: 7px; }
@@ -3594,11 +3599,9 @@ body { overscroll-behavior-y: none; }
     align-items: center;
     text-align: center;
   }
-  /* Butonul „Urmărește" coboară sub nume, odată cu tot antetul. Lângă un
-     nume scurt („A. Denis"), pe un ecran îngust, rândul nu se rupea singur:
-     mai era loc, deci butonul rămânea lipit în dreapta numelui și părea o
-     bucată din el. Aici nu-l lăsăm la voia lățimii, îl punem pe rândul lui. */
-  .profile__nume-rand { flex-direction: column; align-items: center; }
+  /* Coloana e deja scrisă mai sus, la orice lățime; aici doar se centrează,
+     odată cu tot antetul. */
+  .profile__nume-rand { align-items: center; }
   .facts { justify-content: center; }
   .rating { width: 100%; }
   .rating-summary { gap: 20px; justify-content: center; }
@@ -4429,9 +4432,10 @@ body { overscroll-behavior-y: none; }
   text-transform: uppercase;
 }
 
-/* Butoanele organizatorului stau pe același rând cu numele lui, sus în antetul
-   anunțului: „Editează" și „Încheie evenimentul". `.post__by` are deja
-   margin-right:auto, deci le împinge pe amândouă la dreapta.
+/* Rândul de butoane din antetul anunțului, pe același rând cu numele
+   organizatorului: „Urmărește" al cititorului, „Fixează" al omului casei,
+   „Editează", „Remake" și „Încheie evenimentul" ale organizatorului. `.post__by`
+   are deja margin-right:auto, deci le împinge pe toate la dreapta.
 
    Poziția relativă e pentru confirmarea de încheiere, care se deschide chiar
    sub ele — întrebarea trebuie să fie lângă mâna care a apăsat, nu la celălalt
