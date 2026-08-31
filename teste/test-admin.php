@@ -560,12 +560,12 @@ require_once __DIR__ . '/../inc/email.php';
  */
 verifica('fără motiv, un singur paragraf', 1, count(paragrafeleMotivului('')));
 verifica('și spune că n-a fost niciunul', true,
-    str_contains(paragrafeleMotivului('')[0], 'Nu a fost scris un motiv anume'));
+    str_contains(paragrafeleMotivului('')[0], 'Nu a fost adăugată o explicație'));
 verifica('numai spații tot e „fără"', paragrafeleMotivului(''), paragrafeleMotivului("  \n "));
 
 $cu = paragrafeleMotivului('  Nu se scrie așa.  ');
 verifica('cu motiv, două paragrafe', 2, count($cu));
-verifica('întâi întrebarea',  'Uite ce s-a scris:', $cu[0]);
+verifica('întâi întrebarea',  'Iată explicația:', $cu[0]);
 verifica('apoi vorba omului', 'Nu se scrie așa.', $cu[1]);
 
 /* ==================================================================== */

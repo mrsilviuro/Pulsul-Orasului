@@ -48,7 +48,21 @@ function categoriiEvenimente(bool $cuAleStaffului = false): array
      */
     $doarObisnuite = $cuAleStaffului ? '' : ' WHERE doar_staff = 0';
 
-    $q = db()->query('SELECT id, nume, slug, doar_staff, joc_qr FROM categorii'
+    /**
+     * `imagine_default` se cere pentru PREVIZUALIZARE.
+     *
+     * Un anunț fără copertă o ia, la afișare, pe cea a categoriei (vezi
+     * evenimentDinBaza din inc/afisare-eveniment.php). Previzualizarea n-avea
+     * de unde s-o știe și arăta un anunț fără poză — adică altfel decât o să
+     * arate în realitate, ceea ce e chiar lucrul pe care previzualizarea are
+     * datoria să nu-l facă.
+     *
+     * Aici, și nu cu o interogare a ei: pagina de previzualizare parcurge
+     * oricum lista asta ca să afle numele categoriei, deci coloana vine pe
+     * drumul pe care umblă deja.
+     */
+    $q = db()->query('SELECT id, nume, slug, doar_staff, joc_qr, imagine_default
+                        FROM categorii'
                    . $doarObisnuite . ' ORDER BY ordine, nume');
 
     return $cache[$cheie] = $q->fetchAll();

@@ -2050,6 +2050,65 @@ verifica('la editare, titlul rămâne cum e', true,
 verifica('și nu urcă la „ #3"', false,
     str_contains($pEditare, 'Cursa de seară prin centrul vechi #3'));
 
+/* ------------- poza categoriei, când omul n-a ales una ------------- */
+
+/**
+ * UN ANUNȚ FĂRĂ COPERTĂ NU RĂMÂNE FĂRĂ POZĂ pe site: primește imaginea
+ * categoriei (vezi evenimentDinBaza). Previzualizarea n-o punea, deci arăta
+ * un anunț gol în cap — adică altceva decât ce urma să apară, exact lucrul
+ * pe care previzualizarea are datoria să nu-l facă.
+ *
+ * Proba își pune singură o poză de categorie și o ia de acolo la sfârșit:
+ * în baza de dezvoltare coloana e goală la toate categoriile, iar fără ea
+ * n-ar fi avut ce să se vadă.
+ */
+$dosarCat = __DIR__ . '/../assets/img/categorii';
+$pozaCat  = $dosarCat . '/tstcat-proba.jpg';
+$eraCat   = db()->query('SELECT imagine_default FROM categorii WHERE id = 1')->fetchColumn();
+
+@mkdir($dosarCat, 0775, true);
+$im = imagecreatetruecolor(40, 24);
+imagejpeg($im, $pozaCat, 70);
+imagedestroy($im);
+
+db()->prepare('UPDATE categorii SET imagine_default = ? WHERE id = 1')
+    ->execute(['tstcat-proba.jpg']);
+
+$fara = previzualizeaza($c);
+$pFara = cerere($baza . '/previzualizare.php?p=' . urlencode((string) $fara['cheie']), $c)['corp'];
+
+verifica('fără copertă, se vede poza categoriei', true,
+    str_contains($pFara, '/assets/img/categorii/tstcat-proba.jpg'));
+
+/**
+ * DAR NU TRECE ÎNAINTEA POZEI OMULUI. Când formularul spune că s-a ales una
+ * nouă („coperta_noua"), pagina lasă un loc gol pe care îl umple JS-ul din
+ * fila-mamă; poza casei acolo ar fi acoperit tocmai ce alesese omul.
+ */
+$cuNoua = previzualizeaza($c, ['coperta_noua' => '1']);
+$pCuNoua = cerere($baza . '/previzualizare.php?p=' . urlencode((string) $cuNoua['cheie']), $c)['corp'];
+
+verifica('cu poză aleasă, categoria nu se bagă', false,
+    str_contains($pCuNoua, '/assets/img/categorii/tstcat-proba.jpg'));
+verifica('ci se lasă locul pentru poza din browser', true,
+    str_contains($pCuNoua, 'data:image/gif;base64,'));
+
+/**
+ * Iar o categorie FĂRĂ poză pe disc rămâne fără poză, ca înainte — nu cu o
+ * adresă care dă 404. urlImagineCategorie() se uită și pe disc.
+ */
+db()->prepare('UPDATE categorii SET imagine_default = ? WHERE id = 1')
+    ->execute(['tstcat-lipsa.jpg']);
+
+$lipsa = previzualizeaza($c);
+$pLipsa = cerere($baza . '/previzualizare.php?p=' . urlencode((string) $lipsa['cheie']), $c)['corp'];
+
+verifica('o poză de categorie lipsă nu lasă o adresă moartă', false,
+    str_contains($pLipsa, 'tstcat-lipsa.jpg'));
+
+@unlink($pozaCat);
+db()->prepare('UPDATE categorii SET imagine_default = ? WHERE id = 1')->execute([$eraCat]);
+
 /**
  * Curat pentru ce urmează: probele de mai jos numără de la zero, iar una
  * dintre ele probează chiar limita de evenimente active — care trebuie să fie
@@ -2132,7 +2191,10 @@ $vedeCoperta = static function (array $r) use ($baza, &$c): string {
         return 'fara';
     }
 
-    return str_contains($p, 'id="prev-coperta"') ? 'browser' : 'bd';
+    if (str_contains($p, 'id="prev-coperta"')) { return 'browser'; }
+
+    // Poza pusă de casă pentru categorie, nu una aleasă de om.
+    return str_contains($p, '/assets/img/categorii/') ? 'categorie' : 'bd';
 };
 
 // 2. editare, fără poză nouă → cea din bază
@@ -2147,13 +2209,47 @@ verifica('la editare CU poză nouă: locul pentru cea nouă', 'browser',
 verifica('la creare cu poză nouă: tot cea nouă', 'browser',
     $vedeCoperta(previzualizeaza($c, ['coperta_noua' => '1'])));
 
-// 3. nimic nicăieri → fără figură
-verifica('fără nicio poză: nicio figură', 'fara',
-    $vedeCoperta(previzualizeaza($c)));
+/**
+ * 3. NIMIC ALES DE OM → poza categoriei, dacă are una; altfel, nimic.
+ *
+ * Amândouă stările se pun ANUME din probă, nu se iau cum s-au nimerit în
+ * bază: `imagine_default` e goală în baza de dezvoltare și plină pe site,
+ * deci o probă care s-ar bizui pe ce găsește ar spune altceva în fiecare
+ * loc. Se pune la loc la sfârșit ce era.
+ */
+$dosarCat2 = __DIR__ . '/../assets/img/categorii';
+$pozaCat2  = $dosarCat2 . '/tstcat-fig.jpg';
+$eraCat2   = db()->query('SELECT imagine_default FROM categorii WHERE id = 1')->fetchColumn();
 
-// Un eveniment fără copertă, editat fără poză nouă: tot nimic.
-verifica('editare fără copertă și fără poză nouă: nimic', 'fara',
+/* a) categoria N-ARE poză → pagina rămâne fără figură, ca înainte */
+db()->prepare('UPDATE categorii SET imagine_default = NULL WHERE id = 1')->execute();
+
+verifica('fără nicio poză, nici la categorie: nicio figură', 'fara',
+    $vedeCoperta(previzualizeaza($c)));
+verifica('editare fără copertă, categorie fără poză: nimic', 'fara',
     $vedeCoperta(previzualizeaza($c, ['slug' => $slugDeSchimbat])));
+
+/* b) categoria ARE poză → ea se vede, și la creare, și la editare */
+@mkdir($dosarCat2, 0775, true);
+$imFig = imagecreatetruecolor(40, 24);
+imagejpeg($imFig, $pozaCat2, 70);
+imagedestroy($imFig);
+db()->prepare('UPDATE categorii SET imagine_default = ? WHERE id = 1')
+    ->execute(['tstcat-fig.jpg']);
+
+verifica('fără copertă, dar categoria are poză: a ei', 'categorie',
+    $vedeCoperta(previzualizeaza($c)));
+verifica('și la editarea unuia fără copertă, tot a ei', 'categorie',
+    $vedeCoperta(previzualizeaza($c, ['slug' => $slugDeSchimbat])));
+
+/* …dar niciodată peste ce a ales omul. */
+verifica('poza omului rămâne deasupra celei de categorie', 'browser',
+    $vedeCoperta(previzualizeaza($c, ['coperta_noua' => '1'])));
+verifica('și coperta salvată rămâne deasupra ei', 'bd',
+    $vedeCoperta(previzualizeaza($c, ['slug' => $slugCuPoza])));
+
+@unlink($pozaCat2);
+db()->prepare('UPDATE categorii SET imagine_default = ? WHERE id = 1')->execute([$eraCat2]);
 
 db()->prepare('DELETE FROM evenimente WHERE id = ?')->execute([$idCuPoza]);
 

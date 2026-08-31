@@ -194,8 +194,8 @@ if (empty($config['dezvoltare'])) {
     });
 
     verifica('la aprobare, subiectul o spune', true,
-        str_contains($nou, 'Fotbal în parc" a fost aprobat'));
-    verifica('și că se vede pe site', true, str_contains($nou, 'se vede'));
+        str_contains($nou, 'Fotbal în parc” a fost aprobat'));
+    verifica('și că se vede pe site', true, str_contains($nou, 'vizibil pe site'));
     verifica('fără vorbe despre motive', false, str_contains($nou, 'motiv'));
 
     /* --- respins CU motiv --- */
@@ -205,13 +205,14 @@ if (empty($config['dezvoltare'])) {
     });
 
     verifica('la respingere, subiectul o spune', true,
-        str_contains($nou, 'Fotbal în parc" nu a fost aprobat'));
+        str_contains($faraRupturi($nou), 'nu a fost aprobat pentru publicare'));
     verifica('motivul scris ajunge întreg', true,
         str_contains($nou, 'Lipsește adresa exactă.'));
-    verifica('și se spune al cui e', true, str_contains($nou, 'Uite ce s-a scris'));
+    verifica('și se spune al cui e', true, str_contains($nou, 'Motivul, așa cum a fost scris'));
     verifica('fără vorba pentru lipsa lui', false,
-        str_contains($nou, 'Nu a fost scris un motiv anume'));
-    verifica('cu îndemnul de a-l îndrepta', true, str_contains($nou, 'îndreaptă ce trebuie'));
+        str_contains($nou, 'Nu a fost adăugată o explicație'));
+    verifica('cu îndemnul de a-l îndrepta', true,
+        str_contains($faraRupturi($nou), 'edita și retrimite'));
 
     /* --- respins FĂRĂ motiv --- */
     $nou = $citeste(function () {
@@ -220,9 +221,7 @@ if (empty($config['dezvoltare'])) {
     });
 
     verifica('fără motiv, se spune pe față', true,
-        str_contains($faraRupturi($nou),
-            'Nu a fost scris un motiv anume. Dacă vrei să afli mai multe, '
-            . 'scrie-ne și îți răspundem.'));
+        str_contains($faraRupturi($nou), 'Nu a fost adăugată o explicație detaliată'));
     verifica('și nu se pretinde că ar fi unul', false,
         str_contains($nou, 'Uite ce s-a scris'));
 
@@ -233,12 +232,12 @@ if (empty($config['dezvoltare'])) {
     });
 
     verifica('la editare, subiectul cere schimbări', true,
-        str_contains($nou, 'mai are nevoie de câteva schimbări'));
+        str_contains($nou, 'are nevoie de câteva ajustări'));
     verifica('și spune că NU e respins', true,
-        str_contains($faraRupturi($nou), 'Nu l-am respins'));
+        str_contains($faraRupturi($nou), 'aproape de publicare'));
     verifica('cu ce trebuie schimbat', true, str_contains($nou, 'Lipsește ora de început.'));
     verifica('și cu îndemnul de a-l trimite din nou', true,
-        str_contains($faraRupturi($nou), 'trimite-l din nou'));
+        str_contains($faraRupturi($nou), 'retrimite-l'));
     verifica('fără vorba „nu a fost aprobat"', false,
         str_contains($nou, 'nu a fost aprobat'));
 
@@ -248,7 +247,7 @@ if (empty($config['dezvoltare'])) {
             'https://exemplu.test/event.php?slug=x', 'editare', '');
     });
     verifica('la editare fără motiv, se spune la fel', true,
-        str_contains($faraRupturi($nou), 'Nu a fost scris un motiv anume.'));
+        str_contains($faraRupturi($nou), 'Nu s-a menționat un motiv anume'));
 
     /* Motivul e text de la om: scăpat în HTML, ca orice paragraf. */
     $sablon = sablonEmail('Test', [
@@ -778,7 +777,7 @@ if ($BAZA === '') {
             $nou = (string) preg_replace('/\s+/u', ' ',
                 substr((string) file_get_contents($logEmail), $inainte));
             verifica('iar e-mailul spune că n-a fost niciunul', true,
-                str_contains($nou, 'Nu a fost scris un motiv anume'));
+                str_contains($nou, 'Nu a fost adăugată o explicație'));
         }
 
         /* --- „editare necesară": rămâne în așteptare --- */
@@ -804,7 +803,7 @@ if ($BAZA === '') {
         if (!empty($config['dezvoltare'])) {
             $nou = substr((string) file_get_contents($logEmail), $inainte);
             verifica('organizatorul primește vestea', true,
-                str_contains($nou, 'mai are nevoie de câteva schimbări'));
+                str_contains($nou, 'are nevoie de câteva ajustări'));
             verifica('cu ce are de îndreptat', true,
                 str_contains($nou, 'Lipsește ora de început.'));
         }

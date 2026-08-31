@@ -113,11 +113,19 @@ if ($deEditat === null) {
  */
 $categorie = '';
 
+/**
+ * Odată cu numele, POZA IMPLICITĂ A CATEGORIEI. E cea care se vede pe un anunț
+ * fără copertă a lui, deci previzualizarea trebuie s-o știe ca să arate ce va
+ * arăta și site-ul.
+ */
+$imagineCategorie = null;
+
 // Cu tot cu cele ale casei: staff-ul previzualizează și un eveniment din
 // „FindMe", iar fără ele numele categoriei ar fi ieșit gol.
 foreach (categoriiEvenimente(true) as $c) {
     if ((int) $c['id'] === (int) $curat['categorie_id']) {
-        $categorie = (string) $c['nume'];
+        $categorie        = (string) $c['nume'];
+        $imagineCategorie = $c['imagine_default'] ?? null;
         break;
     }
 }
@@ -170,6 +178,32 @@ if (($_POST['coperta_noua'] ?? '') !== '') {
 
     if ($coperta !== '') {
         $copertaFel = 'bd';
+    }
+}
+
+/**
+ * ULTIMA TREAPTĂ: poza categoriei.
+ *
+ * Un anunț fără copertă nu rămâne fără poză pe site — primește imaginea
+ * categoriei (vezi evenimentDinBaza din inc/afisare-eveniment.php). Fără
+ * rândul ăsta, previzualizarea arăta un anunț gol în capul paginii și omul
+ * pleca de acolo crezând că așa o să apară și pe site. O previzualizare care
+ * arată altceva decât realitatea e mai rea decât niciuna.
+ *
+ * Se pune ABIA LA SFÂRȘIT, după toate celelalte: e poza pe care o dă casa,
+ * nu una aleasă de om, deci nu are voie să treacă înaintea niciuneia dintre
+ * ele. Și numai dacă nu vine nimic nici din browser (`coperta_noua`) —
+ * altfel ar fi acoperit tocmai poza pe care omul tocmai a ales-o.
+ *
+ * urlImagineCategorie() se uită și pe disc: fișierele de categorie se urcă de
+ * mână, iar unele lipsesc încă. Una lipsă înseamnă „fără poză", ca înainte,
+ * nu o adresă care dă 404.
+ */
+if ($copertaFel === '' && $coperta === '') {
+    $coperta = urlImagineCategorie($imagineCategorie);
+
+    if ($coperta !== '') {
+        $copertaFel = 'categorie';
     }
 }
 
