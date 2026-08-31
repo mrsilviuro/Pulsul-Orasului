@@ -26,6 +26,7 @@ declare(strict_types=1);
  */
 
 require_once __DIR__ . '/../inc/evenimente.php';
+require_once __DIR__ . '/../inc/urmariri.php';
 require_once __DIR__ . '/../inc/interese.php';
 require_once __DIR__ . '/../inc/email.php';
 
@@ -248,6 +249,20 @@ if ($organizator !== null) {
                 . 'pentru evenimentul #' . (int) $eveniment['id']);
     }
 }
+
+/**
+ * ȘI CEI CARE ÎL URMĂRESC PE ORGANIZATOR AFLĂ — dar numai la aprobare, adică
+ * abia acum, când anunțul chiar se vede pe site.
+ *
+ * Se cheamă necondiționat: instiinteazaUrmaritorii() întreabă singură dacă
+ * anunțul e public și pune ștampila înainte de a trimite ceva. Așa, un anunț
+ * respins și aprobat din nou nu scrie a doua oară acelorași oameni, iar două
+ * apăsări deodată pe „Aprobă" nu trimit de două ori.
+ *
+ * DUPĂ vestea către organizator, nu înaintea ei: dacă pică ceva la mijloc, cel
+ * care trebuie să afle întâi e omul al cărui anunț e în joc.
+ */
+instiinteazaUrmaritorii((int) $eveniment['id']);
 
 $vorba = match (true) {
     $editare            => 'I-am cerut organizatorului o îndreptare. Anunțul rămâne în așteptare.',

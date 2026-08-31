@@ -3119,6 +3119,59 @@ body { overscroll-behavior-y: none; }
   margin-bottom: 10px;
 }
 
+/* Numele și butonul „Urmărește", pe același rând.
+   `baseline` ca butonul să stea pe linia numelui, nu la mijlocul lui: la un
+   titlu de 30px, centrat, ar fi părut că plutește. Pe telefon rândul se rupe,
+   iar butonul trece dedesubt — de aceea `flex-wrap`. */
+.profile__nume-rand {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+}
+.profile__nume-rand .profile__name { margin-bottom: 0; }
+.profile__nume-rand + .facts { margin-top: 10px; }
+
+/* ---- butonul „Urmărește" ----
+   Stă în două locuri (profil și pagina unui eveniment) și se scrie dintr-un
+   singur loc: randeazaButonUrmarire() din inc/urmariri.php. */
+.urmarire {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  white-space: nowrap;
+}
+.urmarire:hover { border-color: var(--brand); color: var(--brand); }
+
+/* Cât timp îl urmărești, butonul e „plin": apăsat, nu de apăsat. */
+.urmarire--merge {
+  border-color: transparent;
+  background: var(--brand-soft);
+  color: var(--brand);
+}
+.urmarire--merge:hover { background: var(--brand-soft); }
+
+/* Cifra urmăritorilor: o pastilă mică, lipită de text. Se vede și când e
+   zero — e o informație despre om, ca numărul de ieșiri organizate, nu o
+   răsplată care apare din senin la primul urmăritor. */
+.urmarire__cati {
+  min-width: 20px;
+  padding: 1px 6px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-soft);
+  font-size: 12.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+.urmarire--merge .urmarire__cati { background: rgba(255, 255, 255, .55); }
+
+[data-theme="dark"] .urmarire--merge .urmarire__cati { background: rgba(0, 0, 0, .28); }
+
+/* Pe pagina unui eveniment stă lângă organizator, împins spre dreapta ca
+   butoanele lui de administrare — dar înaintea lor. */
+.post__meta > .urmarire { margin-left: auto; }
+
 /* datele scurte: vârstă, localitate, sex, vechime */
 .facts { display: flex; flex-wrap: wrap; gap: 7px; }
 

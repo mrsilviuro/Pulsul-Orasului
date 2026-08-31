@@ -1585,3 +1585,47 @@ function emailDorintaHotarata(string $catre, string $prenume, string $dorinta,
                                       'incheiere' => 'Dacă simți că a fost vorba despre o neînțelegere, ne poți scrie oricând prin pagina de contact.',
                                   ]);
                               }
+
+/**
+ * „Cineva pe care îl urmărești a pus un anunț nou."
+ *
+ * UN SINGUR CARTONAȘ, nu o listă — asta e toată deosebirea față de
+ * newsletterul zilnic, și e chiar rostul urmăririi: cine ține la un singur om
+ * vrea să afle despre EL, nu despre tot ce se întâmplă în oraș. Cartonașul se
+ * desenează prin același bloc „lista" din șablon, cu un singur rând, ca să
+ * arate întocmai ca acolo.
+ *
+ * FĂRĂ „List-Unsubscribe" ȘI FĂRĂ LINK DE DEZABONARE. Nu e un mesaj venit
+ * nechemat: omul a apăsat el însuși „Urmărește" pe profilul cuiva, iar ieșirea
+ * e tot acolo, la o apăsare — de aceea butonul din josul mesajului duce la
+ * profilul organizatorului, nu la o pagină de dezabonare. Newsletterul zilnic
+ * rămâne singurul mesaj de pe site care vine fără să-l fi cerut nimeni anume.
+ */
+function emailEvenimentDeLaUrmarit(
+    string $catre,
+    string $prenume,
+    string $cineOrganizeaza,
+    array $cartonas,
+    string $adresaProfil
+): bool {
+    $blocuri = [
+        'salut'     => 'Bună, ' . $prenume . '!',
+        'paragrafe' => [
+            $cineOrganizeaza . ', pe care îl urmărești, tocmai a pus la cale ceva nou. '
+            . 'Uite despre ce e vorba:',
+        ],
+        'lista'     => [$cartonas],
+        'buton'     => ['text' => 'Vezi evenimentul', 'href' => $cartonas['href'] ?? ''],
+        'link_gol'  => $cartonas['href'] ?? '',
+        /* Blocul ăsta se scapă cu h() la randare, deci aici merge doar text
+           curat — o etichetă scrisă de mână s-ar vedea ca atare pe ecran.
+           Adresa profilului se scrie întreagă, ca omul s-o poată apăsa oricum
+           ar citi mesajul. */
+        'incheiere' => 'Primești mesajul ăsta fiindcă îl urmărești pe ' . $cineOrganizeaza
+                     . '. Dacă nu mai vrei, deschide-i profilul (' . $adresaProfil
+                     . ') și apasă din nou butonul „Urmărești" — se oprește pe loc.',
+    ];
+
+    return trimiteEmail($catre, $cineOrganizeaza . ' a pus un anunț nou: '
+                              . (string) ($cartonas['titlu'] ?? 'un eveniment'), $blocuri);
+}

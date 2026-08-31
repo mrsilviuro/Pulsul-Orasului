@@ -5,6 +5,7 @@ require_once __DIR__ . '/inc/auth.php';
 require_once __DIR__ . '/inc/imagini.php';
 require_once __DIR__ . '/inc/evenimente.php';
 require_once __DIR__ . '/inc/evaluari.php';
+require_once __DIR__ . '/inc/urmariri.php';
 
 /**
  * Al cui e profilul.
@@ -254,7 +255,14 @@ require __DIR__ . '/inc/antet.php';
         </div>
 
         <div class="profile__head">
-          <h1 class="profile__name"><?= h($numeProfil) ?></h1>
+          <div class="profile__nume-rand">
+            <h1 class="profile__name"><?= h($numeProfil) ?></h1>
+            <?php if ($p !== null): ?>
+            <!-- Nu se desenează pe propriul profil și nici pentru un cont
+                 golit — hotărăște randeazaButonUrmarire(), într-un singur loc. -->
+            <?= randeazaButonUrmarire($eu, $p) ?>
+            <?php endif; ?>
+          </div>
 
           <ul class="facts">
             <?php if ($varsta !== null): ?>

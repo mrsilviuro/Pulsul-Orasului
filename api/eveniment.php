@@ -11,6 +11,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../inc/evenimente.php';
 require_once __DIR__ . '/../inc/coduri-qr.php';
+require_once __DIR__ . '/../inc/urmariri.php';
 
 if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
     raspunsJson(['ok' => false, 'mesaj' => 'Metodă nepermisă.'], 405);
@@ -299,6 +300,22 @@ if ($idSalvat > 0) {
                      . lcfirst(vorbaDespreCodulQr($legat));
         }
     }
+}
+
+/* ================== 7. Vestea către cei care îl urmăresc ============== */
+
+/**
+ * Anunțul unui om de casă intră „aprobat" de-a dreptul, deci ACUM devine
+ * public — nu mai trece pe la nimeni. Al celorlalți așteaptă moderarea, iar
+ * vestea pleacă de acolo (api/modereaza-eveniment.php).
+ *
+ * instiinteazaUrmaritorii() întreabă singură dacă anunțul chiar se vede și
+ * pune ștampila înainte să trimită ceva, deci nu e nevoie de nicio grijă aici:
+ * chemată de două ori, a doua oară nu face nimic. La editare, la fel — anunțul
+ * are deja ștampila din ziua în care a fost publicat prima oară.
+ */
+if ($idSalvat > 0) {
+    instiinteazaUrmaritorii($idSalvat);
 }
 
 // Adresa pleacă înapoi ca panoul de „gata" să aibă unde trimite omul: la un

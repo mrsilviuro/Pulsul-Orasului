@@ -16,6 +16,7 @@ declare(strict_types=1);
  */
 
 require_once __DIR__ . '/inc/evenimente.php';
+require_once __DIR__ . '/inc/urmariri.php';
 require_once __DIR__ . '/inc/afisare-eveniment.php';
 require_once __DIR__ . '/inc/interese.php';
 require_once __DIR__ . '/inc/comentarii.php';
@@ -553,7 +554,22 @@ require __DIR__ . '/inc/antet.php';
          * pe la mijlocul paginii, printre iconițele de distribuire — alea sunt
          * pentru oricine.
          */
-        afiseazaEveniment(evenimentDinBaza($eveniment), $banda,
+        /**
+         * Butonul „Urmărește" al organizatorului.
+         *
+         * Se scrie AICI, unde se știe cine citește pagina, și se dă mai departe
+         * prin tabloul de afișare — vezi lămurirea din inc/afisare-eveniment.php.
+         * Omului i se dau doar cele trei lucruri de care are nevoie butonul;
+         * restul rândului lui n-are ce căuta în plus prin pagină.
+         */
+        $dateDeAfisat = evenimentDinBaza($eveniment);
+        $dateDeAfisat['urmarire'] = randeazaButonUrmarire($membru, [
+            'id'        => (int) $eveniment['membru_id'],
+            'stare'     => $eveniment['org_stare'] ?? 'activ',
+            'permalink' => (string) ($eveniment['org_permalink'] ?? ''),
+        ]);
+
+        afiseazaEveniment($dateDeAfisat, $banda,
           ($poateEdita || $poateIncheia || $poateReface || $poateFixa)
             ? function () use ($eveniment, $poateEdita, $poateIncheia, $poateReface,
                               $poateFixa, $eFixat) {

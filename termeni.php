@@ -47,8 +47,9 @@ require __DIR__ . '/inc/antet.php';
   </nav>
   <div class="prose">
 
-  <p><h1>Termeni și Condiții</h1></p>
-  <p><h2>1. Ce este PulsulOrașului.Ro</h2></p>
+  <h1>Termeni și Condiții</h1>
+  <p class="doc-data">Ultima actualizare: <?= h($dataDocumentului) ?></p>
+  <h2>1. Ce este PulsulOrașului.Ro</h2>
 
   <p>PulsulOrașului.Ro este locul în care comunitatea locală prinde viață ... un spațiu creat pentru ca oamenii dintr-un oraș să împărtășească ce pun la cale și să descopere activitățile celorlalți. Noi ne ocupăm de găzduirea și buna funcționare a platformei, iar evenimentele sunt publicate și organizate de către membrii comunității.</p>
 
@@ -56,7 +57,7 @@ require __DIR__ . '/inc/antet.php';
 
   <p>Utilizarea platformei este 100% gratuită. Nu vindem spații de promovare și nu percepem taxe pentru a poziționa un anunț mai sus pe pagină.</p>
 
-  <p><h2>2. Contul tău</h2></p>
+  <h2>2. Contul tău</h2>
 
   <p>Poți explora platforma și poți citi anunțurile fără a avea un cont. Totuși, pentru a publica un eveniment, a te înscrie la o activitate, a lăsa comentarii sau a evalua alți participanți, vei avea nevoie de un cont personal.</p>
 
@@ -71,7 +72,7 @@ require __DIR__ . '/inc/antet.php';
 
   <p>Îți poți șterge contul oricând din secțiunea de setări. Pentru siguranța ta, ștergerea include o perioadă de grație de 30 de zile, timp în care nu se schimbă nimic și te poți răzgândi oricând, fiind suficient să te reautentifici. Detaliile despre gestionarea datelor tale după această perioadă sunt prezentate în <a href="/confidentialitate.php">Politica de Confidențialitate</a>.</p>
 
-  <p><h2>3. Ce publici pe platformă</h2></p>
+  <h2>3. Ce publici pe platformă</h2>
 
   <p>Anunțurile pe care le creezi îți aparțin în totalitate. Prin publicare, ne acorzi doar dreptul de a le afișa pe site și de a le include în e-mailul zilnic, strictul necesar pentru ca platforma să funcționeze. Nu le vom vinde, nu le vom înstrăina și nu le vom folosi în alt scop.</p>
 
@@ -92,19 +93,19 @@ require __DIR__ . '/inc/antet.php';
 
   <p>Fiecare anunț este verificat de echipa noastră înainte de publicare. Te vom anunța pe e-mail cu privire la decizia luată. Dacă sunt necesare mici ajustări, îți vom explica exact ce este de modificat și vei putea retrimite anunțul fără a pierde datele introduse. În cazul în care un anunț nu respectă regulile de mai sus, acesta va fi respins, menționându-se motivul.</p>
 
-  <p><h2>4. Când te înscrii la un eveniment</h2></p>
+  <h2>4. Când te înscrii la un eveniment</h2>
 
   <p>În momentul în care apeși butonul „Particip”, organizatorul va putea vedea numele tău complet și numărul tău de telefon, astfel încât să te poată contacta dacă apar modificări legate de eveniment. Ceilalți utilizatori vor vedea doar prenumele tău (sau numele prescurtat) și fotografia de profil.</p>
 
   <p>Înscrierea este un angajament amical față de ceilalți participanți. Dacă nu mai poți ajunge, te rugăm să te retragi de pe listă din timp, pentru a elibera locul altcuiva. Organizatorul are opțiunea de a te retrage de pe listă (caz în care vei primi un e-mail explicativ) și te poate marca ca absent în cazul în care ai confirmat prezența, dar nu ai mai ajuns.</p>
 
-  <p><h2>5. Evaluări, note și păreri</h2></p>
+  <h2>5. Evaluări, note și păreri</h2>
 
   <p>După încheierea unui eveniment, participanții își pot acorda reciproc evaluări timp de 48 de ore. Notarea prin steluțe este complet anonimă. Impresiile și comentariile scrise sunt publice, purtând semnătura autorului, și vor fi afișate pe profilul persoanei evaluate.</p>
 
   <p>Evaluările trebuie să reflecte strict comportamentul și implicarea persoanei în cadrul evenimentului, nu părerea generală despre aceasta ca om. Notele acordate din frustrare, ca răzbunare sau prin înțelegeri amicale între prieteni distrug încrederea în comunitate, singurul motiv pentru care acest sistem există. Astfel de evaluări vor fi șterse imediat ce sunt identificate.</p>
 
-  <p><h2>6. Ce putem face noi (Moderarea platformei)</h2></p>
+  <h2>6. Ce putem face noi (Moderarea platformei)</h2>
 
   <p>Pentru a menține o comunitate sigură, corectă și plăcută, ne rezervăm dreptul de a:</p>
 
@@ -117,7 +118,7 @@ require __DIR__ . '/inc/antet.php';
 
   <p><b>Transparență:</b> Te vom informa întotdeauna pe e-mail de fiecare dată când intervenim asupra unui conținut creat de tine (ștergerea unui comentariu, a unei poze, suspendarea contului sau decizii legate de anunțuri și dorințe). Îți vom comunica și motivul deciziei. Dacă consideri că a fost vorba despre o greșeală, <a href="/contact.php">scrie-ne</a> oricând, citim fiecare mesaj și răspundem cu drag.</p>
 
-  <p><h2>7. Ce nu putem promite (Limitări de răspundere)</h2></p>
+  <h2>7. Ce nu putem promite (Limitări de răspundere)</h2>
 
   <p>Platforma este furnizată „așa cum este”. Depunem toate eforturile pentru ca site-ul să funcționeze impecabil și fără întreruperi, însă nu putem garanta absența erorilor tehnice sau veridicitatea fiecărui anunț publicat de utilizatori.</p>
 
@@ -125,11 +126,11 @@ require __DIR__ . '/inc/antet.php';
 
   <p>Nicio prevedere din această pagină nu îți limitează drepturile legale garantate în calitate de utilizator sau consumator.</p>
 
-  <p><h2>8. Modificarea termenilor și condițiilor</h2></p>
+  <h2>8. Modificarea termenilor și condițiilor</h2>
 
   <p>Atunci când actualizăm aceste reguli, vom menționa data revizuirii în partea de sus a paginii. În cazul unor modificări majore, te vom notifica și prin e-mail sau printr-un anunț direct pe site. Dacă nu ești de acord cu noile prevederi, îți poți închide contul în orice moment.</p>
 
-  <p><h2>9. Cadrul legal și rezolvarea neînțelegerilor</h2></p>
+  <h2>9. Cadrul legal și rezolvarea neînțelegerilor</h2>
 
   <p>Acest regulament este guvernat de legea română. În cazul în care apare o neînțelegere, ne dorim să o rezolvăm mai întâi pe cale amiabilă. O simplă <a href="/contact.php">discuție prin e-mail</a> poate clarifica aproape orice situație.</p>
 
