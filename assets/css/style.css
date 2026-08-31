@@ -3594,6 +3594,11 @@ body { overscroll-behavior-y: none; }
     align-items: center;
     text-align: center;
   }
+  /* Butonul „Urmărește" coboară sub nume, odată cu tot antetul. Lângă un
+     nume scurt („A. Denis"), pe un ecran îngust, rândul nu se rupea singur:
+     mai era loc, deci butonul rămânea lipit în dreapta numelui și părea o
+     bucată din el. Aici nu-l lăsăm la voia lățimii, îl punem pe rândul lui. */
+  .profile__nume-rand { flex-direction: column; align-items: center; }
   .facts { justify-content: center; }
   .rating { width: 100%; }
   .rating-summary { gap: 20px; justify-content: center; }
