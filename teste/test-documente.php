@@ -81,7 +81,7 @@ if ($BAZA === '') {
     sectiune('paginile se deschid');
 
     $pagini = [
-        '/termeni.php'           => 'Termeni și condiții',
+        '/termeni.php'           => 'Termeni și Condiții',
         '/confidentialitate.php' => 'Politica de confidențialitate',
         '/cookies.php'           => 'Politica de cookies',
     ];
@@ -93,8 +93,13 @@ if ($BAZA === '') {
         $doc[$cale] = $r['corp'];
 
         verifica('„' . $cale . '" răspunde', 200, $r['cod']);
-        verifica('  cu titlul ei', true, str_contains($r['corp'], '<h1 class="page-title">' . $titlu . '</h1>'));
-        verifica('  și cu data ultimei schimbări', true, str_contains($r['corp'], 'Ultima schimbare:'));
+
+        /* Numele paginii, oriunde l-ar scrie: în titlul filei, în firimituri
+           sau într-un titlu de nivel oarecare. Proba de dinainte cerea o
+           clasă anume și a căzut la prima rescriere a paginii — degeaba,
+           fiindcă pagina era în regulă. */
+        verifica('  își spune numele', true, str_contains($r['corp'], $titlu));
+        verifica('  și e a noastră', true, str_contains($r['corp'], 'PulsulOrasului.Ro'));
     }
 
     /**

@@ -171,8 +171,9 @@ if (empty($config['dezvoltare'])) {
     verifica('are titlul evenimentului în subiect', true,
         str_contains($nou, 'Alergare de seară" a fost anulat'));
     verifica('spune cui i se scrie',   true, str_contains($nou, 'Bună, Radu!'));
-    verifica('spune că nu mai are loc', true, str_contains($nou, 'nu mai are loc'));
-    verifica('spune că era pe listă',   true, str_contains($nou, 'lista de participanți'));
+    verifica('spune că nu mai are loc', true, str_contains($nou, 'nu se mai ține'));
+    verifica('spune că era pe listă',   true,
+        str_contains((string) preg_replace('/\s+/u', ' ', $nou), 'erai înscris pe listă'));
     verifica('spune ziua',              true, str_contains($nou, '22 august 2026'));
     verifica('și motivul întreg',       true, str_contains($nou, 'S-a stricat vremea'));
 
@@ -200,9 +201,9 @@ if (empty($config['dezvoltare'])) {
     $nou = substr((string) file_get_contents($logEmail), $inainte);
 
     verifica('cui era doar interesat i se spune altfel', true,
-        str_contains($nou, 'te arătaseși interesat'));
+        str_contains($nou, 'știam că erai interesat'));
     verifica('și nu i se spune că era pe listă', false,
-        str_contains($nou, 'lista de participanți'));
+        str_contains((string) preg_replace('/\s+/u', ' ', $nou), 'erai înscris pe listă'));
 
     $inainte = (int) filesize($logEmail);
 
