@@ -558,7 +558,16 @@ inc/
                       însemnul „Organizator" (`e_organizator` iese 0 în
                       interogare), fiindcă el n-a pus nimic la cale. Restul
                       bifei rămâne unde-i e rostul: „Ieșiri organizate"
-                      (evenimenteDePeProfil, cateEvenimenteOrganizate)
+                      (evenimenteDePeProfil, cateEvenimenteOrganizate).
+                      CIFRA ACEEA NUMĂRĂ TOT DOAR CE S-A ÎNCHEIAT, ca sora ei
+                      de mai sus: un anunț pus ieri pentru săptămâna viitoare
+                      nu e nimic ținut încă, se poate și anula — cât se
+                      numărau cele viitoare, ajungea să scrii un anunț ca
+                      să-ți crească cifra. DE AICI: cifra și lista de sub ea
+                      nu se acoperă niciodată, ci sunt aproape pe dos — lista
+                      arată ce URMEAZĂ (filtruNeincheiat), cifra spune ce A
+                      FOST. Nici cele anulate nu se numără: acolo nu s-a ținut
+                      nimic
   urmariri.php      → URMĂRIREA UNUI ORGANIZATOR: butonul „Urmărește" de pe
                       profil și de pe pagina unui eveniment, cifra
                       urmăritorilor, și vestea pe e-mail la fiecare anunț nou

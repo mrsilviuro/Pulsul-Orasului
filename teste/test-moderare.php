@@ -452,7 +452,13 @@ verifica('dar celălalt e acolo',                      true,  in_array($slugLaVe
 verifica('lipsește și când își vede propriul profil', false,
     in_array($slugSef, $slugurile(evenimenteDePeProfil($sef, false)), true));
 
-verifica('nici cifra de deasupra nu-l numără', 1, cateEvenimenteOrganizate($sef));
+/**
+ * Cifra de deasupra e încă zero, dar nu din pricina bifei: amândouă anunțurile
+ * sunt abia în față, iar „Ieșiri organizate" numără doar ce s-a încheiat (vezi
+ * cateEvenimenteOrganizate). Ce face bifa aici se vede mai jos, după ce le
+ * mutăm pe amândouă în trecut: atunci cifra spune „1", nu „2".
+ */
+verifica('cifra nu numără ce abia urmează', 0, cateEvenimenteOrganizate($sef));
 
 /* --- istoricul: al lui nu, al celorlalți da --- */
 
@@ -530,7 +536,9 @@ verifica('adică fix câte cartonașe sunt', count($istoricSef),
  * rămâne: anunțul orașului n-are ce căuta printre ieșirile puse la cale de el,
  * oricâte ori s-ar duce la ele.
  */
-verifica('„Ieșiri organizate" rămâne cum era', 1, cateEvenimenteOrganizate($sef));
+/* Acum amândouă s-au încheiat, deci cifra le-ar putea număra pe amândouă —
+   și tot spune „1". Aici se vede că bifa chiar taie ceva. */
+verifica('„Ieșiri organizate" numără doar ieșirea lui', 1, cateEvenimenteOrganizate($sef));
 verifica('și lista de acolo, la fel', false,
     in_array($slugSef, $slugurile(evenimenteDePeProfil($sef, true)), true));
 
