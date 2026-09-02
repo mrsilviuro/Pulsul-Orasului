@@ -673,11 +673,28 @@ function randeazaIstoric(array $evenimente): string
 /**
  * La câte evenimente a fost omul ăsta.
  *
- * Cele active ȘI cele încheiate — adică tot ce se vede pe site: unul la care
- * merge săptămâna viitoare se numără la fel ca unul de acum o lună. Ce nu se
- * numără sunt evenimentele care n-au ajuns niciodată publice (în așteptare,
- * respinse) și cele anulate: la primele n-avea cum să se înscrie nimeni, iar
- * la ultimele nimeni n-a fost nicăieri.
+ * NUMAI CELE CARE S-AU ÎNCHEIAT. „Prezent la" e un lucru care s-a întâmplat,
+ * la timpul trecut: un eveniment de săptămâna viitoare, la care omul abia a
+ * apăsat „Particip", n-are ce căuta în cifra asta — n-a fost încă nicăieri.
+ *
+ * Se numărau și cele care urmează, și de aceea cifra ieșea mai mare decât
+ * lista de cartonașe de sub ea: pe un profil scria „Prezent la 4 activități"
+ * peste un istoric cu trei seri trecute și una anulată. Omul care se uita
+ * număra cartonașele și nu-i ieșea socoteala.
+ *
+ * ÎNCHEIAT înseamnă același lucru ca peste tot pe site (vezi
+ * evenimentIncheiat() din inc/evenimente.php): ori i-a trecut ziua, ori
+ * organizatorul a apăsat „Încheie evenimentul". Condiția e scrisă la fel ca în
+ * istoricEvenimente(), de mai sus, ca cele două să se vadă că sunt surori —
+ * doar că aici lipsește „anulat".
+ *
+ * Ce nu se numără: evenimentele care n-au ajuns niciodată publice (în
+ * așteptare, respinse), cele care încă urmează, și cele ANULATE. La primele
+ * n-avea cum să se înscrie nimeni, la ultimele nimeni n-a fost nicăieri —
+ * seara aceea n-a existat. Ele rămân totuși în istoricul de dedesubt, stinse și
+ * cu „Anulat" în colț: omul își ținuse seara liberă, iar asta face parte din ce
+ * i s-a întâmplat. De aceea cifra e mai mică decât numărul de cartonașe la cine
+ * a avut parte de o anulare, și e bine așa: sunt două întrebări deosebite.
  *
  * SE SCAD cele la care organizatorul a însemnat că n-a venit. Altfel cele două
  * cifre de pe profil s-ar bate cap în cap: „prezent la 12" și „a confirmat,
@@ -707,6 +724,9 @@ function laCateEvenimenteAFost(int $membruId): int
             -- care spusese „particip" la un anunț al orașului avea zero scris
             -- sus și niciun cartonaș jos — deși fusese acolo.
             AND e.stare_moderare IN (\'aprobat\', \'incheiat\')
+            -- Numai ce s-a terminat. Aceeași socoteală ca în istoricEvenimente,
+            -- fără „anulat": „prezent la" e la timpul trecut.
+            AND (e.stare_moderare = \'incheiat\' OR e.data_eveniment < ?)
             AND NOT EXISTS (
                   SELECT 1 FROM evaluari ev
                    WHERE ev.eveniment_id = i.eveniment_id
@@ -714,7 +734,7 @@ function laCateEvenimenteAFost(int $membruId): int
                      AND ev.automat      = 1
                 )'
     );
-    $q->execute([$membruId]);
+    $q->execute([$membruId, date('Y-m-d')]);
 
     return (int) $q->fetchColumn();
 }

@@ -232,9 +232,40 @@ verifica('evenimentul anulat nu se numără', 0, laCateEvenimenteAFost($ana));
 salveazaInteres((int) $asteptare['id'], $ana, 'participant');
 verifica('nici cel din așteptare', 0, laCateEvenimenteAFost($ana));
 
-// Dar unul care abia urmează, da: „active și încheiate", amândouă.
+/**
+ * NICI UNUL CARE ABIA URMEAZĂ. „Prezent la" e la timpul trecut: cine tocmai a
+ * apăsat „Particip" la ceva de săptămâna viitoare n-a fost încă nicăieri.
+ *
+ * Se numărau și acelea, și de aceea cifra ieșea mai mare decât lista de sub
+ * ea: pe un profil scria „Prezent la 4 activități" peste un istoric cu trei
+ * seri trecute și una anulată. Cine se uita număra cartonașele și nu-i ieșea
+ * socoteala.
+ */
 salveazaInteres((int) $viitor['id'], $ana, 'participant');
-verifica('cel care urmează se numără', 1, laCateEvenimenteAFost($ana));
+verifica('cel care urmează nu se numără', 0, laCateEvenimenteAFost($ana));
+
+/**
+ * Iar cifra e mai mică decât ISTORICUL la cine a avut parte de o anulare, și
+ * asta e voit: seara anulată rămâne pe cartonașele de dedesubt, fiindcă omul
+ * își ținuse timpul liber pentru ea, dar nu e o prezență — n-a fost nimic.
+ * Aici e chiar cazul de pe profilul din care a pornit toată socoteala.
+ */
+$treiSiUna = faMembru('c4', 'Probă', 'Claudiu');
+
+foreach (['tstmul-trecut-1', 'tstmul-trecut-2', 'tstmul-trecut-3'] as $slug) {
+    salveazaInteres(
+        (int) faEveniment($slug, $organizator, '-4 days', 'incheiat')['id'],
+        $treiSiUna, 'participant'
+    );
+}
+
+salveazaInteres((int) faEveniment('tstmul-anulatul-lui', $organizator, '-2 days', 'anulat')['id'],
+                $treiSiUna, 'participant');
+salveazaInteres((int) faEveniment('tstmul-viitorul-lui', $organizator, '+6 days', 'aprobat')['id'],
+                $treiSiUna, 'participant');
+
+verifica('istoricul arată patru cartonașe', 4, count(istoricEvenimente($treiSiUna)));
+verifica('dar prezențele sunt trei',        3, laCateEvenimenteAFost($treiSiUna));
 
 verifica('fără cont, zero', 0, laCateEvenimenteAFost(0));
 verifica('și la absențe la fel', 0, laCateEvenimenteNuAVenit(0));
