@@ -558,15 +558,63 @@ require_once __DIR__ . '/../inc/email.php';
  * limpede că nu s-a dat niciunul — altfel omul ar fi primit o veste fără cap și
  * fără coadă, cu un gol în locul explicației.
  */
-verifica('fără motiv, un singur paragraf', 1, count(paragrafeleMotivului('')));
-verifica('și spune că n-a fost niciunul', true,
-    str_contains(paragrafeleMotivului('')[0], 'Nu a fost adăugată o explicație'));
-verifica('numai spații tot e „fără"', paragrafeleMotivului(''), paragrafeleMotivului("  \n "));
+$gol = cuMotivul(['paragrafe' => ['Ceva s-a întâmplat.']], '');
+verifica('fără motiv, niciun chenar', false, isset($gol['motiv']));
+verifica('și un paragraf în plus',    2, count($gol['paragrafe']));
+verifica('care spune că n-a fost niciunul', true,
+    str_contains($gol['paragrafe'][1], 'Nu a fost adăugată o explicație'));
+verifica('numai spații tot e „fără"', $gol, cuMotivul(['paragrafe' => ['Ceva s-a întâmplat.']], "  \n "));
 
-$cu = paragrafeleMotivului('  Nu se scrie așa.  ');
-verifica('cu motiv, două paragrafe', 2, count($cu));
-verifica('întâi întrebarea',  'Iată explicația:', $cu[0]);
-verifica('apoi vorba omului', 'Nu se scrie așa.', $cu[1]);
+/**
+ * CU MOTIV, MOTIVUL INTRĂ ÎN CHENAR, nu în curgerea textului.
+ *
+ * Scris ca paragraf, între alte paragrafe, se citea la fel de repede ca
+ * „Era programat pentru miercuri" — adică deloc, tocmai el, singurul rând
+ * pentru care omul deschide mesajul. Merge în caseta de citat, aceeași în
+ * care se arată comentariul cuiva.
+ */
+$cu = cuMotivul(['paragrafe' => ['Ceva s-a întâmplat.']], '  Nu se scrie așa.  ');
+verifica('cu motiv, se face un chenar',  true, isset($cu['motiv']));
+verifica('paragrafele rămân cum erau',   1, count($cu['paragrafe']));
+verifica('vorba omului, fără spații',    'Nu se scrie așa.', $cu['motiv']['text']);
+verifica('cu eticheta deasupra',         'Motivul, așa cum a fost scris', $cu['motiv']['eticheta']);
+
+/* Eticheta se schimbă după cine a scris motivul. */
+verifica('altă etichetă, când se cere', 'Iată explicația',
+    cuMotivul([], 'Ceva.', 'Iată explicația')['motiv']['eticheta']);
+
+/* Blocurile primite nu se ating: se întorc altele, cu motivul în ele. */
+$inainte = ['paragrafe' => ['Unul.'], 'buton' => ['text' => 'Hai', 'href' => '/']];
+cuMotivul($inainte, 'Un motiv.');
+verifica('nu scrie peste ce a primit', ['paragrafe' => ['Unul.'], 'buton' => ['text' => 'Hai', 'href' => '/']], $inainte);
+
+/**
+ * ȘI CHENARUL CHIAR SE VEDE ÎN MESAJ: dunga din stânga în HTML, „> " în
+ * varianta de text. Fără proba asta, un slot scris greșit în șablon ar fi
+ * înghițit motivul cu totul — cel mai rău fel de a se strica, fiindcă mesajul
+ * pleacă mai departe și pare întreg.
+ */
+$sablon = sablonEmail('Probă', cuMotivul(
+    ['paragrafe' => ['Ceva s-a întâmplat.']], 'Fiindcă așa am vrut.'));
+
+verifica('motivul ajunge în HTML',  true, str_contains($sablon['html'], 'Fiindcă așa am vrut.'));
+verifica('cu eticheta lui',         true, str_contains($sablon['html'], 'Motivul, așa cum a fost scris'));
+verifica('în caseta cu dungă',      true, str_contains($sablon['html'], 'border-left:3px solid'));
+verifica('și citat în text simplu', true, str_contains($sablon['text'], '> Fiindcă așa am vrut.'));
+
+/* Ce se scrie „după" stă DUPĂ chenar, nu înaintea lui. */
+$sablon = sablonEmail('Probă', cuMotivul(
+    ['paragrafe' => ['Ceva s-a întâmplat.'], 'dupa' => ['Poți încerca din nou.']],
+    'Fiindcă așa am vrut.'));
+
+verifica('îndemnul vine după motiv', true,
+    strpos($sablon['html'], 'Fiindcă așa am vrut.') < strpos($sablon['html'], 'Poți încerca din nou.'));
+verifica('la fel și în text simplu', true,
+    strpos($sablon['text'], 'Fiindcă așa am vrut.') < strpos($sablon['text'], 'Poți încerca din nou.'));
+
+/* Un motiv scris de om NU poate strecura etichete în mesajul altcuiva. */
+$sablon = sablonEmail('Probă', cuMotivul([], 'Motiv cu <script>alert(1)</script> în el.'));
+verifica('motivul e scăpat în HTML', false, str_contains($sablon['html'], '<script>'));
 
 /* ==================================================================== */
 if ($BAZA === '') {

@@ -25,7 +25,7 @@ declare(strict_types=1);
  * PATRU DINTRE ELE TRIMIT UN E-MAIL: ștergerea unui comentariu, ștergerea unei
  * poze, suspendarea unui cont și hotărârea asupra unei dorințe. Toate primesc
  * un MOTIV, care poate să lipsească — atunci mesajul spune limpede că nu s-a
- * dat niciunul, în loc să tacă (vezi paragrafeleMotivului din inc/email.php).
+ * dat niciunul, în loc să tacă (vezi cuMotivul din inc/email.php).
  *
  * Vestea pleacă mereu DUPĂ ce fapta s-a scris cu bine, și niciodată invers: un
  * e-mail care spune „ți-am șters poza" pentru o ștergere care n-a mers e mai

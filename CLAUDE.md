@@ -209,9 +209,10 @@ termeni.php, confidentialitate.php, cookies.php
                 cu `fapta`, ca paza să fie scrisă o dată. CE DOARE PLEACĂ PE
                 E-MAIL: comentariul șters, poza ștearsă, contul suspendat și
                 hotărârea unei dorințe. Toate patru primesc un MOTIV care poate
-                lipsi — `data-motiv` pe buton îl cere din JS, iar
-                paragrafeleMotivului() din inc/email.php scrie, când e gol, că
-                nu s-a dat niciunul. Un mesaj cu un loc gol în el ar fi fost mai
+                lipsi — `data-motiv` pe buton îl cere din JS, iar cuMotivul()
+                din inc/email.php îl pune în mesaj: în CHENAR când există, iar
+                când e gol, o vorbă care spune că nu s-a dat niciunul. Un mesaj
+                cu un loc gol în el ar fi fost mai
                 rău decât niciun mesaj. La lista de stări, `data-motiv-pentru`
                 îngustează întrebarea la singura valoare care trimite ceva
                 („suspendat"): o întrebare pusă degeaba e una pe care omul
@@ -673,7 +674,29 @@ inc/
   afisare-eveniment.php → CUM ARATĂ un eveniment pe ecran (antet, copertă,
                       caseta cu detalii, descrierea). Folosit și de event.php,
                       și de previzualizare.php — schimbă aici, nu în pagini
-  email.php         → șablon unic pentru toate email-urile (table-based, inline style)
+  email.php         → șablon unic pentru toate email-urile (table-based, inline
+                      style). CASETA DE CITAT e desenată dintr-un singur loc și
+                      o cer DOUĂ blocuri: `citat` (ce a scris omul — comentariul
+                      la care i s-a răspuns, dorința lui; deasupra stă NUMELE) și
+                      `motiv` (de ce s-a luat o hotărâre care îl privește;
+                      deasupra stă o VORBĂ: „Motivul, așa cum a fost scris de
+                      organizator"). Pentru ochi sunt același lucru — un text
+                      scos din curgerea mesajului — deci se desenează la fel.
+                      MOTIVUL NU MAI E UN PARAGRAF ÎNTRE PARAGRAFE: scris așa,
+                      se citea la fel de repede ca „Era programat pentru
+                      miercuri", adică deloc, tocmai el, singurul rând pentru
+                      care omul deschide mesajul. Îl pune cuMotivul(), pe care îl
+                      cheamă TOATE cele șapte vești care poartă unul: anularea
+                      unui eveniment, scoaterea de pe o listă, cele trei
+                      hotărâri ale moderării, comentariul șters, poza ștearsă,
+                      contul suspendat, dorința respinsă. FĂRĂ MOTIV NU SE
+                      DESENEAZĂ NICIUN CHENAR — unul gol ar fi scos în evidență
+                      tocmai lipsa; se scrie atunci un paragraf obișnuit, cu
+                      aceeași vorbă peste tot (FARA_MOTIV). Al treilea bloc nou,
+                      `dupa`, e pentru ce se spune DUPĂ casete („poți încerca
+                      din nou", „intră și îndreaptă-l"): pus între celelalte
+                      paragrafe, îndemnul ajungea ÎNAINTEA motivului, adică omul
+                      citea ce are de făcut înainte să afle de ce
   google.php        → OAuth Google (authorization code flow + PKCE)
   buton-google.php  → butonul de login Google
   stergere.php      → ștergerea contului cu răgaz + anonimizarea

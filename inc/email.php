@@ -379,10 +379,10 @@ function sablonEmail(string $titlu, array $blocuri): array
              . h($paragraf) . '</p>';
     }
 
-    /* --------------------------- citatul ------------------------------ */
+    /* ------------------- citatul și motivul, aceeași casetă ------------ */
 
     /**
-     * Vorbele altcuiva, arătate ca vorbele altcuiva.
+     * Vorbele cuiva, arătate ca vorbele cuiva.
      *
      * Nu e cutia de la `cod`: aceea e făcută pentru șase caractere de tastat,
      * cu litere mari și rărite. Aici e un text de citit, poate lung, scris de
@@ -390,25 +390,67 @@ function sablonEmail(string $titlu, array $blocuri): array
      * altfel s-ar amesteca cu ce spunem noi. De aceea o dungă în stânga și un
      * fundal stins, ca un citat dintr-o carte.
      *
+     * O DESENEAZĂ O SINGURĂ FUNCȚIE, fiindcă o cer două blocuri deosebite:
+     *
+     *   `citat` — ce a scris omul: comentariul la care i s-a răspuns, dorința
+     *             lui. Sus stă NUMELE celui care a scris.
+     *   `motiv` — de ce s-a luat o hotărâre care îl privește: anularea unui
+     *             eveniment, respingerea unui anunț, ștergerea unui comentariu.
+     *             Sus stă o VORBĂ, nu un nume („Motivul, așa cum a fost scris
+     *             de organizator").
+     *
+     * Amândouă sunt același lucru pentru ochi — un text scos din curgerea
+     * mesajului — deci trebuie să arate la fel; scrise de două ori, a doua
+     * copie ar fi rămas în urmă la prima schimbare de culoare.
+     *
      * Rândurile scrise de om se păstrează: `nl2br` peste textul DEJA scăpat cu
      * h(). În ordinea asta, nu invers — altfel `<br />`-urile puse de noi ar fi
      * fost scăpate și ele, și s-ar fi văzut ca text.
      */
-    if (!empty($blocuri['citat']['text'])) {
-        $h[] = '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" '
-             . 'style="margin:20px 0;"><tr><td '
-             . 'style="background:#f7f8fa;border-left:3px solid ' . $margine . ';'
-             . 'border-radius:0 8px 8px 0;padding:16px 18px;font-family:' . $font . ';">';
+    $caseta = static function (string $eticheta, string $continut)
+        use ($font, $text, $textMoale, $margine): string {
+        $b = '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" '
+           . 'style="margin:20px 0;"><tr><td '
+           . 'style="background:#f7f8fa;border-left:3px solid ' . $margine . ';'
+           . 'border-radius:0 8px 8px 0;padding:16px 18px;font-family:' . $font . ';">';
 
-        if (!empty($blocuri['citat']['cine'])) {
-            $h[] = '<div style="font-size:13.5px;font-weight:bold;color:' . $text . ';'
-                 . 'margin:0 0 8px 0;">' . h($blocuri['citat']['cine']) . '</div>';
+        if ($eticheta !== '') {
+            $b .= '<div style="font-size:13.5px;font-weight:bold;color:' . $text . ';'
+                . 'margin:0 0 8px 0;">' . h($eticheta) . '</div>';
         }
 
-        $h[] = '<div style="font-size:15.5px;line-height:1.6;color:' . $textMoale . ';">'
-             . nl2br(h((string) $blocuri['citat']['text'])) . '</div>';
+        return $b . '<div style="font-size:15.5px;line-height:1.6;color:' . $textMoale . ';">'
+             . nl2br(h($continut)) . '</div></td></tr></table>';
+    };
 
-        $h[] = '</td></tr></table>';
+    if (!empty($blocuri['citat']['text'])) {
+        $h[] = $caseta((string) ($blocuri['citat']['cine'] ?? ''),
+                       (string) $blocuri['citat']['text']);
+    }
+
+    /**
+     * MOTIVUL, mereu DUPĂ citat.
+     *
+     * La respingerea unei dorințe se văd amândouă: întâi ce a scris omul, apoi
+     * de ce n-a intrat pe tablă. Invers ar fi fost un răspuns înaintea
+     * întrebării.
+     */
+    if (!empty($blocuri['motiv']['text'])) {
+        $h[] = $caseta((string) ($blocuri['motiv']['eticheta'] ?? ''),
+                       (string) $blocuri['motiv']['text']);
+    }
+
+    /**
+     * Ce se spune DUPĂ casete: „poți încerca din nou", „intră și îndreaptă-l".
+     *
+     * Un slot deosebit de `paragrafe`, fiindcă e singurul fel în care îndemnul
+     * de la coadă poate rămâne la coadă. Pus între celelalte paragrafe, ar fi
+     * ajuns înaintea casetei cu motivul — adică omul citea ce are de făcut
+     * înainte să afle de ce.
+     */
+    foreach (($blocuri['dupa'] ?? []) as $paragraf) {
+        $h[] = '<p style="margin:0 0 16px 0;font-size:16px;line-height:1.6;color:' . $textMoale . ';">'
+             . h($paragraf) . '</p>';
     }
 
     /* ------------------------- lista de anunțuri ---------------------- */
@@ -673,13 +715,28 @@ function sablonEmail(string $titlu, array $blocuri): array
      * să ajungă și pe rândurile născute din wordwrap, nu doar pe cele scrise de
      * om.
      */
-    if (!empty($blocuri['citat']['text'])) {
-        if (!empty($blocuri['citat']['cine'])) {
-            $t[] = $blocuri['citat']['cine'] . ':';
+    $casetaText = static function (string $eticheta, string $continut) use (&$t): void {
+        if ($eticheta !== '') {
+            $t[] = $eticheta . ':';
         }
 
-        $rupt = wordwrap((string) $blocuri['citat']['text'], 68, "\n", false);
+        $rupt = wordwrap($continut, 68, "\n", false);
         $t[] = '> ' . str_replace("\n", "\n> ", $rupt);
+        $t[] = '';
+    };
+
+    if (!empty($blocuri['citat']['text'])) {
+        $casetaText((string) ($blocuri['citat']['cine'] ?? ''),
+                    (string) $blocuri['citat']['text']);
+    }
+
+    if (!empty($blocuri['motiv']['text'])) {
+        $casetaText((string) ($blocuri['motiv']['eticheta'] ?? ''),
+                    (string) $blocuri['motiv']['text']);
+    }
+
+    foreach (($blocuri['dupa'] ?? []) as $paragraf) {
+        $t[] = wordwrap($paragraf, 72, "\n", false);
         $t[] = '';
     }
 
@@ -967,9 +1024,10 @@ function emailMesajDeContact(array $mesaj, ?int $membruId): bool
  * (vezi sql/016-excluderi-evenimente.sql). Nu se socotește aici: cine e staff
  * azi poate să nu mai fie mâine, iar mesajul trebuie să spună ce a fost atunci.
  *
- * Motivul intră ca paragraf obișnuit, deci trece prin aceeași ieșire ca restul
- * textelor din șablon — scăpat cu htmlspecialchars în varianta HTML. Nimeni nu
- * poate strecura etichete în e-mailul altcuiva prin caseta de motiv.
+ * Motivul intră în CASETA de citat — vezi cuMotivul(), mai jos. Textul lui
+ * trece prin aceeași ieșire ca restul șablonului, scăpat cu htmlspecialchars
+ * în varianta HTML: nimeni nu poate strecura etichete în e-mailul altcuiva
+ * prin caseta de motiv.
  */
 function emailExcludereParticipant(
     string $catre,
@@ -988,16 +1046,14 @@ function emailExcludereParticipant(
     // pentru cineva anume, nu ca un formular.
     $scos = $sex === 'F' ? 'scoasă' : 'scos';
 
-    $blocuri = [
+    $blocuri = cuMotivul([
         'salut'     => 'Bună, ' . $prenume . '!',
         'paragrafe' => [
             'Ai fost ' . $scos . ' de pe lista de participanți la „' . $titluEveniment . '", '
             . 'de către ' . $cineA . '. Locul tău s-a eliberat.',
-            'Motivul, așa cum a fost scris:',
-            $motiv,
         ],
         'buton'     => ['text' => 'Vezi evenimentul', 'href' => $adresaEveniment],
-    ];
+    ], $motiv, 'Motivul, așa cum a fost scris');
 
     /**
      * Ușa închisă se spune limpede, într-o casetă care se vede.
@@ -1161,9 +1217,10 @@ function emailNewsletterZilnic(
  * fi dus fiecare om exact într-o ușă închisă, la capătul unui mesaj care deja
  * îi strica planul. Butonul duce în oraș, unde mai sunt și altele.
  *
- * Motivul intră ca paragraf obișnuit, deci trece prin aceeași ieșire ca restul
- * textelor din șablon — scăpat cu htmlspecialchars în varianta HTML. Nimeni nu
- * poate strecura etichete în e-mailul altcuiva prin caseta de motiv.
+ * Motivul intră în CASETA de citat — vezi cuMotivul(), mai jos. Textul lui
+ * trece prin aceeași ieșire ca restul șablonului, scăpat cu htmlspecialchars
+ * în varianta HTML: nimeni nu poate strecura etichete în e-mailul altcuiva
+ * prin caseta de motiv.
  *
  * $eraParticipant schimbă o singură propoziție: cine confirmase primește o
  * vorbă care recunoaște că își făcuse un plan; cine era doar interesat, una mai
@@ -1191,10 +1248,7 @@ function emailAnulareEveniment(
         $paragrafe[] = 'Era programat pentru ' . $candAvutLoc . '.';
     }
 
-    $paragrafe[] = 'Motivul, așa cum a fost scris de organizator:';
-    $paragrafe[] = $motiv;
-
-    $blocuri = [
+    $blocuri = cuMotivul([
         'salut'     => 'Bună, ' . $prenume . '!',
         'paragrafe' => $paragrafe,
         'buton'     => [
@@ -1203,7 +1257,7 @@ function emailAnulareEveniment(
         ],
         'link_gol'  => $adresaSite,
         'incheiere' => 'Nu trebuie să faci nimic, locul tău s-a eliberat automat. Dacă evenimentul se va reprograma pe viitor, va fi afișat un anunț nou.',
-    ];
+    ], $motiv, 'Motivul, așa cum a fost scris de organizator');
 
     return trimiteEmail($catre, '„' . $titluEveniment . '" a fost anulat', $blocuri);
 }
@@ -1239,9 +1293,10 @@ function emailAnulareEveniment(
  * comentariile, notele și listele. Omului i se spune ce-l privește — că
  * anunțul nu se publică — nu ce am făcut noi prin bază.
  *
- * Motivul intră ca paragraf obișnuit, deci trece prin aceeași ieșire ca restul
- * textelor din șablon — scăpat cu htmlspecialchars în varianta HTML. Nimeni nu
- * poate strecura etichete în e-mailul altcuiva prin caseta de motiv.
+ * Motivul intră în CASETA de citat — vezi cuMotivul(), mai jos. Textul lui
+ * trece prin aceeași ieșire ca restul șablonului, scăpat cu htmlspecialchars
+ * în varianta HTML: nimeni nu poate strecura etichete în e-mailul altcuiva
+ * prin caseta de motiv.
  */
 function emailModerareAnunt(
     string $catre,
@@ -1254,29 +1309,26 @@ function emailModerareAnunt(
     /* ------------------------ mai are de lucru ------------------------ */
 
     if ($hotarare === 'editare') {
-        $paragrafe = [
-            'Evenimentul tău, „' . $titluEveniment . '”, e foarte aproape de publicare! Mai sunt doar câteva mici detalii de pus la punct înainte să apară pe site.',
-        ];
-
-        if ($motiv !== '') {
-            $paragrafe[] = 'Iată ce ar fi de ajustat:';
-            $paragrafe[] = $motiv;
-        } else {
-            $paragrafe[] = 'Nu s-a menționat un motiv anume. Dacă ai întrebări, scrie-ne oricând!';
-        }
-
-        $paragrafe[] = 'Mergi pe pagina evenimentului, apasă butonul „Editează” și retrimite-l. Îl vom verifica imediat!';
-
         return trimiteEmail(
             $catre,
             'Mai e puțin! „' . $titluEveniment . '” are nevoie de câteva ajustări',
-            [
-                'salut'     => 'Bună, ' . $prenume . '!',
-                'paragrafe' => $paragrafe,
-                'buton'     => ['text' => 'Vezi și editează anunțul', 'href' => $adresaEveniment],
-                'link_gol'  => $adresaEveniment,
-                'incheiere' => 'Toate datele completate sunt la locul lor, așa că poți face modificările foarte rapid.',
-            ]
+            cuMotivul(
+                [
+                    'salut'     => 'Bună, ' . $prenume . '!',
+                    'paragrafe' => [
+                        'Evenimentul tău, „' . $titluEveniment . '”, e foarte aproape de publicare! Mai sunt doar câteva mici detalii de pus la punct înainte să apară pe site.',
+                    ],
+                    'dupa'      => [
+                        'Mergi pe pagina evenimentului, apasă butonul „Editează” și retrimite-l. Îl vom verifica imediat!',
+                    ],
+                    'buton'     => ['text' => 'Vezi și editează anunțul', 'href' => $adresaEveniment],
+                    'link_gol'  => $adresaEveniment,
+                    'incheiere' => 'Toate datele completate sunt la locul lor, așa că poți face modificările foarte rapid.',
+                ],
+                $motiv,
+                'Iată ce ar fi de ajustat',
+                'Nu s-a menționat un motiv anume. Dacă ai întrebări, scrie-ne oricând!'
+            )
         );
     }
 
@@ -1299,28 +1351,27 @@ function emailModerareAnunt(
         'Îți mulțumim că ai vrut să împărtășești „' . $titluEveniment . '” cu noi! Din păcate, de această dată anunțul tău nu a fost aprobat pentru publicare pe site. Totuși, el rămâne vizibil în continuare pe pagina lui, unde îl poți consulta oricând.',
     ];
 
-    if ($motiv !== '') {
-        $paragrafe[] = 'Motivul, așa cum a fost scris:';
-        $paragrafe[] = $motiv;
-    } else {
-        /**
-         * Fără motiv, mesajul nu tace și nu se preface.
-         *
-         * Un „nu" fără nicio explicație și fără nicio ușă e cel mai prost fel
-         * de a închide o discuție. Așa, omul știe și că n-a fost scris nimic,
-         * și pe unde să întrebe.
-         */
-        $paragrafe[] = 'Nu a fost adăugată o explicație detaliată, însă dacă ai orice întrebare sau dorești mai multe clarificări, scrie-ne oricând ... suntem bucuroși să te ajutăm!';
-    }
-
-    $paragrafe[] = 'Dacă vrei să reajustezi anunțul, îl poți edita și retrimite oricând! De îndată ce salvezi o modificare, noi îl vom reanaliza cu mare drag.';
-
-    $blocuri = [
-        'salut'     => 'Bună, ' . $prenume . '!',
-        'paragrafe' => $paragrafe,
-        'buton'     => ['text' => 'Vezi anunțul tău', 'href' => $adresaEveniment],
-        'link_gol'  => $adresaEveniment,
-    ];
+    /**
+     * Fără motiv, mesajul nu tace și nu se preface.
+     *
+     * Un „nu" fără nicio explicație și fără nicio ușă e cel mai prost fel de a
+     * închide o discuție. Așa, omul știe și că n-a fost scris nimic, și pe unde
+     * să întrebe.
+     */
+    $blocuri = cuMotivul(
+        [
+            'salut'     => 'Bună, ' . $prenume . '!',
+            'paragrafe' => $paragrafe,
+            'dupa'      => [
+                'Dacă vrei să reajustezi anunțul, îl poți edita și retrimite oricând! De îndată ce salvezi o modificare, noi îl vom reanaliza cu mare drag.',
+            ],
+            'buton'     => ['text' => 'Vezi anunțul tău', 'href' => $adresaEveniment],
+            'link_gol'  => $adresaEveniment,
+        ],
+        $motiv,
+        'Motivul, așa cum a fost scris',
+        'Nu a fost adăugată o explicație detaliată, însă dacă ai orice întrebare sau dorești mai multe clarificări, scrie-ne oricând ... suntem bucuroși să te ajutăm!'
+    );
 
     return trimiteEmail($catre, 'Despre anunțul tău, „' . $titluEveniment . '”', $blocuri);
 }
@@ -1428,26 +1479,47 @@ function emailFeedbackNou(
 /* ================== VEȘTILE DIN ZONA DE ADMINISTRARE ================= */
 
 /**
- * Motivul scris de omul casei, gata de pus într-un e-mail.
+ * Motivul, pus în mesaj așa cum trebuie pus.
  *
- * Toate cele patru vești de mai jos au aceeași croială: se poate da un motiv,
- * și de cele mai multe ori nu se dă. Fraza pentru „n-a scris nimeni nimic"
- * trebuie să fie ACEEAȘI peste tot — altfel patru locuri ar fi ajuns să spună
- * patru lucruri ușor diferite despre aceeași tăcere.
+ * TOATE VEȘTILE CARE POARTĂ UN MOTIV TREC PE AICI — anularea unui eveniment,
+ * scoaterea de pe o listă, hotărârea moderării, comentariul șters, poza
+ * ștearsă, contul suspendat, dorința respinsă. Nu fiindcă ar fi o modă, ci
+ * fiindcă motivul e ce caută omul în mesaj: restul e împachetare.
  *
- * Întoarce paragrafele care se lipesc la coada mesajului.
+ * SCRIS CA UN PARAGRAF, SE PIERDE. Un rând obișnuit între alte rânduri
+ * obișnuite se citește la fel de repede ca „Era programat pentru miercuri" —
+ * adică deloc. De aceea intră în CASETA de citat, aceeași în care se arată un
+ * comentariu: fundal stins, dungă în stânga, o vorbă îngroșată deasupra care
+ * spune al cui e. Vorbele cuiva, arătate ca vorbele cuiva.
+ *
+ * $eticheta e ce scrie deasupra casetei și se schimbă după cine a scris
+ * motivul: organizatorul care a anulat, omul casei care a respins.
+ *
+ * FĂRĂ MOTIV NU SE DESENEAZĂ NICIO CASETĂ. Un chenar gol, sau unul cu „nu s-a
+ * dat niciun motiv" în el, ar fi scos în evidență tocmai lipsa — se scrie
+ * atunci un paragraf obișnuit, care spune pe față că nu s-a scris nimic și
+ * arată pe unde se întreabă. Fraza aceea trebuie să fie ACEEAȘI peste tot,
+ * altfel șapte locuri ar fi ajuns să spună șapte lucruri ușor diferite despre
+ * aceeași tăcere; $faraMotiv o schimbă doar unde chiar e altă propoziție.
+ *
+ * Primește blocurile mesajului și le întoarce cu motivul în ele — nu le scrie
+ * peste, deci se poate chema oriunde între alcătuirea lor și trimitere.
  */
-function paragrafeleMotivului(string $motiv, string $intrebare = 'Iată explicația'): array
+const FARA_MOTIV = 'Nu a fost adăugată o explicație detaliată, însă dacă ai orice întrebare sau nelămurire, scrie-ne oricând, suntem bucuroși să te ajutăm!';
+
+function cuMotivul(array $blocuri, string $motiv,
+                   string $eticheta = 'Motivul, așa cum a fost scris',
+                   string $faraMotiv = FARA_MOTIV): array
 {
     $motiv = trim($motiv);
 
     if ($motiv === '') {
-        return [
-            'Nu a fost adăugată o explicație detaliată, însă dacă ai orice întrebare sau nelămurire, scrie-ne oricând, suntem bucuroși să te ajutăm!',
-        ];
+        $blocuri['paragrafe'][] = $faraMotiv;
+        return $blocuri;
     }
 
-    return [$intrebare . ':', $motiv];
+    $blocuri['motiv'] = ['eticheta' => $eticheta, 'text' => $motiv];
+    return $blocuri;
 }
 
 /**
@@ -1467,20 +1539,15 @@ function emailComentariuSters(string $catre, string $prenume, string $titluEveni
                                   global $config;
                                   $site = rtrim((string) ($config['url_site'] ?? ''), '/');
 
-                                  $paragrafe = array_merge(
-                                      [
+                                  return trimiteEmail($catre, 'Un comentariu de-al tău a fost șters', cuMotivul([
+                                      'salut'     => 'Bună, ' . $prenume . '!',
+                                      'paragrafe' => [
                                           'Un comentariu scris de tine la anunțul „' . $titluEveniment . '" a fost '
                                           . 'șters de echipa PulsulOrasului.Ro.',
                                       ],
-                                      paragrafeleMotivului($motiv)
-                                  );
-
-                                  return trimiteEmail($catre, 'Un comentariu de-al tău a fost șters', [
-                                      'salut'     => 'Bună, ' . $prenume . '!',
-                                      'paragrafe' => $paragrafe,
                                       'buton'     => ['text' => 'Scrie-ne', 'href' => $site . '/contact.php'],
                                       'incheiere' => 'Contul tău nu e atins: poți scrie mai departe pe site.',
-                                  ]);
+                                  ], $motiv, 'Iată explicația'));
                               }
 
 /**
@@ -1495,19 +1562,17 @@ function emailPozaStearsa(string $catre, string $prenume, string $motiv = ''): b
     global $config;
     $site = rtrim((string) ($config['url_site'] ?? ''), '/');
 
-    $paragrafe = array_merge(
-        ['Te informăm că fotografia ta de profil de pe PulsulOrasului.Ro a fost îndepărtată de către echipa noastră.'],
-        paragrafeleMotivului($motiv)
-    );
-
-    $paragrafe[] = 'Te invităm să încarci o nouă fotografie oricând dorești, direct din pagina profilului tău.';
-
-    return trimiteEmail($catre, 'Actualizare privind fotografia ta de profil', [
+    return trimiteEmail($catre, 'Actualizare privind fotografia ta de profil', cuMotivul([
         'salut'     => 'Bună, ' . $prenume . '!',
-        'paragrafe' => $paragrafe,
+        'paragrafe' => [
+            'Te informăm că fotografia ta de profil de pe PulsulOrasului.Ro a fost îndepărtată de către echipa noastră.',
+        ],
+        'dupa'      => [
+            'Te invităm să încarci o nouă fotografie oricând dorești, direct din pagina profilului tău.',
+        ],
         'buton'     => ['text' => 'Alege o altă fotografie', 'href' => $site . '/poza.php'],
         'incheiere' => 'Restul datelor și activitatea din contul tău rămân complet neatinse.',
-    ]);
+    ], $motiv, 'Iată explicația'));
 }
 
 /**
@@ -1522,20 +1587,15 @@ function emailContSuspendat(string $catre, string $prenume, string $motiv = ''):
     global $config;
     $site = rtrim((string) ($config['url_site'] ?? ''), '/');
 
-    $paragrafe = array_merge(
-        [
+    return trimiteEmail($catre, 'Informații importante privind contul tău', cuMotivul([
+        'salut'     => 'Bună, ' . $prenume . '!',
+        'paragrafe' => [
             'Te informăm că accesul la contul tău de pe PulsulOrasului.Ro a fost temporar suspendat de către echipa noastră. În această perioadă, autentificarea în cont nu va fi posibilă.',
         ],
-        paragrafeleMotivului($motiv)
-    );
-
-    return trimiteEmail($catre, 'Informații importante privind contul tău', [
-        'salut'     => 'Bună, ' . $prenume . '!',
-        'paragrafe' => $paragrafe,
         'atentie'   => 'Dacă consideri că este vorba despre o neînțelegere, te rugăm să ne scrii ... citim cu atenție fiecare mesaj și căutăm mereu cea mai bună soluție.',
         'buton'     => ['text' => 'Scrie-ne pentru clarificări', 'href' => $site . '/contact.php'],
         'incheiere' => 'Evenimentele create de tine și istoricul participărilor rămân salvate în siguranță.',
-    ]);
+    ], $motiv, 'Iată explicația'));
 }
 
 /**
@@ -1568,22 +1628,21 @@ function emailDorintaHotarata(string $catre, string $prenume, string $dorinta,
                                       ]);
                                   }
 
-                                  $paragrafe = array_merge(
-                                      [
+                                  /* Întâi ce a scris omul, apoi de ce n-a intrat pe tablă, apoi
+                                     îndemnul de a mai încerca — în ordinea asta, fiindcă e ordinea
+                                     în care se pun întrebările. */
+                                  return trimiteEmail($catre, 'Informații despre dorința ta', cuMotivul([
+                                      'salut'     => 'Bună, ' . $prenume . '!',
+                                      'paragrafe' => [
                                           'Îți mulțumim că ai împărtășit ideea ta cu noi! Am citit dorința trimisă, însă de această dată nu am putut să o afișăm pe tablă.',
                                       ],
-                                      paragrafeleMotivului($motiv)
-                                  );
-
-                                  $paragrafe[] = 'Te încurajăm să încerci din nou! Poți adăuga oricând o altă dorință pe tablă, fără nicio perioadă de așteptare.';
-
-                                  return trimiteEmail($catre, 'Informații despre dorința ta', [
-                                      'salut'     => 'Bună, ' . $prenume . '!',
-                                      'paragrafe' => $paragrafe,
                                       'citat'     => ['cine' => $prenume, 'text' => $dorinta],
+                                      'dupa'      => [
+                                          'Te încurajăm să încerci din nou! Poți adăuga oricând o altă dorință pe tablă, fără nicio perioadă de așteptare.',
+                                      ],
                                       'buton'     => ['text' => 'Adaugă o altă dorință', 'href' => $site . '/'],
                                       'incheiere' => 'Dacă simți că a fost vorba despre o neînțelegere, ne poți scrie oricând prin pagina de contact.',
-                                  ]);
+                                  ], $motiv, 'Iată explicația'));
                               }
 
 /**

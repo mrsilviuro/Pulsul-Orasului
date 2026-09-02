@@ -78,7 +78,7 @@ $randComentariu = static function (array $c, bool $cuRapoarte): string {
          /**
           * `data-motiv` cere o vorbă înainte de faptă, dar N-O IMPUNE: lăsată
           * goală, e-mailul spune limpede că nu s-a dat niciun motiv, în loc să
-          * tacă. Vezi paragrafeleMotivului() din inc/email.php.
+          * tacă. Vezi cuMotivul() din inc/email.php.
           */
          . '<button class="btn btn--rau btn--xs" type="button"'
          . ' data-fapta="sterge-comentariu" data-id="' . (int) $c['id'] . '"'
