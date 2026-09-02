@@ -542,9 +542,19 @@ inc/
                       unde a fost omul, nu ce a organizat. Dacă omul de casă a
                       apăsat „Particip" la un anunț al orașului, a fost acolo ca
                       oricare altul, iar cartonașul intră în istoric și se
-                      numără la „Prezent la activități" (laCateEvenimenteAFost —
-                      aceeași socoteală, ca cifra să numere fix cartonașele de
-                      sub ea). Ce face bifa AICI e un singur lucru: stinge
+                      numără la „Prezent la activități" (laCateEvenimenteAFost).
+                      CIFRA ACEEA NUMĂRĂ DOAR CE S-A ÎNCHEIAT: „prezent la" e
+                      la timpul trecut, iar cine tocmai a apăsat „Particip" la
+                      ceva de săptămâna viitoare n-a fost încă nicăieri. Se
+                      numărau și cele care urmează, și de aceea cifra ieșea mai
+                      mare decât lista de sub ea. Condiția e scrisă la fel ca în
+                      istoricEvenimente, ca cele două să se vadă că sunt surori
+                      — doar că din cifră lipsește și „anulat". DECI CIFRA E MAI
+                      MICĂ DECÂT NUMĂRUL DE CARTONAȘE la cine a avut parte de o
+                      anulare, și e voit: seara anulată rămâne în istoric,
+                      fiindcă omul își ținuse timpul liber pentru ea, dar nu e o
+                      prezență — n-a fost nimic. Sunt două întrebări deosebite.
+                      Ce face bifa AICI e un singur lucru: stinge
                       însemnul „Organizator" (`e_organizator` iese 0 în
                       interogare), fiindcă el n-a pus nimic la cale. Restul
                       bifei rămâne unde-i e rostul: „Ieșiri organizate"
