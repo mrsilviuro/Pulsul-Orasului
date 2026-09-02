@@ -2292,25 +2292,41 @@ echo "\n=== CÂTE EVENIMENTE A ORGANIZAT ===\n";
 db()->exec('DELETE FROM evenimente');
 verifica('la început, zero', 0, cateEvenimenteOrganizate($idOrg));
 
+/**
+ * CELE CARE ABIA URMEAZĂ NU SE NUMĂRĂ. Cifra spune cât a ȚINUT omul pentru
+ * oraș, iar un anunț pus ieri pentru săptămâna viitoare nu e încă nimic ținut
+ * — se poate și anula până atunci. Cât se numărau, ajungea să scrii un anunț
+ * ca să-ți crească cifra de pe profil.
+ */
 pune($idOrg, 'Aprobat, peste o lună', 'aprobat', 30);
 pune($idOrg, 'Aprobat, mâine',        'aprobat', 1);
-verifica('se numără cele aprobate care urmează', 2, cateEvenimenteOrganizate($idOrg));
+verifica('cele care urmează nu se numără', 0, cateEvenimenteOrganizate($idOrg));
 
 /**
- * Trecutul se numără și el. Cifra spune cât a făcut omul pentru oraș, iar ce
- * a făcut nu se șterge când trece ziua — spre deosebire de lista de dedesubt,
- * care arată doar ce urmează.
+ * Trecutul, în schimb, rămâne: ce a făcut omul nu se șterge când trece ziua.
+ * Exact pe dos față de lista de dedesubt, care arată doar ce urmează.
  */
 pune($idOrg, 'Aprobat, de acum un an',    'aprobat', -365);
 pune($idOrg, 'Aprobat, de săptămâna trecută', 'aprobat', -7);
-verifica('și cele din trecut se numără', 4, cateEvenimenteOrganizate($idOrg));
+verifica('cele din trecut se numără', 2, cateEvenimenteOrganizate($idOrg));
+
+/**
+ * ȘI CEL ÎNCHEIAT CU MÂNA, oricât ar arăta calendarul — altfel cifra ar fi
+ * scăzut chiar în clipa în care organizatorul apasă „Încheie evenimentul",
+ * adică exact când a terminat treaba.
+ */
+pune($idOrg, 'Încheiat devreme', 'incheiat', 20);
+verifica('și cel încheiat cu mâna', 3, cateEvenimenteOrganizate($idOrg));
+
+pune($idOrg, 'Anulat, deși a trecut', 'anulat', -3);
+verifica('dar nu și cel anulat', 3, cateEvenimenteOrganizate($idOrg));
 
 pune($idOrg, 'Încă neaprobat', 'in_asteptare', 5);
 pune($idOrg, 'Respins',        'respins',      6);
-verifica('dar nu și ce așteaptă moderarea', 4, cateEvenimenteOrganizate($idOrg));
+verifica('nici ce așteaptă moderarea', 3, cateEvenimenteOrganizate($idOrg));
 
-pune($idAltul, 'Al altuia, aprobat', 'aprobat', 3);
-verifica('nici evenimentele altcuiva', 4, cateEvenimenteOrganizate($idOrg));
+pune($idAltul, 'Al altuia, din trecut', 'aprobat', -3);
+verifica('nici evenimentele altcuiva', 3, cateEvenimenteOrganizate($idOrg));
 verifica('fiecare cu numărul lui', 1, cateEvenimenteOrganizate($idAltul));
 
 /* ---- și cifra din pagină, care e alta decât lungimea listei de sub ea ---- */
@@ -2318,15 +2334,19 @@ verifica('fiecare cu numărul lui', 1, cateEvenimenteOrganizate($idAltul));
 $pagina = cerere($baza . '/profil.php', $c)['corp'];
 
 preg_match('/stat__value">(\d+)</', $pagina, $m);
-verifica('cifra din pagină e cea numărată', '4', $m[1] ?? '');
+verifica('cifra din pagină e cea numărată', '3', $m[1] ?? '');
 
-// Lista de dedesubt arată altceva: două aprobate care urmează + una în
-// așteptare. Tocmai de-aia numărul nu se poate lua din lungimea ei.
+/**
+ * Lista de dedesubt arată ALTCEVA, și aproape pe dos: cele două aprobate care
+ * urmează. Cele în așteptare le vede doar omul însuși — aici e chiar profilul
+ * lui, deci intră și ele. Tocmai de-aia numărul nu se poate lua din lungimea
+ * listei: una spune ce a fost, cealaltă unde se mai poate ajunge.
+ */
 verifica('lista de dedesubt are trei cartonașe', 3, substr_count($pagina, '<article class="card'));
 
 $paginaDinAfara = cerere($baza . '/profil.php?m=organizat02', $altul)['corp'];
 preg_match('/stat__value">(\d+)</', $paginaDinAfara, $m);
-verifica('din afară se vede aceeași cifră', '4', $m[1] ?? '');
+verifica('din afară se vede aceeași cifră', '3', $m[1] ?? '');
 
 /* ---------------- cartonașele de pe profil duc la pagină ---------------- */
 
@@ -2898,16 +2918,27 @@ verifica('nici pe profil', false, in_array('Unul pe care îl încheie el',
     array_column(evenimenteDePeProfil($idOrg, true), 'titlu'), true));
 
 /**
- * DAR se numără mai departe la „Evenimente organizate". Cifra aia spune ce a
- * făcut omul pentru oraș, iar un eveniment încheiat e chiar dovada că a făcut:
- * ar fi fost pe dos să scadă exact în clipa în care a dus treaba la capăt.
+ * DAR ABIA ACUM SE NUMĂRĂ la „Evenimente organizate". Cifra aia spune ce a
+ * ȚINUT omul pentru oraș: cât timp seara era încă în față, nu ținuse nimic —
+ * putea și să anuleze. Butonul „Încheie evenimentul" e tocmai clipa în care a
+ * dus treaba la capăt, deci cifra urcă atunci, nu scade.
  */
 $inainteDeIncheiere = cateEvenimenteOrganizate($idOrg);
-$idInch2 = pune($idOrg, 'Încă unul, pe care îl încheie', 'aprobat', 13);
-verifica('un eveniment aprobat se numără', $inainteDeIncheiere + 1,
+
+/**
+ * Unul de AZI, care a și început: singura fereastră în care butonul chiar se
+ * poate apăsa. Unul de mâine n-a început, iar unuia de ieri i-a trecut ziua,
+ * deci e încheiat oricum — vezi poateFiIncheiat(). Ora se mută cu mâna,
+ * fiindcă pune() scrie 19:00 și proba ar fi mers doar seara.
+ */
+$idInch2 = pune($idOrg, 'Încă unul, pe care îl încheie', 'aprobat', 0);
+db()->prepare('UPDATE evenimente SET ora_inceput = \'00:01\' WHERE id = ?')->execute([$idInch2]);
+
+verifica('cât n-a trecut ziua, nu se numără', $inainteDeIncheiere,
     cateEvenimenteOrganizate($idOrg));
-incheie($c, $slugul($idInch2));
-verifica('și după încheiere se numără la fel', $inainteDeIncheiere + 1,
+
+verifica('și butonul chiar a mers', true, (incheie($c, $slugul($idInch2))['ok'] ?? false) === true);
+verifica('după încheiere, da', $inainteDeIncheiere + 1,
     cateEvenimenteOrganizate($idOrg));
 
 // Nu se mai poate edita: o editare l-ar întoarce în „in_asteptare".

@@ -156,11 +156,12 @@ $evenimenteProfil = $p ? evenimenteDePeProfil((int) $p['id'], $eProfilulMeu) : [
 /**
  * Cifra de pe cartonașul „Evenimente organizate".
  *
- * Nu e lungimea listei de mai jos: acolo se văd doar cele care urmează (plus,
- * pentru omul însuși, cele în așteptare), aici se numără tot ce a organizat
- * vreodată și a fost aprobat. Un organizator cu douăzeci de evenimente în
- * urmă și niciunul în față are „20" scris sus și lista goală dedesubt — și e
- * corect așa.
+ * Nu e lungimea listei de mai jos, ci aproape pe dos: acolo se văd cele care
+ * URMEAZĂ (plus, pentru omul însuși, cele în așteptare), aici se numără cele
+ * care S-AU ÎNCHEIAT. Un organizator cu douăzeci de seri în urmă și niciuna în
+ * față are „20" scris sus și lista goală dedesubt; unul care abia și-a pus
+ * primul anunț are „0" și un cartonaș. Amândouă sunt corecte: cifra spune ce a
+ * ținut, lista spune unde se mai poate ajunge. Vezi cateEvenimenteOrganizate().
  */
 $cateOrganizate = $p ? cateEvenimenteOrganizate((int) $p['id']) : 12;
 

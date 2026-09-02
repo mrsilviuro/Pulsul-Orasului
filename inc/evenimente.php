@@ -916,33 +916,44 @@ function evenimenteDePeProfil(int $membruId, bool $vedeSiCeleInAsteptare): array
 }
 
 /**
- * Câte evenimente a organizat omul, cu totul.
+ * Câte evenimente a ȚINUT omul, până azi.
  *
- * Numai cele aprobate, dar de oricând: și cele care abia urmează, și cele de
- * acum trei ani. E cifra de pe cartonașul „Evenimente organizate", adică o
- * măsură a cât a făcut cineva pentru oraș — iar ce a făcut nu se șterge când
- * trece ziua. De aceea AICI nu se folosește filtruNeincheiat(): lista de mai
- * jos arată ce urmează, numărul ăsta spune ce a fost.
+ * NUMAI CELE CARE S-AU ÎNCHEIAT — ca la „Prezent la activități"
+ * (laCateEvenimenteAFost din inc/evaluari.php), și din același motiv: cifra e o
+ * măsură a ce a făcut cineva pentru oraș, iar un anunț pus ieri pentru
+ * săptămâna viitoare nu e încă nimic făcut. Se poate și anula până atunci.
+ * Numărau și cele care urmează, așa că ajungea să scrii un anunț ca să-ți
+ * crească cifra pe profil.
+ *
+ * Ce a făcut NU SE ȘTERGE ÎNSĂ când trece ziua: „incheiat" se numără la fel ca
+ * unul căruia i-a trecut ziua singur. Altfel cifra ar fi scăzut chiar în clipa
+ * în care organizatorul apasă „Încheie evenimentul" — adică exact când a
+ * terminat treaba.
+ *
+ * DE AICI: cifra și lista de sub ea nu se acoperă niciodată. Lista arată ce
+ * URMEAZĂ (evenimenteDePeProfil, cu filtruNeincheiat), cifra spune ce A FOST.
+ * Un om cu douăzeci de seri în urmă și niciuna în față are „20" scris sus și
+ * lista goală dedesubt; unul care abia și-a pus primul anunț are „0" și un
+ * cartonaș. Sunt două întrebări deosebite, ca la istoric.
  *
  * Ce așteaptă moderarea sau a fost respins nu se numără: n-a ajuns niciodată
  * un eveniment adevărat, deci n-are ce căuta într-o cifră pe care o vede toată
- * lumea.
+ * lumea. Nici cele ANULATE — acolo nu s-a ținut nimic.
  *
- * Nici ce e ținut deoparte de profil (`ascuns_pe_profil`). Cifra stă chiar
- * deasupra listei; dacă ar număra și ce nu se vede în ea, ar scrie „12" peste
- * nouă cartonașe și n-ar avea nimeni de unde ști de ce.
+ * Nici ce e ținut deoparte de profil (`ascuns_pe_profil`): sunt anunțurile
+ * scrise în numele orașului, nu ieșiri de-ale omului.
  */
 function cateEvenimenteOrganizate(int $membruId): int
 {
     $q = db()->prepare(
-        // „incheiat" se numără la fel ca „aprobat": e un eveniment care chiar
-        // a avut loc. Fără el, cifra ar scădea în clipa în care organizatorul
-        // apasă „Încheie evenimentul" — adică exact când a făcut treaba.
         'SELECT COUNT(*) FROM evenimente
           WHERE membru_id = ? AND ascuns_pe_profil = 0
-            AND stare_moderare IN (\'aprobat\', \'incheiat\')'
+            AND stare_moderare IN (\'aprobat\', \'incheiat\')
+            -- Aceeași socoteală a lui „încheiat" ca peste tot pe site (vezi
+            -- evenimentIncheiat): ori i-a trecut ziua, ori s-a apăsat butonul.
+            AND (stare_moderare = \'incheiat\' OR data_eveniment < ?)'
     );
-    $q->execute([$membruId]);
+    $q->execute([$membruId, date('Y-m-d')]);
 
     return (int) $q->fetchColumn();
 }
