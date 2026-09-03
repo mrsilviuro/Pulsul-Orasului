@@ -662,6 +662,35 @@ inc/
                       MULTUMIRI_MINIM_OAMENI pe listă), iar de atunci
                       evenimentul nu mai apare niciodată. Cronul spune asta
                       când nu găsește nimic — multumiriDejaTrimise()
+  amintiri.php      → MEMENTOUL DE DINAINTEA UNUI EVENIMENT: „«X» începe azi la
+                      19:00", către fiecare om de pe lista de participanți, cu
+                      ORE_AMINTIRE (3) ceasuri înainte. Fratele mulțumirii, la
+                      celălalt capăt al serii, și scris după același tipar:
+                      cron din oră în oră, ștampilă pe rândul evenimentului
+                      (`amintire_trimisa_la`, sql/034), ștampila pusă ȘI când
+                      n-a plecat nimic. EXISTĂ fiindcă site-ul avea nouăsprezece
+                      feluri de e-mail și niciunul nu spunea că URMEAZĂ ceva:
+                      cine apăsa „Particip" pe 3 pentru o seară de pe 20 nu mai
+                      auzea nimic până trecea. Acolo se pierd oamenii — și, la
+                      un eveniment cu locuri limitate, unul care uită ține
+                      degeaba ocupat un loc.
+                      FEREASTRA SE UITĂ LA CLIPĂ, NU LA ZI, ca regula de la
+                      publicare: începe în cel mult trei ore (capăt ÎNCHIS) ȘI
+                      n-a început încă (capăt DESCHIS). Al doilea e cel care
+                      doare: un memento pentru ceva ce a pornit deja e mai rău
+                      decât niciunul, iar el e și plasa care ține când cronul
+                      n-a rulat o noapte. Tot din pricina clipei intră, la
+                      22:00, și un eveniment de a doua zi de la 00:30 — de
+                      aceea vorba spune „azi"/„mâine" (candIncepeEvenimentul),
+                      NU „peste două ore": un e-mail poate sta o oră prin
+                      poștă, iar un răstimp ar minți, pe când o oră rămâne
+                      adevărată. NU e mesaj nechemat — e răspunsul la
+                      „Particip"-ul apăsat de om —, deci n-are link de
+                      dezabonare și n-are bifă în setări; ieșirea scrisă în el e
+                      chiar butonul din care s-a intrat: scoaterea de pe listă.
+                      Cine se înscrie DUPĂ ce a plecat mementoul nu mai
+                      primește niciunul, și e în regulă: tocmai s-a înscris la
+                      ceva care începe în mai puțin de trei ore
   comentarii.php    → discuția de sub eveniment: cele două niveluri,
                       aprecierile, ștergerea cu piatră de mormânt, ȘI cum
                       arată pe ecran (HTML-ul se scrie doar aici). TOT AICI
@@ -830,6 +859,7 @@ api/                → endpoint-uri JSON apelate din JS (fetch); eveniment.php 
 cron/               → scripturi rulate din cron (doar CLI, .htaccess le blochează)
                       anonimizeaza-conturi.php      — o dată pe zi
                       multumeste-participantilor.php — din oră în oră
+                      aminteste-de-eveniment.php     — din oră în oră
                       newsletter-zilnic.php         — o dată pe zi, la 12:00
 sql/                → schema.sql + migrări numerotate (002, 003, 004, 005-google,
                       006-tine-minte, 007-setari, 008-mesaje-contact,
@@ -845,7 +875,14 @@ sql/                → schema.sql + migrări numerotate (002, 003, 004, 005-goo
                       026-corectura-eveniment, 027-instiintari-feedback,
                       028-feedback-instiintat, 029-eveniment-fixat,
                       030-incercari-qr, 031-newsletter-zilnic,
-                      032-dorinte-mai-multe, 033-urmariri)
+                      032-dorinte-mai-multe, 033-urmariri,
+                      034-amintire-eveniment)
+                      `evenimente.amintire_trimisa_la` (034) e singurul lucru
+                      care ține „un memento pe eveniment": fereastra e de trei
+                      ore, cronul trece din oră în oră, deci fără ea același
+                      mesaj ar pleca de trei ori fiecărui om. E pe EVENIMENT,
+                      nu pe om, fiindcă pleacă o dată către toți cei de pe
+                      listă în clipa aceea
                       `dorinte.sters_la` (032) e tot ce trebuie ca omul să-și
                       poată lua o dorință înapoi: ștergerea e MOALE, rândul
                       rămâne pentru numărătoarea de mai târziu. Cele TREI
@@ -883,6 +920,14 @@ teste/              → router.php: serverul de probă cu ADRESE FRUMOASE.
                       restul tablei)
                       test-comentarii.php, test-participanti.php,
                       test-evaluari.php, test-multumiri.php
+                      test-amintiri.php (mementoul de dinaintea unui eveniment;
+                      cere baza, nu și serverul. Păzește mai presus de orice
+                      CELE DOUĂ CAPETE ALE FERESTREI, cu un ceas oprit la o
+                      clipă scrisă în probă — altfel aceeași probă ar socoti
+                      altfel la 23:59 decât la 09:00. Capătul de jos e cel care
+                      doare: un memento plecat DUPĂ ce a început evenimentul e
+                      mai rău decât niciunul, și nimeni nu se plânge de un
+                      e-mail pe care nu l-a primit)
                       test-newsletter.php (newsletterul zilnic; cere baza, iar
                       pagina de dezabonare cere și serverul — se sare singură.
                       ATENȚIE: stinge bifa de newsletter la toți membrii din
@@ -1112,8 +1157,11 @@ sistem. Regulile care s-au strâns din trecerea de purificare:
   legăturile dau 404. Există o probă care păzește regula asta
   („nicio adresă relativă în pagină", în teste/test-evenimente.php).
   DE AICI DECURGE: site-ul stă la RĂDĂCINA domeniului, nu într-un subdosar.
-- Înștiințările pe e-mail care pleacă azi: mulțumirea de după eveniment
-  (cron/multumeste-participantilor.php), vestea că cineva a fost scos de pe
+- Înștiințările pe e-mail care pleacă azi: MEMENTOUL DE DINAINTEA UNUI
+  EVENIMENT (cron/aminteste-de-eveniment.php, cu ORE_AMINTIRE ceasuri înainte,
+  către cine e pe lista de participanți), mulțumirea de după eveniment
+  (cron/multumeste-participantilor.php) — cele două capete ale aceleiași seri —,
+  vestea că cineva a fost scos de pe
   listă, vestea că un eveniment s-a anulat (api/anuleaza-eveniment.php),
   hotărârea moderării (api/modereaza-eveniment.php), comentariile noi
   (api/comentarii.php → instiinteazaDeComentariu, cu bifa `email_comentarii`

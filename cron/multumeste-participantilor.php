@@ -84,8 +84,10 @@ if ($evenimente === []) {
         exit(0);
     }
 
+    /* Acordul se face după cifră: „1 eveniment a primit", „3 evenimente au
+       primit". numaratoare() știe regula lui „de", dar nu și verbul. */
     echo '  nimic de trimis. ' . $cateEvenimente($servite)
-       . " au primit deja mulțumirile:\n";
+       . ($servite === 1 ? ' a primit' : ' au primit') . " deja mulțumirile:\n";
 
     foreach (multumiriDejaTrimise() as $ev) {
         echo '    „' . $ev['titlu'] . '" (' . $ev['data_eveniment'] . ')'
