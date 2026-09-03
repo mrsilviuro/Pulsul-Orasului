@@ -123,27 +123,17 @@ function cateMultumiriTrimise(): int
 /**
  * Cine primește mesajul: oamenii de pe lista de participanți.
  *
- * Nu oameniiCuStarea(), deși ar fi fost la îndemână: aceea aduce ce trebuie
- * pentru un rând desenat pe ecran — chip, permalink, insigne — și nu aduce
- * adresa de e-mail, care aici e tot ce contează. Două treburi, două cereri.
+ * Întrebarea e scrisă o singură dată, în participantiiCuEmail() din
+ * inc/interese.php — acolo unde stă tot ce știe site-ul despre cine e pe o
+ * listă. O cere și mementoul de dinaintea evenimentului (inc/amintiri.php), iar
+ * cele două n-au voie să socotească altfel: dacă unul dintre ele ar număra un om
+ * în plus, acela ar primi un e-mail pe care celălalt spune că nu i se cuvine.
  *
- * Numai conturile active, ca peste tot: cine și-a șters contul nu mai primește
- * nimic, iar rândul lui anonimizat nici n-are unde. Aceeași grijă ca la
- * omulDeInstiintat() din inc/interese.php.
+ * Numele rămâne al lui: aici se cheamă ca să se mulțumească.
  */
 function participantiiDeMultumit(int $evenimentId): array
 {
-    $q = db()->prepare(
-        'SELECT m.id, m.prenume, m.email
-           FROM interese_evenimente i
-           JOIN membri m ON m.id = i.membru_id AND m.stare = \'activ\'
-          WHERE i.eveniment_id = ? AND i.stare = \'participant\'
-            AND m.email <> \'\'
-          ORDER BY i.creat_la, i.id'
-    );
-    $q->execute([$evenimentId]);
-
-    return $q->fetchAll();
+    return participantiiCuEmail($evenimentId);
 }
 
 /* ============================== SCRIEREA ============================= */

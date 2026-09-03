@@ -1130,6 +1130,70 @@ function emailMultumireParticipare(
 }
 
 /**
+ * „Începe în curând" — mementoul de dinaintea unui eveniment.
+ *
+ * Pleacă O SINGURĂ DATĂ pe eveniment, din cron/aminteste-de-eveniment.php, cu
+ * ORE_AMINTIRE ceasuri înainte, către fiecare om de pe lista de participanți.
+ * Cine s-a arătat doar interesat nu primește nimic: n-a promis nimănui nimic.
+ *
+ * MESAJUL ARE UN SINGUR LUCRU DE SPUS, și nu trebuie citit ca să fie înțeles:
+ * ora. De aceea ea stă în subiect, ca omul care se uită la telefon în tramvai
+ * să nu mai fie nevoit să deschidă nimic. Restul e cartonașul obișnuit — poza,
+ * locul, un început de text — pentru cine chiar deschide.
+ *
+ * $cand vine gata scris („azi la 19:00", „mâine la 00:30") din
+ * candIncepeEvenimentul(), fiindcă acolo se știe ceasul. Aici se scrie doar
+ * mesajul.
+ *
+ * NU SE SPUNE „PESTE DOUĂ ORE". Un e-mail poate sta un sfert de oră prin poștă
+ * și încă o jumătate până se uită omul la el; un răstimp ar fi atunci o
+ * minciună, pe când o oră rămâne adevărată oricând ar fi citit.
+ *
+ * NU are link de dezabonare și n-are bifă în setări: nu e un mesaj nechemat, e
+ * răspunsul la „Particip"-ul apăsat chiar de om. Ieșirea e tot acolo unde a
+ * fost intrarea — se scoate de pe listă — și scrie asta la coada mesajului.
+ *
+ * Organizatorul primește același mesaj, cu alt prim paragraf: lui nu i se
+ * amintește că se duce undeva, ci că îl așteaptă niște oameni.
+ */
+function emailAminteDeEveniment(
+    string $catre,
+    string $prenume,
+    string $titluEveniment,
+    string $cand,
+    array $cartonas,
+    bool $eOrganizator = false
+): bool {
+    $adresa = (string) ($cartonas['href'] ?? '');
+    $laOra  = $cand === '' ? '' : ' ' . $cand;
+
+    $primul = $eOrganizator
+        ? 'Se apropie „' . $titluEveniment . '", evenimentul pe care l-ai pus la cale: începe'
+          . $laOra . '. Îți scriem din vreme, ca să ai timp să ajungi înaintea celorlalți.'
+        : 'Nu uita: „' . $titluEveniment . '" începe' . $laOra
+          . ', iar tu ai spus că vii. Îți scriem din vreme, ca să apuci să te pregătești.';
+
+    $blocuri = [
+        'salut'     => 'Bună, ' . $prenume . '!',
+        'paragrafe' => [$primul],
+        'lista'     => $cartonas === [] ? [] : [$cartonas],
+        'buton'     => ['text' => 'Vezi evenimentul', 'href' => $adresa],
+        'link_gol'  => $adresa,
+        /* Blocul ăsta se scapă cu h() la randare, deci aici merge doar text
+           curat — o etichetă scrisă de mână s-ar vedea ca atare pe ecran. */
+        'incheiere' => $eOrganizator
+            ? 'Dacă între timp s-a schimbat ceva, intră pe pagina evenimentului: de acolo îl poți anula, iar toți cei înscriși află pe loc.'
+            : 'Dacă până la urmă nu mai ajungi, intră pe pagina evenimentului și scoate-ți numele de pe listă. Locul tău se eliberează pe loc, cât mai e cineva care să-l ia.',
+    ];
+
+    $subiect = $cand === ''
+        ? 'Începe în curând: „' . $titluEveniment . '"'
+        : '„' . $titluEveniment . '" începe ' . $cand;
+
+    return trimiteEmail($catre, $subiect, $blocuri);
+}
+
+/**
  * Newsletterul zilnic: ce se întâmplă azi în oraș.
  *
  * Pleacă doar când ARE ce spune — cronul nici nu ajunge aici dacă ziua e goală

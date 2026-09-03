@@ -627,6 +627,42 @@ function oameniiDeInstiintatLaAnulare(int $evenimentId, int $faraMembruId = 0): 
     return $q->fetchAll();
 }
 
+/**
+ * PARTICIPANȚII CĂRORA LI SE POATE SCRIE — cei de pe listă, cu adresă bună.
+ *
+ * O cer DOUĂ cronuri, și amândouă întreabă exact același lucru: mulțumirea de
+ * după eveniment (inc/multumiri.php) și mementoul de dinaintea lui
+ * (inc/amintiri.php). Scrisă de două ori, a doua copie ar fi rămas în urmă în
+ * ziua în care se schimbă cine socotim că e „pe listă" — iar urmarea n-ar fi
+ * fost o pagină strâmbă, ci un e-mail plecat către cine nu trebuia.
+ *
+ * Nu oameniiCuStarea(), deși ar fi fost la îndemână: aceea aduce ce trebuie
+ * pentru un rând desenat pe ecran — chip, permalink, insigne — și NU aduce
+ * adresa de e-mail, care aici e tot ce contează. Două treburi, două cereri.
+ *
+ * Numai conturile active, ca peste tot: cine și-a șters contul nu mai primește
+ * nimic, iar rândul lui anonimizat nici n-are unde. Aceeași grijă ca la
+ * omulDeInstiintat() și la oameniiDeInstiintatLaAnulare(), de mai sus.
+ *
+ * NUMAI „participant", niciodată „interesat": cine s-a uitat într-acolo fără
+ * să se hotărască n-a promis nimănui nimic, deci nu i se mulțumește că a fost
+ * și nu i se amintește de o seară la care nu s-a înscris.
+ */
+function participantiiCuEmail(int $evenimentId): array
+{
+    $q = db()->prepare(
+        'SELECT m.id, m.prenume, m.email
+           FROM interese_evenimente i
+           JOIN membri m ON m.id = i.membru_id AND m.stare = \'activ\'
+          WHERE i.eveniment_id = ? AND i.stare = \'participant\'
+            AND m.email <> \'\'
+          ORDER BY i.creat_la, i.id'
+    );
+    $q->execute([$evenimentId]);
+
+    return $q->fetchAll();
+}
+
 /* ======================= CUM ARATĂ PE ECRAN ========================== */
 
 /**
