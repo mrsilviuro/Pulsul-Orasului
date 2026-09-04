@@ -750,6 +750,144 @@ $htmlAncora = randeazaComentarii(
 verifica('comentariul poartă ancora spre care trimite e-mailul', true,
     str_contains($htmlAncora, 'id="c' . $alStrainului . '"'));
 
+/* ================= ANUNȚUL IMPORTANT AL ORGANIZATORULUI ============== */
+
+echo "\n=== ANUNȚUL IMPORTANT ===\n";
+
+/* ---------------------------- cine poate ---------------------------- */
+
+verifica('organizatorul poate',            true,  poateMarcaImportant($eveniment, $organizator));
+verifica('un participant, nu',             false, poateMarcaImportant($eveniment, $participant));
+verifica('un străin, nici atât',           false, poateMarcaImportant($eveniment, $strain));
+verifica('nici nelogatul',                 false, poateMarcaImportant($eveniment, 0));
+
+/**
+ * NICI STAFF-UL, pe evenimentul altcuiva. Bifa nu e o unealtă de moderare, e
+ * vocea celui care ține evenimentul: „ne mutăm pe terenul de alături" e o
+ * vorbă pe care omul casei n-are de unde s-o știe adevărată.
+ */
+verifica('nici staff-ul, pe anunțul altuia', false, poateMarcaImportant($eveniment, $staff));
+
+/**
+ * NU LA UN RĂSPUNS, nici măcar organizatorului: un răspuns stă sub comentariul
+ * la care răspunde, deci n-are cum să urce deasupra tuturor, iar un „Important"
+ * care nu e primul e o promisiune neținută.
+ */
+verifica('nici organizatorul, la un răspuns', false,
+    poateMarcaImportant($eveniment, $organizator, true));
+
+/* ------------------------ steagul chiar se scrie -------------------- */
+
+$anunt = salveazaComentariu($evenimentId, $organizator,
+    'Ne mutăm pe terenul de alături, lângă vestiare.', null, true);
+
+verifica('steagul e scris în bază', 1, (int) comentariuDupaId($anunt)['important']);
+
+/**
+ * UN RĂSPUNS NU POATE FI DE CĂPĂTÂI, oricât s-ar cere de la funcție. Poarta e
+ * poateMarcaImportant(), dar salveazaComentariu() o mai închide o dată: e
+ * chemată din două locuri, iar al doilea ar putea într-o zi să uite să întrebe.
+ */
+$raspunsImportant = salveazaComentariu($evenimentId, $organizator, 'Și încă ceva.',
+    comentariuDupaId($anunt), true);
+
+verifica('un răspuns nu se face important', 0,
+    (int) comentariuDupaId($raspunsImportant)['important']);
+
+/* --------------------------- unde se așază -------------------------- */
+
+/**
+ * DEASUPRA TUTUROR, oricâte aprecieri ar avea celelalte. Ca să nu fie o
+ * potriveală, îi dăm altui comentariu tot ce se poate strânge: aprecierile a
+ * trei oameni. Fără steag, el ar fi fost primul.
+ */
+$iubit = salveazaComentariu($evenimentId, $participant, 'Ce idee bună!');
+
+foreach ([$organizator, $participant, $strain] as $cine) {
+    comutaApreciere($iubit, $cine);
+}
+
+$fire = grupeazaComentarii(comentariileEvenimentului($evenimentId, $strain));
+
+verifica('anunțul stă primul', $anunt, (int) $fire[0]['id']);
+verifica('cel cu trei aprecieri, abia al doilea', $iubit, (int) $fire[1]['id']);
+
+/**
+ * MAI MULTE ANUNȚURI: de la nou la vechi, iar aprecierile nu intră deloc în
+ * socoteală. Ultima veste o înlocuiește pe cea dinainte, deci una veche și
+ * îndrăgită n-are ce căuta peste una proaspătă.
+ */
+foreach ([$organizator, $participant] as $cine) {
+    comutaApreciere($anunt, $cine);
+}
+
+$alDoileaAnunt = salveazaComentariu($evenimentId, $organizator,
+    'Aduceți și bani gheață, terenul se plătește pe loc.', null, true);
+
+$fire = grupeazaComentarii(comentariileEvenimentului($evenimentId, $strain));
+
+verifica('cel mai nou anunț e primul',   $alDoileaAnunt, (int) $fire[0]['id']);
+verifica('cel vechi, al doilea',         $anunt,         (int) $fire[1]['id']);
+verifica('și abia apoi cel îndrăgit',    $iubit,         (int) $fire[2]['id']);
+
+/* ------------------------- cum se vede pe ecran --------------------- */
+
+$htmlAnunt = randeazaComentarii($fire, context($eveniment, $strain));
+
+verifica('poartă insigna',   true, str_contains($htmlAnunt, 'badge--important'));
+verifica('și scrie cuvântul', true, str_contains($htmlAnunt, '>Important</span>'));
+verifica('caseta e altfel',  true, str_contains($htmlAnunt, 'comment__body--important'));
+
+/* Un comentariu obișnuit nu capătă nimic din toate astea. */
+$htmlObisnuit = randeazaComentariu(
+    comentariuDupaId($iubit) + ['participa' => 1, 'stare_cont' => 'activ',
+                                'este_staff' => 0, 'permalink' => '', 'poza' => null,
+                                'nume' => 'Neagu', 'prenume' => 'Elena', 'aprecieri' => 3],
+    context($eveniment, $strain));
+
+verifica('cel obișnuit rămâne cum era', false,
+    str_contains($htmlObisnuit, 'comment__body--important'));
+
+/**
+ * O PIATRĂ DE MORMÂNT NU RĂMÂNE PIRONITĂ SUS. Un anunț golit păstrează rândul
+ * ca să țină legată discuția de sub el — dar în locul lui scrie „Comentariu
+ * șters", iar acela n-are ce căuta în capul listei, deasupra a tot ce mai au
+ * oamenii de spus.
+ *
+ * Întrebarea se pune la CITIRE (esteImportant), nu se stinge steagul la
+ * ștergere: un rând golit de mână din phpMyAdmin n-ar fi trecut pe la codul
+ * care l-ar fi stins. De aceea proba îl golește chiar așa, direct în bază.
+ */
+db()->prepare('UPDATE comentarii SET sters = 1 WHERE id = ?')->execute([$alDoileaAnunt]);
+
+$fire = grupeazaComentarii(comentariileEvenimentului($evenimentId, $strain));
+
+verifica('anunțul golit nu mai e important', false,
+    esteImportant(comentariuDupaId($alDoileaAnunt)));
+verifica('și nu mai stă primul', $anunt, (int) $fire[0]['id']);
+
+/* ------------------------ cine primește vestea ---------------------- */
+
+/**
+ * TOȚI CEI CARE AȘTEAPTĂ SEARA ASTA — și înscriși, și doar interesați. E o
+ * veste despre EVENIMENT, nu despre discuția de sub el.
+ *
+ * Fără organizator: el tocmai a scris-o. Și fără conturile golite — Elena a
+ * trecut prin ștergere mai sus, în proba pietrei de mormânt, deci n-are unde
+ * primi nimic. De aceea înscrisul de aici e un om nou, nu ea.
+ */
+$inscris = faMembru('insc', 'Popa', 'Radu');
+salveazaInteres($evenimentId, $inscris, 'participant');
+salveazaInteres($evenimentId, $strain,  'interesat');
+
+$iduri = array_map(static fn ($o) => (int) $o['id'],
+                   oameniiDeInstiintat($evenimentId, $organizator));
+
+verifica('cel înscris primește',       true,  in_array($inscris, $iduri, true));
+verifica('și cel doar interesat',      true,  in_array($strain, $iduri, true));
+verifica('organizatorul, nu',          false, in_array($organizator, $iduri, true));
+verifica('nici contul golit',          false, in_array($participant, $iduri, true));
+
 /* =========================== curățenie ============================= */
 
 curata();

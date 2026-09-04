@@ -1505,6 +1505,57 @@ function emailComentariuNou(
 }
 
 /**
+ * „Organizatorul a lăsat un anunț important" — vestea de sub un eveniment.
+ *
+ * Pleacă la TOȚI cei care așteaptă seara aceea, și înscriși, și doar
+ * interesați (oameniiDeInstiintat din inc/interese.php), în clipa în care
+ * organizatorul bifează „Important" la un comentariu.
+ *
+ * NU SE UITĂ LA BIFA `email_comentarii` DIN SETĂRI, și e o alegere, nu o
+ * scăpare. Bifa aceea scrie, cu vorbele ei: „când cineva comentează la
+ * evenimentul MEU sau ÎMI răspunde la un comentariu". Mesajul de față nu e
+ * niciuna dintre cele două — e o veste despre un eveniment la care omul s-a
+ * înscris, ca anularea sau ca mementoul de dinainte. Cine a stins bifa a spus
+ * „nu mă interesează pălăvrăgeala de sub anunțuri", n-a spus „nu-mi spuneți
+ * dacă se mută locul".
+ *
+ * De aceea nici nu poartă link de dezabonare: ieșirea e chiar butonul din care
+ * s-a intrat — omul se scoate de pe lista evenimentului și nu mai primește
+ * nimic despre el.
+ *
+ * TEXTUL INTRĂ ÎNTREG, ca citat, exact ca la înștiințarea de răspuns: un „a
+ * scris ceva important, intră pe site" e chiar felul de mesaj care își ratează
+ * rostul. Dacă vestea e că se începe cu o oră mai târziu, omul trebuie s-o afle
+ * din mesaj, nu după două apăsări.
+ */
+function emailComentariuImportant(
+    string $catre,
+    string $prenume,
+    string $numeAutor,
+    string $titluEveniment,
+    string $textComentariu,
+    string $adresaComentariu
+): bool {
+    $blocuri = [
+        'salut'     => 'Bună, ' . $prenume . '!',
+        'paragrafe' => [
+            $numeAutor . ', organizatorul evenimentului „' . $titluEveniment
+            . '", a lăsat un anunț important. Uite ce scrie:',
+        ],
+        'citat'     => ['cine' => $numeAutor, 'text' => $textComentariu],
+        'buton'     => ['text' => 'Vezi anunțul', 'href' => $adresaComentariu],
+        'link_gol'  => $adresaComentariu,
+        'incheiere' => 'Primești mesajul ăsta fiindcă te-ai înscris la acest eveniment sau ai spus că te interesează. Poți răspunde chiar sub anunț, pe pagina evenimentului.',
+    ];
+
+    return trimiteEmail(
+        $catre,
+        'Anunț important la „' . $titluEveniment . '"',
+        $blocuri
+    );
+}
+
+/**
  * Vestea că cineva ți-a scris o părere pe profil.
  *
  * NUMAI PENTRU CE E SCRIS. Stelele rămân anonime și tăcute — vezi

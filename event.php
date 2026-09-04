@@ -1167,6 +1167,29 @@ require __DIR__ . '/inc/antet.php';
                         placeholder="Scrie un comentariu…"
                         aria-describedby="err-comentariu"></textarea>
               <p class="field__error" id="err-comentariu" hidden></p>
+
+              <?php if (poateMarcaImportant($eveniment, $membruId)): ?>
+              <!--
+                Bifa „Important", numai pentru organizator. Regula o știe
+                poateMarcaImportant() din inc/comentarii.php, de unde o citește
+                și api/comentarii.php — aici e doar purtarea frumoasă de a nu
+                arăta un buton pe care omul n-are voie să-l apese.
+
+                Stă DEASUPRA vorbei despre purtare frumoasă, dinadins: aceea e
+                pentru toată lumea și se citește o dată, pe când asta e o
+                unealtă, iar uneltele stau lângă mâna care le folosește. Sub ea
+                scrie ce se întâmplă când o apeși — un e-mail către toți
+                înscrișii nu e un lucru pe care omul să-l afle după ce l-a
+                trimis.
+              -->
+              <label class="check comment-form__important">
+                <input type="checkbox" id="comentariu-important" name="important" value="1">
+                <span>Anunț important
+                  <small>Stă primul în discuție și pleacă pe e-mail tuturor celor înscriși.</small>
+                </span>
+              </label>
+              <?php endif; ?>
+
               <div class="comment-form__actions">
                 <p class="comment-form__hint">Hai să ne purtăm frumos unii cu alții. Comentariile urâte se șterg, iar dacă se repetă, contul poate fi suspendat.</p>
                 <button class="btn btn--primary btn--sm" type="submit">Publică</button>

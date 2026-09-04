@@ -1867,6 +1867,18 @@ main { padding-block: 46px 64px; }
 }
 .comment-form__hint { font-size: 12.5px; color: var(--text-faint); }
 
+/* Bifa „Important", numai pe ecranul organizatorului.
+   Sub ea scrie ce se întâmplă când o apeși: un e-mail către toți înscrișii nu
+   e un lucru pe care omul să-l afle după ce l-a trimis. */
+.comment-form__important { margin-top: 10px; align-items: flex-start; }
+.comment-form__important small {
+  display: block;
+  margin-top: 2px;
+  font-size: 12.5px;
+  font-weight: 400;
+  color: var(--text-faint);
+}
+
 /* Vizitatorul nu primește o casetă în care să scrie degeaba — ar fi aflat
    abia la apăsarea butonului că-i trebuie cont, cu textul scris deja. */
 .comment-form__intra {
@@ -1945,6 +1957,38 @@ main { padding-block: 46px 64px; }
 /* Staff și Organizator se pot purta amândouă, deci trebuie să se deosebească
    dintr-o privire: una violetă, cealaltă în culoarea site-ului. */
 .badge--staff { background: rgba(124, 92, 255, .12); color: var(--brand-2); }
+
+/* „Important" — anunțul organizatorului.
+   Poartă un semn, nu doar culoare: cine nu deosebește roșul de cenușiu n-ar
+   fi avut din ce să înțeleagă că rândul acela e altfel. */
+.badge--important {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: var(--brand-soft); color: var(--brand);
+}
+.badge--important .ico { width: 12px; height: 12px; }
+
+/* ---- comentariul de căpătâi ----
+   SUBTIL, DINADINS. Un chenar gros sau un fundal aprins ar fi făcut din el o
+   reclamă în capul discuției, iar ochiul se obișnuiește cu ele și le sare. O
+   dungă în stânga și un fundal abia ridicat sunt de ajuns: se vede că e altfel
+   fără să strige. Aceeași croială ca la caseta de citat din e-mailuri. */
+.comment__body--important {
+  padding: 12px 14px;
+  border-left: 3px solid var(--brand);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  background: var(--brand-soft);
+}
+
+/* Fundalul cald al casetei ar fi înghițit pastila „Organizator", care e chiar
+   în culoarea lui. Aici stă pe alb, ca să rămână două lucruri, nu unul. */
+.comment__body--important .badge--author,
+.comment__body--important .badge--important { background: var(--surface); }
+
+[data-theme="dark"] .comment__body--important { background: rgba(212, 57, 43, .10); }
+[data-theme="dark"] .comment__body--important .badge--author,
+[data-theme="dark"] .comment__body--important .badge--important {
+  background: rgba(0, 0, 0, .28);
+}
 
 .comment__main > p {
   font-size: 15px;

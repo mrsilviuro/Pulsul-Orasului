@@ -613,6 +613,36 @@ function omulDeInstiintat(int $membruId): ?array
  */
 function oameniiDeInstiintatLaAnulare(int $evenimentId, int $faraMembruId = 0): array
 {
+    return oameniiDeInstiintat($evenimentId, $faraMembruId);
+}
+
+/**
+ * TOȚI CEI CARE AȘTEAPTĂ SEARA ASTA — și cei înscriși, și cei doar interesați.
+ *
+ * O cer DOUĂ vești, și amândouă întreabă exact același lucru: anularea
+ * evenimentului (api/anuleaza-eveniment.php) și comentariul de căpătâi al
+ * organizatorului (api/comentarii.php). Amândouă sunt lucruri despre EVENIMENT,
+ * nu despre discuția de sub el — de aceea ajung și la cine s-a arătat doar
+ * interesat: el își ține seara aceea deoparte, chiar dacă n-a apăsat încă
+ * „Particip".
+ *
+ * Aceeași listă pentru amândouă, scrisă o dată: dacă una ar număra un om în
+ * plus, acela ar primi un e-mail pe care cealaltă spune că nu i se cuvine.
+ *
+ * $faraMembruId e cel care tocmai a apăsat butonul — de obicei organizatorul,
+ * pe care faOrganizatorulParticipant() îl trece singur pe listă la publicare.
+ * Fără el, și-ar trimite singur vestea. Se dă din afară, nu se citește aici,
+ * fiindcă cel care cheamă funcția îl are deja în mână.
+ *
+ * Numai conturile ACTIVE și cu adresă: cine și-a șters contul n-are unde primi
+ * nimic, iar rândul lui anonimizat n-are adresă. Aceeași grijă ca la
+ * omulDeInstiintat() și la participantiiCuEmail(), de mai sus.
+ *
+ * Se citesc ÎNAINTE de orice curățenie: rândurile din `interese_evenimente`
+ * sunt singurul loc unde scrie cine aștepta seara aceea.
+ */
+function oameniiDeInstiintat(int $evenimentId, int $faraMembruId = 0): array
+{
     $q = db()->prepare(
         'SELECT m.id, m.prenume, m.sex, m.email, i.stare
            FROM interese_evenimente i

@@ -2252,6 +2252,16 @@
       var campComentariu  = formComentariu.querySelector('textarea');
       var eroareComentariu = formComentariu.querySelector('#err-comentariu');
 
+      /**
+       * Bifa „Important" există numai pe ecranul organizatorului — pentru
+       * oricine altcineva, `null`. De aceea se întreabă de fiecare dată dacă e
+       * acolo, în loc să se presupună.
+       *
+       * Ce se trimite de aici nu hotărăște nimic: api/comentarii.php întreabă
+       * din nou poateMarcaImportant() și stinge tăcut un steag necuvenit.
+       */
+      var bifaImportant = formComentariu.querySelector('[name="important"]');
+
       formComentariu.addEventListener('submit', function (e) {
         e.preventDefault();
 
@@ -2263,12 +2273,22 @@
           return;
         }
 
+        var cerere = { fapta: 'adauga', text: text };
+
+        if (bifaImportant && bifaImportant.checked) cerere.important = 1;
+
         trimiteComentariu(
-          { fapta: 'adauga', text: text },
+          cerere,
           formComentariu.querySelector('button[type="submit"]'),
           eroareComentariu,
           function (c) {
             campComentariu.value = '';
+
+            /* Bifa se stinge odată cu caseta: lăsată apăsată, următorul
+               comentariu al organizatorului — o glumă, un răspuns scurt — ar fi
+               plecat pe e-mail la toată lumea fără ca el să vrea. */
+            if (bifaImportant) bifaImportant.checked = false;
+
             adaugaInLista(c);
             toast(c.mesaj || 'Gata, comentariul tău e publicat.');
           }
