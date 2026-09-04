@@ -699,8 +699,67 @@ require __DIR__ . '/inc/antet.php';
         // Textul care pleacă pe WhatsApp și în clipboard. Scurt dinadins:
         // pe WhatsApp intră în căsuța de scris, iar omul îl termină cum vrea.
         $textDistribuire = 'Uite ce eveniment am găsit pe Pulsul Orașului: ' . $eveniment['titlu'];
+
+        // Mesajul gata scris din caseta de mai jos. Altul decât cel de sus,
+        // fiindcă acela pleacă lipit de un buton care spune deja unde duce, pe
+        // când ăsta e trimis de om, cu mâna lui, într-o discuție.
+        $mesajDeCopiat = 'Salut! Am găsit ceva fain pe PulsulOrașului.Ro '
+                       . 'și m-am gândit că ți-ar plăcea și ție: ' . $adresaEveniment;
       ?>
-      <div class="post__share" role="group" aria-label="Distribuie evenimentul">
+
+      <!-- ===================== CASETA DE SPRIJIN ==========================
+        DE CE E DEOSEBITĂ DE RÂNDUL DE ICONIȚE DE MAI JOS, deși spun același
+        lucru: fiindcă blocantele de reclame ascund rândul acela. AdGuard și
+        celelalte au filtre gata scrise pentru butoanele de distribuire — le
+        recunosc după numele claselor și după adresele către facebook.com și
+        wa.me. Nu e nimic de reparat acolo: un link către sharer-ul Facebook
+        ARATĂ exact ca un link către sharer-ul Facebook, oricum l-am scrie.
+
+        Caseta asta trece pe lângă toate filtrele fiindcă nu seamănă cu ele:
+        n-are în ea nicio adresă către o rețea, iar numele clasei nu poartă
+        niciun cuvânt după care se caută. E text și un buton de copiat.
+
+        DE ACEEA STĂ SINGURĂ, nu în același înveliș cu iconițele și fără
+        vreo legătură de vecinătate cu ele: o regulă care ascunde rândul de
+        mai jos n-are cum s-o ia și pe ea cu el.
+      ================================================================== -->
+      <section class="sprijin" aria-labelledby="sprijin-titlu">
+        <p class="sprijin__titlu" id="sprijin-titlu">PulsulOrașului trăiește prin oameni ca tine!</p>
+
+        <p class="sprijin__text">Suntem un proiect non-profit creat din drag pentru
+          comunitate, iar fiecare distribuire ne ajută enorm să mergem mai departe.
+          Trimite acest eveniment prietenilor tăi pe WhatsApp sau pe rețelele sociale!</p>
+
+        <p class="sprijin__indemn">Am pregătit noi mesajul, tu doar copiază-l:</p>
+
+        <!--
+          Mesajul stă într-un `<p>` obișnuit, nu într-un buton, ca să se poată
+          SELECTA CU MÂNA. Fără JavaScript, copierea nu are cum să meargă — și
+          atunci singura cale rămasă e ca omul să treacă peste text și să-l ia
+          singur. Într-un buton, textul nu se lasă selectat.
+
+          Butonul de lângă e unealta adevărată: se ajunge la el cu tastatura și
+          îl citesc cititoarele de ecran. Apăsarea pe text e doar o scurtătură
+          în plus, pentru cine dă cu degetul direct pe vorbe — de aceea poartă
+          același `data-copiaza`, iar main.js le prinde pe amândouă cu o
+          singură regulă.
+        -->
+        <div class="sprijin__mesaj">
+          <p class="sprijin__vorba" data-copiaza="<?= h($mesajDeCopiat) ?>"><?= h($mesajDeCopiat) ?></p>
+
+          <button class="btn btn--primary btn--sm sprijin__copiaza" type="button"
+                  data-copiaza="<?= h($mesajDeCopiat) ?>"
+                  data-copiat="Am copiat mesajul. Dă-l mai departe!">
+            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="9" y="9" width="11" height="11" rx="2"/>
+              <path d="M5 15V5a2 2 0 0 1 2-2h8"/>
+            </svg>
+            <span>Copiază</span>
+          </button>
+        </div>
+      </section>
+
+      <div class="post__trimite" role="group" aria-label="Distribuie evenimentul">
         <a class="icon-btn" target="_blank" rel="noopener noreferrer"
            href="https://www.facebook.com/sharer/sharer.php?u=<?= h(urlencode($adresaEveniment)) ?>"
            aria-label="Distribuie pe Facebook" title="Distribuie pe Facebook">
