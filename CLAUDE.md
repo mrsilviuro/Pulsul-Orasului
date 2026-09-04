@@ -697,7 +697,12 @@ inc/
                       ANUNȚUL IMPORTANT AL ORGANIZATORULUI (`important`,
                       sql/035): un comentariu de căpătâi, care stă PRIMUL în
                       listă oricâte aprecieri ar avea celelalte, se vede puțin
-                      altfel și pleacă pe e-mail la toți cei înscriși. În rest
+                      altfel și pleacă pe e-mail la toți cei înscriși. NU
+                      poartă nicio pastilă: caseta e deja altfel, iar
+                      „Organizator" stă chiar lângă ea — două semne pentru
+                      același lucru. Rămâne doar o vorbă `sr-only`, fiindcă
+                      cititoarele de ecran nu citesc culori și nici dungi în
+                      stânga. În rest
                       e un comentariu obișnuit — se editează, se șterge, se
                       apreciază și i se răspunde ca oricare altul.
                       CINE POATE: doar ORGANIZATORUL (poateMarcaImportant), NU

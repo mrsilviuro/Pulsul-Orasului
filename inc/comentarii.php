@@ -712,20 +712,18 @@ function insigneleComentariului(array $c, int $organizatorId): string
     }
 
     /**
-     * „Important" vine ULTIMA, după „Organizator", fiindcă se citește ca o
-     * urmare a ei: omul care ține evenimentul spune ceva ce trebuie știut. Pusă
-     * prima, ar fi părut o însușire a omului, nu a vorbei lui.
+     * ANUNȚUL DE CĂPĂTÂI NU POARTĂ PASTILĂ. A purtat una, scrisă „Important",
+     * și era una în plus: caseta e deja altfel (vezi `.comment__body--important`
+     * din style.css), iar „Organizator" stă chiar lângă ea — două semne pentru
+     * același lucru, pe un rând care are și-așa trei.
      *
-     * Poartă un semn, nu doar culoare: cine nu deosebește roșul de cenușiu
-     * n-ar fi avut din ce să înțeleagă că rândul acela e altfel decât
-     * celelalte. Din același motiv scrie și cuvântul întreg.
+     * Rămâne însă o vorbă pentru cine NU vede caseta: cititoarele de ecran nu
+     * citesc culori și nici dungi în stânga, deci fără rândul ăsta anunțul ar fi
+     * fost, pentru un om orb, un comentariu ca oricare altul. Nu se vede pe
+     * ecran și nu schimbă nimic din ce a cerut ochiul.
      */
     if (esteImportant($c)) {
-        $insigne .= '<span class="badge badge--important">'
-                  . '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">'
-                  . '<path d="M12 8v5"/><path d="M12 16.5v.01"/>'
-                  . '<circle cx="12" cy="12" r="9"/>'
-                  . '</svg>Important</span>';
+        $insigne .= '<span class="sr-only">Anunț important</span>';
     }
 
     return $insigne;

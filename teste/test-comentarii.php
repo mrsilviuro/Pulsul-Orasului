@@ -834,9 +834,21 @@ verifica('și abia apoi cel îndrăgit',    $iubit,         (int) $fire[2]['id']
 
 $htmlAnunt = randeazaComentarii($fire, context($eveniment, $strain));
 
-verifica('poartă insigna',   true, str_contains($htmlAnunt, 'badge--important'));
-verifica('și scrie cuvântul', true, str_contains($htmlAnunt, '>Important</span>'));
-verifica('caseta e altfel',  true, str_contains($htmlAnunt, 'comment__body--important'));
+verifica('caseta e altfel', true, str_contains($htmlAnunt, 'comment__body--important'));
+
+/**
+ * FĂRĂ PASTILĂ pe rândul numelui. A purtat una, scrisă „Important", și era una
+ * în plus: caseta e deja altfel, iar „Organizator" stă chiar lângă ea.
+ */
+verifica('fără pastilă în plus', false, str_contains($htmlAnunt, 'badge--important'));
+
+/**
+ * DAR CU O VORBĂ PENTRU CINE NU VEDE CASETA. Cititoarele de ecran nu citesc
+ * culori și nici dungi în stânga; fără rândul ăsta, anunțul ar fi fost pentru
+ * un om orb un comentariu ca oricare altul.
+ */
+verifica('dar spusă pentru cititoarele de ecran', true,
+    str_contains($htmlAnunt, '<span class="sr-only">Anunț important</span>'));
 
 /* Un comentariu obișnuit nu capătă nimic din toate astea. */
 $htmlObisnuit = randeazaComentariu(
