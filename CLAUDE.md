@@ -244,6 +244,16 @@ termeni.php, confidentialitate.php, cookies.php
                 îngustează întrebarea la singura valoare care trimite ceva
                 („suspendat"): o întrebare pusă degeaba e una pe care omul
                 învață s-o închidă fără să citească
+  admin.php   → panoul zonei de administrare: cartonașele, și SUB ELE
+                COMUTATORUL DE ȘANTIER (închide/deschide site-ul, plus „Uită
+                dispozitivul"). E un `<form method="post">` adevărat către
+                pagina însăși, NU o faptă prin api/admin.php ca restul: alea
+                sunt lucruri făcute pe rânduri dintr-o listă, ăsta e chiar
+                întrerupătorul de la ușa casei, iar unul care are nevoie de
+                JavaScript ca să MAI DESCHIDĂ site-ul e cel mai prost fel de
+                întrerupător cu putință. Paza nu se scrie de două ori:
+                cerePazaDeStaff() e prima linie a paginii. Răspunde cu o
+                REDIRECȚIONARE, ca un „reîncarcă" să nu comute lacătul din nou
   coduri.php  → pagina omului de casă: face coduri noi și le arată starea.
                 Prima pagină de administrare de pe site; azi e „Abțibilduri" în
                 zona de admin. Se aduc cel mult CODURI_QR_PASTRATE (50) și se
@@ -901,8 +911,43 @@ inc/
                       fără an, cu literă mică. puneODorinta()
                       și stergeDorintaOmului() sunt chemate amândouă din DOUĂ
                       locuri: api/ (cu JS) și index.php (fără)
-  constructie.php   → LACĂTUL de pe site (`in_constructie` din config.php):
-                      cine trece (doar staff), ce uși rămân deschise
+  constructie.php   → LACĂTUL de pe site. DOUĂ LACĂTE, iar cel din setări e
+                      mai tare: `in_constructie` din config.php ține site-ul
+                      închis și comutatorul din admin nu-l poate deschide — e
+                      cheia de rezervă, drumul care merge chiar dacă discul e
+                      doar de citit. Cel de zi cu zi e un FIȘIER GOL în
+                      `private/in-constructie`, pus și scos din admin.php
+                      (puneLacatul). DE CE UN FIȘIER, nu un rând în bază:
+                      ăsta e tocmai lacătul pe care îl pui CÂND UMBLI LA BAZĂ.
+                      Și de ce nu se scrie în config.php: fișierul acela e
+                      `require`-uit la fiecare cerere, iar o scriere pe
+                      jumătate nu strică o setare, ci oprește tot site-ul —
+                      pe deasupra, pe multe găzduiri nici n-are drept de
+                      scriere acolo, și e bine că n-are.
+                      PERMISUL DE ȘANTIER (`po_santier`, ZILE_SANTIER = 30):
+                      un cookie SEMNAT cu cheia site-ului, scris singur la
+                      orice cerere a unui om de casă (tineMinteDispozitivul),
+                      și ORICÂND, nu doar cât e închis — altfel s-ar fi scris
+                      abia după punerea lacătului, adică prea târziu pentru
+                      cel care închide site-ul și iese din cont ca să-l
+                      încerce. În el stă doar clipa de expirare și semnătura
+                      ei: NICIUN id de om, de aceea trece dintr-un cont în
+                      altul, ceea ce e chiar rostul lui — să poți intra cu un
+                      cont de PROBĂ cât e site-ul închis. NU e o cheie de-a
+                      casei: nu deschide admin-ul și nici o faptă, fiindcă
+                      alea întreabă toate `esteStaff()` din bază. Deschide
+                      ușa de la stradă, atât.
+                      poateIntraInConstructie() SE CHEAMĂ DIN TREI LOCURI, și
+                      trebuie să rămână așa: lacătul de pe pagini și cele două
+                      uși de intrare în cont (api/autentificare.php,
+                      google.php). Scrisă de mână în vreuna — cum a fost, cu
+                      `esteStaff()` singur — regula se desparte: pe pagini
+                      treceai cu permisul, dar nu te puteai CONECTA ca să le
+                      vezi. Se dă `$membru` acolo unde sesiunea nu s-a făcut
+                      încă. CE RĂMÂNE ÎNCHIS ORICUM: conturile NOI
+                      (google.php, ramura fără cont) — cât e site-ul închis nu
+                      se fac conturi noi, permis sau nu.
+                      Mai departe: cine trece, ce uși rămân deschise
                       (usileDeschiseInConstructie) și oprirea propriu-zisă
                       (opresteDacaEInConstructie, chemată la COADA lui
                       auth.php — nu în fiecare pagină, fiindcă o listă de

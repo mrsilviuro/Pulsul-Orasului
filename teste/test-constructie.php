@@ -216,6 +216,108 @@ foreach ($usi as $usa) {
 /* Din linia de comandă nu se pune niciun lacăt: cronurile nu sunt vizitatori. */
 verifica('din CLI nu se pune lacăt', false, cerereDinBrowser());
 
+/* ================= 3a. COMUTATORUL DIN ADMIN ======================== */
+
+sectiune('comutatorul de șantier');
+
+/**
+ * DOUĂ LACĂTE, iar cel din setări e mai tare.
+ *
+ * Comutatorul din admin scrie un fișier gol în private/; linia din config
+ * rămâne cheia de rezervă, cea care merge chiar dacă discul e doar de citit.
+ * Cât e ea pusă, comutatorul n-are ce comuta — și pagina spune asta pe față,
+ * fiindcă un buton care nu face nimic e mai rău decât unul care lipsește.
+ *
+ * Proba pornește de la site DESCHIS din config: curata() pune fișierul de
+ * setări la loc oricum, iar lacătul de fișier îl stingem noi aici.
+ */
+puneLacatul(false);
+
+verifica('la început, deschis',       false, siteInConstructie());
+verifica('și nu din setări',          false, lacatulEDinSetari());
+
+verifica('comutatorul închide',       true,  puneLacatul(true));
+verifica('și site-ul chiar e închis', true,  siteInConstructie());
+verifica('dar nu din setări',         false, lacatulEDinSetari());
+verifica('semnul e pe disc',          true,  is_file(FISIER_CONSTRUCTIE));
+
+/* A doua apăsare pe „închide" nu e o eroare: era deja închis. */
+verifica('închis de două ori, tot bine', true, puneLacatul(true));
+
+verifica('comutatorul deschide',      true,  puneLacatul(false));
+verifica('și site-ul e deschis',      false, siteInConstructie());
+verifica('semnul a plecat de pe disc', false, is_file(FISIER_CONSTRUCTIE));
+
+/* Și deschis de două ori, la fel: nu se plânge că nu era nimic de șters. */
+verifica('deschis de două ori, tot bine', true, puneLacatul(false));
+
+/* ================= 3b. PERMISUL DE DISPOZITIV ======================= */
+
+sectiune('permisul de dispozitiv');
+
+/**
+ * CE PĂZEȘTE, mai presus de orice: că permisul NU SE POATE SCRIE DE MÂNĂ.
+ *
+ * E singurul lucru de pe site care deschide o ușă închisă fără să întrebe cine
+ * ești. Dacă s-ar putea ticlui un cookie care trece, lacătul n-ar mai fi lacăt
+ * — iar asta nu s-ar vedea nicăieri: site-ul ar arăta exact la fel.
+ */
+$maine = time() + 86400;
+$bun   = permisSantier($maine);
+
+/* Fără cookie, dispozitivul nu e cunoscut. */
+unset($_COOKIE[COOKIE_SANTIER]);
+verifica('fără permis, necunoscut', false, dispozitivCunoscut());
+
+$_COOKIE[COOKIE_SANTIER] = $bun;
+verifica('cu permisul bun, cunoscut', true, dispozitivCunoscut());
+
+/* SEMNĂTURA. Un permis cu ceasul bun, dar semnat aiurea, nu trece. */
+$_COOKIE[COOKIE_SANTIER] = $maine . '.' . str_repeat('a', 64);
+verifica('semnătură inventată, respinsă', false, dispozitivCunoscut());
+
+/* Nici unul fără semnătură deloc. */
+$_COOKIE[COOKIE_SANTIER] = (string) $maine;
+verifica('fără semnătură, respins', false, dispozitivCunoscut());
+
+/**
+ * CEASUL. Semnătura e a clipei de expirare, deci nu se poate lua un permis
+ * bun și împinge data mai încolo: semnătura n-ar mai fi a ei.
+ */
+$_COOKIE[COOKIE_SANTIER] = permisSantier(time() - 60);
+verifica('permis expirat, respins', false, dispozitivCunoscut());
+
+[$candExpira, $semnatura] = explode('.', $bun, 2);
+$_COOKIE[COOKIE_SANTIER] = ((int) $candExpira + 999999) . '.' . $semnatura;
+verifica('data împinsă, semnătura nu ține', false, dispozitivCunoscut());
+
+/* Și gunoiul curat, care nici măcar nu seamănă. */
+foreach (['', '.', 'abc', 'nuecifra.abc', '123'] as $gunoi) {
+    $_COOKIE[COOKIE_SANTIER] = $gunoi;
+    verifica('gunoi respins: „' . $gunoi . '"', false, dispozitivCunoscut());
+}
+
+/**
+ * CINE TRECE DE LACĂT: staff-ul SAU dispozitivul cunoscut.
+ *
+ * Aceeași funcție o cer TREI locuri — lacătul de pe pagini și cele două uși de
+ * intrare în cont (api/autentificare.php, google.php). Scrisă de mână în
+ * vreuna, ieșea o casă în care puteai deschide paginile de pe dispozitivul
+ * tău, dar nu te puteai conecta cu un cont de probă ca să le vezi.
+ */
+unset($_COOKIE[COOKIE_SANTIER]);
+$deProba  = ['id' => 1, 'este_staff' => 0];
+$alCasei  = ['id' => 1, 'este_staff' => 1];
+
+verifica('fără nimic, nu trece',        false, poateIntraInConstructie($deProba));
+verifica('omul de casă trece',          true,  poateIntraInConstructie($alCasei));
+
+$_COOKIE[COOKIE_SANTIER] = $bun;
+verifica('și un cont de probă, de pe dispozitivul cunoscut', true,
+    poateIntraInConstructie($deProba));
+
+unset($_COOKIE[COOKIE_SANTIER]);
+
 /* ===================== 3b. CINE E OM DE CASĂ ======================== */
 
 sectiune('cine e om de casă');
@@ -497,6 +599,49 @@ if ($BAZA === '') {
     // Și chiar nu s-a făcut: cu același cookie, prima pagină tot îl respinge.
     $r = cere('/index.php', null, $r['cookie']);
     verifica('deci prima pagină tot nu-l lasă', 302, $r['cod']);
+
+    /**
+     * DAR DE PE UN DISPOZITIV CUNOSCUT, ACELAȘI CONT INTRĂ — și ăsta e tot
+     * rostul permisului.
+     *
+     * Fără el, omul de casă putea deschide paginile de pe dispozitivul lui,
+     * dar nu se putea CONECTA cu un cont de probă ca să vadă site-ul cu ochii
+     * unui om obișnuit: ușa de la intrarea în cont întreba doar `esteStaff()`.
+     * Un site închis pe care nu-l poți încerca decât ca administrator nu e
+     * închis pentru lucrări, e închis pentru lucru.
+     *
+     * Permisul se face AICI, în probă, cu aceeași funcție pe care o folosește
+     * și serverul: cheia iese din inc/config.php, deci amândoi ajung la aceeași
+     * semnătură. Dacă asta ar înceta să fie adevărat, proba pică — și e bine.
+     */
+    $pagina  = cere('/login.php');
+    $cookie  = $pagina['cookie'];
+    preg_match('/name="csrf" value="([^"]+)"/', $pagina['corp'], $m);
+    $token   = $m[1] ?? '';
+    $permis  = COOKIE_SANTIER . '=' . permisSantier(time() + 86400);
+
+    $r = cere('/api/autentificare.php', [
+        'csrf'   => $token,
+        'email'  => SEMN . 'om@invalid.local',
+        'parola' => $PAROLA,
+    ], $cookie . '; ' . $permis);
+
+    $corp = json_decode($r['corp'], true) ?: [];
+
+    verifica('de pe dispozitiv cunoscut, intră și cine nu e staff', true, $corp['ok'] ?? false);
+
+    /* Și chiar vede site-ul, nu doar formularul de intrare. */
+    $r = cere('/index.php', null, $r['cookie'] . '; ' . $permis);
+    verifica('și prima pagină i se deschide', 200, $r['cod']);
+
+    /**
+     * DAR UN PERMIS TICLUIT NU DESCHIDE NIMIC. Aici e miezul: dacă s-ar putea
+     * scrie un cookie de mână, lacătul n-ar mai fi lacăt, iar asta nu s-ar
+     * vedea din afară — site-ul ar arăta exact la fel.
+     */
+    $r = cere('/index.php', null,
+        COOKIE_SANTIER . '=' . (time() + 86400) . '.' . str_repeat('a', 64));
+    verifica('un permis inventat nu deschide nimic', 302, $r['cod']);
 
     // Omul de casă intră, și de la el încolo site-ul e deschis.
     $pagina = cere('/login.php');
