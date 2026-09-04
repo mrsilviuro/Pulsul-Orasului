@@ -161,7 +161,11 @@ termeni.php, confidentialitate.php, cookies.php
                 prin urlEveniment() (inc/evenimente.php); la fel profilul,
                 prin urlProfil().
                 TOATĂ DISTRIBUIREA E O SINGURĂ CASETĂ (`.sprijin`), ținută
-                sub un buton („Distribuie asta prietenilor tăi"). Un
+                sub un buton („Distribuie asta prietenilor tăi"). SE VEDE ȘI LA
+                UN ANUNȚ ANULAT — de aceea sePoateDistribui(), nu
+                evenimentPublicat(): anularea nu ascunde pagina, iar cine tocmai
+                a aflat că nu se mai ține are un motiv la fel de bun să dea
+                vestea mai departe. NU și la ce n-a ajuns niciodată public. Un
                 `<details>`, nu un panou de JS — se deschide în orice browser,
                 ca „Dorințele mele". Deschisă mănâncă o treime din ecranul unui
                 telefon, chiar între detalii și butonul de participare, adică
@@ -762,6 +766,15 @@ inc/
                       cere scuze. Numai discuția, nu și înscrierile:
                       api/interes.php cere mai departe evenimentPublicat().
                       TOT AICI
+                      poateRaspunde() — LA PROPRIUL COMENTARIU NU SE
+                      RĂSPUNDE: un răspuns la propria vorbă nu e un răspuns, e
+                      o adăugire, iar pentru adăugiri e „Editează", chiar
+                      lângă. Vizitatorul îl vede totuși (nu e autorul nimănui),
+                      ca la „Apreciază": apăsat, îl duce la intrare. NU
+                      întreabă dacă discuția e deschisă — aceea e altă
+                      întrebare, a locului, pusă separat în amândouă capetele.
+                      Ca poateRaporta(), o citesc DOUĂ locuri: rândul de unelte
+                      și api/comentarii.php. TOT AICI
                       raportarea: poateRaporta() (oricine e conectat, în afară
                       de autorul comentariului — lui nu i se scrie steagul
                       deloc) și comutaRaport() (apasă = raportează, apasă iar =

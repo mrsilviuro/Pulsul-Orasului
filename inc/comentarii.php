@@ -547,6 +547,37 @@ function poateRaporta(array $comentariu, int $membruId): bool
 }
 
 /**
+ * Poate omul ăsta să răspundă comentariului ăstuia?
+ *
+ * NU LA AL LUI. Un răspuns la propria vorbă nu e un răspuns, e o adăugire — iar
+ * pentru adăugiri există „Editează", chiar lângă. Butonul îi dădea omului o cale
+ * de a-și rupe gândul în două rânduri cu propriul nume de amândouă părțile, ca
+ * o discuție cu sine.
+ *
+ * VIZITATORUL ÎL VEDE, ca la „Apreciază": apăsat, îl duce la intrare, cu
+ * întoarcere fix aici. Ascuns, i-ar fi arătat o discuție la care pare că n-are
+ * cum să ia parte. De aceea 0 trece — nu e niciodată autorul nimănui.
+ *
+ * NU întreabă dacă discuția e deschisă: aceea e altă întrebare, a locului, nu a
+ * omului (discutiaEDeschisa), și se pune separat în amândouă capetele. Aceeași
+ * croială ca poateRaporta(), de mai sus — și tot ca acolo, regula e citită din
+ * DOUĂ locuri: rândul de unelte, ca purtare frumoasă, și api/comentarii.php, ca
+ * regulă. Cererea poate veni de oriunde, nu doar de pe butonul acela.
+ */
+function poateRaspunde(array $comentariu, int $membruId): bool
+{
+    if ((int) ($comentariu['sters'] ?? 0) === 1) {
+        return false;
+    }
+
+    if ($membruId <= 0) {
+        return true;
+    }
+
+    return (int) $comentariu['membru_id'] !== $membruId;
+}
+
+/**
  * Raportează comentariul, sau ia raportul înapoi dacă era deja dat.
  *
  * Un singur buton pentru amândouă, ca la apreciere: spre server pleacă „am
@@ -959,7 +990,10 @@ function randeazaUneltele(array $c, array $context): string
             . '<span data-like-count>' . (int) ($c['aprecieri'] ?? 0) . '</span>'
             . '</button>';
 
-    if (!empty($context['poate_scrie'])) {
+    /* Două întrebări deosebite, și amândouă trebuie să spună da: locul e
+       deschis (poate_scrie) ȘI omul are cui răspunde — nu lui însuși. */
+    if (!empty($context['poate_scrie'])
+        && poateRaspunde($c, (int) $context['membru_id'])) {
         $unelte .= '<button class="comment__tool" type="button" data-reply>Răspunde</button>';
     }
 

@@ -250,6 +250,36 @@ function evenimentPublicat(array $eveniment): bool
     return in_array($eveniment['stare_moderare'] ?? '', ['aprobat', 'incheiat'], true);
 }
 
+/**
+ * Se poate da mai departe anunțul ăsta?
+ *
+ * A TREIA ÎNTREBARE DIN FAMILIE, deosebită de celelalte două dinadins — ca
+ * discutiaEDeschisa() din inc/comentarii.php, și din același motiv:
+ *
+ *   evenimentPublicat()  — lumea se poartă cu el ca și cu unul de pe site
+ *   discutiaEDeschisa()  — oamenii au unde vorbi despre el
+ *   asta                 — pagina lui se deschide de oricine, deci are rost
+ *                          să-i trimiți cuiva adresa
+ *
+ * SE DESCHIDE ȘI LA UN ANUNȚ ANULAT. Anularea nu ascunde pagina: ea se vede
+ * mai departe de oricine, cu banda și cu motivul scris de organizator (vezi
+ * anuleazaEveniment). Cine tocmai a aflat că nu se mai ține are un motiv la fel
+ * de bun să dea vestea mai departe ca unul care are ceva de recomandat — poate
+ * cel mai bun, fiindcă prietenul lui își făcuse și el planul pentru seara aceea.
+ *
+ * NU se deschide la ce n-a ajuns niciodată public — în așteptare sau respins:
+ * acolo adresa ar duce prietenul într-o pagină pe care n-are voie s-o vadă.
+ *
+ * Scrisă aici, nu de mână în event.php, ca sora ei poateFiIncheiat(): aceea a
+ * stat o vreme scrisă de mână, cu doi termeni din trei, și de aceea butonul
+ * „Încheie evenimentul" stătea viu pe pagina unui anunț anulat.
+ */
+function sePoateDistribui(array $eveniment): bool
+{
+    return evenimentPublicat($eveniment)
+        || ($eveniment['stare_moderare'] ?? '') === 'anulat';
+}
+
 /* ========================== ANUNȚUL FIXAT ============================ */
 
 /**
