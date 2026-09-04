@@ -1185,7 +1185,7 @@ require __DIR__ . '/inc/antet.php';
               <label class="check comment-form__important">
                 <input type="checkbox" id="comentariu-important" name="important" value="1">
                 <span>Anunț important
-                  <small>Stă primul în discuție și pleacă pe e-mail tuturor celor înscriși.</small>
+                  <small>Comentariul va fi evidențiat și ținut sus iar toți cei înscriși vor fi notificați prin email.</small>
                 </span>
               </label>
               <?php endif; ?>

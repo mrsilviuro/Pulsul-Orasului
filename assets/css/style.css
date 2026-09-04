@@ -1958,15 +1958,6 @@ main { padding-block: 46px 64px; }
    dintr-o privire: una violetă, cealaltă în culoarea site-ului. */
 .badge--staff { background: rgba(124, 92, 255, .12); color: var(--brand-2); }
 
-/* „Important" — anunțul organizatorului.
-   Poartă un semn, nu doar culoare: cine nu deosebește roșul de cenușiu n-ar
-   fi avut din ce să înțeleagă că rândul acela e altfel. */
-.badge--important {
-  display: inline-flex; align-items: center; gap: 4px;
-  background: var(--brand-soft); color: var(--brand);
-}
-.badge--important .ico { width: 12px; height: 12px; }
-
 /* ---- comentariul de căpătâi ----
    SUBTIL, DINADINS. Un chenar gros sau un fundal aprins ar fi făcut din el o
    reclamă în capul discuției, iar ochiul se obișnuiește cu ele și le sare. O
@@ -1981,14 +1972,10 @@ main { padding-block: 46px 64px; }
 
 /* Fundalul cald al casetei ar fi înghițit pastila „Organizator", care e chiar
    în culoarea lui. Aici stă pe alb, ca să rămână două lucruri, nu unul. */
-.comment__body--important .badge--author,
-.comment__body--important .badge--important { background: var(--surface); }
+.comment__body--important .badge--author { background: var(--surface); }
 
 [data-theme="dark"] .comment__body--important { background: rgba(212, 57, 43, .10); }
-[data-theme="dark"] .comment__body--important .badge--author,
-[data-theme="dark"] .comment__body--important .badge--important {
-  background: rgba(0, 0, 0, .28);
-}
+[data-theme="dark"] .comment__body--important .badge--author { background: rgba(0, 0, 0, .28); }
 
 .comment__main > p {
   font-size: 15px;
