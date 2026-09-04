@@ -147,11 +147,15 @@ if ($membru) {
      * conectat în spatele unui site închis, fără nicio pagină la care să
      * ajungă.
      *
-     * esteStaff() primește rândul citit mai sus; dacă acela n-are coloana
-     * (SELECT-urile de aici cer doar câteva câmpuri), o citește singur din
-     * bază după id — vezi inc/auth.php.
+     * Aceeași întrebare ca la intrarea cu parolă și ca la lacătul de pe
+     * pagini — poateIntraInConstructie() din inc/constructie.php: trece
+     * staff-ul, dar și dispozitivul pe care a intrat cândva unul.
+     *
+     * Ea primește rândul citit mai sus; dacă acela n-are coloana
+     * `este_staff` (SELECT-urile de aici cer doar câteva câmpuri), o citește
+     * singură din bază după id — vezi inc/auth.php.
      */
-    if (siteInConstructie() && !esteStaff($membru)) {
+    if (siteInConstructie() && !poateIntraInConstructie($membru)) {
         inapoiCuNecaz('Site-ul e în lucru. Îți dăm de veste imediat ce deschidem.');
     }
 

@@ -5400,6 +5400,69 @@ a.admin-nav__link:hover { background: var(--bg-soft); color: var(--text); }
 .admin-cart__cifra span { font-size: 11.5px; color: var(--text-faint); }
 .admin-cart__linistit { font-size: 11.5px; color: var(--text-faint); }
 
+/* ------------------------------ șantierul ------------------------------
+   Întrerupătorul de la ușa casei, sub cartonașe. NU arată ca ele, dinadins:
+   alea sunt liste de lucru pe care le deschizi, asta e o singură apăsare care
+   schimbă ce vede tot orașul. Un cartonaș în plus în același rând s-ar fi
+   apăsat din greșeală, în drum spre „Comentarii".
+
+   Închis, caseta se aprinde: e o stare în care nu vrei să uiți site-ul. */
+.santier {
+  margin-top: 34px;
+  padding: 20px 22px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  display: flex; flex-wrap: wrap; align-items: center; gap: 14px 20px;
+}
+.santier--inchis {
+  border-color: rgba(224, 57, 59, .45);
+  background: rgba(224, 57, 59, .06);
+}
+
+.santier__spus { flex: 1 1 320px; min-width: 0; }
+.santier__titlu { font-size: 17px; margin: 0 0 4px; }
+.santier__vorba { margin: 0; font-size: 13.5px; line-height: 1.6; color: var(--text-soft); }
+
+.santier__form { flex: none; }
+
+/* Lacătul pus din config: nu e o eroare, e o lămurire — de aceea nu e roșie. */
+.santier__blocat {
+  flex: 1 1 100%;
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--bg-soft);
+  font-size: 13px; line-height: 1.6; color: var(--text-soft);
+}
+.santier__blocat code {
+  padding: 1px 5px; border-radius: 5px;
+  background: var(--surface-2);
+  font-size: 12.5px;
+}
+
+.santier__raspuns {
+  flex: 1 1 100%;
+  margin: 0;
+  font-size: 13.5px; font-weight: 600;
+  color: #16a34a;
+}
+.santier__raspuns--rau { color: #d32f31; }
+
+/* Permisul de dispozitiv, sub o linie: e o lămurire despre browserul ăsta, nu
+   despre site — două lucruri deosebite n-au ce sta lipite. */
+.santier__permis {
+  flex: 1 1 100%;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.santier__permis p {
+  flex: 1 1 320px;
+  margin: 0;
+  font-size: 12.5px; line-height: 1.6; color: var(--text-faint);
+}
+
 /* -------------------------- secțiuni și tabele -------------------------- */
 
 .admin-sect { margin-bottom: 38px; }

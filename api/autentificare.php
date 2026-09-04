@@ -173,8 +173,16 @@ if ($membru['stare'] !== 'activ') {
  * cu cont, cu cookie, cu tot, dar fără nicio pagină la care să ajungă. Așa nu
  * se întâmplă nimic: e ca și cum n-ar fi apăsat.
  *
- * Se citește din rândul deja adus din bază (`este_staff`), prin aceeași
- * esteStaff() ca peste tot — nu dintr-o comparație scrisă din nou aici.
+ * TRECE ȘI DISPOZITIVUL CUNOSCUT, nu doar staff-ul: poateIntraInConstructie()
+ * e aceeași întrebare care păzește și paginile (inc/constructie.php). Scrisă
+ * aici de mână, cu `esteStaff()` singur — cum a fost o vreme —, ieșea o casă
+ * în care omul de casă putea DESCHIDE paginile de pe dispozitivul lui, dar nu
+ * se putea CONECTA cu un cont de probă ca să le vadă cu ochii altcuiva. Adică
+ * exact lucrul pentru care s-a făcut permisul.
+ *
+ * Rândul citit mai sus se dă mai departe: sesiunea nu s-a făcut încă, deci
+ * membruCurent() ar fi null, iar întrebarea e despre omul care tocmai și-a
+ * scris parola.
  *
  * Nu se numără ca încercare greșită: parola a fost corectă, iar omul n-a
  * făcut nimic rău. Ar fi fost cel mai nedrept fel de blocare — trei intrări
@@ -183,7 +191,7 @@ if ($membru['stare'] !== 'activ') {
  * `redirect` întoarce pagina la afișul de pe ușă, ca omul să vadă unde a
  * ajuns, nu un formular care refuză fără să spună unde să se ducă.
  */
-if (siteInConstructie() && !esteStaff($membru)) {
+if (siteInConstructie() && !poateIntraInConstructie($membru)) {
     raspunsJson([
         'ok'       => false,
         'stare'    => 'in_constructie',
