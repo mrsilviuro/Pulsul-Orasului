@@ -679,11 +679,20 @@ require __DIR__ . '/inc/antet.php';
         } : null);
       ?>
 
-      <?php if ($ePublicat): ?>
+      <?php if (sePoateDistribui($eveniment)): ?>
       <!-- ========================== DISTRIBUIRE ===========================
-        O SINGURĂ CASETĂ, ascunsă sub un buton. Numai la un eveniment publicat:
-        n-are rost să dai mai departe un anunț pe care nu-l poate deschide
-        nimeni.
+        O SINGURĂ CASETĂ, ascunsă sub un buton.
+
+        SE VEDE ȘI LA UN ANUNȚ ANULAT — de aceea sePoateDistribui(), nu
+        $ePublicat. Anularea nu ascunde pagina: ea rămâne de deschis de oricine,
+        cu banda și cu motivul organizatorului. Cine tocmai a aflat că nu se mai
+        ține are un motiv la fel de bun să dea vestea mai departe ca unul care
+        are ceva de recomandat — poate cel mai bun, fiindcă prietenul lui își
+        făcuse și el planul pentru seara aceea.
+
+        NU se vede la ce n-a ajuns niciodată public (în așteptare, respins):
+        acolo adresa ar duce prietenul într-o pagină pe care n-are voie s-o
+        vadă.
 
         DE CE NU MAI SUNT TREI ICONIȚE (Facebook, WhatsApp, copiază). Blocantele
         de reclame le recunoșteau după adresele către facebook.com și wa.me, iar
@@ -776,7 +785,9 @@ require __DIR__ . '/inc/antet.php';
           <span>Trimite pe WhatsApp</span>
         </a>
       </details>
+      <?php endif; /* sePoateDistribui */ ?>
 
+      <?php if ($ePublicat): ?>
       <?php if ($eVanatoare): ?>
       <!-- ========================= VÂNĂTOAREA ============================
         La un eveniment „FindMe", în locul casetei de interes stă caseta

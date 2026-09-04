@@ -254,6 +254,23 @@ function adaugaComentariul(array $date, array $eveniment, int $membruId, bool $e
                 'mesaj' => 'Comentariul la care răspundeai a fost șters.',
             ], 409);
         }
+
+        /**
+         * ȘI NU LA AL TĂU. Butonul „Răspunde" nici nu se desenează pe propriul
+         * comentariu, dar cererea poate veni de oriunde — regula e aceeași
+         * funcție care hotărăște și dacă se vede butonul.
+         *
+         * Aici se spune pe față de ce n-a mers, spre deosebire de steagul
+         * „Important", care se stinge tăcut: acolo omul cinstit n-avea cum să
+         * ajungă, bifa nefiind pe ecranul lui, pe când aici poate fi o filă
+         * lăsată deschisă dintr-o vreme în care butonul era acolo.
+         */
+        if (!poateRaspunde($catre, $membruId)) {
+            raspunsJson([
+                'ok'    => false,
+                'mesaj' => 'La propriul comentariu nu se răspunde. Poți să-l editezi, dacă mai ai ceva de adăugat.',
+            ], 409);
+        }
     }
 
     /**

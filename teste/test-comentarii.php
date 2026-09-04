@@ -425,9 +425,19 @@ $ctxStrain  = context($eveniment, $strain);
 $htmlStrain = randeazaComentarii(
     grupeazaComentarii(comentariileEvenimentului($evenimentId, $strain)), $ctxStrain);
 
-verifica('la comentariile altora, două unelte pentru fiecare', 3,
+/**
+ * DOUĂ DIN TREI, nu trei: la propriul comentariu nu se răspunde. Un răspuns la
+ * propria vorbă nu e un răspuns, e o adăugire — iar pentru adăugiri e
+ * „Editează", chiar lângă. Vlad a scris unul dintre cele trei, deci acolo are
+ * „Editează", nu „Răspunde"; cele două rânduri se citesc împreună.
+ */
+verifica('răspunde la ale altora, nu la al lui', 2,
     substr_count($htmlStrain, 'data-reply'));
 verifica('și corectură doar la al lui', 1, substr_count($htmlStrain, 'data-edit'));
+
+/* Cele două nu se suprapun niciodată: pe un comentariu e ori unul, ori altul. */
+verifica('cele trei sunt acoperite o dată', 3,
+    substr_count($htmlStrain, 'data-reply') + substr_count($htmlStrain, 'data-edit'));
 
 // Staff-ul: peste tot.
 $ctxStaff  = context($eveniment, $staff, true);
@@ -445,6 +455,27 @@ $htmlGol = randeazaComentarii(
 verifica('vizitatorul nu poate edita nimic', 0, substr_count($htmlGol, 'data-edit'));
 verifica('nici șterge', 0, substr_count($htmlGol, 'data-delete'));
 verifica('dar vede butonul de apreciere', 3, substr_count($htmlGol, 'data-like-count'));
+
+/**
+ * ȘI LE VEDE PE TOATE TREI „RĂSPUNDE", ca pe cel de apreciere: apăsat, îl duce
+ * la intrare, cu întoarcere fix aici. Ascuns, i-ar fi arătat o discuție la care
+ * pare că n-are cum să ia parte. Nefiind conectat, nu e autorul nimănui — deci
+ * regula „nu la al tău" nu-l atinge.
+ */
+verifica('vizitatorul vede toate butoanele de răspuns', 3,
+    substr_count($htmlGol, 'data-reply'));
+
+/* ------------------- la al tău nu se răspunde --------------------- */
+
+/**
+ * Regula, luată de-a dreptul. O citesc DOUĂ locuri — rândul de unelte, ca
+ * purtare frumoasă, și api/comentarii.php, ca regulă — deci trebuie să fie
+ * adevărată în afara amândurora.
+ */
+verifica('la al meu, nu',        false, poateRaspunde(['membru_id' => $strain, 'sters' => 0], $strain));
+verifica('la al altuia, da',     true,  poateRaspunde(['membru_id' => $organizator, 'sters' => 0], $strain));
+verifica('vizitatorul poate',    true,  poateRaspunde(['membru_id' => $organizator, 'sters' => 0], 0));
+verifica('la unul golit, nimeni', false, poateRaspunde(['membru_id' => $organizator, 'sters' => 1], $strain));
 
 /* ------------------------ piatra de mormânt ----------------------- */
 

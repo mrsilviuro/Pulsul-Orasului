@@ -394,6 +394,31 @@ verifica('nici cel în așteptare', false,
 verifica('nici cel respins',      false,
     poateFiIncheiat(['stare_moderare' => 'respins'] + $anulatSiInceput));
 
+/**
+ * DAR ANULATUL SE DĂ MAI DEPARTE — sePoateDistribui(), a treia întrebare din
+ * familie, și singura care spune DA despre un anunț anulat.
+ *
+ * Anularea nu ascunde pagina: ea rămâne de deschis de oricine, cu banda și cu
+ * motivul organizatorului. Cine tocmai a aflat că nu se mai ține are un motiv
+ * la fel de bun să dea vestea mai departe ca unul care are ceva de recomandat —
+ * poate cel mai bun, fiindcă prietenul lui își făcuse și el planul.
+ *
+ * Se scrie aici, lângă surorile ei, tocmai fiindcă ele răspund toate ALTFEL la
+ * aceeași stare: ăsta e felul în care se vede că nu s-au amestecat.
+ */
+verifica('anulatul se poate distribui',   true,  sePoateDistribui($anulatSiInceput));
+verifica('aprobatul, la fel',             true,  sePoateDistribui(['stare_moderare' => 'aprobat']));
+verifica('și încheiatul',                 true,  sePoateDistribui(['stare_moderare' => 'incheiat']));
+
+/* Ce n-a ajuns niciodată public, nu: acolo adresa ar duce prietenul într-o
+   pagină pe care n-are voie s-o vadă. */
+verifica('cel în așteptare, nu',          false, sePoateDistribui(['stare_moderare' => 'in_asteptare']));
+verifica('nici cel respins',              false, sePoateDistribui(['stare_moderare' => 'respins']));
+
+/* Și e chiar mai largă decât „publicat", nu la fel — altfel n-ar fi avut rost. */
+verifica('e mai largă decât „publicat"', true,
+    sePoateDistribui($anulatSiInceput) && !evenimentPublicat($anulatSiInceput));
+
 /* Și nici de două ori. */
 verifica('nici cel deja încheiat', false, poateFiIncheiat($incheiatDeja));
 verifica('nici cel căruia i-a trecut ziua', false,
