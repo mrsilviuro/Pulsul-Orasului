@@ -681,50 +681,47 @@ require __DIR__ . '/inc/antet.php';
 
       <?php if ($ePublicat): ?>
       <!-- ========================== DISTRIBUIRE ===========================
-        Trei iconițe, între detalii și „Mergi la acest eveniment?". Aceleași
-        desene ca cele scoase odinioară de lângă organizator — acolo erau
-        lipite de numele cuiva, aici sunt la locul lor: după ce omul a citit
-        despre ce e vorba și înainte să hotărască dacă vine.
+        O SINGURĂ CASETĂ, ascunsă sub un buton. Numai la un eveniment publicat:
+        n-are rost să dai mai departe un anunț pe care nu-l poate deschide
+        nimeni.
 
-        Numai la un eveniment publicat: n-are rost să dai mai departe un anunț
-        pe care nu-l poate deschide nimeni.
+        DE CE NU MAI SUNT TREI ICONIȚE (Facebook, WhatsApp, copiază). Blocantele
+        de reclame le recunoșteau după adresele către facebook.com și wa.me, iar
+        împotriva acelora nu există apărare: un link către sharer-ul Facebook
+        arată exact ca un link către sharer-ul Facebook, oricum l-am scrie. Ce a
+        rămas e ce nu se poate recunoaște — text și un mesaj de copiat.
 
-        Adresa se scrie ÎNTREAGĂ, prin urlIntreg() (adică url_site din config).
-        Facebook și WhatsApp primesc un link, nu o cale — „/eveniment/…" singur
-        n-ar duce nicăieri de pe telefonul altcuiva.
+        DE CE SUB UN BUTON. Deschisă, caseta mănâncă o treime din ecranul unui
+        telefon, chiar între detaliile evenimentului și butonul de participare —
+        adică taie drumul tocmai celui care voia să se înscrie. Închisă, e un
+        rând.
+
+        E un `<details>`, nu un panou de JS: se deschide singur, în orice
+        browser, fără o linie de JavaScript. Aceeași alegere ca la „Dorințele
+        mele" de pe prima pagină.
+
+        Adresa se scrie ÎNTREAGĂ, prin urlIntreg() (adică url_site din config):
+        mesajul pleacă într-o discuție, de pe alt telefon, unde „/eveniment/…"
+        singur n-ar duce nicăieri.
       ================================================================== -->
       <?php
         $adresaEveniment = urlIntreg(urlEveniment((string) $eveniment['slug']));
 
-        // Textul care pleacă pe WhatsApp și în clipboard. Scurt dinadins:
-        // pe WhatsApp intră în căsuța de scris, iar omul îl termină cum vrea.
-        $textDistribuire = 'Uite ce eveniment am găsit pe Pulsul Orașului: ' . $eveniment['titlu'];
-
-        // Mesajul gata scris din caseta de mai jos. Altul decât cel de sus,
-        // fiindcă acela pleacă lipit de un buton care spune deja unde duce, pe
-        // când ăsta e trimis de om, cu mâna lui, într-o discuție.
+        // Mesajul gata scris, unul singur: și cel copiat, și cel dus pe
+        // WhatsApp. Scrise deosebit, s-ar fi despărțit la prima corectură.
         $mesajDeCopiat = 'Salut! Am găsit ceva fain pe PulsulOrașului.Ro '
                        . 'și m-am gândit că ți-ar plăcea și ție: ' . $adresaEveniment;
       ?>
+      <details class="sprijin">
+        <summary class="sprijin__buton">
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+            <path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/>
+          </svg>
+          <span>Distribuie asta prietenilor tăi</span>
+        </summary>
 
-      <!-- ===================== CASETA DE SPRIJIN ==========================
-        DE CE E DEOSEBITĂ DE RÂNDUL DE ICONIȚE DE MAI JOS, deși spun același
-        lucru: fiindcă blocantele de reclame ascund rândul acela. AdGuard și
-        celelalte au filtre gata scrise pentru butoanele de distribuire — le
-        recunosc după numele claselor și după adresele către facebook.com și
-        wa.me. Nu e nimic de reparat acolo: un link către sharer-ul Facebook
-        ARATĂ exact ca un link către sharer-ul Facebook, oricum l-am scrie.
-
-        Caseta asta trece pe lângă toate filtrele fiindcă nu seamănă cu ele:
-        n-are în ea nicio adresă către o rețea, iar numele clasei nu poartă
-        niciun cuvânt după care se caută. E text și un buton de copiat.
-
-        DE ACEEA STĂ SINGURĂ, nu în același înveliș cu iconițele și fără
-        vreo legătură de vecinătate cu ele: o regulă care ascunde rândul de
-        mai jos n-are cum s-o ia și pe ea cu el.
-      ================================================================== -->
-      <section class="sprijin" aria-labelledby="sprijin-titlu">
-        <p class="sprijin__titlu" id="sprijin-titlu">PulsulOrașului trăiește prin oameni ca tine!</p>
+        <p class="sprijin__titlu">PulsulOrașului trăiește prin oameni ca tine!</p>
 
         <p class="sprijin__text">Suntem un proiect non-profit creat din drag pentru
           comunitate, iar fiecare distribuire ne ajută enorm să mergem mai departe.
@@ -757,32 +754,28 @@ require __DIR__ . '/inc/antet.php';
             <span>Copiază</span>
           </button>
         </div>
-      </section>
-
-      <div class="post__trimite" role="group" aria-label="Distribuie evenimentul">
-        <a class="icon-btn" target="_blank" rel="noopener noreferrer"
-           href="https://www.facebook.com/sharer/sharer.php?u=<?= h(urlencode($adresaEveniment)) ?>"
-           aria-label="Distribuie pe Facebook" title="Distribuie pe Facebook">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 8.5V7a1.5 1.5 0 0 1 1.5-1.5H17V3h-2.2A3.8 3.8 0 0 0 11 6.8v1.7H9V11h2v10h3V11h2.2l.4-2.5H14Z" fill="currentColor" stroke="none"/></svg>
-        </a>
-
-        <a class="icon-btn" target="_blank" rel="noopener noreferrer"
-           href="https://wa.me/?text=<?= h(urlencode($textDistribuire . ' ' . $adresaEveniment)) ?>"
-           aria-label="Trimite pe WhatsApp" title="Trimite pe WhatsApp">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11.5a8 8 0 0 1-11.9 7L4 20l1.6-4A8 8 0 1 1 20 11.5Z"/><path d="M9 9.5c.4 2 1.6 3.2 3.6 3.6l.9-1.2 1.7.8-.4 1.4c-2.9.3-5.8-2.6-5.5-5.5l1.4-.4.8 1.7z" fill="currentColor" stroke="none"/></svg>
-        </a>
 
         <!--
-          Copierea o face JS. Textul stă într-un atribut, nu se lipește în JS
-          din bucăți: aici e escapat de h(), iar un titlu cu ghilimele sau cu
-          „&" nu poate strica nimic.
+          WhatsApp, singurul link către o rețea rămas în pagină. ȘTIM că unele
+          blocante îl vor ascunde (`a[href*="wa.me"]` e o regulă gata scrisă) și
+          e în regulă: cine îl are, îl folosește; cine nu, are mesajul de
+          deasupra, care nu se poate bloca.
+
+          DAR FĂRĂ URMĂ CÂND E ASCUNS. De aceea e frate cu celelalte, nu învelit
+          în ceva de-al lui: un `<div>` în jurul lui ar fi rămas cu marginea și
+          cu locul lui gol, iar caseta ar fi avut o gaură pe care n-o umple
+          nimic. Așa, `display: none` îl scoate cu totul — marginea e a lui, nu
+          a unui înveliș.
         -->
-        <button class="icon-btn" type="button" id="copiaza-link"
-                data-copiaza="<?= h($textDistribuire . ' ' . $adresaEveniment) ?>"
-                aria-label="Copiază linkul" title="Copiază linkul">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3A4 4 0 0 0 13 5.3l-1.4 1.4"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3A4 4 0 0 0 11 18.7l1.4-1.4"/></svg>
-        </button>
-      </div>
+        <a class="btn btn--sm sprijin__whatsapp" target="_blank" rel="noopener noreferrer"
+           href="https://wa.me/?text=<?= h(urlencode($mesajDeCopiat)) ?>">
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M20 11.5a8 8 0 0 1-11.9 7L4 20l1.6-4A8 8 0 1 1 20 11.5Z"/>
+            <path d="M9 9.5c.4 2 1.6 3.2 3.6 3.6l.9-1.2 1.7.8-.4 1.4c-2.9.3-5.8-2.6-5.5-5.5l1.4-.4.8 1.7z" fill="currentColor" stroke="none"/>
+          </svg>
+          <span>Trimite pe WhatsApp</span>
+        </a>
+      </details>
 
       <?php if ($eVanatoare): ?>
       <!-- ========================= VÂNĂTOAREA ============================

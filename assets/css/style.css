@@ -1397,59 +1397,6 @@ main { padding-block: 46px 64px; }
   font-size: 13px; color: var(--text-faint);
 }
 
-/* Distribuirea: trei iconițe între detaliile evenimentului și „Mergi la acest
-   eveniment?". Mici și discrete dinadins — sunt o portiță, nu o chemare; ce
-   cere apăsarea e butonul mare de dedesubt.
-
-   Două sunt linkuri și una e buton (copierea o face JS), dar arată la fel:
-   pentru om sunt trei lucruri de-un fel.
-
-   NUMELE CLASEI NU POARTĂ „share", DINADINS. Blocantele de reclame au filtre
-   gata scrise pentru butoanele de distribuire, iar cele mai multe se uită la
-   numele claselor: „share", „social", „share-buttons". Numele ăsta trece pe
-   lângă ele. NU e o apărare adevărată — adresele către facebook.com și wa.me
-   se văd oricum, iar o regulă scrisă după ele prinde rândul întreg, oricât
-   l-am boteza. De aceea ce contează cu adevărat stă în `.sprijin`, mai jos:
-   acolo nu e nimic de recunoscut. */
-.post__trimite {
-  display: flex;
-  gap: 6px;
-  margin: 22px 0 0;
-}
-
-.icon-btn {
-  width: 34px; height: 34px;
-  display: grid; place-items: center;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--text-soft);
-  text-decoration: none;
-  cursor: pointer;
-  transition: all .18s var(--ease);
-}
-
-.icon-btn svg {
-  width: 17px; height: 17px;
-  fill: none; stroke: currentColor;
-  stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
-}
-
-.icon-btn:hover {
-  color: #fff;
-  background: var(--brand);
-  border-color: var(--brand);
-  transform: translateY(-2px);
-}
-
-.icon-btn:focus-visible {
-  outline: 2px solid var(--brand);
-  outline-offset: 2px;
-}
-
-/* Întrebarea de dinaintea încheierii. Nu e roșie — încheierea nu e o pierdere,
-   e un lucru firesc la capătul unui eveniment; dar tot se cere o apăsare în
-   plus, fiindcă nu se poate lua înapoi. */
 .incheiere-confirm {
   margin-top: 14px;
   padding: 16px 18px;
@@ -1472,27 +1419,38 @@ main { padding-block: 46px 64px; }
   margin-top: 14px;
 }
 
-/* Semnul că s-a copiat. Stă o clipă în locul iconiței, ca omul să vadă că
-   apăsarea lui a făcut ceva — un toast singur, jos de tot, se pierde. */
-.icon-btn.s-a-copiat {
-  color: #fff;
-  background: #16a34a;
-  border-color: #16a34a;
-}
-
 /* ---- caseta de sprijin ----
-   Stă deasupra rândului de iconițe și e SINGURĂ, fără nicio legătură de
-   vecinătate cu el: o regulă de blocant care ascunde butoanele de distribuire
-   n-are cum s-o ia și pe ea cu el. Vezi lămurirea din event.php.
+   ÎNCHISĂ, E UN RÂND. Deschisă, mănâncă o treime din ecranul unui telefon,
+   chiar între detaliile evenimentului și butonul de participare — adică taie
+   drumul tocmai celui care voia să se înscrie. De aceea stă sub un buton.
 
-   Culoarea mărcii, dar stinsă: e o rugăminte, nu o alarmă. */
-.sprijin {
-  margin: 26px 0 0;
-  padding: 18px 20px;
+   Un `<details>`, nu un panou de JS: se deschide singur, în orice browser,
+   fără o linie de JavaScript. Aceeași alegere ca la „Dorințele mele". */
+.sprijin { margin: 26px 0 0; }
+
+/* Butonul care o deschide. Aceeași croială ca „Dorințele mele" de pe prima
+   pagină — sunt același fel de lucru, deci arată la fel. */
+.sprijin__buton {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 7px 14px 7px 12px;
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--bg-soft);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  font-size: 13.5px; font-weight: 600; color: var(--text-soft);
+  cursor: pointer;
+  list-style: none;                 /* fără triunghiul browserului */
+  transition: border-color .15s var(--ease), color .15s var(--ease);
 }
+/* Safari desenează triunghiul altfel decât ceilalți. */
+.sprijin__buton::-webkit-details-marker { display: none; }
+
+.sprijin__buton:hover { border-color: var(--brand); color: var(--brand); }
+.sprijin__buton .ico  { width: 15px; height: 15px; }
+.sprijin[open] .sprijin__buton { border-color: var(--brand); color: var(--brand); }
+
+/* Deschisă, vorbele stau retrase față de buton, ca să se vadă că atârnă de el. */
+.sprijin[open] .sprijin__titlu { margin-top: 14px; }
+
 .sprijin__titlu {
   margin: 0 0 8px;
   font-size: 15.5px; font-weight: 800;
@@ -1510,8 +1468,8 @@ main { padding-block: 46px 64px; }
   color: var(--text);
 }
 
-/* Mesajul și butonul, unul lângă altul cât încape. Pe ecran îngust butonul
-   trece dedesubt și se face cât rândul: acolo e degetul, nu cursorul. */
+/* Mesajul și butonul de copiat, unul lângă altul cât încape. Pe ecran îngust
+   butonul trece dedesubt și se face cât rândul: acolo e degetul, nu cursorul. */
 .sprijin__mesaj {
   display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
   padding: 12px 14px;
@@ -1537,9 +1495,23 @@ main { padding-block: 46px 64px; }
 .sprijin__copiaza { flex: none; }
 .sprijin__copiaza.s-a-copiat { background: #16a34a; border-color: #16a34a; }
 
+/* WhatsApp. MARGINEA E A LUI, nu a unui înveliș: știm că unele blocante îl
+   ascund după adresă, iar atunci trebuie să dispară CU TOTUL. Într-un `<div>`
+   de-al lui, învelișul ar fi rămas cu marginea lui și caseta ar fi avut o
+   gaură pe care n-o umple nimic. Așa, `display: none` nu lasă nicio urmă. */
+.sprijin__whatsapp {
+  display: inline-flex; align-items: center; gap: 8px;
+  margin-top: 12px;
+  border: 1px solid #25d366;
+  background: #25d366;
+  color: #fff;
+}
+.sprijin__whatsapp:hover { background: #1eb855; border-color: #1eb855; }
+.sprijin__whatsapp .ico  { width: 16px; height: 16px; color: currentColor; }
+
 @media (max-width: 560px) {
-  .sprijin { padding: 16px; }
-  .sprijin__copiaza { width: 100%; justify-content: center; }
+  .sprijin__copiaza,
+  .sprijin__whatsapp { width: 100%; justify-content: center; }
 }
 
 .post__figure { margin: 26px 0 0; }
