@@ -1337,40 +1337,38 @@ verifica('fără vorbe despre sfârșitul care lipsește', false,
 $adresaIntreaga = rtrim((string) ($config['url_site'] ?? ''), '/')
                 . urlEveniment($slugul($idAprobat));
 
-verifica('are zona de distribuire', true, str_contains($pagina, "post__trimite"));
-verifica('cu link de Facebook, pe adresa întreagă', true,
-    str_contains($pagina, 'facebook.com/sharer/sharer.php?u=' . h(urlencode($adresaIntreaga))));
-verifica('cu link de WhatsApp', true, str_contains($pagina, 'wa.me/?text='));
-verifica('care poartă și titlul, nu doar adresa', true,
-    str_contains($pagina, urlencode('Uite ce eveniment am găsit pe Pulsul Orașului: Cursa aprobată')));
-verifica('și cu butonul de copiat', true, str_contains($pagina, 'id="copiaza-link"'));
-verifica('care are textul gata scris, escapat', true,
-    str_contains($pagina, 'data-copiaza="Uite ce eveniment am găsit pe Pulsul Orașului: Cursa aprobată '
-                        . h($adresaIntreaga) . '"'));
-verifica('cele două linkuri se deschid în altă filă', 2,
-    preg_match_all('/class="icon-btn"[^>]*target="_blank"[^>]*rel="noopener noreferrer"/', $pagina));
-verifica('zona stă înaintea butoanelor de participare', true,
-    strpos($pagina, "post__trimite") < strpos($pagina, 'id="rsvp"'));
-verifica('și după caseta cu detalii', true,
-    strpos($pagina, 'event-box') < strpos($pagina, "post__trimite"));
-
 /* ------------------------- caseta de sprijin ------------------------- */
 
 /**
- * Există fiindcă blocantele de reclame ascund rândul de iconițe de mai jos —
- * îl recunosc după adresele către facebook.com și wa.me, iar acelea nu se pot
- * ascunde de ele. Caseta asta trece pe lângă filtre fiindcă nu seamănă cu ele.
+ * TOATĂ DISTRIBUIREA E AICI. Rândul de trei iconițe (Facebook, WhatsApp,
+ * copiază) a fost scos: blocantele de reclame îl recunoșteau după adresele
+ * către facebook.com și wa.me, iar împotriva acelora nu există apărare — un
+ * link către sharer-ul Facebook arată exact ca un link către sharer-ul
+ * Facebook, oricum l-am scrie.
  *
- * DE ACEEA E CEA MAI IMPORTANTĂ PROBĂ DE AICI: caseta trebuie să stea SINGURĂ,
- * niciodată în același înveliș cu iconițele. Pusă înăuntru — sau lipită de ele
- * printr-o regulă de vecinătate — ar fi dispărut odată cu ele, și tocmai la
- * oamenii pentru care a fost scrisă.
+ * Ce a rămas e ce NU se poate recunoaște: text și un mesaj de copiat.
  */
+verifica('nu mai e niciun rând de iconițe', false, str_contains($pagina, 'post__trimite'));
+verifica('nici link către sharer-ul Facebook', false,
+    str_contains($pagina, 'facebook.com/sharer'));
+
 verifica('caseta de sprijin e în pagină', true, str_contains($pagina, 'class="sprijin"'));
 verifica('cu vorba despre non-profit', true,
     str_contains($pagina, 'proiect non-profit creat din drag pentru'));
 verifica('și cu îndemnul de a copia', true,
     str_contains($pagina, 'Am pregătit noi mesajul, tu doar copiază-l:'));
+
+/**
+ * STĂ ÎNCHISĂ, sub un buton. Deschisă, mănâncă o treime din ecranul unui
+ * telefon, chiar între detalii și butonul de participare — adică taie drumul
+ * tocmai celui care voia să se înscrie.
+ *
+ * Un `<details>`, nu un panou de JS: se deschide în orice browser, fără o
+ * linie de JavaScript. Fără `open` în marcaj, altfel s-ar naște deschisă.
+ */
+verifica('e un <details>', true, str_contains($pagina, '<details class="sprijin">'));
+verifica('cu butonul care o deschide', true,
+    str_contains($pagina, 'Distribuie asta prietenilor tăi'));
 
 /**
  * MESAJUL GATA SCRIS poartă adresa ÎNTREAGĂ: se dă mai departe într-o discuție,
@@ -1386,27 +1384,42 @@ verifica('mesajul gata scris, cu adresa întreagă', true,
  * SE COPIAZĂ DIN DOUĂ LOCURI: butonul (unealta adevărată, se ajunge la ea cu
  * tastatura) și textul însuși (scurtătura pentru cine dă cu degetul pe vorbe).
  */
-verifica('se copiază de pe buton', true,
-    str_contains($pagina, 'sprijin__copiaza'));
+verifica('se copiază de pe buton', true, str_contains($pagina, 'sprijin__copiaza'));
 verifica('și de pe textul însuși', true,
     str_contains($pagina, 'class="sprijin__vorba" data-copiaza='));
 verifica('amândouă poartă același text', 2,
     substr_count($pagina, 'data-copiaza="' . h($mesajulScris) . '"'));
 
-/* Stă între detalii și rândul de iconițe, ca să se vadă înaintea lor. */
-verifica('caseta stă înaintea iconițelor', true,
-    strpos($pagina, 'class="sprijin"') < strpos($pagina, "post__trimite"));
+/**
+ * WHATSAPP, singurul link către o rețea rămas în pagină — și duce ACELAȘI
+ * mesaj, nu altul.
+ *
+ * ȘTIM că unele blocante îl ascund (`a[href*="wa.me"]` e o regulă gata
+ * scrisă), și e în regulă. DAR TREBUIE SĂ DISPARĂ FĂRĂ URMĂ, iar asta cere ca
+ * el să fie frate cu celelalte, nu învelit în ceva de-al lui: un `<div>` în
+ * jurul lui ar fi rămas cu marginea și cu locul lui gol. Proba se uită la
+ * asta — între sfârșitul casetei cu mesajul și linkul de WhatsApp nu se
+ * deschide niciun element nou.
+ */
+verifica('are butonul de WhatsApp', true, str_contains($pagina, 'sprijin__whatsapp'));
+verifica('cu același mesaj în el', true,
+    str_contains($pagina, 'wa.me/?text=' . urlencode($mesajulScris)));
+
+$dupaMesaj = (int) strpos($pagina, '</div>', (int) strpos($pagina, 'sprijin__mesaj'));
+$intreEle  = substr($pagina, $dupaMesaj,
+                    (int) strpos($pagina, 'sprijin__whatsapp') - $dupaMesaj);
+
+/* Fără lămuririle din marcaj: ele vorbesc DESPRE `<div>`-uri, iar proba se
+   uită după `<div>`-uri adevărate. */
+$intreEle = (string) preg_replace('/<!--.*?-->/s', '', $intreEle);
+
+verifica('WhatsApp nu stă într-un înveliș al lui', false, str_contains($intreEle, '<div'));
+
+/* Stă între caseta cu detalii și butoanele de participare. */
+verifica('caseta stă înaintea butoanelor de participare', true,
+    strpos($pagina, 'class="sprijin"') < strpos($pagina, 'id="rsvp"'));
 verifica('și după caseta cu detalii', true,
     strpos($pagina, 'event-box') < strpos($pagina, 'class="sprijin"'));
-
-/**
- * ȘI NU E ÎNĂUNTRUL LOR. Se citește pe față din HTML: între începutul casetei
- * și al rândului de iconițe trebuie să stea închiderea casetei — altfel una e
- * în cealaltă.
- */
-verifica('caseta se închide înaintea iconițelor', true,
-    strpos($pagina, '</section>', (int) strpos($pagina, 'class="sprijin"'))
-        < strpos($pagina, "post__trimite"));
 verifica('locația', true, str_contains($pagina, 'Piața Sfatului'));
 verifica('costul lipsă înseamnă gratuit', true, str_contains($pagina, 'Gratuit'));
 
@@ -2633,9 +2646,9 @@ verifica('fără cercuri goale', false, str_contains($pustiu, 'class="facepile"'
 $asteapta = cerere($baza . urlEveniment($slugul($idAstept)), $c)['corp'];
 verifica('la un eveniment neaprobat, secțiunea nici nu apare', false,
     str_contains($asteapta, 'id="rsvp"'));
-// Nici butoanele de distribuire: n-are rost să dai mai departe un anunț pe
+// Nici caseta de distribuire: n-are rost să dai mai departe un anunț pe
 // care nu-l poate deschide nimeni.
-verifica('nici butoanele de distribuire', false, str_contains($asteapta, "post__trimite"));
+verifica('nici caseta de distribuire', false, str_contains($asteapta, 'class="sprijin"'));
 
 db()->prepare('DELETE FROM membri WHERE email = ?')->execute(['al-treilea@exemplu-test.ro']);
 
