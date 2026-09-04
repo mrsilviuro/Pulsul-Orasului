@@ -693,7 +693,37 @@ inc/
                       ceva care începe în mai puțin de trei ore
   comentarii.php    → discuția de sub eveniment: cele două niveluri,
                       aprecierile, ștergerea cu piatră de mormânt, ȘI cum
-                      arată pe ecran (HTML-ul se scrie doar aici). TOT AICI
+                      arată pe ecran (HTML-ul se scrie doar aici).
+                      ANUNȚUL IMPORTANT AL ORGANIZATORULUI (`important`,
+                      sql/035): un comentariu de căpătâi, care stă PRIMUL în
+                      listă oricâte aprecieri ar avea celelalte, se vede puțin
+                      altfel și pleacă pe e-mail la toți cei înscriși. În rest
+                      e un comentariu obișnuit — se editează, se șterge, se
+                      apreciază și i se răspunde ca oricare altul.
+                      CINE POATE: doar ORGANIZATORUL (poateMarcaImportant), NU
+                      și staff-ul pe anunțul altuia — bifa nu e o unealtă de
+                      moderare, e vocea celui care ține evenimentul, iar „ne
+                      mutăm pe terenul de alături" e o vorbă pe care omul casei
+                      n-are de unde s-o știe adevărată. NU LA UN RĂSPUNS: acela
+                      stă sub comentariul la care răspunde, deci n-are cum să
+                      urce deasupra tuturor. Regula stă într-un singur loc, de
+                      unde o citesc și formularul (dacă se desenează bifa), și
+                      api/comentarii.php (care stinge TĂCUT un steag necuvenit
+                      — cine îl trimite pe ascuns nu merită o lămurire).
+                      ÎNTRE MAI MULTE ANUNȚURI hotărăște doar vechimea, de la
+                      nou la vechi: ultima veste o înlocuiește pe cea dinainte,
+                      iar aprecierile n-au ce căuta acolo. UN ANUNȚ GOLIT NU MAI
+                      E IMPORTANT (esteImportant) — altfel o piatră de mormânt
+                      ar fi stat pironită în capul listei; se întreabă la
+                      CITIRE, nu se stinge steagul la ștergere, fiindcă un rând
+                      golit din phpMyAdmin n-ar fi trecut pe la codul acela.
+                      VESTEA NU SE UITĂ LA BIFA `email_comentarii`, dinadins:
+                      bifa aceea scrie „când cineva comentează la evenimentul
+                      MEU sau ÎMI răspunde", iar asta nu e niciuna din ele — e
+                      o veste despre un eveniment la care omul s-a înscris, ca
+                      anularea. Pleacă la TOȚI, și înscriși, și doar interesați
+                      (oameniiDeInstiintat din inc/interese.php, aceeași listă
+                      ca la anulare). TOT AICI
                       discutiaEDeschisa() — ÎNTREBARE DEOSEBITĂ de
                       evenimentPublicat(), dinadins: aceea spune dacă lumea se
                       poartă cu anunțul ca și cu unul de pe site (înscrieri,
@@ -876,7 +906,14 @@ sql/                → schema.sql + migrări numerotate (002, 003, 004, 005-goo
                       028-feedback-instiintat, 029-eveniment-fixat,
                       030-incercari-qr, 031-newsletter-zilnic,
                       032-dorinte-mai-multe, 033-urmariri,
-                      034-amintire-eveniment)
+                      034-amintire-eveniment, 035-comentariu-important)
+                      `comentarii.important` (035) e tot ce trebuie pentru
+                      anunțul de căpătâi al organizatorului. NU e o coloană pe
+                      eveniment („comentariul fixat"), fiindcă pot fi mai
+                      multe: cine schimbă locul, apoi ora, apoi cere bani
+                      gheață are trei lucruri de spus, nu unul care îl
+                      înlocuiește pe celălalt. Fără index — ordinea se face în
+                      PHP, pe rândurile deja citite ale unui singur eveniment
                       `evenimente.amintire_trimisa_la` (034) e singurul lucru
                       care ține „un memento pe eveniment": fereastra e de trei
                       ore, cronul trece din oră în oră, deci fără ea același
@@ -1165,7 +1202,10 @@ sistem. Regulile care s-au strâns din trecerea de purificare:
   listă, vestea că un eveniment s-a anulat (api/anuleaza-eveniment.php),
   hotărârea moderării (api/modereaza-eveniment.php), comentariile noi
   (api/comentarii.php → instiinteazaDeComentariu, cu bifa `email_comentarii`
-  din setări) și PĂRERILE SCRISE pe profil (api/evaluare.php →
+  din setări), ANUNȚUL IMPORTANT AL ORGANIZATORULUI (api/comentarii.php →
+  instiinteazaDeAnuntImportant, către TOȚI cei înscriși sau interesați, FĂRĂ
+  bifa `email_comentarii` — vezi lămurirea de la comentarii.php)
+  și PĂRERILE SCRISE pe profil (api/evaluare.php →
   omDeInstiintatLaFeedback, cu bifa `email_feedback`; stelele singure NU
   vestesc nimic, fiindcă sunt anonime). PLUS CELE PATRU ALE ZONEI DE ADMINISTRARE, toate cu motiv care
   poate lipsi (api/admin.php): comentariul șters, poza ștearsă, contul

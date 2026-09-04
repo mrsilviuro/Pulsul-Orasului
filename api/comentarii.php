@@ -256,7 +256,21 @@ function adaugaComentariul(array $date, array $eveniment, int $membruId, bool $e
         }
     }
 
-    $id = salveazaComentariu($evenimentId, $membruId, $rezultat['text'], $catre);
+    /**
+     * „Important" se cerne AICI, nu se crede pe cuvânt.
+     *
+     * Bifa se desenează în pagină doar organizatorului, dar cererea poate veni
+     * de oriunde — din consola browserului, dintr-un script. Regula e una
+     * singură, poateMarcaImportant(), și o citesc amândouă locurile.
+     *
+     * Un steag necuvenit NU e o eroare, se stinge tăcut: cine trimite unul pe
+     * ascuns nu merită un răspuns care să-i spună de ce n-a mers, iar un om
+     * cinstit n-are cum să ajungă aici — bifa nici nu e pe ecranul lui.
+     */
+    $important = !empty($date['important'])
+              && poateMarcaImportant($eveniment, $membruId, $catre !== null);
+
+    $id = salveazaComentariu($evenimentId, $membruId, $rezultat['text'], $catre, $important);
 
     $desenat = comentariulDesenat($id, $eveniment, $membruId, $eStaff);
 
@@ -278,7 +292,11 @@ function adaugaComentariul(array $date, array $eveniment, int $membruId, bool $e
      * scris n-are nicio vină și n-are ce face cu o eroare despre serverul de
      * e-mail. Comentariul lui e publicat; ce n-a mers ajunge în log.
      */
-    instiinteazaDeComentariu($eveniment, $rand, $catre, $membruId);
+    if ($important) {
+        instiinteazaDeAnuntImportant($eveniment, $rand, $membruId);
+    } else {
+        instiinteazaDeComentariu($eveniment, $rand, $catre, $membruId);
+    }
 
     raspunsJson([
         'ok'     => true,
@@ -289,8 +307,53 @@ function adaugaComentariul(array $date, array $eveniment, int $membruId, bool $e
                   . randeazaComentariu($rand, $desenat['context'])
                   . '</li>',
         'numar'  => numaraComentarii($evenimentId),
-        'mesaj'  => $catre === null ? 'Gata, comentariul tău e publicat.' : 'Gata, răspunsul tău e publicat.',
+        /* La un anunț important se spune și că a plecat vestea: altfel omul
+           n-ar avea de unde ști că a scris tuturor, iar asta se cuvine spus
+           chiar în clipa în care s-a întâmplat. */
+        'mesaj'  => $important
+            ? 'Gata! Anunțul tău stă acum în capul discuției și le-am dat de veste pe e-mail celor înscriși.'
+            : ($catre === null ? 'Gata, comentariul tău e publicat.' : 'Gata, răspunsul tău e publicat.'),
     ]);
+}
+
+/**
+ * Dă de veste tuturor celor care așteaptă seara asta.
+ *
+ * Numai la un comentariu de căpătâi, și numai atunci: organizatorul a bifat
+ * „Important" tocmai fiindcă are ceva ce trebuie citit de toți.
+ *
+ * CINE PRIMEȘTE: și cei înscriși, și cei doar interesați (oameniiDeInstiintat
+ * din inc/interese.php) — e o veste despre EVENIMENT, nu despre discuția de sub
+ * el, iar cine s-a arătat interesat își ține și el seara aceea deoparte. Fără
+ * organizator, care tocmai a apăsat butonul.
+ *
+ * Nu se uită la bifa `email_comentarii`: vezi lămurirea de la
+ * emailComentariuImportant() din inc/email.php.
+ *
+ * Nu întoarce nimic și nu oprește nimic, ca sora ei de mai jos: un mesaj care
+ * nu pleacă n-are voie să strice publicarea unui comentariu.
+ */
+function instiinteazaDeAnuntImportant(array $eveniment, array $rand, int $autorId): void
+{
+    $oameni = oameniiDeInstiintat((int) $eveniment['id'], $autorId);
+
+    if ($oameni === []) {
+        return;
+    }
+
+    $adresa = urlIntreg(urlEveniment((string) $eveniment['slug'])) . '#c' . (int) $rand['id'];
+    $autor  = numeleDinComentariu($rand);
+
+    foreach ($oameni as $om) {
+        emailComentariuImportant(
+            (string) $om['email'],
+            (string) $om['prenume'],
+            $autor,
+            (string) $eveniment['titlu'],
+            (string) $rand['text'],
+            $adresa
+        );
+    }
 }
 
 /**

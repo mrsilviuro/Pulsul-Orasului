@@ -79,7 +79,7 @@ function discutiaEDeschisa(array $eveniment): bool
 function comentariileEvenimentului(int $evenimentId, int $membruId = 0): array
 {
     $q = db()->prepare(
-        'SELECT c.id, c.parinte_id, c.raspuns_la_id, c.text, c.sters,
+        'SELECT c.id, c.parinte_id, c.raspuns_la_id, c.text, c.sters, c.important,
                 c.creat_la, c.editat_la, c.membru_id,
                 m.permalink, m.nume, m.prenume, m.poza,
                 m.stare AS stare_cont, m.este_staff,
@@ -121,7 +121,14 @@ function comentariileEvenimentului(int $evenimentId, int $membruId = 0): array
  * Întoarce o listă de principale, fiecare cu răspunsurile lui sub cheia
  * „raspunsuri".
  *
- * Principalele după aprecieri, apoi de la nou la vechi. Sus stă ce a găsit
+ * ÎNTÂI CELE DE CĂPĂTÂI, ale organizatorului, oricâte aprecieri ar avea
+ * celelalte. Ele nu sunt o părere între păreri, sunt o veste despre eveniment:
+ * „ne mutăm pe terenul de alături" trebuie citit de toți, nu ridicat prin vot.
+ * Între ele hotărăște doar vechimea, de la nou la vechi — aprecierile nu intră
+ * deloc în socoteală, fiindcă ultima veste o înlocuiește pe cea dinainte, iar
+ * una veche și îndrăgită n-are ce căuta peste una proaspătă.
+ *
+ * Restul după aprecieri, apoi de la nou la vechi. Sus stă ce a găsit
  * lumea de cuviință să ridice, iar la egalitate — și mai ales la zero, unde
  * sunt cele mai multe — hotărăște vechimea, ca la orice listă de noutăți.
  *
@@ -171,6 +178,18 @@ function grupeazaComentarii(array $randuri): array
      * pe care tocmai îl citea.
      */
     usort($lista, static function (array $a, array $b): int {
+        $aE = esteImportant($a);
+        $bE = esteImportant($b);
+
+        // Cele de căpătâi, deasupra tuturor. Între ele, doar vechimea.
+        if ($aE !== $bE) {
+            return $bE <=> $aE;
+        }
+
+        if ($aE) {
+            return (int) $b['id'] <=> (int) $a['id'];
+        }
+
         $dupaAprecieri = (int) ($b['aprecieri'] ?? 0) <=> (int) ($a['aprecieri'] ?? 0);
 
         return $dupaAprecieri !== 0
@@ -226,7 +245,7 @@ function comentariuDupaId(int $id): ?array
 {
     $q = db()->prepare(
         'SELECT id, eveniment_id, membru_id, parinte_id, raspuns_la_id, text, sters,
-                creat_la, editat_la
+                important, creat_la, editat_la
            FROM comentarii WHERE id = ? LIMIT 1'
     );
     $q->execute([$id]);
@@ -263,6 +282,52 @@ function poateModificaComentariul(array $comentariu, int $membruId, bool $eStaff
     return $eStaff || (int) $comentariu['membru_id'] === $membruId;
 }
 
+/**
+ * Poate omul ăsta să pună un comentariu „Important" aici?
+ *
+ * DOAR ORGANIZATORUL, și doar pe un comentariu PRINCIPAL.
+ *
+ * Nu și staff-ul, deși el poate aproape orice altceva: bifa asta nu e o unealtă
+ * de moderare, e vocea celui care ține evenimentul. „Ne mutăm pe terenul de
+ * alături" e o vorbă pe care numai el o poate spune — omul casei n-are de unde
+ * ști dacă e adevărată. Pe anunțurile lui, puse în numele orașului, el ESTE
+ * organizatorul, deci o are oricum.
+ *
+ * NU LA UN RĂSPUNS: un răspuns stă sub comentariul la care răspunde, deci n-are
+ * cum să urce deasupra tuturor, iar un „Important" care nu e primul e o
+ * promisiune neținută. $laUnRaspuns spune dacă se răspunde cuiva.
+ *
+ * Regula se ține ÎNTR-UN SINGUR LOC, de unde o citesc și formularul (dacă se
+ * desenează bifa), și api/comentarii.php (dacă se ia în seamă ce s-a trimis).
+ * Cea din pagină e o purtare frumoasă; asta de aici e regula — cererea poate
+ * veni de oriunde, nu doar de pe bifa aceea.
+ */
+function poateMarcaImportant(array $eveniment, int $membruId, bool $laUnRaspuns = false): bool
+{
+    if ($membruId <= 0 || $laUnRaspuns) {
+        return false;
+    }
+
+    return (int) ($eveniment['membru_id'] ?? 0) === $membruId;
+}
+
+/**
+ * E de căpătâi comentariul ăsta — și mai are cine să-l citească?
+ *
+ * Steagul singur nu e de ajuns: un comentariu GOLIT păstrează rândul în bază ca
+ * să țină legată discuția de sub el, dar în locul lui scrie „Comentariu șters".
+ * Rămas important, o piatră de mormânt ar fi stat pironită în capul listei,
+ * deasupra a tot ce mai au oamenii de spus.
+ *
+ * Întrebarea se pune AICI, la citire, nu se stinge steagul la ștergere: un rând
+ * golit de mână din phpMyAdmin — se mai întâmplă pe site-ul ăsta — n-ar fi
+ * trecut pe la codul care l-ar fi stins.
+ */
+function esteImportant(array $c): bool
+{
+    return (int) ($c['important'] ?? 0) === 1 && (int) ($c['sters'] ?? 0) !== 1;
+}
+
 /* ============================== SCRIEREA ============================= */
 
 /**
@@ -276,8 +341,14 @@ function poateModificaComentariul(array $comentariu, int $membruId, bool $eStaff
  *
  * Adâncimea n-o hotărăște cine apasă, ci locul: oriunde ar apăsa, răspunsul
  * ajunge pe al doilea nivel. De aceea nu primim „ce nivel", ci „la cine".
+ *
+ * $important vine gata cernut de cel care cheamă funcția — el are în mână și
+ * evenimentul, și pe cel care scrie, deci el poate întreba poateMarcaImportant().
+ * Aici se scrie doar ce s-a hotărât acolo; funcția asta nu deschide o a doua
+ * portiță prin care s-ar putea strecura un steag necuvenit.
  */
-function salveazaComentariu(int $evenimentId, int $membruId, string $text, ?array $catre = null): int
+function salveazaComentariu(int $evenimentId, int $membruId, string $text,
+                            ?array $catre = null, bool $important = false): int
 {
     $parinteId   = null;
     $raspunsLaId = null;
@@ -295,11 +366,16 @@ function salveazaComentariu(int $evenimentId, int $membruId, string $text, ?arra
 
     $q = db()->prepare(
         'INSERT INTO comentarii
-                (eveniment_id, membru_id, parinte_id, raspuns_la_id, text, creat_la)
-         VALUES (?,?,?,?,?,?)'
+                (eveniment_id, membru_id, parinte_id, raspuns_la_id, text, important, creat_la)
+         VALUES (?,?,?,?,?,?,?)'
     );
 
-    $q->execute([$evenimentId, $membruId, $parinteId, $raspunsLaId, $text, acum()]);
+    /* Un răspuns nu poate fi de căpătâi, oricât s-ar cere: locul lui e sub
+       comentariul la care răspunde, deci n-are cum să stea primul. */
+    $important = $important && $parinteId === null;
+
+    $q->execute([$evenimentId, $membruId, $parinteId, $raspunsLaId, $text,
+                 $important ? 1 : 0, acum()]);
 
     return (int) db()->lastInsertId();
 }
@@ -635,6 +711,23 @@ function insigneleComentariului(array $c, int $organizatorId): string
         $insigne .= '<span class="badge">Participant</span>';
     }
 
+    /**
+     * „Important" vine ULTIMA, după „Organizator", fiindcă se citește ca o
+     * urmare a ei: omul care ține evenimentul spune ceva ce trebuie știut. Pusă
+     * prima, ar fi părut o însușire a omului, nu a vorbei lui.
+     *
+     * Poartă un semn, nu doar culoare: cine nu deosebește roșul de cenușiu
+     * n-ar fi avut din ce să înțeleagă că rândul acela e altfel decât
+     * celelalte. Din același motiv scrie și cuvântul întreg.
+     */
+    if (esteImportant($c)) {
+        $insigne .= '<span class="badge badge--important">'
+                  . '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">'
+                  . '<path d="M12 8v5"/><path d="M12 16.5v.01"/>'
+                  . '<circle cx="12" cy="12" r="9"/>'
+                  . '</svg>Important</span>';
+    }
+
     return $insigne;
 }
 
@@ -811,7 +904,11 @@ function randeazaComentariu(array $c, array $context): string
      *
      * Piatra de mormânt n-are id: la un comentariu golit nu trimitem pe nimeni.
      */
-    return '<article class="comment__body" id="c' . $id . '">'
+    /* Un comentariu de căpătâi se vede altfel — puțin, cât să se deosebească
+       dintr-o privire. Cum anume, scrie în style.css. */
+    $felul = esteImportant($c) ? ' comment__body--important' : '';
+
+    return '<article class="comment__body' . $felul . '" id="c' . $id . '">'
          . '<img class="comment__avatar" src="' . h($poza) . '" alt=""'
          . ' width="96" height="96" loading="lazy" decoding="async">'
          . '<div class="comment__main">'
