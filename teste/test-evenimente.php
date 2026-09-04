@@ -1337,7 +1337,7 @@ verifica('fără vorbe despre sfârșitul care lipsește', false,
 $adresaIntreaga = rtrim((string) ($config['url_site'] ?? ''), '/')
                 . urlEveniment($slugul($idAprobat));
 
-verifica('are zona de distribuire', true, str_contains($pagina, 'post__share'));
+verifica('are zona de distribuire', true, str_contains($pagina, "post__trimite"));
 verifica('cu link de Facebook, pe adresa întreagă', true,
     str_contains($pagina, 'facebook.com/sharer/sharer.php?u=' . h(urlencode($adresaIntreaga))));
 verifica('cu link de WhatsApp', true, str_contains($pagina, 'wa.me/?text='));
@@ -1350,9 +1350,63 @@ verifica('care are textul gata scris, escapat', true,
 verifica('cele două linkuri se deschid în altă filă', 2,
     preg_match_all('/class="icon-btn"[^>]*target="_blank"[^>]*rel="noopener noreferrer"/', $pagina));
 verifica('zona stă înaintea butoanelor de participare', true,
-    strpos($pagina, 'post__share') < strpos($pagina, 'id="rsvp"'));
+    strpos($pagina, "post__trimite") < strpos($pagina, 'id="rsvp"'));
 verifica('și după caseta cu detalii', true,
-    strpos($pagina, 'event-box') < strpos($pagina, 'post__share'));
+    strpos($pagina, 'event-box') < strpos($pagina, "post__trimite"));
+
+/* ------------------------- caseta de sprijin ------------------------- */
+
+/**
+ * Există fiindcă blocantele de reclame ascund rândul de iconițe de mai jos —
+ * îl recunosc după adresele către facebook.com și wa.me, iar acelea nu se pot
+ * ascunde de ele. Caseta asta trece pe lângă filtre fiindcă nu seamănă cu ele.
+ *
+ * DE ACEEA E CEA MAI IMPORTANTĂ PROBĂ DE AICI: caseta trebuie să stea SINGURĂ,
+ * niciodată în același înveliș cu iconițele. Pusă înăuntru — sau lipită de ele
+ * printr-o regulă de vecinătate — ar fi dispărut odată cu ele, și tocmai la
+ * oamenii pentru care a fost scrisă.
+ */
+verifica('caseta de sprijin e în pagină', true, str_contains($pagina, 'class="sprijin"'));
+verifica('cu vorba despre non-profit', true,
+    str_contains($pagina, 'proiect non-profit creat din drag pentru'));
+verifica('și cu îndemnul de a copia', true,
+    str_contains($pagina, 'Am pregătit noi mesajul, tu doar copiază-l:'));
+
+/**
+ * MESAJUL GATA SCRIS poartă adresa ÎNTREAGĂ: se dă mai departe într-o discuție,
+ * de pe alt telefon, unde „/eveniment/…" singur n-ar duce nicăieri.
+ */
+$mesajulScris = 'Salut! Am găsit ceva fain pe PulsulOrașului.Ro și m-am gândit că '
+              . 'ți-ar plăcea și ție: ' . $adresaIntreaga;
+
+verifica('mesajul gata scris, cu adresa întreagă', true,
+    str_contains($pagina, h($mesajulScris)));
+
+/**
+ * SE COPIAZĂ DIN DOUĂ LOCURI: butonul (unealta adevărată, se ajunge la ea cu
+ * tastatura) și textul însuși (scurtătura pentru cine dă cu degetul pe vorbe).
+ */
+verifica('se copiază de pe buton', true,
+    str_contains($pagina, 'sprijin__copiaza'));
+verifica('și de pe textul însuși', true,
+    str_contains($pagina, 'class="sprijin__vorba" data-copiaza='));
+verifica('amândouă poartă același text', 2,
+    substr_count($pagina, 'data-copiaza="' . h($mesajulScris) . '"'));
+
+/* Stă între detalii și rândul de iconițe, ca să se vadă înaintea lor. */
+verifica('caseta stă înaintea iconițelor', true,
+    strpos($pagina, 'class="sprijin"') < strpos($pagina, "post__trimite"));
+verifica('și după caseta cu detalii', true,
+    strpos($pagina, 'event-box') < strpos($pagina, 'class="sprijin"'));
+
+/**
+ * ȘI NU E ÎNĂUNTRUL LOR. Se citește pe față din HTML: între începutul casetei
+ * și al rândului de iconițe trebuie să stea închiderea casetei — altfel una e
+ * în cealaltă.
+ */
+verifica('caseta se închide înaintea iconițelor', true,
+    strpos($pagina, '</section>', (int) strpos($pagina, 'class="sprijin"'))
+        < strpos($pagina, "post__trimite"));
 verifica('locația', true, str_contains($pagina, 'Piața Sfatului'));
 verifica('costul lipsă înseamnă gratuit', true, str_contains($pagina, 'Gratuit'));
 
@@ -2581,7 +2635,7 @@ verifica('la un eveniment neaprobat, secțiunea nici nu apare', false,
     str_contains($asteapta, 'id="rsvp"'));
 // Nici butoanele de distribuire: n-are rost să dai mai departe un anunț pe
 // care nu-l poate deschide nimeni.
-verifica('nici butoanele de distribuire', false, str_contains($asteapta, 'post__share'));
+verifica('nici butoanele de distribuire', false, str_contains($asteapta, "post__trimite"));
 
 db()->prepare('DELETE FROM membri WHERE email = ?')->execute(['al-treilea@exemplu-test.ro']);
 

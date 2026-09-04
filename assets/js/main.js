@@ -1427,9 +1427,9 @@
      și copiat cu document.execCommand. E scoasă din uz, dar merge peste tot
      unde cealaltă nu.
   */
-  var butonCopiaza = document.getElementById('copiaza-link');
+  var deCopiat = document.querySelectorAll('[data-copiaza]');
 
-  if (butonCopiaza) {
+  if (deCopiat.length) {
     /** Calea veche, pentru unde nu există Clipboard API. Întoarce true/false. */
     function copiazaPeVechi(text) {
       var camp = document.createElement('textarea');
@@ -1455,31 +1455,50 @@
 
     var ceasCopiat = null;
 
-    function aratatCopiat() {
-      toast('Link copiat!');
-      butonCopiaza.classList.add('s-a-copiat');
+    /**
+     * Semnul că s-a copiat, pe elementul care a fost apăsat.
+     *
+     * Vorba din bulă se ia de pe el, din `data-copiat`: linkul de sus e altceva
+     * decât mesajul gata scris din caseta de sprijin, iar „Link copiat!" spus
+     * despre o frază întreagă ar fi fost o vorbă pe lângă.
+     */
+    function aratatCopiat(cine) {
+      toast(cine.getAttribute('data-copiat') || 'Link copiat!');
+      cine.classList.add('s-a-copiat');
       clearTimeout(ceasCopiat);
       ceasCopiat = setTimeout(function () {
-        butonCopiaza.classList.remove('s-a-copiat');
+        cine.classList.remove('s-a-copiat');
       }, 1600);
     }
 
-    butonCopiaza.addEventListener('click', function () {
-      var text = butonCopiaza.getAttribute('data-copiaza') || window.location.href;
+    /**
+     * O singură regulă pentru toate locurile de unde se copiază ceva: iconița
+     * de lângă Facebook și WhatsApp, și mesajul din caseta de sprijin — acolo
+     * și textul, și butonul de lângă el. Scrisă de două ori, a doua copie ar fi
+     * rămas fără calea veche în ziua în care cineva o schimba doar pe prima.
+     */
+    Array.prototype.forEach.call(deCopiat, function (cine) {
+      cine.addEventListener('click', function () {
+        var text = cine.getAttribute('data-copiaza') || window.location.href;
 
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text)
-          .then(aratatCopiat)
-          .catch(function () {
-            // Permisiunea poate fi refuzată chiar și pe https.
-            if (copiazaPeVechi(text)) { aratatCopiat(); }
-            else { toast('N-am reușit să copiem linkul. Ia-l din bara de adrese.'); }
-          });
-        return;
-      }
+        function nuAMers() {
+          toast('N-am reușit să copiem. Ia textul cu mâna, e chiar aici.');
+        }
 
-      if (copiazaPeVechi(text)) { aratatCopiat(); }
-      else { toast('N-am reușit să copiem linkul. Ia-l din bara de adrese.'); }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text)
+            .then(function () { aratatCopiat(cine); })
+            .catch(function () {
+              // Permisiunea poate fi refuzată chiar și pe https.
+              if (copiazaPeVechi(text)) { aratatCopiat(cine); }
+              else { nuAMers(); }
+            });
+          return;
+        }
+
+        if (copiazaPeVechi(text)) { aratatCopiat(cine); }
+        else { nuAMers(); }
+      });
     });
   }
 

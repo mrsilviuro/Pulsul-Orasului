@@ -1402,8 +1402,16 @@ main { padding-block: 46px 64px; }
    cere apăsarea e butonul mare de dedesubt.
 
    Două sunt linkuri și una e buton (copierea o face JS), dar arată la fel:
-   pentru om sunt trei lucruri de-un fel. */
-.post__share {
+   pentru om sunt trei lucruri de-un fel.
+
+   NUMELE CLASEI NU POARTĂ „share", DINADINS. Blocantele de reclame au filtre
+   gata scrise pentru butoanele de distribuire, iar cele mai multe se uită la
+   numele claselor: „share", „social", „share-buttons". Numele ăsta trece pe
+   lângă ele. NU e o apărare adevărată — adresele către facebook.com și wa.me
+   se văd oricum, iar o regulă scrisă după ele prinde rândul întreg, oricât
+   l-am boteza. De aceea ce contează cu adevărat stă în `.sprijin`, mai jos:
+   acolo nu e nimic de recunoscut. */
+.post__trimite {
   display: flex;
   gap: 6px;
   margin: 22px 0 0;
@@ -1470,6 +1478,68 @@ main { padding-block: 46px 64px; }
   color: #fff;
   background: #16a34a;
   border-color: #16a34a;
+}
+
+/* ---- caseta de sprijin ----
+   Stă deasupra rândului de iconițe și e SINGURĂ, fără nicio legătură de
+   vecinătate cu el: o regulă de blocant care ascunde butoanele de distribuire
+   n-are cum s-o ia și pe ea cu el. Vezi lămurirea din event.php.
+
+   Culoarea mărcii, dar stinsă: e o rugăminte, nu o alarmă. */
+.sprijin {
+  margin: 26px 0 0;
+  padding: 18px 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-soft);
+}
+.sprijin__titlu {
+  margin: 0 0 8px;
+  font-size: 15.5px; font-weight: 800;
+  letter-spacing: -.01em;
+  color: var(--text);
+}
+.sprijin__text {
+  margin: 0;
+  font-size: 14px; line-height: 1.65;
+  color: var(--text-soft);
+}
+.sprijin__indemn {
+  margin: 16px 0 8px;
+  font-size: 13.5px; font-weight: 700;
+  color: var(--text);
+}
+
+/* Mesajul și butonul, unul lângă altul cât încape. Pe ecran îngust butonul
+   trece dedesubt și se face cât rândul: acolo e degetul, nu cursorul. */
+.sprijin__mesaj {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 12px 14px;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+/* Vorba gata scrisă. `cursor: pointer` fiindcă se copiază și cu o apăsare pe
+   ea; `user-select: text` scris pe față, ca să rămână limpede că textul
+   TREBUIE să se poată lua și cu mâna — fără JavaScript, aia e singura cale. */
+.sprijin__vorba {
+  flex: 1 1 260px;
+  margin: 0;
+  font-size: 13.5px; line-height: 1.6;
+  color: var(--text-soft);
+  cursor: pointer;
+  user-select: text;
+  overflow-wrap: anywhere;
+}
+.sprijin__vorba:hover { color: var(--text); }
+
+.sprijin__copiaza { flex: none; }
+.sprijin__copiaza.s-a-copiat { background: #16a34a; border-color: #16a34a; }
+
+@media (max-width: 560px) {
+  .sprijin { padding: 16px; }
+  .sprijin__copiaza { width: 100%; justify-content: center; }
 }
 
 .post__figure { margin: 26px 0 0; }

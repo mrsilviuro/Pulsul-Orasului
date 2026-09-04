@@ -159,7 +159,25 @@ termeni.php, confidentialitate.php, cookies.php
                 că omul are voie la el: pus mai sus, ar fi trimis
                 PERMANENT și un slug scris aiurea. Adresa se scrie DOAR
                 prin urlEveniment() (inc/evenimente.php); la fel profilul,
-                prin urlProfil()
+                prin urlProfil().
+                DISTRIBUIREA E ÎN DOUĂ BUCĂȚI, ȘI ANUME AȘA: rândul de trei
+                iconițe (`.post__trimite`) și, DEASUPRA LUI ȘI SINGURĂ, caseta
+                de sprijin (`.sprijin`) — vorba despre proiectul non-profit și
+                mesajul gata scris, de copiat. Blocantele de reclame (AdGuard
+                și celelalte) ascund rândul de iconițe: îl recunosc după numele
+                claselor ȘI după adresele către facebook.com și wa.me. Pe cele
+                dintâi le-am ocolit — de aceea clasa nu se mai cheamă
+                „post__share" —, pe celelalte NU ARE CUM: un link către
+                sharer-ul Facebook arată exact ca un link către sharer-ul
+                Facebook. Caseta trece pe lângă filtre fiindcă nu seamănă cu
+                ele: n-are nicio adresă către o rețea și nici un cuvânt după
+                care se caută. DE ACEEA NU SE PUNE NICIODATĂ ÎN ACELAȘI
+                ÎNVELIȘ cu iconițele și nici lipită de ele printr-o regulă de
+                vecinătate — ar fi dispărut odată cu ele, tocmai la oamenii
+                pentru care a fost scrisă. Există o probă care păzește asta, în
+                teste/test-evenimente.php. Mesajul se copiază din DOUĂ locuri
+                (butonul și textul însuși), dar textul stă într-un `<p>`, nu
+                într-un buton, ca să se poată lua cu mâna când JS-ul e stins
   sitemap.php → harta pentru motoarele de căutare, cerută la `/sitemap.xml`
                 (rescriere). SE SCRIE DIN BAZĂ la fiecare cerere: una făcută
                 o dată și lăsată acolo ar fi rămas în urmă la primul
