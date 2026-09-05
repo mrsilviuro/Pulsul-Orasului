@@ -30,6 +30,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/bootstrap.php';
 require_once __DIR__ . '/posta.php';   // pe ce drum pleacă mesajul
+require_once __DIR__ . '/coada.php';   // …și dacă pleacă acum sau la rând
 
 /* ============================ TRIMITEREA =============================== */
 
@@ -38,10 +39,14 @@ require_once __DIR__ . '/posta.php';   // pe ce drum pleacă mesajul
  *
  * $blocuri descrie conținutul; vezi sablonEmail() pentru ce se poate pune.
  * Întoarce true dacă mesajul a plecat (sau a fost scris în fișier, în modul
- * de dezvoltare).
+ * de dezvoltare, ori pus la rând în coadă).
+ *
+ * $dinCoada spune că mesajul VINE din coadă, deci n-are voie să se pună singur
+ * la loc în ea. Fără el, un mesaj picat s-ar fi scris din nou în coadă la
+ * fiecare încercare, iar coada ar fi crescut singură la nesfârșit.
  */
 function trimiteEmail(string $catre, string $subiect, array $blocuri,
-                      array $anteturiInPlus = []): bool
+                      array $anteturiInPlus = [], bool $dinCoada = false): bool
 {
     global $config;
 
@@ -57,6 +62,21 @@ function trimiteEmail(string $catre, string $subiect, array $blocuri,
     if (!esteAdresaSigura($catre)) {
         error_log('PulsulOrasului: adresă de e-mail respinsă la trimitere.');
         return false;
+    }
+
+    /**
+     * PRIMA RĂSCRUCE: pleacă acum, sau se scrie la rând?
+     *
+     * Se întreabă ÎNAINTE de sablonEmail(), fiindcă în coadă intră BLOCURILE, nu
+     * HTML-ul ieșit din ele — un rând de o jumătate de kilooctet în loc de
+     * doisprezece, iar o îndreptare de text din șablon prinde și mesajele deja
+     * puse la rând.
+     *
+     * Steagul îl pune laCoada(), din locul care trimite în serie. Aici doar se
+     * ascultă: funcțiile email* nu știu și n-au de ce să știe pe unde ies.
+     */
+    if (!$dinCoada && scriemInCoada()) {
+        return puneInCoada($catre, $subiect, $blocuri, $anteturiInPlus, prioritateaCozii());
     }
 
     $expeditor    = (string) ($config['email_expeditor'] ?? 'noreply@pulsulorasului.ro');
@@ -185,6 +205,24 @@ function trimiteEmail(string $catre, string $subiect, array $blocuri,
         if (!$plecat) {
             error_log('PulsulOrasului: mail() a dat greș pentru un mesaj de tip „' . $subiect . '".');
         }
+    }
+
+    /**
+     * A DOUA RĂSCRUCE: n-a plecat — se mai încearcă.
+     *
+     * Mesajele care răspund unei apăsări (confirmarea de cont, parola
+     * temporară) pleacă PE LOC și nu trec prin coadă: omul stă și așteaptă, iar
+     * un cron oprit n-are voie să însemne că nimeni nu-și mai poate face cont.
+     *
+     * Dar dacă trimiterea a dat greș, mesajul era pierdut de tot — omul rămânea
+     * cu un cont neconfirmat și fără nicio veste, iar noi cu un rând în log. Așa,
+     * intră în coadă cu prioritate, și pleacă în minutul următor.
+     *
+     * `$dinCoada` oprește bucla: ce vine din coadă și pică rămâne acolo, cu
+     * încercările numărate pe rândul lui, nu se scrie a doua oară.
+     */
+    if (!$plecat && !$dinCoada) {
+        puneInCoada($catre, $subiect, $blocuri, $anteturiInPlus, COADA_URGENT);
     }
 
     // În dezvoltare păstrăm și o copie, ca să se poată citi ce s-a trimis.

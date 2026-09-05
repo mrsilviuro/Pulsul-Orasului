@@ -361,16 +361,24 @@ function instiinteazaDeAnuntImportant(array $eveniment, array $rand, int $autorI
     $adresa = urlIntreg(urlEveniment((string) $eveniment['slug'])) . '#c' . (int) $rand['id'];
     $autor  = numeleDinComentariu($rand);
 
-    foreach ($oameni as $om) {
-        emailComentariuImportant(
-            (string) $om['email'],
-            (string) $om['prenume'],
-            $autor,
-            (string) $eveniment['titlu'],
-            (string) $rand['text'],
-            $adresa
-        );
-    }
+    /**
+     * LA RÂND: un eveniment cu treizeci de înscriși ar fi însemnat treizeci de
+     * mesaje trimise pe loc, dintr-o cerere web, în timp ce organizatorul se
+     * uită la butonul „Trimite". Acum se scriu treizeci de rânduri și pagina
+     * răspunde. Vezi laCoada() din inc/coada.php.
+     */
+    laCoada(static function () use ($oameni, $autor, $eveniment, $rand, $adresa) {
+        foreach ($oameni as $om) {
+            emailComentariuImportant(
+                (string) $om['email'],
+                (string) $om['prenume'],
+                $autor,
+                (string) $eveniment['titlu'],
+                (string) $rand['text'],
+                $adresa
+            );
+        }
+    });
 }
 
 /**

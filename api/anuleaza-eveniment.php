@@ -135,19 +135,35 @@ $candAvutLoc = dataLunga((string) ($eveniment['data_eveniment'] ?? ''));
 $trimise = 0;
 $picate  = 0;
 
-foreach ($deInstiintat as $om) {
-    $plecat = emailAnulareEveniment(
-        (string) $om['email'],
-        (string) $om['prenume'],
-        (string) $eveniment['titlu'],
-        $candAvutLoc,
-        $motiv['text'],
-        $adresaSite,
-        (string) $om['stare'] === 'participant'
-    );
+/**
+ * LA RÂND, DAR ÎNAINTEA CELORLALTE.
+ *
+ * La rând, fiindcă un eveniment cu treizeci de înscriși ar fi ținut pagina
+ * ocupată până plecau toate mesajele — iar omul tocmai apăsase „Anulează" și
+ * aștepta un răspuns.
+ *
+ * ÎNAINTEA CELORLALTE (COADA_URGENT), fiindcă asta e singura veste de pe site
+ * care se strică dacă întârzie: dacă tocmai atunci cineva cu două sute de
+ * urmăritori a publicat un anunț, coada ar ține o jumătate de ceas, iar oamenii
+ * ar afla că nu se mai ține ieșirea de diseară cu jumătate de oră mai târziu.
+ * Un anunț nou poate aștepta; o anulare, nu.
+ */
+laCoada(static function () use (&$trimise, &$picate, $deInstiintat, $eveniment,
+                                $candAvutLoc, $motiv, $adresaSite) {
+    foreach ($deInstiintat as $om) {
+        $plecat = emailAnulareEveniment(
+            (string) $om['email'],
+            (string) $om['prenume'],
+            (string) $eveniment['titlu'],
+            $candAvutLoc,
+            $motiv['text'],
+            $adresaSite,
+            (string) $om['stare'] === 'participant'
+        );
 
-    $plecat ? $trimise++ : $picate++;
-}
+        $plecat ? $trimise++ : $picate++;
+    }
+}, COADA_URGENT);
 
 if ($picate > 0) {
     error_log('PulsulOrasului: ' . $picate . ' din ' . count($deInstiintat)

@@ -238,17 +238,34 @@ function instiinteazaUrmaritorii(int $evenimentId): int
 
     $plecate = 0;
 
-    foreach ($oameni as $om) {
-        if (emailEvenimentDeLaUrmarit(
-            (string) $om['email'],
-            (string) $om['prenume'],
-            $cine,
-            $randuri[0],
-            urlIntreg(urlProfil((string) ($ev['org_permalink'] ?? '')))
-        )) {
-            $plecate++;
+    /**
+     * LA RÂND, NU ACUM — și aici e locul unde contează cel mai mult.
+     *
+     * Un organizator cu două sute de urmăritori naște două sute de mesaje
+     * dintr-o singură apăsare pe „Publică", ÎNTR-O CERERE WEB. Trimise pe loc,
+     * ar fi sărit plafonul găzduirii de trei ori și l-ar fi ținut pe om cu ochii
+     * pe o pagină care se învârte minute în șir. Acum se scriu două sute de
+     * rânduri în coadă, pagina răspunde, iar cronul le duce în vreo jumătate de
+     * ceas.
+     *
+     * `$plecate` numără de acum CÂTE AU INTRAT LA RÂND. Ștampila de pe anunț
+     * (`urmaritori_instiintati_la`) se pune mai departe o singură dată, deci un
+     * anunț respins și aprobat din nou tot nu scrie de două ori acelorași
+     * oameni.
+     */
+    laCoada(static function () use (&$plecate, $oameni, $cine, $randuri, $ev) {
+        foreach ($oameni as $om) {
+            if (emailEvenimentDeLaUrmarit(
+                (string) $om['email'],
+                (string) $om['prenume'],
+                $cine,
+                $randuri[0],
+                urlIntreg(urlProfil((string) ($ev['org_permalink'] ?? '')))
+            )) {
+                $plecate++;
+            }
         }
-    }
+    });
 
     return $plecate;
 }

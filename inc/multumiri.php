@@ -192,25 +192,30 @@ function trimiteMultumiriPentruEveniment(array $eveniment): array
         return $rezultat;
     }
 
-    foreach ($oameni as $om) {
-        /**
-         * Pasul cerut de găzduire — vezi asteaptaRandulUrmator() din
-         * inc/posta.php. Un eveniment cu treizeci de înscriși înseamnă treizeci
-         * de mesaje deodată, adică taman plafonul sărit. E un cron, deci
-         * așteptarea nu ține pe nimeni în loc.
-         */
-        asteaptaRandulUrmator();
+    /**
+     * TOT CE PLEACĂ DE AICI MERGE LA RÂND, nu în clipa asta.
+     *
+     * Un eveniment cu treizeci de înscriși înseamnă treizeci de mesaje dintr-o
+     * singură apăsare — peste plafonul găzduirii. Învelișul spune o dată „la
+     * coadă", iar funcțiile de mesaje de dedesubt rămân neatinse: ele nu știu și
+     * n-au de ce să știe pe unde ies. Vezi laCoada() din inc/coada.php.
+     *
+     * `trimise` numără de acum CÂTE AU INTRAT ÎN COADĂ, nu câte au ajuns. Cine
+     * vrea să știe câte au plecat cu adevărat se uită în coada.log.
+     */
+    laCoada(static function () use (&$rezultat, $oameni, $titlu, $adresa, $organizator) {
+        foreach ($oameni as $om) {
+            $plecat = emailMultumireParticipare(
+                (string) $om['email'],
+                (string) $om['prenume'],
+                $titlu,
+                $adresa,
+                (int) $om['id'] === $organizator
+            );
 
-        $plecat = emailMultumireParticipare(
-            (string) $om['email'],
-            (string) $om['prenume'],
-            $titlu,
-            $adresa,
-            (int) $om['id'] === $organizator
-        );
-
-        $plecat ? $rezultat['trimise']++ : $rezultat['picate']++;
-    }
+            $plecat ? $rezultat['trimise']++ : $rezultat['picate']++;
+        }
+    });
 
     insemneazaMultumiriTrimise($evenimentId);
 

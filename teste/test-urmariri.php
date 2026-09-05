@@ -17,6 +17,26 @@ declare(strict_types=1);
  */
 
 require_once __DIR__ . '/../inc/urmariri.php';
+require_once __DIR__ . '/../inc/coada.php';
+
+/**
+ * GOLEȘTE COADA, ca mesajele să ajungă în log.
+ *
+ * De când trimiterile în serie se scriu în coadă și pleacă din cron, un mesaj
+ * nu mai ajunge în private/emailuri-trimise.log în clipa apăsării. Proba face
+ * aici ce face cronul — și e mai bine așa: acoperă drumul întreg, de la apăsare
+ * până la plic, nu doar prima jumătate.
+ *
+ * În buclă, fiindcă o rulare duce cel mult COADA_PE_RULARE mesaje.
+ */
+function goleșteCoada(): void
+{
+    for ($i = 0; $i < 50; $i++) {
+        if (trimiteDinCoada(50)['luate'] === 0) {
+            return;
+        }
+    }
+}
 
 $BAZA = rtrim($argv[1] ?? '', '/');
 
@@ -187,6 +207,11 @@ $q->execute([$idEv]);
 verifica('ștampila e pusă', true, $q->fetchColumn() !== null);
 
 if (!empty($config['dezvoltare'])) {
+    /* Vestea către urmăritori se scrie în coadă, nu pleacă pe loc — un
+       organizator cu două sute de urmăritori ar fi ținut pagina ocupată minute
+       în șir. Proba face aici ce face cronul. */
+    goleșteCoada();
+
     $nou  = (string) preg_replace('/\s+/u', ' ',
         substr((string) file_get_contents($logEmail), $inainte));
 
