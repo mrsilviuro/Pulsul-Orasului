@@ -158,12 +158,19 @@
 #  `.git/config` are în el adresa depozitului; `.git/` întreg are TOT codul și
 #  toată istoria lui, inclusiv fișiere șterse cândva. Se descarcă fișier cu
 #  fișier, cu unelte care se găsesc de-a gata.
+#
+#  ȘI `.md`, adică CLAUDE.md și README.md. Nu sunt secrete — dar CLAUDE.md e
+#  harta întreagă a site-ului: unde stau încuietorile, ce păzește fiecare și,
+#  la coadă, o listă scrisă pe față cu ce e neterminat. Nimic din ce e acolo nu
+#  ține locul unei apărări adevărate, însă e o economie de câteva ore pentru
+#  cine bâjbâie. Locul lor e pe GitHub, nu pe server; rândul de aici e pentru
+#  ziua în care se urcă din obișnuință, cu tot dosarul deodată.
 # -------------------------------------------------------------------------
 <IfModule mod_rewrite.c>
   RewriteRule (^|/)\.(git|svn|hg|env)(/|$) - [F,L]
 </IfModule>
 
-<FilesMatch "(^\.|~$|\.(bak|old|orig|save|swp|sql|log|ini|sh|dist|example)$)">
+<FilesMatch "(^\.|~$|\.(bak|old|orig|save|swp|sql|log|ini|sh|dist|example|md)$)">
   <IfModule mod_authz_core.c>
     Require all denied
   </IfModule>

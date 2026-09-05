@@ -1331,6 +1331,21 @@ teste/              → router.php: serverul de probă cu ADRESE FRUMOASE.
                       aceeași cifră ca antetul, și că la a doua cerere cifra e
                       alta)
 private/            → loguri (emailuri-trimise.log), protejat prin .htaccess
+
+CE NU SE URCĂ PE SERVER, deși e în repo: `teste/`, `sql/`, `CLAUDE.md`,
+README.md, `.gitignore`. Niciunul nu e cerut de site cât rulează. Cele mai
+multe sunt închise oricum de `.htaccess`, dar cel mai sigur fișier e cel care
+nu e acolo — iar `.htaccess` nu se citește deloc pe nginx.
+`teste/` E CEL CARE CHIAR CONTA. N-avea nici lacăt, nici pază, iar fișierele
+lui rulează întocmai dintr-un browser: test-constructie.php ÎNCHIDE SITE-UL
+(scrie `in_constructie` în inc/config.php), test-coada.php golește
+`coada_emailuri`, restul scriu și șterg membri și evenimente la fiecare
+cerere. Are acum DOUĂ încuietori, ca `cron/`: `teste/.htaccess` (ține pe
+Apache) și `PHP_SAPI !== 'cli'` în fiecare probă (ține oriunde).
+SINGURA EXCEPȚIE E `teste/router.php`, și e o excepție adevărată: el TREBUIE
+să ruleze prin web, fiindcă e chiar routerul serverului de probă, pornit cu
+`php -S`. Acolo PHP_SAPI e „cli-server", nu „cli" — paza pusă și pe el l-a
+omorât la prima cerere, la scriere. Pe el îl apără doar `.htaccess`-ul.
 PHPMailer/          → biblioteca de trimis e-mailuri, ÎNCĂRCATĂ DE MÂNĂ de la
                       https://github.com/PHPMailer/PHPMailer, așa încât să
                       existe `PHPMailer/src/PHPMailer.php`. NU E ÎN REPO și nu

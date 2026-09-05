@@ -13,6 +13,17 @@ declare(strict_types=1);
  *     php teste/test-tine-minte.php http://127.0.0.1:8126
  */
 
+/* --------------------------- Doar din consolă -------------------------- */
+
+/**
+ * Probele nu se rulează din browser. `teste/.htaccess` le închide dosarul, dar
+ * el se citește doar pe Apache cu AllowOverride pornit — verificarea asta ține
+ * oriunde. Aceeași pereche de încuietori ca la cron/.
+ */
+if (PHP_SAPI !== 'cli') {
+    http_response_code(404);
+    exit("Se rulează doar din linia de comandă.\n");
+}
 require_once __DIR__ . '/../inc/auth.php';
 
 $baza = rtrim($argv[1] ?? 'http://127.0.0.1:8126', '/');
