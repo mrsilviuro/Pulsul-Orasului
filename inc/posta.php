@@ -410,6 +410,38 @@ function insemneazaVorbaPostei(string $vorba): void
     $poUltimaVorbaAPostei = $vorba;
 }
 
+/**
+ * E un refuz DEFINITIV, adică n-are rost să mai încercăm?
+ *
+ * DOUĂ CONDIȚII, ȘI AMÂNDOUĂ TREBUIE SĂ ȚINĂ:
+ *
+ *   1. Serverul a răspuns cu un cod din clasa 5xx. RFC-ul e limpede: 4xx
+ *      înseamnă „nu acum, mai încearcă" (server picat, cutie plină pe moment),
+ *      5xx înseamnă „nu, și n-are rost să revii".
+ *   2. Vorba lui e despre DESTINATAR, nu despre noi. Asta e partea care
+ *      contează cu adevărat.
+ *
+ * DE CE A DOUA CONDIȚIE. Un „550" poate să însemne și „relay access denied"
+ * ori o autentificare respinsă — adică NOI suntem stricați, nu adresa. Fără
+ * întrebarea asta, o parolă SMTP schimbată din greșeală ar fi omorât TĂCUT
+ * fiecare mesaj din coadă la prima încercare: confirmări de cont, recuperări de
+ * parolă, tot. Cu ea, un asemenea 550 rămâne o piedică trecătoare, mesajele se
+ * mai încearcă, iar tu vezi cifra crescând pe panoul din admin.
+ *
+ * Vorba căutată e cea pe care o scrie chiar PHPMailer când serverul refuză un
+ * destinatar la comanda RCPT TO („recipients_failed" în limba lui). Sub mail()
+ * nu există niciun cod și nicio vorbă, deci nimic nu e vreodată definitiv —
+ * ceea ce e bine: acolo nici măcar nu știm dacă mesajul a plecat.
+ */
+function esteRefuzDefinitiv(string $eroare): bool
+{
+    if ($eroare === '' || stripos($eroare, 'recipients failed') === false) {
+        return false;
+    }
+
+    return preg_match('/SMTP code:\s*5\d\d/i', $eroare) === 1;
+}
+
 /* ========================= UNDE A PLECAT FRÂNA ========================
    A stat aici o vreme asteaptaRandulUrmator(), o pauză de șase secunde între
    două mesaje dintr-o trimitere în serie. A plecat odată cu coada: azi nu se

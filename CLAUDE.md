@@ -252,7 +252,17 @@ termeni.php, confidentialitate.php, cookies.php
                 că merg pe drumul bun. Spune și când contul de conectare nu e
                 aceeași adresă cu cea din „From" (adreseleSePotrivesc): nu e o
                 piedică, dar e taman strâmbătatea din care se nasc mesajele
-                oprite de DMARC
+                oprite de DMARC. TOT ACOLO COADA: câte așteaptă, câte au plecat
+                în ultimul ceas și — când sunt — MESAJELE RĂMASE PE DRUMURI,
+                fiecare cu adresa, subiectul și VORBA SERVERULUI pe el
+                (emailurilePicate, cel mult COADA_PICATE_ARATATE). Era doar o
+                cifră, iar ca să afli DE CE trebuia deschis phpMyAdmin. Un „×"
+                le șterge, unul câte unul sau pe toate (stergeDinCoada,
+                stergeToateCelePicate) — tot formulare adevărate spre pagina
+                însăși, ca și comutatorul de șantier, fiindcă panoul de poștă e
+                tocmai locul în care ajungi când ceva nu merge, JavaScript-ul
+                inclus. FĂRĂ CONFIRMARE, dinadins: ce scria în plic s-a
+                întâmplat oricum, doar vestea n-a ajuns
   coduri.php  → pagina omului de casă: face coduri noi și le arată starea.
                 Prima pagină de administrare de pe site; azi e „Abțibilduri" în
                 zona de admin. Se aduc cel mult CODURI_QR_PASTRATE (50) și se
@@ -816,8 +826,21 @@ inc/
                       pornire pe minut. Vezi inc/coada.php.
                       TOT AICI ultimaVorbaAPostei(): ce a spus serverul la
                       ultima trimitere picată. O scrie coada pe rândul mesajului
-                      (`coada_emailuri.eroare`), și e singurul loc de pe site
-                      unde se poate vedea vreodată de ce n-a plecat ceva
+                      (`coada_emailuri.eroare`), de unde ajunge pe panoul din
+                      admin — singurul loc de pe site unde se poate vedea
+                      vreodată de ce n-a plecat ceva.
+                      ȘI FRATELE EI, esteRefuzDefinitiv(): dacă vorba aceea
+                      înseamnă „mai încearcă" ori „n-are rost". CERE DOUĂ
+                      LUCRURI DEODATĂ — un cod 5xx ȘI ca refuzul să fie despre
+                      DESTINATAR („recipients failed", vorba scrisă de PHPMailer
+                      când pică RCPT TO). A doua e cea care contează: un „550"
+                      poate să însemne și „relay access denied" ori o parolă
+                      respinsă, adică NOI suntem stricați, nu adresa — iar fără
+                      întrebarea asta o parolă SMTP schimbată din greșeală ar fi
+                      omorât TĂCUT toată coada la prima trecere. Sub mail() nu e
+                      nimic vreodată definitiv: acolo nici nu se știe dacă
+                      mesajul a plecat. O păzește o probă cu vorbe adevărate de
+                      server, în teste/test-posta.php
   coada.php         → COADA DE E-MAILURI: inc/email.php spune CE scrie într-un
                       mesaj, inc/posta.php pe ce drum iese, ăsta CÂND.
                       DE CE: sunt locuri unde o singură apăsare naște zeci de
@@ -872,7 +895,22 @@ inc/
                       motiv anume — cu două sute de urmăritori la rând, coada
                       ține o jumătate de ceas, iar cei înscriși la ceva de
                       diseară n-au de ce să afle atât de târziu că nu se mai
-                      ține. Un anunț nou poate aștepta; o anulare, nu
+                      ține. Un anunț nou poate aștepta; o anulare, nu.
+                      CELE TREI ÎNCERCĂRI AU O EXCEPȚIE: dacă serverul a spus
+                      limpede că ADRESA nu există (esteRefuzDefinitiv din
+                      inc/posta.php), rândul moare din prima —
+                      insemneazaDinCoadaPicat() cu $definitiv duce `incercari`
+                      de-a dreptul la capăt. O adresă care nu există acum nu se
+                      naște peste un minut, iar găzduirile numără refuzurile
+                      astea („protecție la Bounces"): cine insistă pe adrese
+                      moarte ajunge să nu mai poată trimite nimănui.
+                      TOT AICI CE VEDE OMUL DE CASĂ: emailurilePicate() (cel
+                      mult COADA_PICATE_ARATATE = 20, cele mai noi întâi),
+                      stergeDinCoada() și stergeToateCelePicate() — toate trei
+                      cu HOTĂRÂREA ÎN `WHERE`: se șterge doar ce chiar a rămas
+                      pe drumuri, deci un id cules de pe un buton vechi n-are
+                      cum să scoată din coadă un mesaj care încă își așteaptă
+                      rândul
   email.php         → șablon unic pentru toate email-urile (table-based, inline
                       style). CASETA DE CITAT e desenată dintr-un singur loc și
                       o cer DOUĂ blocuri: `citat` (ce a scris omul — comentariul
@@ -1472,24 +1510,50 @@ sistem. Regulile care s-au strâns din trecerea de purificare:
   (sql/019) NU au nicio treabă cu newsletterul plecat. Acolo ajung adresele
   lăsate pe AFIȘUL DE ȘANTIER de oameni care n-au cont și vor să afle când
   deschidem (inscrieLaVesti din inc/constructie.php). Rămân, și sunt vii.
-- CE TRIMITE ÎN SERIE PLEACĂ PRIN COADĂ, nu din cererea web. Cinci locuri nasc
-  zeci de mesaje dintr-o singură apăsare: vestea către urmăritori
-  (inc/urmariri.php — un organizator poate avea două sute), anularea unui
-  eveniment (api/anuleaza-eveniment.php), anunțul important al organizatorului
-  (api/comentarii.php), mementoul de dinaintea unui eveniment și mulțumirea de
-  după (cele două cronuri). Toate cinci sunt învelite în `laCoada()`: scriu
-  rânduri în `coada_emailuri` și răspund pe loc, iar
-  cron/trimite-emailuri.php le duce câte opt pe minut. O apăsare pe „Publică"
-  la un om cu două sute de urmăritori nu mai ține pagina ocupată și nu mai sare
-  plafonul găzduirii; mesajele ajung în vreo jumătate de ceas.
-  CE NU TRECE PRIN COADĂ, dinadins: tot restul — confirmarea de cont, parola
-  temporară, hotărârea moderării, comentariul nou, părerea scrisă, cele patru
-  ale zonei de administrare. Alea pleacă PE LOC, fiindcă omul stă și așteaptă,
-  fiindcă sunt una câte una și n-ating niciodată plafonul, și — mai ales —
-  fiindcă un cron oprit n-are voie să însemne că nimeni nu-și mai poate face
-  cont sau recupera parola. Ele intră în coadă DOAR dacă trimiterea a dat greș,
-  cu prioritate, ca să fie reîncercate. Regula are o probă a ei în
-  teste/test-coada.php, și e cea mai importantă de acolo
+- PRIN COADĂ PLEACĂ APROAPE TOT, nu din cererea web. Întrebarea nu mai e „cine
+  trimite în serie?", ci pe dos: CINE STĂ ȘI AȘTEAPTĂ MESAJUL? Cele cinci care
+  nasc zeci de mesaje dintr-o apăsare erau doar pricina dintâi — vestea către
+  urmăritori (inc/urmariri.php — un organizator poate avea două sute), anularea
+  unui eveniment (api/anuleaza-eveniment.php), anunțul important al
+  organizatorului (api/comentarii.php), mementoul de dinaintea unui eveniment
+  și mulțumirea de după (cele două cronuri). Lângă ele au intrat toate cele
+  care pot aștepta un minut fără să se strice: mesajul de contact
+  (api/contact.php), scoaterea de pe listă (api/exclude-participant.php),
+  comentariul nou (api/comentarii.php), părerea scrisă (api/evaluare.php),
+  hotărârea moderării (api/modereaza-eveniment.php), cele patru ale zonei de
+  administrare (api/admin.php: comentariul șters, poza ștearsă, contul
+  suspendat, hotărârea unei dorințe), bun venit după intrarea cu Google
+  (api/finalizare-google.php) și confirmarea ștergerii contului (stergere.php).
+  Toate sunt învelite în `laCoada()`: scriu rânduri în `coada_emailuri` și
+  răspund pe loc, iar cron/trimite-emailuri.php le duce câte opt pe minut.
+  CE NU TRECE PRIN COADĂ SUNT PATRU, și e o listă care nu trebuie să crească:
+  confirmarea de cont (api/inregistrare.php, api/retrimite-confirmare.php),
+  parola temporară (api/parola-uitata.php), vestea că s-a schimbat parola
+  (api/parola-noua.php) și linkul de ștergere a contului (inc/stergere.php).
+  Alea pleacă PE LOC, fiindcă omul chiar stă cu ochii pe cutia poștală, și —
+  mai ales — fiindcă un cron oprit n-are voie să însemne că nimeni nu-și mai
+  poate face cont sau recupera parola. Ele intră în coadă DOAR dacă trimiterea
+  a dat greș, cu prioritate, ca să fie reîncercate. Regula are o probă a ei în
+  teste/test-coada.php, și e cea mai importantă de acolo.
+  DE AICI DECURGE CEVA PENTRU PROBE: o probă care apasă un buton și apoi se
+  uită în private/emailuri-trimise.log NU MAI GĂSEȘTE NIMIC — mesajul e în
+  coadă. Se cheamă întâi goleșteCoada() (helperul din test-anulare,
+  test-amintiri, test-urmariri, test-moderare), care face ce face cronul. E mai
+  bine așa: proba acoperă drumul întreg, de la apăsare până la plic
+- O ADRESĂ CARE NU EXISTĂ NU SE MAI ÎNCEARCĂ DE TREI ORI. esteRefuzDefinitiv()
+  din inc/posta.php se uită la vorba serverului și cere DOUĂ lucruri deodată:
+  un cod 5xx ȘI ca refuzul să fie despre DESTINATAR („recipients failed", vorba
+  pe care o scrie PHPMailer când pică RCPT TO). Atunci trimiteDinCoada() duce
+  `incercari` de-a dreptul la capăt, iar rândul moare din prima. A doua condiție
+  e cea care contează: un „550" poate să însemne și „relay access denied" ori o
+  parolă SMTP respinsă — adică NOI suntem stricați, nu adresa —, iar fără ea o
+  parolă schimbată din greșeală ar fi omorât TĂCUT toată coada la prima trecere,
+  confirmări de cont cu tot. Sub mail() nu e nimic vreodată definitiv: acolo
+  nici măcar nu se știe dacă mesajul a plecat.
+  NU EXISTĂ LISTĂ DE ADRESE OPRITE și nu-i trebuie: rândul mort se vede pe
+  panoul din admin, cu vorba serverului pe el, și se șterge de acolo. O listă
+  ar fi însemnat un tabel nou, o pagină nouă și întrebarea „când se iartă o
+  adresă?" — pentru o mână de conturi de probă
 - Tabla cu dorințe se moderează din `admin-dorinte.php`, DINTR-O SINGURĂ LISTĂ
   DE ALES (aceeași unealtă ca starea contului din `admin-useri.php`), cu patru
   rânduri: „Așteptare", „Aprobă", „Respinge", „Șterge". RÂNDUL ÎN CARE DORINȚA

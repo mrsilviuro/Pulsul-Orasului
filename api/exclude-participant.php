@@ -176,7 +176,12 @@ excludeParticipant($evenimentId, $tintaId, $membruId, $rol, $rezultat['text'], $
 $instiintat = false;
 
 if ($omul !== null) {
-    $instiintat = emailExcludereParticipant(
+    /**
+     * LA RÂND: cine tocmai a fost scos de pe listă află într-un minut, nu
+     * într-o clipă, iar organizatorul care a apăsat butonul primește răspunsul
+     * pe loc. Vestea nu se strică așteptând un minut.
+     */
+    $laRand = laCoada(static fn (): bool => emailExcludereParticipant(
         (string) $omul['email'],
         (string) $omul['prenume'],
         (string) $omul['sex'],
@@ -185,10 +190,17 @@ if ($omul !== null) {
         $rol,
         $rezultat['text'],
         $interzis
-    );
+    ));
 
-    if (!$instiintat) {
-        error_log('PulsulOrasului: nu am putut trimite e-mailul de excludere '
+    /* „Înștiințat" înseamnă de acum „pus la rând": mesajul pleacă din cron, nu
+       din cererea asta. Pentru cel care a apăsat butonul e același lucru —
+       vestea și-a găsit drumul. */
+    $instiintat = $laRand;
+
+    /* `false` înseamnă acum „n-am putut nici măcar să-l scriu în coadă" —
+       adică baza n-a primit rândul. Merită tot un rând în log. */
+    if (!$laRand) {
+        error_log('PulsulOrasului: nu am putut pune la rând e-mailul de excludere '
                 . 'pentru membrul #' . $tintaId . ' la evenimentul #' . $evenimentId);
     }
 }

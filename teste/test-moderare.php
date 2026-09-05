@@ -19,6 +19,26 @@ declare(strict_types=1);
 require_once __DIR__ . '/../inc/evenimente.php';
 require_once __DIR__ . '/../inc/interese.php';
 require_once __DIR__ . '/../inc/email.php';
+require_once __DIR__ . '/../inc/coada.php';
+
+/**
+ * GOLEȘTE COADA, ca mesajele să ajungă în log.
+ *
+ * De când hotărârea moderării se scrie în coadă și pleacă din cron, mesajul nu
+ * mai ajunge în private/emailuri-trimise.log în clipa apăsării. Proba face aici
+ * ce face cronul — și e mai bine așa: acoperă drumul întreg, de la butonul
+ * apăsat până la plic, nu doar prima jumătate.
+ *
+ * În buclă, fiindcă o rulare duce cel mult COADA_PE_RULARE mesaje.
+ */
+function goleșteCoada(): void
+{
+    for ($i = 0; $i < 50; $i++) {
+        if (trimiteDinCoada(50)['luate'] === 0) {
+            return;
+        }
+    }
+}
 
 $BAZA = $argv[1] ?? '';
 
@@ -680,6 +700,7 @@ if ($BAZA === '') {
             $corp['instiintat'] ?? false);
 
         if (!empty($config['dezvoltare'])) {
+            goleșteCoada();   // hotărârea moderării trece prin coadă
             $nou = substr((string) file_get_contents($logEmail), $inainteDeAprobare);
             verifica('i-a plecat mesajul de aprobare', true,
                 str_contains($nou, SEMN . 'org@invalid.local'));
@@ -755,6 +776,7 @@ if ($BAZA === '') {
             (string) evenimentDupaSlug('tst-mod-2')['stare_moderare']);
 
         if (!empty($config['dezvoltare'])) {
+            goleșteCoada();   // hotărârea moderării trece prin coadă
             $nou = substr((string) file_get_contents($logEmail), $inainte);
             verifica('motivul ajunge în e-mail', true,
                 str_contains($nou, 'Lipsește ora de început.'));
@@ -782,6 +804,7 @@ if ($BAZA === '') {
             (json_decode($r['corp'], true) ?: [])['ok'] ?? false);
 
         if (!empty($config['dezvoltare'])) {
+            goleșteCoada();   // hotărârea moderării trece prin coadă
             $nou = (string) preg_replace('/\s+/u', ' ',
                 substr((string) file_get_contents($logEmail), $inainte));
             verifica('iar e-mailul spune că n-a fost niciunul', true,
@@ -809,6 +832,7 @@ if ($BAZA === '') {
             (string) evenimentDupaSlug('tst-mod-2')['stare_moderare']);
 
         if (!empty($config['dezvoltare'])) {
+            goleșteCoada();   // hotărârea moderării trece prin coadă
             $nou = substr((string) file_get_contents($logEmail), $inainte);
             verifica('organizatorul primește vestea', true,
                 str_contains($nou, 'are nevoie de câteva ajustări'));
@@ -863,6 +887,7 @@ if ($BAZA === '') {
             evenimentDupaSlug('tst-mod-plin') !== null);
 
         if (!empty($config['dezvoltare'])) {
+            goleșteCoada();   // hotărârea moderării trece prin coadă
             $nou = substr((string) file_get_contents($logEmail), $inainte);
             verifica('iar organizatorului nu i se spune că s-a șters ceva', false,
                 str_contains($nou, 'ters'));

@@ -175,8 +175,15 @@ unset($_SESSION['google_nou']);
 // orice altă intrare cu Google.
 autentifica($membru, true);
 
-// Un „bine ai venit", fără link de confirmat: nu mai e nimic de confirmat.
-emailBunVenit((string) $membru['email'], (string) $membru['prenume']);
+/**
+ * Un „bine ai venit", fără link de confirmat: nu mai e nimic de confirmat.
+ *
+ * LA RÂND, tocmai fiindcă n-are nimic de confirmat: omul e deja înăuntru și se
+ * uită la site, nu la cutia poștală. Confirmarea de cont și parola temporară —
+ * cele la care omul chiar așteaptă — pleacă mai departe pe loc.
+ */
+laCoada(static fn (): bool =>
+    emailBunVenit((string) $membru['email'], (string) $membru['prenume']));
 
 raspunsJson([
     'ok'       => true,

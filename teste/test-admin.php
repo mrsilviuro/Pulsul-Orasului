@@ -873,6 +873,91 @@ if ($BAZA === '') {
         $hotaraste('in_asteptare');
         $hotaraste('aprobat');
         verifica('aprobată prin API, tot fără ștampilă', null, $aNoastra()['publicat_la']);
+
+        /* ============================================================== */
+        sectiune('mesajele rămase pe drumuri');
+
+        /**
+         * Panoul arată rândurile din coadă care n-au plecat nici după toate
+         * încercările, cu vorba serverului pe fiecare, și un „×" care le
+         * șterge. Până acum se vedea doar cifra lor — ca să afli DE CE,
+         * trebuia deschis phpMyAdmin.
+         *
+         * ȘTERGEREA E O FAPTĂ, deci se probează și PAZA ei: se face cu un
+         * formular adevărat spre /admin.php, nu prin api/admin.php, deci
+         * regula scrisă acolo n-o acoperă.
+         */
+        require_once __DIR__ . '/../inc/coada.php';
+
+        $adresaMoarta = 'nimeni-' . bin2hex(random_bytes(4)) . '@coada-proba.invalid';
+
+        /**
+         * VORBA SERVERULUI E UNA IRECUNOSCIBILĂ, nu „No Such User Here".
+         *
+         * Aceea e scrisă și în lămurirea din admin.php, ca pildă — iar proba ar
+         * fi trecut liniștită căutându-și propriul comentariu, chiar cu coloana
+         * scoasă din tabel. S-a întâmplat la scriere.
+         */
+        $vorbaLui = 'Vorbă de probă ' . bin2hex(random_bytes(4));
+
+        puneInCoada($adresaMoarta, 'Subiect de probă', ['paragrafe' => ['Ceva.']]);
+
+        db()->prepare(
+            'UPDATE coada_emailuri SET incercari = ?, eroare = ? WHERE catre = ?'
+        )->execute([COADA_INCERCARI_MAX, $vorbaLui, $adresaMoarta]);
+
+        $idPicat = (int) db()->query(
+            'SELECT id FROM coada_emailuri WHERE catre = ' . db()->quote($adresaMoarta)
+        )->fetchColumn();
+
+        $panou = $ceruta('/admin.php', null, $cookieGazda);
+
+        verifica('panoul arată adresa', true,
+            str_contains($panou['brut'], $adresaMoarta));
+        verifica('și vorba serverului',  true,
+            str_contains($panou['brut'], $vorbaLui));
+
+        preg_match('/name="csrf" value="([^"]+)"/', $panou['brut'], $m);
+        $csrfPanou = $m[1] ?? '';
+
+        /** Formularele de aici merg cu câmpuri, nu cu JSON. */
+        $apasa = static function (array $campuri, string $cookie) use ($BAZA): int {
+            $ctx = stream_context_create(['http' => [
+                'method'        => 'POST',
+                'header'        => "Content-Type: application/x-www-form-urlencoded\r\n"
+                                 . ($cookie === '' ? '' : "Cookie: $cookie\r\n"),
+                'content'       => http_build_query($campuri),
+                'follow_location' => 0,
+                'ignore_errors' => true,
+                'timeout'       => 10,
+            ]]);
+
+            @file_get_contents($BAZA . '/admin.php', false, $ctx);
+
+            foreach ($http_response_header ?? [] as $rand) {
+                if (preg_match('~^HTTP/\S+\s+(\d+)~', $rand, $mm)) { return (int) $mm[1]; }
+            }
+
+            return 0;
+        };
+
+        $maiE = static fn (): bool => (bool) db()->query(
+            'SELECT COUNT(*) FROM coada_emailuri WHERE id = ' . $idPicat
+        )->fetchColumn();
+
+        /* Fără sesiune de om de casă nu se șterge nimic. */
+        $apasa(['csrf' => $csrfPanou, 'picat' => $idPicat], '');
+        verifica('un străin nu poate șterge', true, $maiE());
+
+        /* Nici cu sesiune bună, dar fără token. */
+        $apasa(['picat' => $idPicat], $cookieGazda);
+        verifica('nici fără token CSRF',   true, $maiE());
+
+        $cod = $apasa(['csrf' => $csrfPanou, 'picat' => $idPicat], $cookieGazda);
+        verifica('omul de casă îl șterge', false, $maiE());
+        verifica('și e trimis înapoi pe panou', 302, $cod);
+
+        db()->prepare('DELETE FROM coada_emailuri WHERE catre = ?')->execute([$adresaMoarta]);
     }
 }
 

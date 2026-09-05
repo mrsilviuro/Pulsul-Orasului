@@ -223,14 +223,16 @@ if ($fapta === 'scrie' && $text !== null) {
 
         require_once __DIR__ . '/../inc/email.php';
 
-        emailFeedbackNou(
+        /* LA RÂND: o părere scrisă nu e o veste care se strică. Omul care a
+           scris-o primește răspunsul pe loc; cel notat află într-un minut. */
+        laCoada(static fn (): bool => emailFeedbackNou(
             (string) $celNotat['email'],
             (string) $celNotat['prenume'],
             numeAfisat((string) $membru['nume'], (string) $membru['prenume']),
             (string) $eveniment['titlu'],
             $text,
             urlIntreg(urlProfil((string) ($celNotat['permalink'] ?? '')))
-        );
+        ));
     }
 }
 

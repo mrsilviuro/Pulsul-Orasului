@@ -235,17 +235,27 @@ if ($stareNoua === 'aprobat'
 $instiintat = false;
 
 if ($organizator !== null) {
-    $instiintat = emailModerareAnunt(
+    /**
+     * LA RÂND: hotărârea e scrisă deja în bază, iar anunțul se vede (sau nu) pe
+     * site din clipa asta. Vestea către organizator doar îi spune ce s-a
+     * întâmplat — poate ajunge într-un minut.
+     */
+    $laRand = laCoada(static fn (): bool => emailModerareAnunt(
         (string) $organizator['email'],
         (string) $organizator['prenume'],
         (string) $eveniment['titlu'],
         urlIntreg(urlEveniment((string) $eveniment['slug'])),
         $editare ? 'editare' : $stare,
         $motivScris
-    );
+    ));
 
-    if (!$instiintat) {
-        error_log('PulsulOrasului: nu am putut trimite e-mailul de moderare '
+    /* „Înștiințat" înseamnă de acum „pus la rând": mesajul pleacă din cron, nu
+       din cererea asta. Pentru omul de casă e același lucru — vestea și-a
+       găsit drumul. */
+    $instiintat = $laRand;
+
+    if (!$laRand) {
+        error_log('PulsulOrasului: nu am putut pune la rând e-mailul de moderare '
                 . 'pentru evenimentul #' . (int) $eveniment['id']);
     }
 }

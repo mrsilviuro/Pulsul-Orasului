@@ -407,7 +407,9 @@ function instiinteazaDeComentariu(array $eveniment, array $rand, ?array $catre, 
 
     $adresa = urlIntreg(urlEveniment((string) $eveniment['slug'])) . '#c' . (int) $rand['id'];
 
-    emailComentariuNou(
+    /* LA RÂND, ca anunțul important de mai sus: cine a scris comentariul are
+       răspunsul pe ecran, iar cel înștiințat poate afla într-un minut. */
+    laCoada(static fn (): bool => emailComentariuNou(
         (string) $om['email'],
         (string) $om['prenume'],
         $catre === null ? 'comentariu' : 'raspuns',
@@ -415,7 +417,7 @@ function instiinteazaDeComentariu(array $eveniment, array $rand, ?array $catre, 
         (string) $eveniment['titlu'],
         (string) $rand['text'],
         $adresa
-    );
+    ));
 }
 
 /* -------------------------- b) corectura ----------------------------- */

@@ -175,7 +175,16 @@ $u->execute([
 
 // Dacă e-mailul nu pleacă, mesajul e deja în bază: omul nu trebuie pus să
 // scrie din nou pentru o piedică ce nu e a lui.
-emailMesajDeContact($curat, $membru !== null ? (int) $membru['id'] : null);
+/**
+ * LA RÂND, nu pe loc.
+ *
+ * Mesajul ăsta pleacă spre noi, nu spre om — el a primit deja răspunsul de mai
+ * jos și nu așteaptă nimic. Un minut în plus până ne ajunge nu schimbă nimic,
+ * iar locul lui în plafonul găzduirii îl ține atunci cineva care chiar
+ * așteaptă: unul care tocmai și-a făcut cont, altul care și-a uitat parola.
+ */
+laCoada(static fn (): bool =>
+    emailMesajDeContact($curat, $membru !== null ? (int) $membru['id'] : null));
 
 raspunsJson([
     'ok'    => true,
