@@ -101,6 +101,6 @@ if (session_status() === PHP_SESSION_ACTIVE && !empty($_SESSION['mesaj_bun'])) {
   </button>
 </div>
 
-<script src="/assets/js/main.js?v=93"></script>
+<script src="/assets/js/main.js?v=94"></script>
 </body>
 </html>

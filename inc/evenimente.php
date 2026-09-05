@@ -1345,6 +1345,75 @@ const CIFRE_CARTONAS = '
  * `aria-label` pe fiecare cifră, fiindcă iconița singură nu spune nimic unui
  * cititor de ecran, iar „7 / 12" citit ca atare n-ar avea niciun înțeles.
  */
+/**
+ * ACELAȘI CARTONAȘ, DAR PENTRU UN E-MAIL: rândurile pentru blocul „lista" din
+ * șablonul de mesaje (vezi sablonEmail din inc/email.php).
+ *
+ * Stă lângă randeazaCartonasEveniment(), fiindcă e fratele lui: un singur loc
+ * pentru cum arată un eveniment, oriunde ar fi pus. Doar că într-un mesaj nu se
+ * poate trimite HTML-ul de pe site — programele de e-mail nu citesc CSS-ul
+ * nostru — deci de acolo iese un tablou de valori, iar desenarea o face
+ * șablonul.
+ *
+ * A STAT ÎN inc/newsletter.php, și s-a mutat aici când newsletterul zilnic a
+ * fost scos: îl cer mai departe DOUĂ locuri, mementoul de dinaintea unui
+ * eveniment (inc/amintiri.php) și vestea către urmăritori (inc/urmariri.php).
+ * O funcție cerută de doi nu poate sta în casa niciunuia.
+ *
+ * ADRESELE SUNT ÎNTREGI. Într-un e-mail nu există „pagina de acum" față de care
+ * să se socotească o cale relativă: mesajul se deschide în Gmail, pe alt
+ * server, în alt oraș. Totul trece prin urlIntreg().
+ *
+ * Poza: coperta anunțului, iar dacă n-are, imaginea categoriei — aceeași
+ * ordine ca pe cartonașele de pe prima pagină, prin aceleași două funcții. Dacă
+ * nu e niciuna, rândul rămâne cu caseta goală, de aceeași mărime (vezi
+ * lămurirea de la blocul „lista" din inc/email.php).
+ */
+function randuriPentruEmail(array $evenimente): array
+{
+    $randuri = [];
+
+    foreach ($evenimente as $ev) {
+        $poza = urlCoperta($ev['coperta'] ?? null);
+
+        if ($poza === '') {
+            $poza = urlImagineCategorie($ev['imagine_default'] ?? null);
+        }
+
+        /**
+         * Ora fără secunde, cum se scrie între oameni: „19:00", nu „19:00:00".
+         */
+        $ora = substr((string) $ev['ora_inceput'], 0, 5);
+
+        /**
+         * Orașul, apoi locul anume, despărțite cu „·" — ca pe cartonașele de pe
+         * site. Se strânge dinspre larg spre îngust: când, în ce oraș, și abia
+         * apoi unde anume.
+         */
+        $unde = array_filter([
+            (string) ($ev['oras'] ?? ''),
+            (string) ($ev['locatie'] ?? ''),
+        ], static fn(string $x): bool => $x !== '');
+
+        $randuri[] = [
+            'titlu' => (string) $ev['titlu'],
+            'cand'  => $ora === '' ? '' : 'de la ' . $ora,
+            'unde'  => implode(' · ', $unde),
+            'poza'  => $poza === '' ? '' : urlIntreg($poza),
+            'href'  => urlIntreg(urlEveniment((string) $ev['slug'])),
+
+            // Categoria și începutul descrierii, ca pe cartonașul de pe site.
+            // Textul e tăiat scurt dinadins: patru paragrafe întregi într-un
+            // mesaj ar fi însemnat un ecran de derulat până la primul lucru de
+            // apăsat.
+            'categorie' => (string) ($ev['categorie'] ?? ''),
+            'text'      => inceputDeText(strip_tags((string) ($ev['descriere'] ?? '')), 110),
+        ];
+    }
+
+    return $randuri;
+}
+
 function cifreleCartonasului(array $ev): string
 {
     /**

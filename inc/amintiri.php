@@ -38,7 +38,6 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/evenimente.php';
 require_once __DIR__ . '/interese.php';
-require_once __DIR__ . '/newsletter.php';
 require_once __DIR__ . '/email.php';
 
 /**
@@ -93,8 +92,7 @@ const ORE_AMINTIRE = 3;
  * evenimente — care crește pentru totdeauna, fiindcă rândurile nu se șterg.
  *
  * $clipa există pentru probe: altfel n-ai cum să spui „ia închipuie-ți că e cu
- * două ore înainte" fără să muți ceasul mașinii. Aceeași ușă ca la
- * evenimenteleDeAzi() din inc/newsletter.php.
+ * două ore înainte" fără să muți ceasul mașinii.
  */
 function evenimenteDeAmintit(?int $clipa = null, int $celMult = 200): array
 {
@@ -220,7 +218,7 @@ function insemneazaAmintireaTrimisa(int $evenimentId): void
  * prima. Iar cine e lăsat fără niciunul nu află nimic. Dintre „încă o dată" și
  * „niciodată", alegem prima — și aici o alegem fără să ne doară.
  *
- * CARTONAȘUL e desenat de randuriPentruNewsletter() din inc/newsletter.php,
+ * CARTONAȘUL e desenat de randuriPentruEmail() din inc/evenimente.php,
  * același din newsletterul zilnic și din vestea către urmăritori: poza lată
  * deasupra, categoria, titlul, ora și locul. Un singur fel de a arăta un
  * eveniment într-un e-mail, oriunde ar fi pus.
@@ -238,10 +236,18 @@ function trimiteAmintirilePentruEveniment(array $eveniment, ?int $clipa = null):
         return $rezultat;
     }
 
-    $cartonas = randuriPentruNewsletter([$eveniment])[0] ?? [];
+    $cartonas = randuriPentruEmail([$eveniment])[0] ?? [];
     $cand     = candIncepeEvenimentul($eveniment, $clipa);
 
     foreach ($oameni as $om) {
+        /**
+         * Pasul cerut de găzduire — vezi asteaptaRandulUrmator() din
+         * inc/posta.php. Un eveniment cu treizeci de înscriși înseamnă treizeci
+         * de mesaje deodată, adică taman plafonul sărit. E un cron, deci
+         * așteptarea nu ține pe nimeni în loc.
+         */
+        asteaptaRandulUrmator();
+
         $plecat = emailAminteDeEveniment(
             (string) $om['email'],
             (string) $om['prenume'],

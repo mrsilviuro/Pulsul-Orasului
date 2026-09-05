@@ -159,7 +159,7 @@ verifica('logat: pagina se deschide', 200, $pagina['stare']);
 verifica('are toate cele patru secțiuni', 4,
     (int) (str_contains($pagina['corp'], 'id="parola-form"')
          + str_contains($pagina['corp'], 'id="telefon-form"')
-         + str_contains($pagina['corp'], 'id="newsletter-form"')
+         + str_contains($pagina['corp'], 'id="instiintari-form"')
          + str_contains($pagina['corp'], 'id="stergere-form"')));
 
 echo "\n=== 1. PAROLA: CONT CU PAROLĂ ===\n";
@@ -278,49 +278,61 @@ echo "\n=== 3. CE E-MAILURI VREA OMUL ===\n";
  * fiecare apel de mai jos le trimite pe amândouă: exact ce trimite și
  * browserul, unde o bifă scoasă nu ajunge deloc în date.
  */
-$preferinte = static function (string $vesti, string $comentarii) use ($baza, $c) {
+$preferinte = static function (string $comentarii, string $feedback) use ($baza, $c) {
     return json_din(cerere($baza . '/api/setari.php', $c, [
         'csrf'             => csrf($c),
-        'sectiune'         => 'newsletter',
-        'newsletter'       => $vesti,
+        'sectiune'         => 'instiintari',
         'email_comentarii' => $comentarii,
+        'email_feedback'   => $feedback,
     ]));
 };
 
-verifica('vestile, pornite din start la conturile care există deja',
-    1, (int) coloana($idClasic, 'newsletter'));
-verifica('și înștiințările la comentarii, la fel',
+/**
+ * ERAU TREI BIFE, ACUM SUNT DOUĂ. A treia era newsletterul, plecat odată cu el:
+ * azi niciun mesaj de pe site nu mai vine nechemat, deci n-a mai rămas nimic de
+ * bifat acolo. Rămân cele două care spun „scrie-mi când cineva îmi răspunde" și
+ * „scrie-mi când cineva îmi lasă o părere".
+ */
+verifica('comentariile, pornite din start la conturile care există deja',
     1, (int) coloana($idClasic, 'email_comentarii'));
+verifica('și părerile scrise, la fel',
+    1, (int) coloana($idClasic, 'email_feedback'));
 
-/* Numai vestile se sting. */
+/* Numai comentariile se sting. */
 $preferinte('', '1');
-verifica('vestile se pot opri',                 0, (int) coloana($idClasic, 'newsletter'));
-verifica('fără să atingă comentariile',        1, (int) coloana($idClasic, 'email_comentarii'));
-verifica('bifa vestilor apare nebifată în pagină', false,
-    str_contains(cerere($baza . '/setari.php', $c)['corp'], 'name="newsletter"' . "\n" . '                   checked'));
-
-/* Și invers: numai comentariile. */
-$preferinte('1', '');
-verifica('comentariile se pot opri singure',    0, (int) coloana($idClasic, 'email_comentarii'));
-verifica('iar vestile pornesc la loc',          1, (int) coloana($idClasic, 'newsletter'));
+verifica('comentariile se pot opri',            0, (int) coloana($idClasic, 'email_comentarii'));
+verifica('fără să atingă părerile',            1, (int) coloana($idClasic, 'email_feedback'));
 verifica('bifa comentariilor apare nebifată în pagină', false,
     str_contains(cerere($baza . '/setari.php', $c)['corp'], 'name="email_comentarii"' . "\n" . '                   checked'));
 
+/* Și invers: numai părerile. */
+$preferinte('1', '');
+verifica('părerile se pot opri singure',       0, (int) coloana($idClasic, 'email_feedback'));
+verifica('iar comentariile pornesc la loc',     1, (int) coloana($idClasic, 'email_comentarii'));
+
 /* Amândouă stinse: mesajul o spune pe față. */
 $r = $preferinte('', '');
-verifica('amândouă stinse',  0, (int) coloana($idClasic, 'newsletter')
-                              + (int) coloana($idClasic, 'email_comentarii'));
+verifica('amândouă stinse',  0, (int) coloana($idClasic, 'email_comentarii')
+                              + (int) coloana($idClasic, 'email_feedback'));
 verifica('iar mesajul spune că nu mai pleacă nimic', true,
     str_contains((string) ($r['mesaj'] ?? ''), 'niciun e-mail'));
 
 /* Amândouă pornite. */
 $r = $preferinte('1', '1');
-verifica('amândouă pornite', 2, (int) coloana($idClasic, 'newsletter')
-                              + (int) coloana($idClasic, 'email_comentarii'));
+verifica('amândouă pornite', 2, (int) coloana($idClasic, 'email_comentarii')
+                              + (int) coloana($idClasic, 'email_feedback'));
 verifica('răspunsul le spune pe amândouă', true,
-    ($r['newsletter'] ?? null) === true && ($r['email_comentarii'] ?? null) === true);
+    ($r['email_feedback'] ?? null) === true && ($r['email_comentarii'] ?? null) === true);
 verifica('bifa comentariilor e bifată în pagină', true,
     str_contains(cerere($baza . '/setari.php', $c)['corp'], 'name="email_comentarii"' . "\n" . '                   checked'));
+
+/**
+ * ȘI BIFA NEWSLETTERULUI CHIAR A PLECAT DIN PAGINĂ. Fără proba asta, un câmp
+ * rămas în formular ar fi trimis mai departe o preferință pe care n-o mai
+ * ascultă nimeni — iar omul ar fi bifat ceva ce nu face nimic.
+ */
+verifica('bifa newsletterului nu mai e în pagină', false,
+    str_contains(cerere($baza . '/setari.php', $c)['corp'], 'name="newsletter"'));
 
 echo "\n=== APĂRAREA PUNCTELOR DE INTRARE ===\n";
 

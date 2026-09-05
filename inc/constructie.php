@@ -196,10 +196,9 @@ const COOKIE_SANTIER = 'po_santier';
 /**
  * Cheia cu care se semnează permisul de dispozitiv.
  *
- * Aceeași croială ca cheieDezabonare() din inc/newsletter.php: dacă e scrisă
- * una în setări, aceea e; altfel se face una din lucruri care sunt oricum
- * deosebite de la un site la altul. Nu e nevoie de o cheie nouă în config, dar
- * se poate pune una.
+ * Dacă e scrisă una în setări, aceea e; altfel se face una din lucruri care
+ * sunt oricum deosebite de la un site la altul. Nu e nevoie de o cheie nouă în
+ * config, dar se poate pune una.
  */
 function cheieSantier(): string
 {

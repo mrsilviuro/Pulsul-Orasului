@@ -29,6 +29,7 @@ declare(strict_types=1);
  */
 
 require_once __DIR__ . '/bootstrap.php';
+require_once __DIR__ . '/posta.php';   // pe ce drum pleacă mesajul
 
 /* ============================ TRIMITEREA =============================== */
 
@@ -145,28 +146,45 @@ function trimiteEmail(string $catre, string $subiect, array $blocuri,
 
     /* --------------------------- Plecarea ----------------------------- */
 
-    $metoda = (string) ($config['email_metoda'] ?? 'auto');
-
-    if ($metoda === 'auto') {
-        // În XAMPP nu există server de e-mail, deci mail() ar da mereu greș.
-        $metoda = !empty($config['dezvoltare']) ? 'fisier' : 'mail';
-    }
+    /* Desfacerea lui 'auto' stă în inc/posta.php, fiindcă aceeași întrebare o
+       pun și frâna de la trimiterile în serie, și rândul de stare din admin. */
+    $metoda = drumulPostei();
 
     if ($metoda === 'fisier') {
         return scrieEmailInFisier($catre, $subiect, $textAnteturi, $corp);
     }
 
     /**
-     * Al cincilea parametru pune adresa și în „plicul" mesajului, nu doar în
-     * antetul From. Fără el, serverul trimite de pe adresa contului de
-     * găzduire (ceva de forma user@srv123.host.ro), care nu se potrivește cu
-     * domeniul nostru — iar nepotrivirea aia e exact ce caută verificarea SPF
-     * când hotărăște dacă mesajul e spam.
+     * CĂDEREA PE DRUMUL VECHI SE SCRIE ÎN LOG, DE FIECARE DATĂ.
+     *
+     * Cerut anume SMTP și lipsind ceva, mesajul pleacă tot — un site care nu
+     * mai poate confirma un cont fiindcă lipsește un dosar e mai rău decât unul
+     * ale cărui mesaje ajung în „Spam". Dar TĂCUT ar fi fost cel mai rău dintre
+     * toate: cineva ar fi pus datele SMTP în config, ar fi văzut că mesajele
+     * pleacă, și ar fi crezut ani de zile că merg pe drumul cel bun.
      */
-    $plecat = @mail($catre, $subiectCodat, $mesaj, $textAnteturi, '-f' . $expeditor);
+    if ($metoda === 'smtp' && ($piedica = deCeNuMergeSmtp()) !== '') {
+        error_log('PulsulOrasului: SMTP e cerut, dar nu merge — mesajul pleacă '
+                . 'prin mail(). ' . $piedica);
+        $metoda = 'mail';
+    }
 
-    if (!$plecat) {
-        error_log('PulsulOrasului: mail() a dat greș pentru un mesaj de tip „' . $subiect . '".');
+    if ($metoda === 'smtp') {
+        $plecat = trimitePrinSmtp($catre, $subiect, $corp, $expeditor,
+                                  $numeExpedior, $raspunsCatre, $anteturiInPlus);
+    } else {
+        /**
+         * Al cincilea parametru pune adresa și în „plicul" mesajului, nu doar
+         * în antetul From. Fără el, serverul trimite de pe adresa contului de
+         * găzduire (ceva de forma user@srv123.host.ro), care nu se potrivește
+         * cu domeniul nostru — iar nepotrivirea aia e exact ce caută
+         * verificarea SPF când hotărăște dacă mesajul e spam.
+         */
+        $plecat = @mail($catre, $subiectCodat, $mesaj, $textAnteturi, '-f' . $expeditor);
+
+        if (!$plecat) {
+            error_log('PulsulOrasului: mail() a dat greș pentru un mesaj de tip „' . $subiect . '".');
+        }
     }
 
     // În dezvoltare păstrăm și o copie, ca să se poată citi ce s-a trimis.
@@ -663,26 +681,23 @@ function sablonEmail(string $titlu, array $blocuri): array
     $h[] = '<br />Evenimente locale, sport, cultură și tot ce mișcă în oraș.';
 
     /**
-     * IEȘIREA DE LA NEWSLETTER, scrisă negru pe alb.
+     * NICIUN LINK DE DEZABONARE, ȘI NICI NU MAI E NEVOIE DE UNUL.
      *
-     * Numai mesajele trimise în serie o primesc — cele pe care omul nu le-a
-     * cerut de fiecare dată. O confirmare de cont sau vestea că i s-a anulat un
-     * eveniment nu se „dezabonează": alea sunt răspunsuri la ceva ce a făcut el.
+     * A fost un bloc „dezabonare" aici, cerut de newsletterul zilnic și de
+     * anunțul scris de mână — singurele două mesaje care veneau NECHEMATE.
+     * Amândouă au fost scoase, iar odată cu ele a plecat și blocul: azi fiecare
+     * mesaj de pe site e răspunsul la ceva ce a făcut chiar omul, iar acelea nu
+     * se „dezabonează". Ieșirea din fiecare e chiar butonul din care s-a intrat
+     * — scoaterea de pe lista de participanți, apăsarea din nou a lui
+     * „Urmărești", bifele din setări.
      *
-     * Se scrie chiar în subsol, cu adresa întreagă alături: cine caută ieșirea o
-     * caută jos, iar dacă n-o găsește în două secunde apasă „Spam". Un singur om
+     * DE VERIFICAT DACĂ APARE VREODATĂ UN MESAJ CARE VINE NECHEMAT: atunci se
+     * pune blocul la loc, ÎMPREUNĂ cu antetul „List-Unsubscribe" (trimiteEmail
+     * primește anteturi în plus, mecanismul e mai departe acolo). Regula nu e
+     * „numai newsletterul avea nevoie", ci CE VINE NECHEMAT ARE IEȘIRE LA
+     * VEDERE: cine n-o găsește în două secunde apasă „Spam", iar un singur om
      * care face asta strică livrarea pentru toți ceilalți.
      */
-    if (!empty($blocuri['dezabonare'])) {
-        /* „Veștile astea", nu „mesajul ăsta zilnic": subsolul e același și
-           pentru newsletterul de fiecare zi, și pentru un anunț scris de mână,
-           care nu vine zilnic. O ieșire care descrie greșit mesajul din care
-           pleacă e o ieșire în care omul nu are încredere. */
-        $h[] = '<br /><br />Nu mai vrei veștile astea? '
-             . '<a href="' . h($blocuri['dezabonare']) . '" '
-             . 'style="color:' . $textMoale . ';text-decoration:underline;">Dezabonează-te</a> '
-             . 'sau schimbă bifa din setările contului.';
-    }
 
     $h[] = '</td></tr>';
 
@@ -806,13 +821,6 @@ function sablonEmail(string $titlu, array $blocuri): array
     $t[] = str_repeat('-', 60);
     $t[] = 'Ai primit mesajul ăsta deoarece ești membru pe ';
     $t[] = $site;
-
-    if (!empty($blocuri['dezabonare'])) {
-        $t[] = '';
-        $t[] = 'Nu mai vrei veștile astea? Deschide adresa de mai jos, sau';
-        $t[] = 'schimbă bifa din setările contului.';
-        $t[] = (string) $blocuri['dezabonare'];
-    }
 
     return [
         'html' => implode("\n", $h),
@@ -1195,80 +1203,6 @@ function emailAminteDeEveniment(
         : '„' . $titluEveniment . '" începe ' . $cand;
 
     return trimiteEmail($catre, $subiect, $blocuri);
-}
-
-/**
- * Newsletterul zilnic: ce se întâmplă azi în oraș.
- *
- * Pleacă doar când ARE ce spune — cronul nici nu ajunge aici dacă ziua e goală
- * (vezi trimiteNewsletterulZilei din inc/newsletter.php).
- *
- * SINGURUL MESAJ DE PE SITE CU BUTON DE DEZABONARE. Celelalte sunt răspunsuri
- * la ceva ce a făcut omul — o confirmare, vestea că i s-a anulat un eveniment —
- * și alea nu se „dezabonează". Ăsta vine nechemat în fiecare zi, deci ieșirea
- * trebuie să fie la vedere: cine n-o găsește în două secunde apasă „Spam", iar
- * un singur om care face asta strică livrarea pentru toți ceilalți.
- *
- * `$randuri` vin gata pregătite din inc/newsletter.php, cu adrese întregi și
- * poze care se pot lipsi — blocul „lista" din șablon ține locul gol de aceeași
- * mărime, ca mesajul să arate la fel și cu pozele blocate.
- */
-function emailNewsletterZilnic(
-    string $catre,
-    string $prenume,
-    array $randuri,
-    string $linkDezabonare
-): bool {
-    $cate = count($randuri);
-
-    /**
-     * „un eveniment" / „3 evenimente" / „21 de evenimente".
-     *
-     * numaratoare() știe regula lui „de" (21 DE evenimente), dar nu și
-     * singularul — ea primește substantivul gata ales. La unul singur se scrie
-     * „un eveniment", nu „1 eveniment": cifra singură sună a inventar.
-     */
-    $cateSpus = $cate === 1 ? 'un eveniment' : numaratoare($cate, 'evenimente');
-
-    /**
-     * „CE URMEAZĂ", nu „ce se întâmplă".
-     *
-     * Lista începe de la clipa în care pleacă mesajul: ce a pornit deja nu mai
-     * intră (vezi evenimenteleDeAzi din inc/newsletter.php). „Ce se întâmplă
-     * azi" ar fi promis ziua întreagă, iar omul care știa de o alergare de
-     * dimineață și n-o găsește în mesaj ar fi crezut că mesajul minte.
-     */
-    $primul = $cate === 1
-    ? 'Uite ce se întâmplă azi în oraș. Avem un singur eveniment, dar poate e fix pe gustul tău.'
-    : 'Uite ce se întâmplă azi în oraș. Sunt ' . $cateSpus . ', ordonate în funcție de oră.';
-
-    $blocuri = [
-        'salut'      => 'Bună, ' . $prenume . '!',
-        'paragrafe'  => [$primul],
-        'lista'      => $randuri,
-        'incheiere'  => $cate === 1
-        ? 'Dacă te hotărăști să mergi, apasă pe el și anunță că vii, așa organizatorul va ști pe cine să se bazeze!'
-        : 'Dacă te hotărăști să mergi la vreunul, apasă pe el și anunță că vii, așa organizatorul va ști pe cine să se bazeze!',
-        'dezabonare' => $linkDezabonare,
-    ];
-
-    $subiect = $cate === 1
-        ? 'Azi în oraș: ' . $randuri[0]['titlu']
-        : 'Azi în oraș: ' . $cateSpus;
-
-    /**
-     * „List-Unsubscribe" e antetul pe care îl citesc Gmail, Outlook și
-     * celelalte ca să pună ELE un buton „Dezabonează-te" chiar lângă numele
-     * expeditorului. E cel mai apăsat buton dintre toate — și e mult mai bun
-     * pentru noi decât „Spam", care e vecinul lui pe ecran.
-     *
-     * Fără „List-Unsubscribe-Post", dinadins: acela le spune programelor să
-     * dezaboneze de-a dreptul, cu o cerere trimisă de ele. Aici linkul duce la
-     * o pagină cu un buton, iar apăsarea aia e a omului. Vezi dezabonare.php.
-     */
-    return trimiteEmail($catre, $subiect, $blocuri, [
-        'List-Unsubscribe' => '<' . $linkDezabonare . '>',
-    ]);
 }
 
 /**
@@ -1806,47 +1740,4 @@ function emailEvenimentDeLaUrmarit(
 
     return trimiteEmail($catre, $cineOrganizeaza . ' a pus un anunț nou: '
                               . (string) ($cartonas['titlu'] ?? 'un eveniment'), $blocuri);
-}
-
-/**
- * VESTEA SCRISĂ DE MÂNĂ, către toată lista de newsletter.
- *
- * Titlul și paragrafele vin de la omul casei, din admin-anunt.php. Restul —
- * antetul, dunga roșie, subsolul — e același șablon ca la toate celelalte
- * douăzeci de mesaje: cine primește vestea asta trebuie s-o recunoască dintr-o
- * privire ca venind de la noi, nu ca pe o scrisoare străină.
- *
- * AL DOILEA MESAJ NECHEMAT DE PE SITE, după newsletterul zilnic — și de aceea al
- * doilea cu buton de dezabonare și cu antetul „List-Unsubscribe". O vreme,
- * newsletterul a fost singurul, și așa scria peste tot — dar regula din spate
- * n-a fost niciodată „numai newsletterul", ci CE VINE NECHEMAT ARE IEȘIRE LA
- * VEDERE. Ăsta vine nechemat: omul a bifat „vreau să aflu ce se întâmplă în oraș", nu
- * „scrieți-mi ce vreți, când vreți". Cine nu găsește ieșirea în două secunde
- * apasă „Spam", iar un singur om care face asta strică livrarea și pentru
- * newsletterul de a doua zi.
- *
- * DEZABONAREA E ACEEAȘI, nu una a lui: bifa `membri.newsletter` e una singură,
- * deci butonul care o stinge trebuie să fie tot unul. Cine iese de aici iese și
- * de la mesajul zilnic, și așa trebuie să fie — omul a spus „nu-mi mai scrieți".
- *
- * TITLUL E ȘI SUBIECTUL. Un subiect scris de noi („Un anunț de la
- * PulsulOrasului") ar fi ascuns tocmai vorba pentru care se trimite mesajul, iar
- * omul de casă are dreptul să hotărască singur ce se vede în lista de mesaje.
- */
-function emailAnuntCatreMembri(
-    string $catre,
-    string $prenume,
-    string $titlu,
-    array $paragrafe,
-    string $linkDezabonare
-): bool {
-    $blocuri = [
-        'salut'      => 'Bună, ' . $prenume . '!',
-        'paragrafe'  => $paragrafe,
-        'dezabonare' => $linkDezabonare,
-    ];
-
-    return trimiteEmail($catre, $titlu, $blocuri, [
-        'List-Unsubscribe' => '<' . $linkDezabonare . '>',
-    ]);
 }

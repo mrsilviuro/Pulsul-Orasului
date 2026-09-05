@@ -27,7 +27,6 @@ declare(strict_types=1);
  */
 
 require_once __DIR__ . '/evenimente.php';
-require_once __DIR__ . '/newsletter.php';   // randuriPentruNewsletter()
 require_once __DIR__ . '/email.php';
 
 /* ============================== ÎNTREBĂRI ============================= */
@@ -225,7 +224,7 @@ function instiinteazaUrmaritorii(int $evenimentId): int
      * poza categoriei, ora, orașul și locul, un început de text. Scris a doua
      * oară aici, s-ar fi despărțit de el la prima îndreptare.
      */
-    $randuri = randuriPentruNewsletter([$ev]);
+    $randuri = randuriPentruEmail([$ev]);
 
     if ($randuri === []) {
         return 0;

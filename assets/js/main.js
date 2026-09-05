@@ -5282,22 +5282,20 @@
     });
   }
 
-  /* --- Newsletterul --- */
-  var newsForm = document.getElementById('newsletter-form');
+  /* --- Înștiințările pe e-mail --- */
+  var newsForm = document.getElementById('instiintari-form');
 
   if (newsForm) {
     newsForm.addEventListener('submit', function (e) {
       e.preventDefault();
 
-      var bifa    = document.getElementById('st-newsletter');
       var bifaCom = document.getElementById('st-comentarii');
       var bifaFdb = document.getElementById('st-feedback');
 
       trimiteSetare(newsForm, newsForm.querySelector('button[type=submit]'),
         {
-          sectiune: 'newsletter',
-          newsletter: bifa && bifa.checked ? '1' : '',
-          // Celelalte două sunt citite la fel: netrimisă înseamnă „nu vreau".
+          sectiune: 'instiintari',
+          // O bifă netrimisă înseamnă „nu vreau" — la fel ca pe server.
           email_comentarii: bifaCom && bifaCom.checked ? '1' : '',
           email_feedback:   bifaFdb && bifaFdb.checked ? '1' : ''
         },
