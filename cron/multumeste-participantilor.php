@@ -42,14 +42,25 @@ if (PHP_SAPI !== 'cli') {
 }
 
 require_once __DIR__ . '/../inc/multumiri.php';
+require_once __DIR__ . '/vorba.php';   // cronul vorbește numai când are ce spune
 
 $uscat = in_array('--uscat', $argv ?? [], true);
+
+/**
+ * ÎNCERCAREA USCATĂ SE AUDE MEREU, chiar și printr-o țeavă: omul a cerut anume
+ * să vadă. Hotărârea se ia AICI, nu în ramura care desenează, fiindcă ramura
+ * „nimic de trimis" iese cu un `exit` înaintea ei — pusă acolo, tăcea tocmai la
+ * rularea din care vrei să afli de ce nu pleacă nimic.
+ */
+if ($uscat) {
+    vorbesteOricum();
+}
 
 /* ------------------------------ Treaba --------------------------------- */
 
 $inceput = time();
 
-echo '[' . date('Y-m-d H:i:s') . "] Caut evenimente încheiate fără mulțumiri…\n";
+spune('[' . date('Y-m-d H:i:s') . '] Caut evenimente încheiate fără mulțumiri…');
 
 /**
  * „1 eveniment", „3 evenimente", „21 de evenimente".
@@ -80,18 +91,18 @@ if ($evenimente === []) {
     $servite = cateMultumiriTrimise();
 
     if ($servite === 0) {
-        echo "  nimic de trimis: niciun eveniment încheiat fără mulțumiri.\n";
+        spune('  nimic de trimis: niciun eveniment încheiat fără mulțumiri.');
         exit(0);
     }
 
     /* Acordul se face după cifră: „1 eveniment a primit", „3 evenimente au
        primit". numaratoare() știe regula lui „de", dar nu și verbul. */
-    echo '  nimic de trimis. ' . $cateEvenimente($servite)
-       . ($servite === 1 ? ' a primit' : ' au primit') . " deja mulțumirile:\n";
+    spune('  nimic de trimis. ' . $cateEvenimente($servite)
+        . ($servite === 1 ? ' a primit' : ' au primit') . ' deja mulțumirile:');
 
     foreach (multumiriDejaTrimise() as $ev) {
-        echo '    „' . $ev['titlu'] . '" (' . $ev['data_eveniment'] . ')'
-           . ' — trimise la ' . $ev['multumiri_trimise_la'] . "\n";
+        spune('    „' . $ev['titlu'] . '" (' . $ev['data_eveniment'] . ')'
+            . ' — trimise la ' . $ev['multumiri_trimise_la']);
     }
 
     exit(0);
@@ -107,13 +118,12 @@ if ($uscat) {
         $oameni = participantiiDeMultumit((int) $ev['id']);
         $cati   = count($oameni);
 
-        echo '  „' . $ev['titlu'] . '" (' . $ev['data_eveniment'] . '): '
-           . $cati . ' pe listă'
-           . ($cati < MULTUMIRI_MINIM_OAMENI ? ' — prea puțini, nu s-ar trimite nimic' : '')
-           . "\n";
+        spune('  „' . $ev['titlu'] . '" (' . $ev['data_eveniment'] . '): '
+            . $cati . ' pe listă'
+            . ($cati < MULTUMIRI_MINIM_OAMENI ? ' — prea puțini, nu s-ar trimite nimic' : ''));
     }
 
-    echo 'Încercare uscată: ' . $cateEvenimente(count($evenimente)) . ", nimic trimis.\n";
+    spune('Încercare uscată: ' . $cateEvenimente(count($evenimente)) . ', nimic trimis.');
     exit(0);
 }
 
@@ -133,9 +143,19 @@ foreach ($evenimente as $ev) {
         . $rezultat['picate'] . ' picate'
     );
 
-    echo '  „' . $ev['titlu'] . '": '
-       . $rezultat['trimise'] . ' trimise, ' . $rezultat['picate'] . " picate\n";
+    spune('  „' . $ev['titlu'] . '": '
+        . $rezultat['trimise'] . ' trimise, ' . $rezultat['picate'] . ' picate');
 }
+
+/**
+ * AICI S-A ÎNTÂMPLAT CEVA, deci rularea asta merită un mesaj.
+ *
+ * Se cheamă pentru toate evenimentele găsite, nu doar pentru cele cu mesaje
+ * plecate: unul cu prea puțini oameni pe listă nu trimite nimic, DAR își pune
+ * ștampila și nu mai apare niciodată. Tăcut, ar fi fost tocmai felul de
+ * întâmplare despre care afli peste o lună.
+ */
+sAIntamplatCeva();
 
 /**
  * Rândul de încheiere se scrie în log doar când chiar a plecat ceva.
@@ -155,7 +175,7 @@ if ($trimise > 0 || $picate > 0) {
    din inc/posta.php). Aici s-a terminat treaba, deci se închide. */
 inchidePostasul();
 
-echo '[' . date('Y-m-d H:i:s') . '] Gata: ' . $cateEvenimente(count($evenimente)) . ', '
-   . $trimise . ' trimise, ' . $picate . " picate.\n";
+spune('[' . date('Y-m-d H:i:s') . '] Gata: ' . $cateEvenimente(count($evenimente)) . ', '
+    . $trimise . ' trimise, ' . $picate . ' picate.');
 
 exit($picate > 0 ? 1 : 0);

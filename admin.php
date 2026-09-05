@@ -11,11 +11,15 @@ declare(strict_types=1);
  * Lista secțiunilor NU se scrie aici: vine din sectiuniAdmin() (inc/admin.php),
  * de unde o ia și rândul de legături de sus. O secțiune nouă e un rând acolo,
  * și apare singură în amândouă locurile.
+ *
+ * SUB CARTONAȘE STĂ UN SINGUR LUCRU: comutatorul de șantier. A stat acolo și
+ * starea poștei, cât era din două rânduri; de când are și coada, și tabelul
+ * mesajelor rămase pe drumuri, și-a luat pagina ei (admin-posta.php). Regula
+ * de care ține locul: aici se pune ce se APASĂ, nu ce se citește — un panou al
+ * cărui rost e să se vadă dintr-o privire nu suportă bucăți care se citesc.
  */
 
 require_once __DIR__ . '/inc/admin.php';
-require_once __DIR__ . '/inc/posta.php';   // pentru rândul de stare a poștei
-require_once __DIR__ . '/inc/coada.php';   // …și pentru cifrele cozii
 
 $membru = cerePazaDeStaff('/admin.php');
 
@@ -67,43 +71,6 @@ if (!empty($_SESSION['vorba_santier'])) {
     $vorbaSantier = (string) $_SESSION['vorba_santier']['text'];
     $santierMers  = (bool)   $_SESSION['vorba_santier']['mers'];
     unset($_SESSION['vorba_santier']);
-}
-
-/**
- * ȘTERGEREA MESAJELOR RĂMASE PE DRUMURI, tot cu un formular adevărat spre
- * pagina asta, din aceleași motive ca lacătul de mai sus: e o unealtă a casei,
- * nu o faptă pe un rând dintr-o listă, iar panoul de poștă e tocmai locul în
- * care ajungi când ceva nu merge — inclusiv JavaScript-ul.
- *
- * NU E O PIERDERE. Un rând de aici e un plic pe care serverul l-a refuzat de
- * trei ori; ce scria în el s-a întâmplat oricum (contul e suspendat, anunțul e
- * anulat), doar vestea n-a ajuns. Ștergerea îl scoate din ochi, atât — de
- * aceea nici nu întreabă nimic înainte.
- */
-$vorbaPicate = '';
-
-if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['picat'])) {
-    if (!tokenCsrfValid((string) ($_POST['csrf'] ?? ''))) {
-        $vorbaPicate = 'Sesiunea a expirat. Reîncarcă pagina și încearcă din nou.';
-    } elseif ($_POST['picat'] === 'toate') {
-        $cate = stergeToateCelePicate();
-        $vorbaPicate = $cate === 1
-            ? 'Am șters mesajul rămas pe drumuri.'
-            : 'Am șters ' . $cate . ' mesaje rămase pe drumuri.';
-    } else {
-        $vorbaPicate = stergeDinCoada((int) $_POST['picat'])
-            ? 'Am șters mesajul.'
-            : 'Nu l-am găsit — poate l-a șters altcineva între timp.';
-    }
-
-    $_SESSION['vorba_picate'] = $vorbaPicate;
-    header('Location: /admin.php#posta');
-    exit;
-}
-
-if (!empty($_SESSION['vorba_picate'])) {
-    $vorbaPicate = (string) $_SESSION['vorba_picate'];
-    unset($_SESSION['vorba_picate']);
 }
 
 $eInchis   = siteInConstructie();
@@ -223,152 +190,6 @@ require __DIR__ . '/inc/antet.php';
       </div>
     </section>
 
-    <!-- ========================= STAREA POȘTEI =========================
-      DE CE E O LINIE PE ECRAN, ȘI NU DOAR UN RÂND ÎN LOG. Căderea de pe SMTP
-      pe mail() e tăcută dinadins — un site care nu mai poate confirma un cont
-      fiindcă lipsește un dosar ar fi mai rău. Dar tăcută ȘI nevăzută înseamnă
-      că cineva pune datele în config, vede că mesajele pleacă, și crede ani de
-      zile că merg pe drumul cel bun. Aici scrie negru pe alb pe care drum merg,
-      fără SSH și fără să caute prin loguri.
-    ============================================================== -->
-    <?php
-      $drumulPostei  = drumulPostei();
-      $piedicaPostei = $drumulPostei === 'smtp' ? '' : deCeNuMergeSmtp();
-    ?>
-    <section class="posta<?= $drumulPostei === 'mail' ? ' posta--rau' : '' ?>"
-             id="posta" aria-labelledby="posta-titlu">
-      <h2 class="posta__titlu" id="posta-titlu">
-        <?php if ($drumulPostei === 'smtp'): ?>
-        Mesajele pleacă prin serverul de poștă
-        <?php elseif ($drumulPostei === 'fisier'): ?>
-        Mesajele nu pleacă nicăieri
-        <?php else: ?>
-        Mesajele pleacă prin <code>mail()</code>
-        <?php endif; ?>
-      </h2>
-
-      <?php if ($drumulPostei === 'smtp'): ?>
-      <p class="posta__vorba">
-        Conectat la <code><?= h((string) setarileSmtp()['gazda']) ?></code>, ca
-        <code><?= h((string) setarileSmtp()['user']) ?></code>. Așa primesc
-        semnătura DKIM a găzduirii — drumul pe care e cel mai puțin probabil să
-        ajungă în „Spam".
-      </p>
-
-      <?php if (!adreseleSePotrivesc()): ?>
-      <!-- Nu e o piedică — mesajele pleacă — dar e taman strâmbătatea din care
-           se nasc mesajele puse deoparte de DMARC, și e greu de bănuit dacă
-           nu-ți spune cineva. -->
-      <p class="posta__vorba posta__vorba--atentie">
-        Dar te conectezi ca <code><?= h((string) setarileSmtp()['user']) ?></code>
-        și scrii de pe <code><?= h((string) ($config['email_expeditor'] ?? '')) ?></code>.
-        Verificarea DMARC le vrea aceleași — pune în <code>smtp_user</code>
-        chiar adresa din <code>email_expeditor</code>.
-      </p>
-      <?php endif; ?>
-
-      <?php elseif ($drumulPostei === 'fisier'): ?>
-      <p class="posta__vorba">
-        E pornit modul de dezvoltare, iar mesajele se scriu în
-        <code>private/emailuri-trimise.log</code>. Pe site-ul adevărat,
-        <code>dezvoltare</code> trebuie să fie <code>false</code>.
-      </p>
-
-      <?php else: ?>
-      <p class="posta__vorba"><?= h($piedicaPostei) ?></p>
-      <p class="posta__vorba">
-        Pleacă mai departe, dar nesemnate cu DKIM, deci o parte bună vor ajunge
-        în „Spam".
-      </p>
-      <?php endif; ?>
-
-      <!--
-        Coada: câte așteaptă acum și câte au rămas pe drumuri. A doua cifră ar
-        trebui să fie mereu zero — când nu e, ceva e stricat, iar motivul stă
-        în `coada_emailuri.eroare`. E singurul loc din care se vede asta fără
-        SSH și fără phpMyAdmin.
-      -->
-      <p class="posta__vorba posta__vorba--mic">
-        <?php $laRand = cateAsteaptaInCoada(); ?>
-        <?php if ($laRand === 0): ?>
-        Nu așteaptă niciun mesaj la rând.
-        <?php else: ?>
-        <strong><?= $laRand ?></strong>
-        <?= $laRand === 1 ? 'mesaj așteaptă' : 'mesaje așteaptă' ?> la rând;
-        cronul duce <?= (int) coadaPeRulare() ?> la fiecare pornire.
-        <?php endif; ?>
-        În ultimul ceas au plecat <strong><?= catePlecateInUltimulCeas() ?></strong>.
-      </p>
-
-      <?php if ($vorbaPicate !== ''): ?>
-      <p class="posta__vorba posta__raspuns"><?= h($vorbaPicate) ?></p>
-      <?php endif; ?>
-
-      <?php if (($ramase = catePicateInCoada()) > 0): ?>
-      <p class="posta__vorba posta__vorba--atentie">
-        <strong><?= $ramase ?></strong>
-        <?= $ramase === 1 ? 'mesaj n-a plecat' : 'mesaje n-au plecat' ?> nici după
-        <?= COADA_INCERCARI_MAX ?> încercări. Motivul e scris în dreptul
-        fiecăruia.
-      </p>
-
-      <!--
-        RÂNDURILE, LA VEDERE. Cifra singură nu spune nimic de făcut: ca s-o
-        vezi de ce, trebuia deschis phpMyAdmin. Aici scrie cui n-a ajuns, ce
-        i se scria și ce a răspuns serverul — de obicei „No Such User Here",
-        adică o adresă care nu există.
-
-        Vorba serverului e scrisă de ALTCINEVA, deci trece prin h() ca orice
-        text străin. E singurul loc de pe site unde se vede vreodată.
-      -->
-      <div class="posta__picate">
-        <table class="posta__tabel">
-          <thead>
-            <tr>
-              <th scope="col">Către</th>
-              <th scope="col">Mesajul</th>
-              <th scope="col">Ce a spus serverul</th>
-              <th scope="col"><span class="sr-only">Șterge</span></th>
-            </tr>
-          </thead>
-          <tbody>
-            <?php foreach (emailurilePicate() as $picat): ?>
-            <tr>
-              <td><code><?= h((string) $picat['catre']) ?></code></td>
-              <td>
-                <?= h((string) $picat['subiect']) ?>
-                <span class="posta__cand"><?= h(dataScrisaMic((string) $picat['creat_la'])) ?></span>
-              </td>
-              <td class="posta__eroare"><?= h((string) ($picat['eroare'] ?? '')) ?></td>
-              <td>
-                <form method="post" action="/admin.php#posta">
-                  <input type="hidden" name="csrf" value="<?= h(tokenCsrf()) ?>">
-                  <button class="posta__sterge" type="submit"
-                          name="picat" value="<?= (int) $picat['id'] ?>"
-                          title="Șterge mesajul"
-                          aria-label="Șterge mesajul către <?= h((string) $picat['catre']) ?>">×</button>
-                </form>
-              </td>
-            </tr>
-            <?php endforeach; ?>
-          </tbody>
-        </table>
-
-        <?php if ($ramase > COADA_PICATE_ARATATE): ?>
-        <p class="posta__vorba posta__vorba--mic">
-          Se văd cele mai noi <?= COADA_PICATE_ARATATE ?>, din <?= $ramase ?>.
-        </p>
-        <?php endif; ?>
-
-        <form method="post" action="/admin.php#posta">
-          <input type="hidden" name="csrf" value="<?= h(tokenCsrf()) ?>">
-          <button class="btn btn--rau btn--xs" type="submit" name="picat" value="toate">
-            Șterge-le pe toate
-          </button>
-        </form>
-      </div>
-      <?php endif; ?>
-    </section>
   </div>
 </main>
 <?php require __DIR__ . '/inc/subsol.php'; ?>

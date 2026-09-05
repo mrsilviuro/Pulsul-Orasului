@@ -464,11 +464,24 @@ verifica('logul pomenește contul', true, str_contains($continut, '#' . $idExpir
 verifica('logul NU păstrează adresa ștearsă', false,
     str_contains($continut, 'sters-expirat@exemplu-test.ro'));
 
-// A doua rulare nu mai are ce face: nu anonimizează de două ori.
+/**
+ * A DOUA RULARE NU MAI ARE CE FACE: nu se anonimizează de două ori.
+ *
+ * SE ÎNTREABĂ BAZA, nu ce scrie cronul pe ecran. A întrebat o vreme ecranul,
+ * căutând vorba „0 anonimizate" — dar de când cronurile TAC când n-au ce spune
+ * (cron/vorba.php), rularea aceea nu mai scrie nimic, tocmai fiindcă n-a găsit
+ * nimic. Adică proba se rupsese de la lucrul cel bun. Iar ștampila
+ * `anonimizat_la` e oricum răspunsul adevărat: dacă a doua rulare ar fi trecut
+ * din nou peste rând, ea s-ar fi schimbat.
+ */
+$stampilaDintai = coloana($idExpirat, 'anonimizat_la');
+
 $iesire = [];
 exec('php ' . escapeshellarg(dirname(__DIR__) . '/cron/anonimizeaza-conturi.php') . ' 2>&1', $iesire);
-verifica('a doua rulare nu mai găsește nimic', true,
-    str_contains(implode("\n", $iesire), '0 anonimizate'));
+
+verifica('a doua rulare nu mai găsește nimic', '', trim(implode("\n", $iesire)));
+verifica('și nu atinge rândul a doua oară', $stampilaDintai,
+    coloana($idExpirat, 'anonimizat_la'));
 
 echo "\n=== ȘABLONUL DE E-MAIL: CUTIA CU VALOARE ===\n";
 

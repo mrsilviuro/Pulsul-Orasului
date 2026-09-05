@@ -34,14 +34,25 @@ if (PHP_SAPI !== 'cli') {
 }
 
 require_once __DIR__ . '/../inc/stergere.php';
+require_once __DIR__ . '/vorba.php';   // cronul vorbește numai când are ce spune
 
 $uscat = in_array('--uscat', $argv ?? [], true);
+
+/**
+ * ÎNCERCAREA USCATĂ SE AUDE MEREU, chiar și printr-o țeavă: omul a cerut anume
+ * să vadă. Hotărârea se ia AICI, nu în ramura care desenează, fiindcă ramura
+ * „nimic de trimis" iese cu un `exit` înaintea ei — pusă acolo, tăcea tocmai la
+ * rularea din care vrei să afli de ce nu pleacă nimic.
+ */
+if ($uscat) {
+    vorbesteOricum();
+}
 
 /* ------------------------------ Treaba --------------------------------- */
 
 $inceput = time();
 
-echo '[' . date('Y-m-d H:i:s') . "] Caut conturi cu răgazul împlinit…\n";
+spune('[' . date('Y-m-d H:i:s') . '] Caut conturi cu răgazul împlinit…');
 
 if ($uscat) {
     $limita = date('Y-m-d H:i:s', $inceput - ZILE_RAGAZ_STERGERE * 24 * 3600);
@@ -58,11 +69,11 @@ if ($uscat) {
     $gasite = $q->fetchAll();
 
     foreach ($gasite as $m) {
-        echo '  ar fi anonimizat: membrul #' . $m['id']
-           . ' (a cerut pe ' . $m['cerere_stergere'] . ")\n";
+        spune('  ar fi anonimizat: membrul #' . $m['id']
+            . ' (a cerut pe ' . $m['cerere_stergere'] . ')');
     }
 
-    echo 'Încercare uscată: ' . count($gasite) . " de conturi, nimic schimbat.\n";
+    spune('Încercare uscată: ' . count($gasite) . ' de conturi, nimic schimbat.');
     exit(0);
 }
 
@@ -77,11 +88,11 @@ foreach ($facute as $f) {
         scrieInLogulStergerii(
             'anonimizat membrul #' . $f['id'] . ', cerut pe ' . $f['cerut']
         );
-        echo '  anonimizat: membrul #' . $f['id'] . "\n";
+        spune('  anonimizat: membrul #' . $f['id']);
     } else {
         $picate++;
         scrieInLogulStergerii('NU AM PUTUT anonimiza membrul #' . $f['id']);
-        echo '  PICAT: membrul #' . $f['id'] . "\n";
+        spune('  PICAT: membrul #' . $f['id']);
     }
 }
 
@@ -92,13 +103,17 @@ foreach ($facute as $f) {
  * „n-am avut ce face" — iar când s-ar întâmpla ceva, s-ar pierde printre ele.
  */
 if ($facute !== []) {
+    /* Un cont anonimizat e o schimbare pe care nu o mai poate lua nimeni
+       înapoi. Rularea asta merită un mesaj. */
+    sAIntamplatCeva();
+
     scrieInLogulStergerii(
         'gata: ' . $reusite . ' anonimizate, ' . $picate . ' picate, '
         . 'în ' . (time() - $inceput) . 's'
     );
 }
 
-echo '[' . date('Y-m-d H:i:s') . '] Gata: ' . $reusite . ' anonimizate, '
-   . $picate . " picate.\n";
+spune('[' . date('Y-m-d H:i:s') . '] Gata: ' . $reusite . ' anonimizate, '
+    . $picate . ' picate.');
 
 exit($picate > 0 ? 1 : 0);

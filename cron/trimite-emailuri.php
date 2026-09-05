@@ -43,6 +43,7 @@ if (PHP_SAPI !== 'cli') {
 }
 
 require_once __DIR__ . '/../inc/coada.php';
+require_once __DIR__ . '/vorba.php';   // cronul vorbește numai când are ce spune
 
 $doarVad = in_array('--vezi', $argv ?? [], true);
 
@@ -66,11 +67,13 @@ $cateMesaje = static function (int $cate): string {
 };
 
 if ($doarVad) {
-    echo '[' . date('Y-m-d H:i:s') . "] Încercare uscată — nu pleacă nimic.\n";
-    echo '    la rând:            ' . $cateMesaje($asteapta) . "\n";
-    echo '    plecate în ultimul ceas: ' . catePlecateInUltimulCeas() . "\n";
-    echo '    rămase pe drumuri:  ' . $picate . "\n";
-    echo '    o rulare duce:      ' . coadaPeRulare() . "\n";
+    vorbesteOricum();   // omul a cerut anume să vadă
+
+    spune('[' . date('Y-m-d H:i:s') . '] Încercare uscată — nu pleacă nimic.');
+    spune('    la rând:            ' . $cateMesaje($asteapta));
+    spune('    plecate în ultimul ceas: ' . catePlecateInUltimulCeas());
+    spune('    rămase pe drumuri:  ' . $picate);
+    spune('    o rulare duce:      ' . coadaPeRulare());
     exit(0);
 }
 
@@ -89,8 +92,8 @@ if ($asteapta === 0) {
     $sterse = curataCoada();
 
     if ($sterse > 0) {
-        echo '[' . date('Y-m-d H:i:s') . '] Nimic la rând. Am șters '
-           . $sterse . " rânduri vechi.\n";
+        spune('[' . date('Y-m-d H:i:s') . '] Nimic la rând. Am șters '
+            . $sterse . ' rânduri vechi.');
     }
 
     exit(0);
@@ -110,8 +113,8 @@ scrieInLogulCozii(
     . (time() - $inceput) . 's'
 );
 
-echo '[' . date('Y-m-d H:i:s') . '] Gata: ' . $r['trimise'] . ' trimise, '
-   . $r['picate'] . " picate.\n";
+spune('[' . date('Y-m-d H:i:s') . '] Gata: ' . $r['trimise'] . ' trimise, '
+    . $r['picate'] . ' picate.');
 
 /**
  * RĂMASELE PE DRUMURI SE SPUN PE FAȚĂ. Cifra asta ar trebui să fie zero; când
@@ -121,11 +124,35 @@ echo '[' . date('Y-m-d H:i:s') . '] Gata: ' . $r['trimise'] . ' trimise, '
  */
 $picateAcum = catePicateInCoada();
 
-if ($picateAcum > 0) {
-    echo '    ATENȚIE: ' . $picateAcum . " mesaje n-au plecat după "
-       . COADA_INCERCARI_MAX . " încercări.\n";
-    echo "    Se văd în admin, jos, la starea poștei — cu vorba serverului pe\n";
-    echo "    fiecare și cu un buton de ștergere.\n";
+/**
+ * SINGURUL LUCRU DIN POȘTAȘ CARE MERITĂ UN E-MAIL: că a picat ceva ACUM.
+ *
+ * Restul — „am dus opt" — se scrie în coada.log la fiecare rulare și n-are de
+ * ce să ajungă la nimeni: din minut în minut, un mesaj pe rulare ar însemna, la
+ * un val de vești către urmăritori, o jumătate de ceas de e-mailuri despre
+ * e-mailuri.
+ *
+ * SE ÎNTREABĂ DE RULAREA ASTA (`$r['picate']`), NU DE CÂTE ZAC ÎN COADĂ.
+ * Rândurile rămase pe drumuri NU se șterg niciodată singure — sunt acolo tocmai
+ * ca să se vadă —, deci „spune cât timp sunt" ar fi însemnat același e-mail
+ * despre aceleași două mesaje, din minut în minut, până le-ar fi șters cineva.
+ * Adică exact zgomotul din care s-a născut fișierul cron/vorba.php, doar că mai
+ * des. Se spune o dată, la picare; de acolo încolo se văd în admin, la „Poșta".
+ */
+if ($r['picate'] > 0) {
+    sAIntamplatCeva();
+
+    spune('    ATENȚIE: ' . $cateMesaje($r['picate'])
+        . ($r['picate'] === 1 ? ' n-a plecat' : ' n-au plecat') . ' la rularea asta.');
+    /* Cele care ZAC în coadă sunt altă cifră: unul picat acum se mai încearcă
+       de două ori, deci de obicei încă nu e printre ele. */
+    if ($picateAcum > 0) {
+        spune('    În coadă mai zac ' . $cateMesaje($picateAcum) . ', rămase pe drumuri'
+            . ' după ' . COADA_INCERCARI_MAX . ' încercări.');
+    }
+
+    spune('    În admin, la „Poșta", scrie pe fiecare ce a răspuns serverul,');
+    spune('    și se pot șterge de acolo.');
 }
 
 exit($r['picate'] > 0 ? 1 : 0);

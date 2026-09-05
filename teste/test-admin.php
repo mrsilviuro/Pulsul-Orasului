@@ -98,10 +98,10 @@ sectiune('secțiunile și cifrele');
 
 $chei = array_map(static fn(array $s): string => (string) $s['cheie'], sectiuniAdmin());
 
-verifica('șapte secțiuni', 7, count($chei));
+verifica('opt secțiuni', 8, count($chei));
 verifica('în ordinea cerută',
     ['coduri', 'evenimente', 'comentarii', 'contact', 'useri', 'evaluari',
-     'dorinte'], $chei);
+     'dorinte', 'posta'], $chei);
 
 /**
  * FIECARE SECȚIUNE ARE O CIFRĂ. A fost o vreme una fără — „Anunț pe e-mail",
@@ -884,7 +884,7 @@ if ($BAZA === '') {
          * trebuia deschis phpMyAdmin.
          *
          * ȘTERGEREA E O FAPTĂ, deci se probează și PAZA ei: se face cu un
-         * formular adevărat spre /admin.php, nu prin api/admin.php, deci
+         * formular adevărat spre /admin-posta.php, nu prin api/admin.php, deci
          * regula scrisă acolo n-o acoperă.
          */
         require_once __DIR__ . '/../inc/coada.php';
@@ -894,7 +894,7 @@ if ($BAZA === '') {
         /**
          * VORBA SERVERULUI E UNA IRECUNOSCIBILĂ, nu „No Such User Here".
          *
-         * Aceea e scrisă și în lămurirea din admin.php, ca pildă — iar proba ar
+         * Aceea e scrisă și în lămurirea din admin-posta.php, ca pildă — iar proba ar
          * fi trecut liniștită căutându-și propriul comentariu, chiar cu coloana
          * scoasă din tabel. S-a întâmplat la scriere.
          */
@@ -910,9 +910,9 @@ if ($BAZA === '') {
             'SELECT id FROM coada_emailuri WHERE catre = ' . db()->quote($adresaMoarta)
         )->fetchColumn();
 
-        $panou = $ceruta('/admin.php', null, $cookieGazda);
+        $panou = $ceruta('/admin-posta.php', null, $cookieGazda);
 
-        verifica('panoul arată adresa', true,
+        verifica('pagina poștei arată adresa', true,
             str_contains($panou['brut'], $adresaMoarta));
         verifica('și vorba serverului',  true,
             str_contains($panou['brut'], $vorbaLui));
@@ -932,7 +932,7 @@ if ($BAZA === '') {
                 'timeout'       => 10,
             ]]);
 
-            @file_get_contents($BAZA . '/admin.php', false, $ctx);
+            @file_get_contents($BAZA . '/admin-posta.php', false, $ctx);
 
             foreach ($http_response_header ?? [] as $rand) {
                 if (preg_match('~^HTTP/\S+\s+(\d+)~', $rand, $mm)) { return (int) $mm[1]; }
@@ -955,7 +955,7 @@ if ($BAZA === '') {
 
         $cod = $apasa(['csrf' => $csrfPanou, 'picat' => $idPicat], $cookieGazda);
         verifica('omul de casă îl șterge', false, $maiE());
-        verifica('și e trimis înapoi pe panou', 302, $cod);
+        verifica('și e trimis înapoi pe pagină', 302, $cod);
 
         db()->prepare('DELETE FROM coada_emailuri WHERE catre = ?')->execute([$adresaMoarta]);
     }
