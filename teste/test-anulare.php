@@ -20,6 +20,17 @@ declare(strict_types=1);
  * pună pe drum. De acolo se citesc aici.
  */
 
+/* --------------------------- Doar din consolă -------------------------- */
+
+/**
+ * Probele nu se rulează din browser. `teste/.htaccess` le închide dosarul, dar
+ * el se citește doar pe Apache cu AllowOverride pornit — verificarea asta ține
+ * oriunde. Aceeași pereche de încuietori ca la cron/.
+ */
+if (PHP_SAPI !== 'cli') {
+    http_response_code(404);
+    exit("Se rulează doar din linia de comandă.\n");
+}
 require_once __DIR__ . '/../inc/evenimente.php';
 require_once __DIR__ . '/../inc/interese.php';
 require_once __DIR__ . '/../inc/email.php';

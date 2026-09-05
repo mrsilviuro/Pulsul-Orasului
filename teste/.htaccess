@@ -1,0 +1,30 @@
+# =========================================================================
+#  PROBELE NU SE RULEAZĂ DIN BROWSER. NICIODATĂ.
+#
+#  Dosarul ăsta n-are ce căuta pe găzduire — probele se rulează pe mașina de
+#  lucru, din linia de comandă. Dar fișierele se urcă prin FTP sau prin File
+#  Manager, cu tot dosarul deodată, iar „am uitat să șterg teste/" e greșeala
+#  cea mai ușor de făcut din câte există. De aceea încuietoarea urcă odată cu
+#  ele: dacă ajung acolo din greșeală, sunt inerte din prima clipă.
+#
+#  CE S-AR FI PUTUT FACE FĂRĂ EA, cu o simplă adresă în bara browserului:
+#    teste/test-constructie.php  — pornește și oprește `in_constructie` din
+#                                  inc/config.php, adică ÎNCHIDE SITE-UL
+#    teste/test-coada.php        — golește tot tabelul `coada_emailuri`, adică
+#                                  aruncă mesajele care încă n-au plecat
+#    restul                      — scriu și șterg membri, evenimente,
+#                                  comentarii și note, la fiecare cerere
+#
+#  A DOUA ÎNCUIETOARE E ÎN PHP, în fiecare probă (PHP_SAPI !== 'cli'), ca la
+#  cron/. Fișierul ăsta ține pe găzduirile cu Apache și AllowOverride pornit;
+#  verificarea din PHP ține ORIUNDE — și pe nginx, unde .htaccess nu se citește
+#  deloc. Niciuna nu e de ajuns singură.
+# =========================================================================
+
+<IfModule mod_authz_core.c>
+    Require all denied
+</IfModule>
+<IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+</IfModule>

@@ -23,6 +23,15 @@ declare(strict_types=1);
  * altfel proba trece pe un site care nu e cel de pe server.
  */
 
+/* ------------------------- FĂRĂ PAZĂ DE CONSOLĂ -------------------------
+   Fișierul ăsta e SINGURUL din dosar care TREBUIE să ruleze prin web: el e
+   chiar routerul serverului de probă, pornit cu `php -S … teste/router.php`.
+   Acolo PHP_SAPI e „cli-server", nu „cli", deci paza pusă în celelalte probe
+   l-ar fi omorât la prima cerere — s-a și întâmplat, la scriere.
+
+   Pe găzduire nu-l apără verificarea din PHP, ci `teste/.htaccess`. Nici n-are
+   ce strica singur: nu scrie nimic, doar întinde adresele frumoase peste
+   fișierele care există oricum. Dar dosarul ăsta n-are ce căuta pe server. */
 $cale = (string) parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH);
 
 /* /eveniment/<slug>  →  event.php?slug=<slug> */
