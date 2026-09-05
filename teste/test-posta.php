@@ -137,6 +137,43 @@ verifica('zero nu înseamnă „niciunul"', 8, coadaPeRulare());
 
 $config['emailuri_pe_rulare'] = 8;
 
+/**
+ * DIN CE CHEIE VINE CIFRA, și cât loc mai rămâne.
+ *
+ * Sunt trei căi spre numărul acela — cheia nouă, cea veche și valoarea din
+ * lipsă — iar panoul scria doar cifra. Când ea nu se potrivea cu ce era scris
+ * în config, n-avea cum să se lămurească nimeni fără SSH; cel mai des vinovatul
+ * e un `inc/config.php` mai vechi decât `config.example.php`, rămas cu
+ * `email_pe_minut`.
+ */
+unset($config['emailuri_pe_rulare'], $config['email_pe_minut']);
+verifica('fără nicio cheie, cifra e cea din lipsă', 8, coadaPeRulare());
+verifica('și se spune că vine din lipsă',           '', deUndeVineCoadaPeRulare());
+
+$config['email_pe_minut'] = 10;
+verifica('cheia veche se citește mai departe',   10, coadaPeRulare());
+verifica('și se spune pe nume', 'email_pe_minut', deUndeVineCoadaPeRulare());
+
+$config['emailuri_pe_rulare'] = 8;
+verifica('cea nouă bate cheia veche',                 8, coadaPeRulare());
+verifica('și se spune care a câștigat', 'emailuri_pe_rulare', deUndeVineCoadaPeRulare());
+
+/**
+ * LOCURILE RĂMASE ÎNTR-UN MINUT pentru ce pleacă pe loc. Zero e cazul care
+ * doare: cine își face cont fix în minutul în care cronul își duce teancul
+ * primește confirmarea abia la rularea următoare. Nu se pierde nimic — mesajul
+ * intră în coadă cu prioritate —, dar omul stă cu ochii pe cutia poștală.
+ */
+$config['plafon_pe_minut'] = 10;
+verifica('opt duse din zece lasă două locuri', 2, locuriRamasePeMinut());
+
+$config['emailuri_pe_rulare'] = 10;
+verifica('zece duse din zece nu lasă niciunul', 0, locuriRamasePeMinut());
+
+$config['emailuri_pe_rulare'] = 8;
+unset($config['plafon_pe_minut']);
+verifica('plafonul are și el o valoare din lipsă', 10, plafonPeMinut());
+
 /* ==================================================================== */
 sectiune('ce refuz e definitiv');
 
