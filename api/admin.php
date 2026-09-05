@@ -184,9 +184,19 @@ switch ((string) ($date['fapta'] ?? '')) {
              */
             $aPlecatVestea = $autorul !== null && (int) $com['membru_id'] !== $membruId;
 
+            /**
+             * TOATE CELE PATRU VEȘTI ALE ZONEI DE ADMINISTRARE MERG LA RÂND —
+             * asta, poza ștearsă, contul suspendat și hotărârea unei dorințe.
+             *
+             * Niciuna nu e o veste care se strică într-un minut: hotărârea e
+             * deja scrisă în bază, iar omul de casă are răspunsul pe ecran. Ce
+             * se câștigă e locul lor din plafonul găzduirii, care rămâne pentru
+             * cine chiar așteaptă — un cont nou, o parolă uitată.
+             */
             if ($aPlecatVestea) {
-                emailComentariuSters($autorul['email'], (string) $autorul['prenume'],
-                                     $titluEv, $motivCerut());
+                laCoada(static fn (): bool => emailComentariuSters(
+                    $autorul['email'], (string) $autorul['prenume'],
+                    $titluEv, $motivCerut()));
             }
 
             raspunsJson([
@@ -401,14 +411,14 @@ switch ((string) ($date['fapta'] ?? '')) {
                             : $destinatarul((int) $dorintaRand['membru_id']);
 
                             if ($omulDorintei !== null) {
-                                emailDorintaHotarata(
+                                laCoada(static fn (): bool => emailDorintaHotarata(
                                     $omulDorintei['email'],
                                     (string) $omulDorintei['prenume'],
-                                                     (string) $dorintaRand['dorinta'],
-                                                     $hotarare === 'aprobat',
-                                                     $hotarare === 'aprobat' ? '' : $motivCerut(),
-                                                     ZILE_PE_TABLA
-                                );
+                                    (string) $dorintaRand['dorinta'],
+                                    $hotarare === 'aprobat',
+                                    $hotarare === 'aprobat' ? '' : $motivCerut(),
+                                    ZILE_PE_TABLA
+                                ));
                             }
 
                             if ($hotarare === 'in_asteptare') {
@@ -460,7 +470,9 @@ switch ((string) ($date['fapta'] ?? '')) {
                                 $omulPozei = $destinatarul((int) $om['id']);
 
                                 if ($omulPozei !== null) {
-                                    emailPozaStearsa($omulPozei['email'], (string) $omulPozei['prenume'], $motivCerut());
+                                    laCoada(static fn (): bool => emailPozaStearsa(
+                                        $omulPozei['email'], (string) $omulPozei['prenume'],
+                                        $motivCerut()));
                                 }
 
                                 raspunsJson([
@@ -606,8 +618,9 @@ switch ((string) ($date['fapta'] ?? '')) {
                                         $celSuspendat = $q->fetch();
 
                                         if ($celSuspendat !== false && (string) $celSuspendat['email'] !== '') {
-                                            emailContSuspendat((string) $celSuspendat['email'],
-                                                               (string) $celSuspendat['prenume'], $motivCerut());
+                                            laCoada(static fn (): bool => emailContSuspendat(
+                                                (string) $celSuspendat['email'],
+                                                (string) $celSuspendat['prenume'], $motivCerut()));
                                             $vesteSuspendare = ' I-am dat de veste pe e-mail.';
                                         }
                                     }

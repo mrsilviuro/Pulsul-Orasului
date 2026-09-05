@@ -25,12 +25,21 @@ if ($membru === null) {
 } else {
     $cand = candSeSterge(acum());
 
-    emailStergereConfirmata(
+    /**
+     * LA RÂND. Nu e linkul de ștergere — acela pleacă pe loc, fiindcă omul stă
+     * cu ochii pe cutia poștală după ce l-a cerut. Ăsta doar îi spune că a
+     * mers, iar el o vede și pe ecran, chiar acum.
+     *
+     * Adresa intră în rândul din coadă așa cum e ACUM, deci mesajul ajunge
+     * chiar dacă între timp contul se golește: coada ține adresa la ea, nu se
+     * uită după ea în `membri` la trimitere.
+     */
+    laCoada(static fn (): bool => emailStergereConfirmata(
         (string) $membru['email'],
         (string) $membru['prenume'],
         $cand,
         ZILE_RAGAZ_STERGERE
-    );
+    ));
 
     /**
      * Ieșirea din cont e parte din confirmare.

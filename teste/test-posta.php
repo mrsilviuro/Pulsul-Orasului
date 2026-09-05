@@ -138,6 +138,43 @@ verifica('zero nu înseamnă „niciunul"', 8, coadaPeRulare());
 $config['emailuri_pe_rulare'] = 8;
 
 /* ==================================================================== */
+sectiune('ce refuz e definitiv');
+
+/**
+ * ÎNTREBAREA DE CARE ATÂRNĂ DACĂ UN MESAJ SE MAI ÎNCEARCĂ.
+ *
+ * Partea care doare nu e să recunoști adresa moartă — aia e ușoară —, ci să NU
+ * iei drept moarte piedicile care sunt despre NOI. Un „550 relay access denied"
+ * ori o parolă SMTP schimbată din greșeală ar fi omorât tăcut toată coada la
+ * prima trecere, confirmări de cont cu tot, iar semnul ar fi fost o cifră
+ * crescută pe un panou pe care nu se uită nimeni.
+ */
+$refuzuri = [
+    'adresa nu există' => [
+        "SMTP Error: The following recipients failed: email6@pulsulorasului.ro: "
+        . "No Such User Here\n SMTP server error: RCPT TO command failed "
+        . "Detail: No Such User Here\n SMTP code: 550",
+        true,
+    ],
+    'parolă SMTP greșită' => [
+        'SMTP Error: Could not authenticate. SMTP code: 535',
+        false,
+    ],
+    'cutie plină pe moment' => [
+        "SMTP Error: The following recipients failed: ana@exemplu.ro: "
+        . "Mailbox busy\n SMTP code: 452",
+        false,
+    ],
+    'conexiunea a picat' => ['SMTP connect() failed.', false],
+    'nicio vorbă'        => ['', false],
+];
+
+foreach ($refuzuri as $ce => [$vorba, $asteptat]) {
+    verifica($ce . ($asteptat ? ' — nu se mai încearcă' : ' — se mai încearcă'),
+        $asteptat, esteRefuzDefinitiv($vorba));
+}
+
+/* ==================================================================== */
 if (!$avem) {
     echo "\n(sar peste plicul și poștașul: n-am biblioteca)\n";
 } else {

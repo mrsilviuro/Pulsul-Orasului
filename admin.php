@@ -69,6 +69,43 @@ if (!empty($_SESSION['vorba_santier'])) {
     unset($_SESSION['vorba_santier']);
 }
 
+/**
+ * ȘTERGEREA MESAJELOR RĂMASE PE DRUMURI, tot cu un formular adevărat spre
+ * pagina asta, din aceleași motive ca lacătul de mai sus: e o unealtă a casei,
+ * nu o faptă pe un rând dintr-o listă, iar panoul de poștă e tocmai locul în
+ * care ajungi când ceva nu merge — inclusiv JavaScript-ul.
+ *
+ * NU E O PIERDERE. Un rând de aici e un plic pe care serverul l-a refuzat de
+ * trei ori; ce scria în el s-a întâmplat oricum (contul e suspendat, anunțul e
+ * anulat), doar vestea n-a ajuns. Ștergerea îl scoate din ochi, atât — de
+ * aceea nici nu întreabă nimic înainte.
+ */
+$vorbaPicate = '';
+
+if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['picat'])) {
+    if (!tokenCsrfValid((string) ($_POST['csrf'] ?? ''))) {
+        $vorbaPicate = 'Sesiunea a expirat. Reîncarcă pagina și încearcă din nou.';
+    } elseif ($_POST['picat'] === 'toate') {
+        $cate = stergeToateCelePicate();
+        $vorbaPicate = $cate === 1
+            ? 'Am șters mesajul rămas pe drumuri.'
+            : 'Am șters ' . $cate . ' mesaje rămase pe drumuri.';
+    } else {
+        $vorbaPicate = stergeDinCoada((int) $_POST['picat'])
+            ? 'Am șters mesajul.'
+            : 'Nu l-am găsit — poate l-a șters altcineva între timp.';
+    }
+
+    $_SESSION['vorba_picate'] = $vorbaPicate;
+    header('Location: /admin.php#posta');
+    exit;
+}
+
+if (!empty($_SESSION['vorba_picate'])) {
+    $vorbaPicate = (string) $_SESSION['vorba_picate'];
+    unset($_SESSION['vorba_picate']);
+}
+
 $eInchis   = siteInConstructie();
 $dinSetari = lacatulEDinSetari();
 $cifre     = cifreleAdmin();
@@ -199,7 +236,7 @@ require __DIR__ . '/inc/antet.php';
       $piedicaPostei = $drumulPostei === 'smtp' ? '' : deCeNuMergeSmtp();
     ?>
     <section class="posta<?= $drumulPostei === 'mail' ? ' posta--rau' : '' ?>"
-             aria-labelledby="posta-titlu">
+             id="posta" aria-labelledby="posta-titlu">
       <h2 class="posta__titlu" id="posta-titlu">
         <?php if ($drumulPostei === 'smtp'): ?>
         Mesajele pleacă prin serverul de poștă
@@ -263,13 +300,73 @@ require __DIR__ . '/inc/antet.php';
         În ultimul ceas au plecat <strong><?= catePlecateInUltimulCeas() ?></strong>.
       </p>
 
+      <?php if ($vorbaPicate !== ''): ?>
+      <p class="posta__vorba posta__raspuns"><?= h($vorbaPicate) ?></p>
+      <?php endif; ?>
+
       <?php if (($ramase = catePicateInCoada()) > 0): ?>
       <p class="posta__vorba posta__vorba--atentie">
         <strong><?= $ramase ?></strong>
         <?= $ramase === 1 ? 'mesaj n-a plecat' : 'mesaje n-au plecat' ?> nici după
-        <?= COADA_INCERCARI_MAX ?> încercări. Motivul e scris pe fiecare, în
-        tabelul <code>coada_emailuri</code>, coloana <code>eroare</code>.
+        <?= COADA_INCERCARI_MAX ?> încercări. Motivul e scris în dreptul
+        fiecăruia.
       </p>
+
+      <!--
+        RÂNDURILE, LA VEDERE. Cifra singură nu spune nimic de făcut: ca s-o
+        vezi de ce, trebuia deschis phpMyAdmin. Aici scrie cui n-a ajuns, ce
+        i se scria și ce a răspuns serverul — de obicei „No Such User Here",
+        adică o adresă care nu există.
+
+        Vorba serverului e scrisă de ALTCINEVA, deci trece prin h() ca orice
+        text străin. E singurul loc de pe site unde se vede vreodată.
+      -->
+      <div class="posta__picate">
+        <table class="posta__tabel">
+          <thead>
+            <tr>
+              <th scope="col">Către</th>
+              <th scope="col">Mesajul</th>
+              <th scope="col">Ce a spus serverul</th>
+              <th scope="col"><span class="sr-only">Șterge</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            <?php foreach (emailurilePicate() as $picat): ?>
+            <tr>
+              <td><code><?= h((string) $picat['catre']) ?></code></td>
+              <td>
+                <?= h((string) $picat['subiect']) ?>
+                <span class="posta__cand"><?= h(dataScrisaMic((string) $picat['creat_la'])) ?></span>
+              </td>
+              <td class="posta__eroare"><?= h((string) ($picat['eroare'] ?? '')) ?></td>
+              <td>
+                <form method="post" action="/admin.php#posta">
+                  <input type="hidden" name="csrf" value="<?= h(tokenCsrf()) ?>">
+                  <button class="posta__sterge" type="submit"
+                          name="picat" value="<?= (int) $picat['id'] ?>"
+                          title="Șterge mesajul"
+                          aria-label="Șterge mesajul către <?= h((string) $picat['catre']) ?>">×</button>
+                </form>
+              </td>
+            </tr>
+            <?php endforeach; ?>
+          </tbody>
+        </table>
+
+        <?php if ($ramase > COADA_PICATE_ARATATE): ?>
+        <p class="posta__vorba posta__vorba--mic">
+          Se văd cele mai noi <?= COADA_PICATE_ARATATE ?>, din <?= $ramase ?>.
+        </p>
+        <?php endif; ?>
+
+        <form method="post" action="/admin.php#posta">
+          <input type="hidden" name="csrf" value="<?= h(tokenCsrf()) ?>">
+          <button class="btn btn--rau btn--xs" type="submit" name="picat" value="toate">
+            Șterge-le pe toate
+          </button>
+        </form>
+      </div>
       <?php endif; ?>
     </section>
   </div>

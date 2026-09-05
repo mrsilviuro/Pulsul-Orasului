@@ -104,6 +104,9 @@ const COADA_ZILE_PASTRARE = 7;
 const COADA_NORMAL = 0;
 const COADA_URGENT = 1;
 
+/** Câte rânduri rămase pe drumuri se arată pe panoul din admin. */
+const COADA_PICATE_ARATATE = 20;
+
 /* ========================== PUNEREA LA RÂND =========================== */
 
 /**
@@ -263,11 +266,23 @@ function insemneazaDinCoadaTrimis(int $id): void
  * minute — nu e un rând orfan, e unul încercat și picat, iar rularea următoare
  * poate să-l ia liniștită. `incercari` a crescut deja la luare, deci după al
  * treilea nu-l mai ia nimeni.
+ *
+ * CU $definitiv, RÂNDUL MOARE DIN PRIMA: `incercari` se duce de-a dreptul la
+ * capăt. Se cheamă așa doar când serverul a spus limpede că ADRESA nu există
+ * (vezi esteRefuzDefinitiv din inc/posta.php) — iar o adresă care nu există
+ * acum nu se naște peste un minut, deci a doua și a treia încercare n-ar fi
+ * decât încă două bătăi la ușa unui om care nu e acolo. Găzduirile numără
+ * refuzurile astea („protecție la Bounces"): cine insistă pe adrese moarte
+ * ajunge să nu mai poată trimite nimănui.
  */
-function insemneazaDinCoadaPicat(int $id, string $eroare): void
+function insemneazaDinCoadaPicat(int $id, string $eroare, bool $definitiv = false): void
 {
+    $incercari = $definitiv ? ', incercari = ' . COADA_INCERCARI_MAX : '';
+
     db()->prepare(
-        'UPDATE coada_emailuri SET luat_de = NULL, luat_la = NULL, eroare = ? WHERE id = ?'
+        'UPDATE coada_emailuri
+            SET luat_de = NULL, luat_la = NULL, eroare = ?' . $incercari . '
+          WHERE id = ?'
     )->execute([mb_substr($eroare, 0, 255), $id]);
 }
 
@@ -326,7 +341,15 @@ function trimiteDinCoada(?int $cate = null): array
             insemneazaDinCoadaTrimis((int) $rand['id']);
             $iesit['trimise']++;
         } else {
-            insemneazaDinCoadaPicat((int) $rand['id'], ultimaVorbaAPostei());
+            /* „Adresa aia nu există" se crede din prima; orice altceva se mai
+               încearcă de trei ori. */
+            $vorba = ultimaVorbaAPostei();
+
+            insemneazaDinCoadaPicat(
+                (int) $rand['id'],
+                $vorba,
+                esteRefuzDefinitiv($vorba)
+            );
             $iesit['picate']++;
         }
     }
@@ -358,6 +381,55 @@ function catePicateInCoada(): int
         'SELECT COUNT(*) FROM coada_emailuri
           WHERE trimis_la IS NULL AND incercari >= ' . COADA_INCERCARI_MAX
     )->fetchColumn();
+}
+
+/**
+ * Rândurile rămase pe drumuri, cu tot cu vorba serverului — pentru panoul din
+ * admin. Cele mai noi întâi: pe alea le caută omul care tocmai a văzut cifra.
+ *
+ * SE ADUC CEL MULT COADA_PICATE_ARATATE. Lista e una de privit și de golit, nu
+ * un raport: dacă sunt o sută, e limpede din cifră că ceva e stricat rău, iar
+ * o sută de rânduri pe panou n-ar spune mai mult decât primele douăzeci.
+ */
+function emailurilePicate(): array
+{
+    return db()->query(
+        'SELECT id, catre, subiect, eroare, incercari, creat_la
+           FROM coada_emailuri
+          WHERE trimis_la IS NULL AND incercari >= ' . COADA_INCERCARI_MAX . '
+          ORDER BY id DESC
+          LIMIT ' . COADA_PICATE_ARATATE
+    )->fetchAll();
+}
+
+/**
+ * Șterge un rând picat. „Aia e, n-a plecat, la revedere."
+ *
+ * HOTĂRÂREA STĂ ÎN `WHERE`, ca peste tot: se șterge doar ce chiar a rămas pe
+ * drumuri. Un id cules de pe un buton vechi n-are cum să scoată din coadă un
+ * mesaj care între timp și-a găsit drumul sau încă își așteaptă rândul.
+ */
+function stergeDinCoada(int $id): bool
+{
+    $q = db()->prepare(
+        'DELETE FROM coada_emailuri
+          WHERE id = ? AND trimis_la IS NULL AND incercari >= ' . COADA_INCERCARI_MAX
+    );
+    $q->execute([$id]);
+
+    return $q->rowCount() > 0;
+}
+
+/** Le șterge pe toate cele picate deodată. Întoarce câte au plecat. */
+function stergeToateCelePicate(): int
+{
+    $q = db()->prepare(
+        'DELETE FROM coada_emailuri
+          WHERE trimis_la IS NULL AND incercari >= ' . COADA_INCERCARI_MAX
+    );
+    $q->execute();
+
+    return $q->rowCount();
 }
 
 /** Câte au plecat în ultimul ceas — pentru cine vrea să vadă cât s-a consumat. */

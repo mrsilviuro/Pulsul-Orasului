@@ -5496,6 +5496,51 @@ a.admin-nav__link:hover { background: var(--bg-soft); color: var(--text); }
   font-size: 12px;
 }
 
+/* Răspunsul la o ștergere — la fel ca vorba comutatorului de șantier. */
+.posta__raspuns { font-weight: 600; color: var(--text); }
+
+/* Mesajele rămase pe drumuri. Tabelul se poate lăți mai mult decât panoul
+   (vorba serverului e un rând lung de engleză), deci se plimbă în cutia lui —
+   niciodată pagina, vezi regula despre `overflow-x`. */
+.posta__picate { margin-top: 10px; }
+.posta__tabel {
+  width: 100%; border-collapse: collapse;
+  font-size: 12.5px;
+}
+.posta__tabel th,
+.posta__tabel td {
+  padding: 7px 10px 7px 0;
+  text-align: left; vertical-align: top;
+  border-bottom: 1px solid var(--border);
+}
+.posta__tabel th {
+  font-size: 11.5px; text-transform: uppercase; letter-spacing: .04em;
+  color: var(--text-faint); font-weight: 700;
+}
+.posta__tabel code { font-size: 12px; word-break: break-all; }
+.posta__cand { display: block; color: var(--text-faint); font-size: 11.5px; }
+/* Vorba serverului: stinsă, fiindcă e o dovadă, nu o citire de zi cu zi. */
+.posta__eroare {
+  color: var(--text-faint);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11.5px; line-height: 1.5;
+  max-width: 34ch;
+}
+.posta__sterge {
+  border: 0; background: none; cursor: pointer;
+  padding: 0 4px; line-height: 1;
+  font-size: 17px; color: var(--text-faint);
+  border-radius: 6px;
+}
+.posta__sterge:hover { color: #e0393b; }
+.posta__picate .btn { margin-top: 10px; }
+
+@media (max-width: 640px) {
+  /* Pe telefon nu încap patru coloane. Tabelul se plimbă în cutia lui. */
+  .posta__picate { overflow-x: auto; }
+  .posta__tabel { min-width: 520px; }
+}
+
 /* -------------------------- secțiuni și tabele -------------------------- */
 
 .admin-sect { margin-bottom: 38px; }

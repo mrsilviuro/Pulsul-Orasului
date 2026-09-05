@@ -124,7 +124,8 @@ $picateAcum = catePicateInCoada();
 if ($picateAcum > 0) {
     echo '    ATENȚIE: ' . $picateAcum . " mesaje n-au plecat după "
        . COADA_INCERCARI_MAX . " încercări.\n";
-    echo "    Uită-te în tabelul coada_emailuri, coloana `eroare`.\n";
+    echo "    Se văd în admin, jos, la starea poștei — cu vorba serverului pe\n";
+    echo "    fiecare și cu un buton de ștergere.\n";
 }
 
 exit($r['picate'] > 0 ? 1 : 0);

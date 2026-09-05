@@ -335,6 +335,71 @@ curataCoada();
 verifica('unul picat rămâne, oricât ar fi de vechi', 1, count(aleMele()));
 
 /* ==================================================================== */
+sectiune('adresa care nu există');
+
+/**
+ * UN REFUZ DEFINITIV OMOARĂ RÂNDUL DIN PRIMA. O adresă care nu există acum nu
+ * se naște peste un minut, iar găzduirile numără refuzurile astea: cine insistă
+ * pe adrese moarte ajunge să nu mai poată trimite nimănui.
+ */
+curata();
+pune('inexistent');
+
+$rand = aleMele()[0];
+
+insemneazaDinCoadaPicat((int) $rand['id'], 'No Such User Here', true);
+
+verifica('nu mai așteaptă la rând', 0, count(iaDinCoada(50)));
+verifica('și se numără printre cele picate', 1, count(emailurilePicate()));
+
+/**
+ * CELELALTE PICĂRI ÎȘI PĂSTREAZĂ CELE TREI ÎNCERCĂRI. Fără deosebirea asta, o
+ * parolă SMTP schimbată din greșeală ar fi omorât tăcut toată coada la prima
+ * trecere — confirmări de cont cu tot.
+ */
+curata();
+pune('trecator');
+
+$rand = aleMele()[0];
+
+insemneazaDinCoadaPicat((int) $rand['id'], 'Connection refused');
+
+verifica('o picare obișnuită se mai încearcă', 1, count(iaDinCoada(50)));
+
+/* ------------------------- ștergerea din admin ------------------------- */
+
+curata();
+pune('mort'); pune('viu');
+
+$randuri = aleMele();
+
+insemneazaDinCoadaPicat((int) $randuri[0]['id'], 'No Such User Here', true);
+
+$picate = emailurilePicate();
+
+verifica('lista arată doar rândul mort', 1, count($picate));
+verifica('cu vorba serverului pe el', 'No Such User Here', (string) $picate[0]['eroare']);
+
+/**
+ * HOTĂRÂREA STĂ ÎN `WHERE`: butonul nu poate scoate din coadă un mesaj care
+ * încă își așteaptă rândul, oricâte id-uri i-ar veni.
+ */
+verifica('cel viu nu se poate șterge de acolo', false,
+    stergeDinCoada((int) $randuri[1]['id']));
+verifica('cel mort, da', true, stergeDinCoada((int) $randuri[0]['id']));
+verifica('și rămâne doar cel viu', 1, count(aleMele()));
+
+curata();
+pune('mort1'); pune('mort2'); pune('viu');
+
+foreach (array_slice(aleMele(), 0, 2) as $r) {
+    insemneazaDinCoadaPicat((int) $r['id'], 'No Such User Here', true);
+}
+
+verifica('„șterge-le pe toate" le ia pe amândouă', 2, stergeToateCelePicate());
+verifica('și tot nu-l atinge pe cel viu', 1, count(aleMele()));
+
+/* ==================================================================== */
 sectiune('cifrele de pe panou');
 
 curata();
