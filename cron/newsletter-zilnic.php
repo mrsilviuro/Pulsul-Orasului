@@ -5,8 +5,7 @@ declare(strict_types=1);
  * PulsulOrasului.Ro — newsletterul zilnic: „ce se întâmplă azi în oraș".
  *
  * Adună evenimentele de ASTĂZI CARE N-AU ÎNCEPUT ÎNCĂ și le trimite celor care
- * au bifa „Vreau să primesc e-mail cu evenimente noi (cel mult unul pe zi)" din
- * setări.
+ * au bifa de vești din setări (`membri.newsletter`).
  *
  * DACĂ NU E NIMIC, NU PLEACĂ NIMIC — nici măcar un „azi nu se întâmplă nimic".
  * Un mesaj care nu spune nimic e cel mai bun fel de a-l învăța pe om să nu-l

@@ -137,6 +137,7 @@ parola-uitata.php, parola-noua.php, google.php, finalizare.php, confirma.php,
 stergere.php, iesire.php, verifica.php, constructie.php,
 findme.php, admin.php, admin-evenimente.php, admin-comentarii.php,
 admin-contact.php, admin-useri.php, admin-evaluari.php, admin-dorinte.php,
+admin-anunt.php,
 coduri.php, sitemap.php, robots.txt, dezabonare.php,
 termeni.php, confidentialitate.php, cookies.php
 
@@ -244,9 +245,33 @@ termeni.php, confidentialitate.php, cookies.php
                 îngustează întrebarea la singura valoare care trimite ceva
                 („suspendat"): o întrebare pusă degeaba e una pe care omul
                 învață s-o închidă fără să citească
+  admin-anunt.php → ANUNȚUL SCRIS DE MÂNĂ către toată lista: un titlu, un text,
+                și pleacă la toți cei cu bifa `newsletter` (staff inclus — cine
+                trimite trebuie să vadă mesajul așa cum îl văd ceilalți).
+                Șablonul e același ca la restul mesajelor; ce se schimbă e doar
+                ce scrie înăuntru. TREI PAȘI, ȘI ĂSTA E TOT ROSTUL PAGINII:
+                scrii, VEZI cum arată (cu numărul celor care primesc scris lângă
+                buton), apeși a doua oară. Un formular cu un singur „Trimite" ar
+                fi trimis într-o zi o frază neterminată către toți membrii, iar
+                un e-mail plecat nu se ia înapoi. TOT DIN PASUL 2: „Trimite-mi
+                mie o probă" — același mesaj, prin aceeași funcție, doar la
+                adresa celui conectat; NU stinge jetonul, fiindcă e un ocol, nu
+                o ieșire. FĂRĂ O PICĂTURĂ DE JAVASCRIPT, ca și comutatorul de
+                șantier: formulare adevărate spre pagina însăși, nu o faptă prin
+                api/admin.php — alea sunt lucruri făcute pe rânduri dintr-o
+                listă, asta e o scrisoare de scris. CE ȚINE LOCUL ȘTAMPILEI DIN
+                BAZĂ e JETONUL DE O SINGURĂ FOLOSINȚĂ (jetonNouDeAnunt /
+                consumaJetonDeAnunt, în inc/anunt.php): pasul 2 îl pune în
+                sesiune, pasul 3 îl scoate ÎNAINTE de trimitere. Un „reîncarcă"
+                peste trimitere, o dublă apăsare, un „înapoi" urmat de încă un
+                „trimite" — toate găsesc sesiunea goală. Tokenul CSRF singur
+                n-ar fi ajuns: el ține cât ține sesiunea și se poate folosi de
+                câte ori vrei. Sunt ȚINUTE VII MAI MULTE (ANUNT_JETOANE = 5):
+                cu unul singur, două file deschise deodată se călcau, iar prima
+                primea „a plecat deja" despre un anunț care nu plecase niciodată
   admin.php   → panoul zonei de administrare: cartonașele, și SUB ELE
-                COMUTATORUL DE ȘANTIER (închide/deschide site-ul, plus „Uită
-                dispozitivul"). E un `<form method="post">` adevărat către
+                COMUTATORUL DE ȘANTIER (închide/deschide site-ul). E un
+                `<form method="post">` adevărat către
                 pagina însăși, NU o faptă prin api/admin.php ca restul: alea
                 sunt lucruri făcute pe rânduri dintr-o listă, ăsta e chiar
                 întrerupătorul de la ușa casei, iar unul care are nevoie de
@@ -690,7 +715,27 @@ inc/
                       fiecare trimitere ar fi însemnat că linkul de ieri moare
                       azi, iar cine caută peste trei luni un mesaj vechi ca să
                       se dezaboneze ar da peste „link expirat" și ar apăsa
-                      „Spam" în schimb
+                      „Spam" în schimb. LINKUL ĂSTA ÎL CERE ȘI ANUNȚUL SCRIS DE
+                      MÂNĂ (inc/anunt.php): bifa e una singură, deci și ieșirea e
+                      una singură
+  anunt.php         → ANUNȚUL SCRIS DE MÂNĂ, către toată lista — partea de sub
+                      admin-anunt.php. Cine primește (destinatariiAnuntului —
+                      ACELEAȘI TREI CONDIȚII ca la newsletter, fără a patra, cea
+                      cu ștampila zilei: un anunț nu se trimite o dată pe zi),
+                      câți sunt (catiPrimescAnuntul, care e chiar catiAbonati()
+                      — o a doua socoteală ar fi ajuns într-o zi să numere
+                      altceva decât trimite), textul tăiat în paragrafe
+                      (paragrafeleAnuntului — RÂNDUL GOL desparte, Enterul
+                      simplu NU: el ține rândurile unei enumerări), trimiterea
+                      (trimiteAnuntul, cu `$doarCatre` pentru proba spre sine) și
+                      JETONUL DE O SINGURĂ FOLOSINȚĂ. NU E NICIO COLOANĂ NOUĂ ÎN
+                      BAZĂ, dinadins: un anunț n-are „a plecat deja azi?" de
+                      întrebat, fiindcă nu-l pornește un cron, ci un om care
+                      apasă un buton. Rămâne un rând în private/anunturi.log.
+                      ANUNT_PE_TRIMITERE (300) NU TAIE ÎN TĂCERE, spre deosebire
+                      de frâna newsletterului: acolo cine n-a încăput azi
+                      primește mâine, aici nu revine nimeni — deci pagina spune
+                      cifra ÎNAINTE de apăsare, dacă lista a crescut peste ea
   multumiri.php     → e-mailul de mulțumire de după eveniment: cine îl
                       primește, când, și semnul că a plecat o singură dată
                       (evenimente.multumiri_trimise_la). Îl cheamă doar
@@ -1060,6 +1105,16 @@ teste/              → router.php: serverul de probă cu ADRESE FRUMOASE.
                       evenimenteleDeAzi() ar pica în orice zi în care se
                       întâmplă ceva în oraș, adică tocmai în zilele care
                       contează)
+                      test-anunt.php (anunțul scris de mână; cere baza, iar
+                      partea de HTTP cere și serverul — se sare singură. Ca
+                      proba newsletterului, stinge bifa de vești la toți membrii
+                      din bază pe durata ei și o pune la loc. Păzește MAI PRESUS
+                      DE ORICE că mesajul NU pleacă de două ori: un buton care
+                      nu se vede se descoperă în cinci minute, dar un al doilea
+                      e-mail către toată lista nu se vede nicăieri și nu se ia
+                      înapoi — de aceea jetonul are aici mai multe probe decât
+                      tot restul paginii la un loc. Numără mesajele din
+                      private/emailuri-trimise.log, după subiect)
                       (toate patru cer baza de date, nu și serverul)
                       test-admin.php (zona de administrare; cere baza, iar
                       partea de HTTP cere și serverul — se sare singură. Păzește
@@ -1259,8 +1314,11 @@ sistem. Regulile care s-au strâns din trecerea de purificare:
   (poateVedeaEvenimentul), poate aproba și respinge anunțuri, PUBLICĂ DIRECT
   (anunțul lui intră „aprobat", iar butonul din formular scrie „Publică
   evenimentul") și poate bifa „nu-l arăta pe profilul meu", poate scoate oameni
-  de pe liste, trece de lacătul de șantier și intră în zona de administrare
-  (`admin*.php`). Steagul însuși NU se dă din interfață, dinadins.
+  de pe liste, trece de lacătul de șantier, intră în zona de administrare
+  (`admin*.php`) și SCRIE UN ANUNȚ CĂTRE TOATĂ LISTA (`admin-anunt.php`) —
+  singurul lucru de pe site care ajunge deodată la toți membrii, și de aceea
+  singurul cu doi pași și o previzualizare între ei. Steagul însuși NU se dă
+  din interfață, dinadins.
   Limita de evenimente active NU i se aplică: poatePublicaEveniment() îl lasă
   să treacă peste ea, fiindcă e făcută împotriva celui care ar umple prima
   pagină, iar el publică tocmai zece anunțuri ale orașului
@@ -1297,12 +1355,21 @@ sistem. Regulile care s-au strâns din trecerea de purificare:
   poate lipsi (api/admin.php): comentariul șters, poza ștearsă, contul
   suspendat și hotărârea unei dorințe. PLUS VESTEA CĂTRE URMĂRITORI (inc/urmariri.php →
   instiinteazaUrmaritorii, la fiecare anunț nou al cuiva urmărit; ieșirea nu e
-  o bifă, ci butonul de pe profilul lui). PLUS NEWSLETTERUL ZILNIC
-  (cron/newsletter-zilnic.php, cu bifa `newsletter`) — SINGURUL mesaj de pe
-  site care vine nechemat, și de aceea singurul cu link de dezabonare și cu
-  antetul `List-Unsubscribe`. Celelalte sunt răspunsuri la ceva ce a făcut
-  omul, iar alea nu se „dezabonează". NU pleacă nimic când cineva se înscrie
-  la un eveniment, când se apreciază un comentariu sau când se raportează ceva
+  o bifă, ci butonul de pe profilul lui). PLUS CELE DOUĂ CARE VIN NECHEMATE,
+  singurele cu link de dezabonare și cu antetul `List-Unsubscribe`:
+  NEWSLETTERUL ZILNIC (cron/newsletter-zilnic.php) și ANUNȚUL SCRIS DE MÂNĂ
+  (admin-anunt.php → inc/anunt.php). Amândouă ascultă de aceeași bifă,
+  `membri.newsletter`, deci și butonul care le stinge e unul singur: cine iese
+  de la unul iese de la amândouă, și așa trebuie — omul a spus „nu-mi mai
+  scrieți". REGULA NU E „numai newsletterul", ci „CE VINE NECHEMAT ARE IEȘIRE
+  LA VEDERE": cine n-o găsește în două secunde apasă „Spam", iar un singur om
+  care face asta strică livrarea pentru toți ceilalți. Celelalte sunt
+  răspunsuri la ceva ce a făcut omul, iar alea nu se „dezabonează". DE AICI
+  DECURGE: vorba din setări, de lângă bifă, trebuie să le cuprindă pe amândouă
+  — cât timp scria doar „evenimente noi, cel mult unul pe zi", al doilea venea
+  peste o promisiune care nu-l cuprindea. NU pleacă nimic când cineva se
+  înscrie la un eveniment, când se apreciază un comentariu sau când se
+  raportează ceva
 - Tabla cu dorințe se moderează din `admin-dorinte.php`, DINTR-O SINGURĂ LISTĂ
   DE ALES (aceeași unealtă ca starea contului din `admin-useri.php`), cu patru
   rânduri: „Așteptare", „Aprobă", „Respinge", „Șterge". RÂNDUL ÎN CARE DORINȚA

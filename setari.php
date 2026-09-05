@@ -194,7 +194,13 @@ require __DIR__ . '/inc/antet.php';
           <label class="check">
             <input type="checkbox" id="st-newsletter" name="newsletter"
                    <?= $newsletter ? 'checked' : '' ?>>
-            <span>Vreau să primesc e-mail cu evenimente noi (cel mult unul pe zi).</span>
+            <!-- Bifa ASTA deschide DOUĂ uși, și amândouă trebuie scrise în ea:
+                 mesajul zilnic cu evenimentele zilei și anunțurile scrise de
+                 mână de echipă (admin-anunt.php). Cât timp scria doar
+                 „evenimente noi, cel mult unul pe zi", al doilea venea peste o
+                 promisiune care nu-l cuprindea. -->
+            <span>Vreau să primesc e-mail cu ce se întâmplă în oraș: evenimentele
+                  zilei (cel mult unul pe zi) și anunțurile din partea echipei.</span>
           </label>
         </div>
 

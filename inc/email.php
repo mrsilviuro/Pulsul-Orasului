@@ -674,7 +674,11 @@ function sablonEmail(string $titlu, array $blocuri): array
      * care face asta strică livrarea pentru toți ceilalți.
      */
     if (!empty($blocuri['dezabonare'])) {
-        $h[] = '<br /><br />Nu mai vrei mesajul ăsta zilnic? '
+        /* „Veștile astea", nu „mesajul ăsta zilnic": subsolul e același și
+           pentru newsletterul de fiecare zi, și pentru un anunț scris de mână,
+           care nu vine zilnic. O ieșire care descrie greșit mesajul din care
+           pleacă e o ieșire în care omul nu are încredere. */
+        $h[] = '<br /><br />Nu mai vrei veștile astea? '
              . '<a href="' . h($blocuri['dezabonare']) . '" '
              . 'style="color:' . $textMoale . ';text-decoration:underline;">Dezabonează-te</a> '
              . 'sau schimbă bifa din setările contului.';
@@ -805,7 +809,7 @@ function sablonEmail(string $titlu, array $blocuri): array
 
     if (!empty($blocuri['dezabonare'])) {
         $t[] = '';
-        $t[] = 'Nu mai vrei mesajul ăsta zilnic? Deschide adresa de mai jos, sau';
+        $t[] = 'Nu mai vrei veștile astea? Deschide adresa de mai jos, sau';
         $t[] = 'schimbă bifa din setările contului.';
         $t[] = (string) $blocuri['dezabonare'];
     }
@@ -1802,4 +1806,47 @@ function emailEvenimentDeLaUrmarit(
 
     return trimiteEmail($catre, $cineOrganizeaza . ' a pus un anunț nou: '
                               . (string) ($cartonas['titlu'] ?? 'un eveniment'), $blocuri);
+}
+
+/**
+ * VESTEA SCRISĂ DE MÂNĂ, către toată lista de newsletter.
+ *
+ * Titlul și paragrafele vin de la omul casei, din admin-anunt.php. Restul —
+ * antetul, dunga roșie, subsolul — e același șablon ca la toate celelalte
+ * douăzeci de mesaje: cine primește vestea asta trebuie s-o recunoască dintr-o
+ * privire ca venind de la noi, nu ca pe o scrisoare străină.
+ *
+ * AL DOILEA MESAJ NECHEMAT DE PE SITE, după newsletterul zilnic — și de aceea al
+ * doilea cu buton de dezabonare și cu antetul „List-Unsubscribe". O vreme,
+ * newsletterul a fost singurul, și așa scria peste tot — dar regula din spate
+ * n-a fost niciodată „numai newsletterul", ci CE VINE NECHEMAT ARE IEȘIRE LA
+ * VEDERE. Ăsta vine nechemat: omul a bifat „vreau să aflu ce se întâmplă în oraș", nu
+ * „scrieți-mi ce vreți, când vreți". Cine nu găsește ieșirea în două secunde
+ * apasă „Spam", iar un singur om care face asta strică livrarea și pentru
+ * newsletterul de a doua zi.
+ *
+ * DEZABONAREA E ACEEAȘI, nu una a lui: bifa `membri.newsletter` e una singură,
+ * deci butonul care o stinge trebuie să fie tot unul. Cine iese de aici iese și
+ * de la mesajul zilnic, și așa trebuie să fie — omul a spus „nu-mi mai scrieți".
+ *
+ * TITLUL E ȘI SUBIECTUL. Un subiect scris de noi („Un anunț de la
+ * PulsulOrasului") ar fi ascuns tocmai vorba pentru care se trimite mesajul, iar
+ * omul de casă are dreptul să hotărască singur ce se vede în lista de mesaje.
+ */
+function emailAnuntCatreMembri(
+    string $catre,
+    string $prenume,
+    string $titlu,
+    array $paragrafe,
+    string $linkDezabonare
+): bool {
+    $blocuri = [
+        'salut'      => 'Bună, ' . $prenume . '!',
+        'paragrafe'  => $paragrafe,
+        'dezabonare' => $linkDezabonare,
+    ];
+
+    return trimiteEmail($catre, $titlu, $blocuri, [
+        'List-Unsubscribe' => '<' . $linkDezabonare . '>',
+    ]);
 }
