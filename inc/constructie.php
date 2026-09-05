@@ -283,13 +283,6 @@ function scrieCookieSantier(string $valoare, int $expira): void
     ]);
 }
 
-/** Uită dispozitivul — butonul de lângă comutatorul din admin. */
-function uitaDispozitivul(): void
-{
-    unset($_COOKIE[COOKIE_SANTIER]);
-    scrieCookieSantier('', time() - 42000);
-}
-
 /**
  * Ține minte dispozitivul, dacă la volan e un om de casă.
  *

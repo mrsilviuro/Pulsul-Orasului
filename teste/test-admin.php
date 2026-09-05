@@ -98,9 +98,40 @@ sectiune('secțiunile și cifrele');
 
 $chei = array_map(static fn(array $s): string => (string) $s['cheie'], sectiuniAdmin());
 
-verifica('șapte secțiuni', 7, count($chei));
+verifica('opt secțiuni', 8, count($chei));
 verifica('în ordinea cerută',
-    ['coduri', 'evenimente', 'comentarii', 'contact', 'useri', 'evaluari', 'dorinte'], $chei);
+    ['coduri', 'evenimente', 'comentarii', 'contact', 'useri', 'evaluari', 'dorinte',
+     'anunt'], $chei);
+
+/**
+ * ANUNȚUL E SINGURA SECȚIUNE FĂRĂ CIFRĂ, și trebuie să rămână așa.
+ *
+ * Toate celelalte sunt liste de lucru, iar cifra spune câte lucruri așteaptă o
+ * hotărâre. Acolo nu așteaptă nimic niciodată — e o unealtă. O cifră pusă pe ea
+ * (câți au bifa, de pildă) ar fi aprins cartonașul în fiecare zi, adică exact
+ * becul de avarie care arde de trei luni și nu mai spune nimic nimănui.
+ */
+$anunt = null;
+
+foreach (sectiuniAdmin() as $s) {
+    if ($s['cheie'] === 'anunt') { $anunt = $s; }
+}
+
+/* `??` n-ar fi mers: pentru el, null și „lipsește" sunt același lucru — iar
+   aici tocmai deosebirea dintre ele e ce se probează. */
+verifica('anunțul n-are cifră', true,
+    is_array($anunt) && array_key_exists('cifra', $anunt) && $anunt['cifra'] === null);
+verifica('și are vorba lui de liniște', true,
+    ($anunt['linistit'] ?? '') !== '');
+
+/* Toate CELELALTE au una: fără ea, cartonașul n-ar spune niciodată că e treabă. */
+$faraCifra = [];
+
+foreach (sectiuniAdmin() as $s) {
+    if ($s['cifra'] === null && $s['cheie'] !== 'anunt') { $faraCifra[] = $s['cheie']; }
+}
+
+verifica('restul au toate cifra lor', [], $faraCifra);
 
 /**
  * Fiecare secțiune trebuie să aibă o cifră care CHIAR se numără. O cheie
@@ -642,7 +673,7 @@ if ($BAZA === '') {
 
     $pagini = ['/admin.php', '/admin-evenimente.php', '/admin-comentarii.php',
                '/admin-contact.php', '/admin-useri.php', '/admin-evaluari.php',
-               '/admin-dorinte.php', '/coduri.php'];
+               '/admin-dorinte.php', '/admin-anunt.php', '/coduri.php'];
 
     $toateInchise = true;
     $scapate      = [];

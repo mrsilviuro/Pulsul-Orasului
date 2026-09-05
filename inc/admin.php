@@ -144,6 +144,32 @@ function sectiuniAdmin(): array
             'unitate'=> 'în așteptare',
             'ico'    => '<path d="m12 3.8 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.5 10l5.9-.9L12 3.8Z"/>',
         ],
+        [
+            /**
+             * SINGURA SECȚIUNE FĂRĂ CIFRĂ, și dinadins.
+             *
+             * Toate celelalte sunt liste de lucru: cifra spune câte lucruri
+             * așteaptă o hotărâre acolo. Aici nu așteaptă nimic niciodată — e o
+             * unealtă, nu un teanc. S-ar fi putut pune numărul celor cu bifa,
+             * dar acela n-ar fi fost „ai treabă", ci doar o cifră care aprinde
+             * cartonașul în fiecare zi, adică exact becul de avarie care arde de
+             * trei luni. Câți primesc scrie pe pagină, unde chiar contează:
+             * lângă butonul care trimite.
+             *
+             * De aceea are `linistit`: „nimic de făcut" ar fi fost un răspuns la
+             * o întrebare care nu se pune despre secțiunea asta.
+             */
+            'cheie'   => 'anunt',
+            'href'    => '/admin-anunt.php',
+            'titlu'   => 'Anunț pe e-mail',
+            'vorba'   => 'Scrie o veste și trimite-o tuturor celor abonați.',
+            'cifra'   => null,
+            'unitate' => '',
+            'linistit'=> 'când ai ceva de spus',
+            'ico'     => '<path d="M4 6.5h11.5v11H4z"/>'
+                       . '<path d="m4.4 7.2 5.35 4 5.35-4"/>'
+                       . '<path d="M17.5 9h3M17.5 12h3M17.5 15h3"/>',
+        ],
     ];
 }
 
@@ -151,8 +177,8 @@ function sectiuniAdmin(): array
  * Câte lucruri așteaptă, în fiecare secțiune.
  *
  * Se cer o dată și se țin minte: le cere și cartonașul de pe admin.php, și
- * rândul de legături de pe fiecare pagină, iar șase interogări făcute de două
- * ori la fiecare încărcare ar fi douăsprezece degeaba.
+ * rândul de legături de pe fiecare pagină, iar interogările făcute de două ori
+ * la fiecare încărcare ar fi de două ori mai multe degeaba.
  *
  * Toate sunt COUNT-uri peste coloane indexate — ieftine. Dacă vreodată nu vor
  * mai fi, locul de schimbat e ăsta, unul singur.
@@ -206,7 +232,7 @@ function cifreleAdmin(): array
 /**
  * Rândul de legături de sus, de pe fiecare pagină de administrare.
  *
- * Scris o dată fiindcă îl cer șase pagini. `$acum` e cheia secțiunii pe care
+ * Scris o dată fiindcă îl cer toate paginile. `$acum` e cheia secțiunii pe care
  * se află omul; legătura ei se aprinde și nu mai duce nicăieri — un link către
  * pagina pe care ești deja e o promisiune care nu se ține.
  */

@@ -4,9 +4,9 @@ declare(strict_types=1);
 /**
  * PulsulOrasului.Ro — newsletterul zilnic: „ce se întâmplă azi în oraș".
  *
- * O dată pe zi, la ora pusă în cron, pleacă un mesaj către cine are bifa
- * „Vreau să primesc e-mail cu evenimente noi (cel mult unul pe zi)" din setări
- * (`membri.newsletter`). Înăuntru: evenimentele de ASTĂZI CARE N-AU ÎNCEPUT ÎNCĂ,
+ * O dată pe zi, la ora pusă în cron, pleacă un mesaj către cine are bifa de vești
+ * din setări (`membri.newsletter`) — aceeași bifă de care atârnă și anunțul scris
+ * de mână din admin-anunt.php. Înăuntru: evenimentele de ASTĂZI CARE N-AU ÎNCEPUT ÎNCĂ,
  * ca niște cartonașe ca pe prima pagină — poză, oră și loc. Lista pornește de la
  * clipa trimiterii: ce a început deja rămâne pe site, dar nu se mai bate la ușa
  * nimănui.

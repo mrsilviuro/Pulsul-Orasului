@@ -4,9 +4,9 @@ declare(strict_types=1);
 /**
  * PulsulOrasului.Ro — zona de administrare, pagina de intrare.
  *
- * Șase cartonașe, câte unul pentru fiecare unealtă a casei. Fiecare arată câte
- * lucruri așteaptă acolo, ca omul să vadă dintr-o privire unde are treabă —
- * altfel ar fi trebuit să deschidă șase pagini ca să afle că cinci sunt goale.
+ * Un cartonaș pentru fiecare unealtă a casei. Fiecare arată câte lucruri
+ * așteaptă acolo, ca omul să vadă dintr-o privire unde are treabă — altfel ar fi
+ * trebuit să deschidă toate paginile ca să afle că mai toate sunt goale.
  *
  * Lista secțiunilor NU se scrie aici: vine din sectiuniAdmin() (inc/admin.php),
  * de unde o ia și rândul de legături de sus. O secțiune nouă e un rând acolo,
@@ -38,9 +38,6 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['santier'])) {
     if (!tokenCsrfValid((string) ($_POST['csrf'] ?? ''))) {
         $vorbaSantier = 'Sesiunea a expirat. Reîncarcă pagina și încearcă din nou.';
         $santierMers  = false;
-    } elseif ($_POST['santier'] === 'uita-dispozitivul') {
-        uitaDispozitivul();
-        $vorbaSantier = 'Am uitat dispozitivul ăsta. De acum trece pe la lacăt ca oricare altul.';
     } else {
         $vreauInchis = $_POST['santier'] === 'inchide';
 
@@ -112,7 +109,7 @@ require __DIR__ . '/inc/antet.php';
           <strong><?= $cate ?></strong>
           <span><?= h($s['unitate']) ?></span>
           <?php else: ?>
-          <span class="admin-cart__linistit">nimic de făcut</span>
+          <span class="admin-cart__linistit"><?= h($s['linistit'] ?? 'nimic de făcut') ?></span>
           <?php endif; ?>
         </span>
       </a>
@@ -180,12 +177,6 @@ require __DIR__ . '/inc/antet.php';
         <p>Dispozitivul ăsta e ținut minte, deci trece de lacăt și cu un cont
           care nu e de-al casei — bun pentru probe. Ține <?= ZILE_SANTIER ?> de
           zile de la ultima intrare a unui om al casei.</p>
-
-        <form method="post" action="/admin.php#santier">
-          <input type="hidden" name="csrf" value="<?= h(tokenCsrf()) ?>">
-          <button class="btn btn--ghost btn--sm" type="submit"
-                  name="santier" value="uita-dispozitivul">Uită dispozitivul</button>
-        </form>
         <?php else: ?>
         <p>Dispozitivul ăsta nu e încă ținut minte. Reîncarcă pagina și va fi:
           permisul se scrie singur la prima cerere a unui om al casei.</p>
