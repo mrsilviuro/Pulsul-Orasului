@@ -20,6 +20,7 @@ declare(strict_types=1);
  */
 
 require_once __DIR__ . '/evenimente.php';
+require_once __DIR__ . '/coada.php';   // pentru cifra „Poștei" de pe panou
 
 /**
  * Paza. Nu se mai întoarce dacă omul n-are ce căuta aici.
@@ -144,6 +145,25 @@ function sectiuniAdmin(): array
             'unitate'=> 'în așteptare',
             'ico'    => '<path d="m12 3.8 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.5 10l5.9-.9L12 3.8Z"/>',
         ],
+        [
+            'cheie'  => 'posta',
+            'href'   => '/admin-posta.php',
+            'titlu'  => 'Poșta',
+            'vorba'  => 'Pe ce drum pleacă mesajele, ce e la rând și ce n-a plecat.',
+            /**
+             * CIFRA E „CÂTE N-AU PLECAT", ca peste tot: câte așteaptă ceva de
+             * făcut. Cele de la rând NU se numără aici — alea se duc singure,
+             * n-are nimeni ce hotărî despre ele, iar o cifră aprinsă la fiecare
+             * val de vești către urmăritori ar fi învățat pe oricine s-o
+             * treacă cu vederea. Zero înseamnă „poșta merge", și chiar așa e.
+             */
+            'cifra'  => 'posta',
+            'unitate'=> 'n-au plecat',
+            /* Un avion de hârtie, nu un plic: plicul e deja al „Contactului",
+               iar două plicuri alăturate n-ar mai deosebi nimic. Acolo vin
+               mesaje, de aici pleacă. */
+            'ico'    => '<path d="M21 3 10.5 13.5M21 3l-6.5 18-4-8.5L2 8.5 21 3Z"/>',
+        ],
     ];
 }
 
@@ -200,6 +220,15 @@ function cifreleAdmin(): array
          */
         'note_mici'  => $numara('SELECT COUNT(*) FROM evaluari
                                   WHERE stele <= 2 AND automat = 0'),
+
+        /**
+         * Mesajele rămase pe drumuri. NU cele de la rând: alea se duc singure,
+         * n-are nimeni ce hotărî despre ele, iar cifra ar fi pâlpâit la
+         * fiecare val de vești către urmăritori. Singura din tabloul ăsta care
+         * nu e o interogare scrisă aici — vine din inc/coada.php, unde stă
+         * regula lui „rămas pe drumuri".
+         */
+        'posta'      => catePicateInCoada(),
     ];
 }
 

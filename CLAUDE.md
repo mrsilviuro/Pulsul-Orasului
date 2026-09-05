@@ -252,17 +252,36 @@ termeni.php, confidentialitate.php, cookies.php
                 că merg pe drumul bun. Spune și când contul de conectare nu e
                 aceeași adresă cu cea din „From" (adreseleSePotrivesc): nu e o
                 piedică, dar e taman strâmbătatea din care se nasc mesajele
-                oprite de DMARC. TOT ACOLO COADA: câte așteaptă, câte au plecat
-                în ultimul ceas și — când sunt — MESAJELE RĂMASE PE DRUMURI,
-                fiecare cu adresa, subiectul și VORBA SERVERULUI pe el
-                (emailurilePicate, cel mult COADA_PICATE_ARATATE). Era doar o
-                cifră, iar ca să afli DE CE trebuia deschis phpMyAdmin. Un „×"
-                le șterge, unul câte unul sau pe toate (stergeDinCoada,
-                stergeToateCelePicate) — tot formulare adevărate spre pagina
-                însăși, ca și comutatorul de șantier, fiindcă panoul de poștă e
-                tocmai locul în care ajungi când ceva nu merge, JavaScript-ul
-                inclus. FĂRĂ CONFIRMARE, dinadins: ce scria în plic s-a
-                întâmplat oricum, doar vestea n-a ajuns
+                oprite de DMARC.
+                STAREA POȘTEI A PLECAT DE AICI, în admin-posta.php: cât era din
+                două rânduri despre SMTP stătea bine jos, dar de când are și
+                coada, și tabelul mesajelor rămase pe drumuri, era cea mai lungă
+                bucată de pe o pagină al cărei rost e să se citească dintr-o
+                privire — și singura care nu-i cerea omului nimic. REGULA CARE-I
+                ȚINE LOCUL: pe panou se pune ce se APASĂ, nu ce se citește
+  admin-posta.php → POȘTA: pe ce drum pleacă mesajele (SMTP, mail() sau
+                fișier), cu ce cont se conectează, dacă adresa de conectare e
+                aceeași cu cea din „From" (adreseleSePotrivesc), câte așteaptă
+                la rând, câte au plecat în ultimul ceas — și, când sunt,
+                MESAJELE RĂMASE PE DRUMURI, fiecare cu adresa, subiectul și
+                VORBA SERVERULUI pe el (emailurilePicate, cel mult
+                COADA_PICATE_ARATATE). Era doar o cifră, iar ca să afli DE CE
+                trebuia deschis phpMyAdmin. Un „×" le șterge, unul câte unul sau
+                pe toate (stergeDinCoada, stergeToateCelePicate) — formulare
+                adevărate spre pagina însăși, NU prin api/admin.php, ca și
+                comutatorul de șantier: pagina de poștă e tocmai locul în care
+                ajungi când ceva nu merge, iar „ceva" poate fi chiar
+                JavaScript-ul. FĂRĂ CONFIRMARE, dinadins: ce scria în plic s-a
+                întâmplat oricum, doar vestea n-a ajuns.
+                NU POARTĂ ÎNVELIȘUL `.admin-sect` al celorlalte pagini de
+                administrare: `.admin-sect h2` e mai tare decât `.posta__titlu`
+                și i-ar fi rescris mărimea, adică aceeași casetă ar fi arătat
+                altfel aici decât arăta pe panou.
+                CIFRA DE PE CARTONAȘ e „câte n-au plecat", ca peste tot: cele de
+                la rând NU se numără, fiindcă se duc singure și n-are nimeni ce
+                hotărî despre ele — o cifră care s-ar fi aprins la fiecare val
+                de vești către urmăritori e o cifră pe care omul învață s-o
+                treacă cu vederea
   coduri.php  → pagina omului de casă: face coduri noi și le arată starea.
                 Prima pagină de administrare de pe site; azi e „Abțibilduri" în
                 zona de admin. Se aduc cel mult CODURI_QR_PASTRATE (50) și se
@@ -1097,6 +1116,45 @@ cron/               → scripturi rulate din cron (doar CLI, .htaccess le bloche
                       ritm. Celelalte două nu mai trimit nimic ele însele — scriu
                       în coadă. A fost și newsletter-zilnic.php, plecat odată cu
                       newsletterul
+  vorba.php         → GURA CRONURILOR: vorbesc numai când au ce spune. NU e un
+                      cron, e fișierul pe care îl cer toate patru.
+                      DE CE. Un cron nu trimite el e-mailuri despre sine; cron-ul
+                      găzduirii ia CE SCRIE SCRIPTUL PE ECRAN și-l pune într-un
+                      mesaj către stăpânul casei. Deci fiecare `echo` dintr-un
+                      cron E un e-mail, iar unul din oră în oră care spune vesel
+                      „caut… nimic de trimis" face 8760 de mesaje pe an, toate
+                      despre nimic — iar singurul care chiar avea ceva de spus se
+                      pierde între ele. Omul învață în două săptămâni să le
+                      șteargă fără să le citească, și de-atunci cronul poate să
+                      tacă stricat luni în șir.
+                      CUM: `echo` a fost înlocuit peste tot cu spune(), care
+                      strânge vorba; se rostește la sfârșit (register_shutdown,
+                      ca să prindă și `exit`-urile din mijloc) DOAR dacă rularea
+                      a chemat sAIntamplatCeva(). Aceea se cheamă pentru CE S-A
+                      FĂCUT și CE S-A STRICAT, niciodată pentru ce s-a căutat.
+                      DE MÂNĂ SE AUDE TOT: seAudeCronul() întreabă
+                      stream_isatty(STDOUT) — de la tastatură e mereu terminal,
+                      din cron niciodată —, deci aceeași comandă scrisă de om
+                      arată tot, fără nicio setare și fără să se schimbe rândul
+                      din cPanel. La fel `--uscat`/`--vezi`, prin
+                      vorbesteOricum(); hotărârea aceea se ia ACOLO UNDE SE
+                      CITEȘTE STEAGUL, nu în ramura care desenează — ramura
+                      „nimic de trimis" iese cu `exit` înaintea ei, iar pusă
+                      acolo tăcea tocmai la rularea din care vrei să afli de ce
+                      nu pleacă nimic.
+                      NU E O TĂCERE OARBĂ: ce s-a făcut se scrie mai departe în
+                      private/*.log, la fiecare rulare. Aici se hotărăște doar
+                      dacă te CAUTĂ cineva pe tine.
+                      POȘTAȘUL ARE REGULA LUI, fiindcă pornește din minut în
+                      minut: vorbește numai când A PICAT CEVA LA RULAREA AIA
+                      (`$r['picate']`), nu când zac rânduri picate în coadă.
+                      Alea nu se șterg niciodată singure — sunt acolo tocmai ca
+                      să se vadă —, deci „spune cât timp sunt" ar fi însemnat
+                      același mesaj despre aceleași două rânduri, din minut în
+                      minut, până le-ar fi șters cineva: exact zgomotul
+                      împotriva căruia e scris fișierul, doar de șaizeci de ori
+                      mai des. Se spune o dată, la picare; de acolo încolo se
+                      văd în admin, la „Poșta"
 sql/                → schema.sql + migrări numerotate (002, 003, 004, 005-google,
                       006-tine-minte, 007-setari, 008-mesaje-contact,
                       009-evenimente, 010-limita-evenimente,
@@ -1195,6 +1253,16 @@ teste/              → router.php: serverul de probă cu ADRESE FRUMOASE.
                       doare: un memento plecat DUPĂ ce a început evenimentul e
                       mai rău decât niciunul, și nimeni nu se plânge de un
                       e-mail pe care nu l-a primit)
+                      test-cronuri.php (gura cronurilor; cere baza, nu și
+                      serverul. PORNEȘTE CHIAR SCRIPTURILE, cu proc_open și
+                      ieșirea legată la o ȚEAVĂ, exact cum le pornește cron-ul:
+                      ce se probează aici e ce IESE pe ecran, iar asta nu se
+                      poate afla chemând o funcție. Păzește că toate patru TAC
+                      când n-au ce spune, că `--uscat`/`--vezi` vorbesc oricum,
+                      că poștașul spune când a picat ceva DAR nu se repetă la
+                      rularea următoare, și — paza celui care scrie mâine un
+                      cron — că n-a rămas niciun `echo` de-a dreptul în ele:
+                      unul strecurat înapoi rupe totul, și o rupe TĂCUT)
                       test-coada.php (coada de e-mailuri; cere baza, nu și
                       serverul. Păzește DOUĂ lucruri care nu se văd nicăieri
                       altundeva: că mesajele care răspund unei apăsări NU intră
