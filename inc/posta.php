@@ -178,9 +178,8 @@ function adreseleSePotrivesc(): bool
  * Pe ce drum pleacă mesajele ACUM: 'smtp', 'mail' sau 'fisier'.
  *
  * Aici se desface 'auto' în ce înseamnă el de fapt, iar întrebarea e pusă
- * într-un singur loc fiindcă o pun trei: trimiteEmail() (ca să știe pe unde s-o
- * ia), asteaptaRandulUrmator() (ca să nu frâneze degeaba când nu pleacă nimic)
- * și rândul de stare din admin.php.
+ * într-un singur loc fiindcă o pun două: trimiteEmail() (ca să știe pe unde s-o
+ * ia) și rândul de stare din admin.php.
  *
  * NU spune dacă drumul ales chiar merge — SMTP cerut și nefolosibil se vede din
  * deCeNuMergeSmtp(). Spune ce s-a cerut, desfăcut.
@@ -360,6 +359,8 @@ function trimitePrinSmtp(
             }
         }
 
+        insemneazaVorbaPostei('');
+
         return $postas->send();
 
     } catch (\Throwable $e) {
@@ -372,88 +373,52 @@ function trimitePrinSmtp(
          * aia e singurul fel de a afla că ai depășit plafonul găzduirii ÎNAINTE
          * să ți se închidă contul.
          */
-        error_log('PulsulOrasului: SMTP a dat greș pentru „' . $subiect . '": '
-                . ($postas->ErrorInfo !== '' ? $postas->ErrorInfo : $e->getMessage()));
+        $vorba = $postas->ErrorInfo !== '' ? $postas->ErrorInfo : $e->getMessage();
+
+        insemneazaVorbaPostei($vorba);
+        error_log('PulsulOrasului: SMTP a dat greș pentru „' . $subiect . '": ' . $vorba);
 
         return false;
     }
 }
 
-/* ========================= PASUL DE MELC ============================== */
+/* ======================= CE A SPUS SERVERUL =========================== */
 
 /**
- * Câte mesaje pe minut duce găzduirea.
+ * Vorba serverului de poștă de la ultima trimitere care a dat greș.
  *
- * NU E O ALEGERE DE-A NOASTRĂ, e un plafon scris în panoul găzduirii, și se
- * schimbă odată cu ea — de aceea stă în config.php, nu aici. Zero sau mai puțin
- * înseamnă „fără frână", pentru cine ajunge vreodată pe un server al lui.
+ * DE CE E ȚINUTĂ MINTE. Coada scrie pe rândul mesajului picat DE CE n-a plecat
+ * (`coada_emailuri.eroare`), iar asta e singurul loc de pe site unde se poate
+ * vedea vreodată. Fără ea, rândul ar fi spus doar „n-a mers" — adică exact
+ * puținul pe care îl spunea și mail(), și pentru care s-a trecut la SMTP.
+ *
+ * Se pune din trimitePrinSmtp() și se citește o dată, imediat după. Nu e o
+ * istorie: e ultima vorbă, atât.
  */
-function emailuriPeMinut(): int
+function ultimaVorbaAPostei(): string
 {
-    global $config;
+    global $poUltimaVorbaAPostei;
 
-    return (int) ($config['email_pe_minut'] ?? 10);
+    return (string) ($poUltimaVorbaAPostei ?? '');
 }
 
-/**
- * Ține pasul cerut de găzduire, între două mesaje dintr-o trimitere în serie.
- *
- * SE CHEAMĂ DOAR DIN CRONURILE CARE TRIMIT ÎN SERIE — mementoul de dinaintea
- * unui eveniment (inc/amintiri.php) și mulțumirea de după (inc/multumiri.php)
- * —, niciodată dintr-un mesaj obișnuit: la o confirmare de cont nu există
- * „mesajul dinainte", iar o pauză acolo ar face omul să se uite la o pagină
- * care se învârte degeaba.
- *
- * NU E O POLITEȚE, E O APĂRARE. Găzduirea numără mesajele pe minut și pe ceas;
- * cine sare plafonul nu primește un avertisment, ci i se oprește poșta — pentru
- * tot ce urmează în ora aceea, inclusiv confirmările de cont și recuperările de
- * parolă ale unor oameni care n-au nicio treabă cu ce tocmai s-a trimis. De
- * aceea frâna stă aici, în drumul de plecare, nu în fiecare loc care trimite.
- *
- * CE NU E FRÂNAT, ȘI DE CE. Trei locuri trimit în serie DINTR-O CERERE WEB:
- * anularea unui eveniment (api/anuleaza-eveniment.php), anunțul important al
- * organizatorului (api/comentarii.php) și vestea către urmăritori
- * (inc/urmariri.php). Acolo frâna ar ține omul cu ochii pe o pagină care se
- * învârte câte șase secunde de fiecare înscris — la treizeci de oameni, trei
- * minute. Deci NU se cheamă, iar la un eveniment mare plafonul se poate sări.
- * Adevărata dezlegare e o coadă și un cron, ca la restul; până atunci, asta e
- * scris aici ca să se știe, nu ca să pară rezolvat.
- *
- * Se socotește din CLIPA MESAJULUI DINAINTE, nu dintr-o pauză fixă: dacă
- * trimiterea a durat ea însăși două secunde, se mai așteaptă doar patru.
- */
-function asteaptaRandulUrmator(): void
+/** O scrie trimitePrinSmtp(); nimeni altcineva n-are ce căuta aici. */
+function insemneazaVorbaPostei(string $vorba): void
 {
-    static $ultimul = null;
+    global $poUltimaVorbaAPostei;
 
-    $peMinut = emailuriPeMinut();
-
-    if ($peMinut <= 0) {
-        return;
-    }
-
-    /**
-     * CÂND NU PLEACĂ NIMIC, NU SE AȘTEAPTĂ NIMIC.
-     *
-     * Frâna e pusă pentru serverul de poștă al găzduirii. Cu mesajele scrise în
-     * fișier — în dezvoltare, și în toate probele — nu există niciun server de
-     * apărat, iar o probă cu douăzeci de mesaje ar fi stat două minute uitându-se
-     * la tavan. Ceea ce, în practică, înseamnă o probă pe care n-o mai rulează
-     * nimeni.
-     */
-    if (drumulPostei() === 'fisier') {
-        return;
-    }
-
-    $pasul = 60.0 / $peMinut;   // secunde între două mesaje
-
-    if ($ultimul !== null) {
-        $trecut = microtime(true) - $ultimul;
-
-        if ($trecut < $pasul) {
-            usleep((int) round(($pasul - $trecut) * 1_000_000));
-        }
-    }
-
-    $ultimul = microtime(true);
+    $poUltimaVorbaAPostei = $vorba;
 }
+
+/* ========================= UNDE A PLECAT FRÂNA ========================
+   A stat aici o vreme asteaptaRandulUrmator(), o pauză de șase secunde între
+   două mesaje dintr-o trimitere în serie. A plecat odată cu coada: azi nu se
+   mai trimite nimic în serie dintr-o cerere web, iar ritmul îl dă cadența
+   cronului — o rulare ia opt mesaje, le duce în câteva secunde și se încheie
+   (vezi inc/coada.php).
+
+   E mai bine așa, nu doar mai simplu: o rulare care ar fi dormit șase secunde
+   între mesaje ar fi ținut fix cât intervalul dintre porniri, deci s-ar fi
+   călcat cu următoarea la fiecare trecere, iar două rulări suprapuse pe aceeași
+   coadă e taman felul în care un mesaj pleacă de două ori.
+   ==================================================================== */

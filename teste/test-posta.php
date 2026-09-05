@@ -23,6 +23,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../inc/posta.php';
 require_once __DIR__ . '/../inc/email.php';
+require_once __DIR__ . '/../inc/coada.php';
 
 $treceri = 0; $picaturi = 0;
 
@@ -111,60 +112,30 @@ verifica('lipsa nu se numără ca nepotrivire', true, adreseleSePotrivesc());
 $config['email_expeditor'] = 'noreply@exemplu-probe.ro';
 
 /* ==================================================================== */
-sectiune('pasul de melc');
+sectiune('unde a plecat frâna');
 
 /**
- * Frâna care ține plafonul găzduirii. NU e o politețe: cine sare peste zece
- * mesaje pe minut rămâne fără poștă pentru tot restul orei — cu tot cu
- * confirmările de cont ale unor oameni care n-au nicio treabă cu ce s-a trimis.
- */
-$config['email_pe_minut'] = 10;
-verifica('citește plafonul din config', 10, emailuriPeMinut());
-
-/**
- * CÂND NU PLEACĂ NIMIC, NU SE AȘTEAPTĂ NIMIC.
+ * A STAT AICI o probă pentru asteaptaRandulUrmator(), pauza de șase secunde
+ * dintre două mesaje ale unei trimiteri în serie. A plecat odată cu ea: azi nu
+ * se mai trimite nimic în serie dintr-o cerere web, iar ritmul îl dă cadența
+ * cronului care golește coada (vezi inc/coada.php și teste/test-coada.php).
  *
- * Frâna e pusă pentru serverul de poștă al găzduirii. Cu mesajele scrise în
- * fișier nu există niciun server de apărat — iar o probă cu douăzeci de mesaje
- * ar fi stat două minute degeaba, adică ar fi ajuns o probă pe care n-o mai
- * rulează nimeni. Se probează ÎNAINTEA celorlalte, cât drumul e încă spre
- * fișier.
+ * Ce a rămas de păzit AICI e că n-a mai rămas nimic din ea: o funcție moartă
+ * lăsată în urmă ar fi fost chemată într-o zi de cineva care crede că frânează
+ * ceva.
  */
-$config['email_metoda'] = 'fisier';
-$plecat = microtime(true);
-asteaptaRandulUrmator();
-asteaptaRandulUrmator();
-verifica('spre fișier nu se așteaptă deloc', true, (microtime(true) - $plecat) < 0.5);
+verifica('frâna de pas chiar a plecat', [false, false],
+    [function_exists('asteaptaRandulUrmator'), function_exists('emailuriPeMinut')]);
 
-/* De aici încolo, drumul e „ca și cum ar pleca": altfel frâna n-ar frâna. */
-$config['email_metoda'] = 'smtp';
+/* Cifra ei a rămas însă, cu alt rost: câte duce o rulare a cronului. */
+$config['emailuri_pe_rulare'] = 8;
+verifica('câte duce o rulare vine din config', 8, coadaPeRulare());
 
-/**
- * PRIMUL MESAJ NU AȘTEAPTĂ. Se socotește din clipa celui dinainte, iar la
- * primul nu există unul — altfel fiecare confirmare de cont ar fi stat șase
- * secunde degeaba, cu omul uitându-se la o pagină care se învârte.
- */
-$plecat = microtime(true);
-asteaptaRandulUrmator();
-verifica('primul nu așteaptă', true, (microtime(true) - $plecat) < 0.5);
+/* Un zero pus din greșeală n-are voie să oprească poșta de tot. */
+$config['emailuri_pe_rulare'] = 0;
+verifica('zero nu înseamnă „niciunul"', 8, coadaPeRulare());
 
-/* Al doilea ține pasul: la zece pe minut, șase secunde. */
-$plecat = microtime(true);
-asteaptaRandulUrmator();
-$pauza = microtime(true) - $plecat;
-
-verifica('al doilea ține pasul cerut', true, $pauza > 5.0 && $pauza < 7.0);
-
-/**
- * ZERO ÎNSEAMNĂ „FĂRĂ FRÂNĂ", pentru cine ajunge vreodată pe un server al lui.
- * Fără ramura asta, un 0 pus în config ar fi dat o împărțire la zero.
- */
-$config['email_pe_minut'] = 0;
-$plecat = microtime(true);
-asteaptaRandulUrmator();
-verifica('zero înseamnă fără frână', true, (microtime(true) - $plecat) < 0.5);
-
-$config['email_pe_minut'] = 10;
+$config['emailuri_pe_rulare'] = 8;
 
 /* ==================================================================== */
 if (!$avem) {

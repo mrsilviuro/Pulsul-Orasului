@@ -15,6 +15,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/inc/admin.php';
 require_once __DIR__ . '/inc/posta.php';   // pentru rândul de stare a poștei
+require_once __DIR__ . '/inc/coada.php';   // …și pentru cifrele cozii
 
 $membru = cerePazaDeStaff('/admin.php');
 
@@ -244,11 +245,32 @@ require __DIR__ . '/inc/antet.php';
       </p>
       <?php endif; ?>
 
+      <!--
+        Coada: câte așteaptă acum și câte au rămas pe drumuri. A doua cifră ar
+        trebui să fie mereu zero — când nu e, ceva e stricat, iar motivul stă
+        în `coada_emailuri.eroare`. E singurul loc din care se vede asta fără
+        SSH și fără phpMyAdmin.
+      -->
       <p class="posta__vorba posta__vorba--mic">
-        Trimiterile în serie țin pasul de
-        <strong><?= (int) emailuriPeMinut() ?></strong> mesaje pe minut, cât
-        duce găzduirea. Mesajele obișnuite nu așteaptă niciodată.
+        <?php $laRand = cateAsteaptaInCoada(); ?>
+        <?php if ($laRand === 0): ?>
+        Nu așteaptă niciun mesaj la rând.
+        <?php else: ?>
+        <strong><?= $laRand ?></strong>
+        <?= $laRand === 1 ? 'mesaj așteaptă' : 'mesaje așteaptă' ?> la rând;
+        cronul duce <?= (int) coadaPeRulare() ?> la fiecare pornire.
+        <?php endif; ?>
+        În ultimul ceas au plecat <strong><?= catePlecateInUltimulCeas() ?></strong>.
       </p>
+
+      <?php if (($ramase = catePicateInCoada()) > 0): ?>
+      <p class="posta__vorba posta__vorba--atentie">
+        <strong><?= $ramase ?></strong>
+        <?= $ramase === 1 ? 'mesaj n-a plecat' : 'mesaje n-au plecat' ?> nici după
+        <?= COADA_INCERCARI_MAX ?> încercări. Motivul e scris pe fiecare, în
+        tabelul <code>coada_emailuri</code>, coloana <code>eroare</code>.
+      </p>
+      <?php endif; ?>
     </section>
   </div>
 </main>

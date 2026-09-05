@@ -21,6 +21,26 @@ declare(strict_types=1);
  */
 
 require_once __DIR__ . '/../inc/amintiri.php';
+require_once __DIR__ . '/../inc/coada.php';
+/**
+ * GOLEȘTE COADA, ca mesajele să ajungă în log.
+ *
+ * De când trimiterile în serie se scriu în coadă și pleacă din cron, un mesaj
+ * nu mai ajunge în private/emailuri-trimise.log în clipa apăsării. Proba face
+ * aici ce face cronul — și e mai bine așa: acoperă drumul întreg, de la apăsare
+ * până la plic, nu doar prima jumătate.
+ *
+ * În buclă, fiindcă o rulare duce cel mult COADA_PE_RULARE mesaje.
+ */
+function goleșteCoada(): void
+{
+    for ($i = 0; $i < 50; $i++) {
+        if (trimiteDinCoada(50)['luate'] === 0) {
+            return;
+        }
+    }
+}
+
 
 $treceri = 0; $picaturi = 0;
 
@@ -214,6 +234,7 @@ $log = static function (callable $ce): string {
     $fisier = __DIR__ . '/../private/emailuri-trimise.log';
     $inainte = is_file($fisier) ? filesize($fisier) : 0;
     $ce();
+    goleșteCoada();
 
     if (!is_file($fisier)) {
         return '';

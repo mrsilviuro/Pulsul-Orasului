@@ -804,24 +804,75 @@ inc/
                       cea mai urâtă scăpare cu putință (omul primește scrisoarea
                       altcuiva) și nu s-ar vedea nicăieri: mesajele pleacă,
                       logul scrie „trimis". O păzește o probă.
-                      TOT AICI FRÂNA: asteaptaRandulUrmator(), pasul cerut de
-                      găzduire (`email_pe_minut`). SE CHEAMĂ DOAR DIN CELE DOUĂ
-                      CRONURI CARE TRIMIT ÎN SERIE (mementoul din inc/amintiri.php
-                      și mulțumirea din inc/multumiri.php), niciodată dintr-un
-                      mesaj obișnuit — la o confirmare de cont nu există
-                      „mesajul dinainte", iar o pauză acolo ar ține omul
-                      uitându-se la o pagină care se învârte. Nu e o politețe:
-                      cine sare plafonul nu primește un avertisment, i se
-                      OPREȘTE POȘTA pentru tot restul orei, cu tot cu
-                      confirmările și recuperările de parolă ale unor oameni
-                      care n-au nicio treabă cu ce s-a trimis. CE NU E FRÂNAT,
-                      ȘI DE CE: cele trei locuri care trimit în serie DINTR-O
-                      CERERE WEB — anularea unui eveniment, anunțul important și
-                      vestea către urmăritori. Vezi lămurirea din capul
-                      funcției. Când drumul e spre fișier nu se așteaptă deloc:
-                      nu există niciun server de apărat, iar o probă care ar sta
-                      două minute degeaba e o probă pe care n-o mai rulează
-                      nimeni
+                      A STAT AICI O FRÂNĂ, asteaptaRandulUrmator() — o pauză de
+                      șase secunde între două mesaje dintr-o trimitere în serie.
+                      A PLECAT odată cu coada, și e mai bine așa, nu doar mai
+                      simplu: o rulare care ar fi dormit șase secunde între
+                      mesaje ar fi ținut fix cât intervalul dintre porniri ale
+                      cronului, deci s-ar fi călcat cu următoarea la fiecare
+                      trecere — iar două rulări suprapuse pe aceeași coadă e
+                      taman felul în care un mesaj pleacă de două ori. Azi
+                      ritmul îl dă CADENȚA CRONULUI: opt mesaje pe rulare, o
+                      pornire pe minut. Vezi inc/coada.php.
+                      TOT AICI ultimaVorbaAPostei(): ce a spus serverul la
+                      ultima trimitere picată. O scrie coada pe rândul mesajului
+                      (`coada_emailuri.eroare`), și e singurul loc de pe site
+                      unde se poate vedea vreodată de ce n-a plecat ceva
+  coada.php         → COADA DE E-MAILURI: inc/email.php spune CE scrie într-un
+                      mesaj, inc/posta.php pe ce drum iese, ăsta CÂND.
+                      DE CE: sunt locuri unde o singură apăsare naște zeci de
+                      mesaje — cineva cu două sute de urmăritori publică un
+                      anunț, un eveniment cu treizeci de înscriși se anulează.
+                      Trimise pe loc, sar plafonul găzduirii (zece pe minut,
+                      șase sute pe ceas) și țin pagina ocupată minute în șir.
+                      Acum se scriu în `coada_emailuri` (sql/037), iar
+                      cron/trimite-emailuri.php le duce câte opt pe minut.
+                      CE INTRĂ ȘI CE NU — REGULA CEA MAI IMPORTANTĂ DE AICI:
+                      numai ce pleacă ÎN SERIE. Confirmarea de cont, parola
+                      temporară și celelalte răspunsuri la o apăsare pleacă PE
+                      LOC, fiindcă omul stă și așteaptă și fiindcă un cron oprit
+                      n-are voie să însemne că nimeni nu-și mai poate face cont.
+                      Ele ajung în coadă DOAR dacă trimiterea pe loc a dat greș,
+                      ca să fie reîncercate (a doua răscruce din trimiteEmail).
+                      CUM SE SPUNE „în serie": laCoada(callable) — un ÎNVELIȘ, nu
+                      un parametru în plus la fiecare funcție email*. Site-ul are
+                      douăzeci de funcții de mesaje; un „pune-l la rând" ca al
+                      șaptelea argument ar fi trebuit strecurat prin cinci dintre
+                      ele, iar a șasea — cea scrisă la anul — l-ar fi uitat și ar
+                      fi trimis două sute de mesaje dintr-o cerere web fără să
+                      bage nimeni de seamă. `try/finally` nu e o politețe: o
+                      excepție dinăuntru ar lăsa steagul aprins, iar de-atunci
+                      TOATE mesajele cererii ar intra în coadă. E păzit de-o probă.
+                      ÎN COADĂ INTRĂ BLOCURILE, nu HTML-ul compus: o jumătate de
+                      kilooctet pe rând în loc de doisprezece, iar o îndreptare a
+                      șablonului prinde și ce e deja la rând.
+                      DOUĂ RULĂRI SUPRAPUSE NU IAU ACELEAȘI RÂNDURI
+                      (iaDinCoada): se scrie întâi cifra rulării pe ele cu un
+                      UPDATE … ORDER BY … LIMIT — o singură mișcare a bazei —
+                      abia apoi se citesc înapoi cele care o poartă. Un SELECT
+                      urmat de UPDATE ar fi lăsat fereastra prin care intră a
+                      doua rulare, iar urmarea ar fi fost că fiecare om primește
+                      mesajul de două ori. Aceeași croială ca la revendicarea
+                      unui abțibild: HOTĂRÂREA STĂ ÎN `WHERE`.
+                      ȘTAMPILA SE PUNE DUPĂ TRIMITERE, pe dos față de
+                      newsletterul de altădată — și dinadins: acolo nu se putea
+                      ști dacă mesajul a plecat, aici serverul răspunde, deci ce
+                      n-a plecat rămâne în coadă cu vorba lui scrisă pe el
+                      (`eroare`, din ultimaVorbaAPostei) și se mai încearcă, de
+                      cel mult COADA_INCERCARI_MAX (3) ori.
+                      PREȚUL, SPUS PE FAȚĂ: un rând rămas agățat se ia din nou
+                      după COADA_MINUTE_BLOCAT (10), iar dacă rularea murise
+                      între trimitere și ștampilă, mesajul pleacă de două ori. E
+                      SINGURUL loc de pe site unde se alege așa — peste tot
+                      altundeva se preferă „n-a plecat". Aici nu se poate: un
+                      rând care n-ar fi luat niciodată din nou e un mesaj pierdut
+                      de-a binelea, nu doar întârziat.
+                      PRIORITATE, doar două trepte: anularea unui eveniment și
+                      reîncercarea unui mesaj picat trec înainte. Există dintr-un
+                      motiv anume — cu două sute de urmăritori la rând, coada
+                      ține o jumătate de ceas, iar cei înscriși la ceva de
+                      diseară n-au de ce să afle atât de târziu că nu se mai
+                      ține. Un anunț nou poate aștepta; o anulare, nu
   email.php         → șablon unic pentru toate email-urile (table-based, inline
                       style). CASETA DE CITAT e desenată dintr-un singur loc și
                       o cer DOUĂ blocuri: `citat` (ce a scris omul — comentariul
@@ -995,10 +1046,19 @@ cron/               → scripturi rulate din cron (doar CLI, .htaccess le bloche
                       anonimizeaza-conturi.php      — o dată pe zi
                       multumeste-participantilor.php — din oră în oră
                       aminteste-de-eveniment.php     — din oră în oră
-                      AMÂNDOUĂ CELE DIN URMĂ TRIMIT ÎN SERIE, deci își țin pasul
-                      cerut de găzduire (asteaptaRandulUrmator din inc/posta.php)
-                      și închid conexiunea la sfârșit. A fost și un al patrulea,
-                      newsletter-zilnic.php, plecat odată cu newsletterul
+                      trimite-emailuri.php          — DIN MINUT ÎN MINUT
+                      Ultimul e poștașul: ia opt mesaje din coadă, le duce și se
+                      încheie în câteva secunde. De obicei nu găsește nimic și
+                      atunci costă o singură interogare indexată — NU deschide
+                      nicio conexiune cu serverul de poștă, fiindcă poștașul din
+                      inc/posta.php se face abia la primul mesaj. Tot el face
+                      curat în coadă. CADENȚA LUI E PASUL: nu se așteaptă nimic
+                      înăuntru, opt pe rulare × o pornire pe minut = opt pe
+                      minut. Dacă găzduirea nu lasă cron mai des de cinci minute,
+                      pui `emailuri_pe_rulare` pe 40 și cronul la cinci: același
+                      ritm. Celelalte două nu mai trimit nimic ele însele — scriu
+                      în coadă. A fost și newsletter-zilnic.php, plecat odată cu
+                      newsletterul
 sql/                → schema.sql + migrări numerotate (002, 003, 004, 005-google,
                       006-tine-minte, 007-setari, 008-mesaje-contact,
                       009-evenimente, 010-limita-evenimente,
@@ -1015,7 +1075,17 @@ sql/                → schema.sql + migrări numerotate (002, 003, 004, 005-goo
                       030-incercari-qr, 031-newsletter-zilnic,
                       032-dorinte-mai-multe, 033-urmariri,
                       034-amintire-eveniment, 035-comentariu-important,
-                      036-fara-newsletter)
+                      036-fara-newsletter, 037-coada-emailuri)
+                      `coada_emailuri` (037) e singurul tabel de pe site ale
+                      cărui rânduri SE ȘTERG singure — și nu calcă regula „nu se
+                      șterge nimic": aceea e despre ce a scris omul, iar un rând
+                      de aici e un plic. Nu la trimitere, însă, ci după
+                      COADA_ZILE_PASTRARE (7): cele șapte zile sunt tot ce ține
+                      loc de log („i-a plecat lui X mesajul?" e o întrebare care
+                      chiar se pune) și tot ele fac cu putință numărătoarea
+                      „câte au plecat în ultimul ceas". CELE PICATE NU SE ȘTERG
+                      NICIODATĂ, oricât ar fi de vechi: sunt singurul semn că
+                      ceva nu merge
                       `036` NU adaugă nimic, ci SCOATE: `membri.newsletter` și
                       `membri.newsletter_trimis_la`, rămase fără rost odată cu
                       newsletterul zilnic. E singura migrare care șterge ceva, și
@@ -1087,6 +1157,20 @@ teste/              → router.php: serverul de probă cu ADRESE FRUMOASE.
                       doare: un memento plecat DUPĂ ce a început evenimentul e
                       mai rău decât niciunul, și nimeni nu se plânge de un
                       e-mail pe care nu l-a primit)
+                      test-coada.php (coada de e-mailuri; cere baza, nu și
+                      serverul. Păzește DOUĂ lucruri care nu se văd nicăieri
+                      altundeva: că mesajele care răspund unei apăsări NU intră
+                      în coadă (altfel un cron oprit ar însemna că nimeni nu-și
+                      mai poate face cont, și n-ar afla nimeni), și că două
+                      rulări suprapuse nu iau aceleași rânduri (altfel fiecare om
+                      primește mesajul de două ori — iar asta se vede doar în
+                      cutiile poștale ale oamenilor). ATENȚIE: GOLEȘTE COADA
+                      ÎNTREAGĂ la pornire, nu doar rândurile ei — iaDinCoada() nu
+                      știe de nicio probă, ia ce urmează la rând, iar cu rânduri
+                      rămase de la altă suită „ia primele două" ar fi luat două
+                      de-ale altcuiva. Nu se pierde nimic: coada e trecătoare, iar
+                      celelalte probe și-o golesc singure (goleșteCoada) înainte
+                      să se uite în log)
                       test-posta.php (drumul pe care pleacă un mesaj; NU cere
                       nici baza, nici serverul, și nu trimite nimic. Partea de
                       SMTP se probează cu un SERVER DE MINCIUNĂ strecurat prin
@@ -1201,10 +1285,15 @@ assets/css/style.css, assets/js/main.js, assets/img/
   tocmai asta cerne. Nu e o piedică (mesajul pleacă), dar e o strâmbătate, și de
   aceea se scrie pe panoul din admin — `adreseleSePotrivesc()`. Goale = se cade
   pe `mail()`, cu un rând în logul de erori
-- `email_pe_minut` — plafonul găzduirii, NU o alegere de-a noastră. Cele două
-  cronuri care trimit în serie își țin singure pasul ăsta
-  (`asteaptaRandulUrmator`); mesajele obișnuite nu așteaptă niciodată. 0 = fără
-  frână
+- `emailuri_pe_rulare` — câte mesaje duce o rulare a lui
+  cron/trimite-emailuri.php. NU e o alegere de-a noastră: iese din plafonul
+  găzduirii (zece pe minut, șase sute pe ceas) și din cât de des îți lasă ea să
+  pornești cronul. Opt la un cron din minut în minut; 40 la unul din cinci în
+  cinci minute — același ritm. Zece ar fi fost fix șase sute pe ceas, adică
+  plafonul lovit din plin, fără nimic de rezervă pentru mesajele care pleacă pe
+  loc. Se citește prin `coadaPeRulare()`, care înțelege și vechiul
+  `email_pe_minut`, ca o setare deja scrisă într-un config.php să nu se stingă
+  tăcut
 - `google_client_id` / `google_client_secret` — goale = butoanele Google nu se afișează deloc
 
 ## Autentificare — ce trebuie respectat mereu
@@ -1383,16 +1472,24 @@ sistem. Regulile care s-au strâns din trecerea de purificare:
   (sql/019) NU au nicio treabă cu newsletterul plecat. Acolo ajung adresele
   lăsate pe AFIȘUL DE ȘANTIER de oameni care n-au cont și vor să afle când
   deschidem (inscrieLaVesti din inc/constructie.php). Rămân, și sunt vii.
-- CE TRIMITE ÎN SERIE ȘI CE NU. Trei locuri trimit zeci de mesaje dintr-o
-  singură apăsare, ȘI O FAC DINTR-O CERERE WEB: anularea unui eveniment
-  (api/anuleaza-eveniment.php), anunțul important al organizatorului
-  (api/comentarii.php) și vestea către urmăritori (inc/urmariri.php). Acolo
-  frâna NU se cheamă — ar fi ținut omul cu ochii pe o pagină care se învârte
-  câte șase secunde de fiecare înscris, adică trei minute la treizeci de oameni
-  — deci la un eveniment mare plafonul găzduirii se poate sări. Cele două
-  CRONURI (mementoul și mulțumirea) își țin pasul, fiindcă acolo nu așteaptă
-  nimeni. Adevărata dezlegare pentru primele trei e o coadă și un cron; până
-  atunci, e scris aici ca să se știe, nu ca să pară rezolvat
+- CE TRIMITE ÎN SERIE PLEACĂ PRIN COADĂ, nu din cererea web. Cinci locuri nasc
+  zeci de mesaje dintr-o singură apăsare: vestea către urmăritori
+  (inc/urmariri.php — un organizator poate avea două sute), anularea unui
+  eveniment (api/anuleaza-eveniment.php), anunțul important al organizatorului
+  (api/comentarii.php), mementoul de dinaintea unui eveniment și mulțumirea de
+  după (cele două cronuri). Toate cinci sunt învelite în `laCoada()`: scriu
+  rânduri în `coada_emailuri` și răspund pe loc, iar
+  cron/trimite-emailuri.php le duce câte opt pe minut. O apăsare pe „Publică"
+  la un om cu două sute de urmăritori nu mai ține pagina ocupată și nu mai sare
+  plafonul găzduirii; mesajele ajung în vreo jumătate de ceas.
+  CE NU TRECE PRIN COADĂ, dinadins: tot restul — confirmarea de cont, parola
+  temporară, hotărârea moderării, comentariul nou, părerea scrisă, cele patru
+  ale zonei de administrare. Alea pleacă PE LOC, fiindcă omul stă și așteaptă,
+  fiindcă sunt una câte una și n-ating niciodată plafonul, și — mai ales —
+  fiindcă un cron oprit n-are voie să însemne că nimeni nu-și mai poate face
+  cont sau recupera parola. Ele intră în coadă DOAR dacă trimiterea a dat greș,
+  cu prioritate, ca să fie reîncercate. Regula are o probă a ei în
+  teste/test-coada.php, și e cea mai importantă de acolo
 - Tabla cu dorințe se moderează din `admin-dorinte.php`, DINTR-O SINGURĂ LISTĂ
   DE ALES (aceeași unealtă ca starea contului din `admin-useri.php`), cu patru
   rânduri: „Așteptare", „Aprobă", „Respinge", „Șterge". RÂNDUL ÎN CARE DORINȚA

@@ -23,6 +23,26 @@ declare(strict_types=1);
 require_once __DIR__ . '/../inc/evenimente.php';
 require_once __DIR__ . '/../inc/interese.php';
 require_once __DIR__ . '/../inc/email.php';
+require_once __DIR__ . '/../inc/coada.php';
+
+/**
+ * GOLEȘTE COADA, ca mesajele să ajungă în log.
+ *
+ * De când trimiterile în serie se scriu în coadă și pleacă din cron, un mesaj
+ * nu mai ajunge în private/emailuri-trimise.log în clipa apăsării. Proba face
+ * aici ce face cronul — și e mai bine așa: acoperă drumul întreg, de la apăsare
+ * până la plic, nu doar prima jumătate.
+ *
+ * În buclă, fiindcă o rulare duce cel mult COADA_PE_RULARE mesaje.
+ */
+function goleșteCoada(): void
+{
+    for ($i = 0; $i < 50; $i++) {
+        if (trimiteDinCoada(50)['luate'] === 0) {
+            return;
+        }
+    }
+}
 
 $BAZA = $argv[1] ?? '';
 
@@ -165,6 +185,8 @@ if (empty($config['dezvoltare'])) {
 
     verifica('mesajul pleacă', true, $plecat);
 
+    goleșteCoada();
+
     $nou = file_get_contents($logEmail);
     $nou = substr((string) $nou, $inainte);
 
@@ -198,6 +220,7 @@ if (empty($config['dezvoltare'])) {
         'https://exemplu.test/index.php', false
     );
 
+    goleșteCoada();
     $nou = substr((string) file_get_contents($logEmail), $inainte);
 
     verifica('cui era doar interesat i se spune altfel', true,
@@ -213,6 +236,7 @@ if (empty($config['dezvoltare'])) {
         'https://exemplu.test/index.php', true
     );
 
+    goleșteCoada();
     $nou = substr((string) file_get_contents($logEmail), $inainte);
 
     verifica('fără dată, nu scrie „Era programat pentru ."', false,
@@ -597,7 +621,9 @@ if ($BAZA === '') {
             'Nu am mai găsit sala, îmi pare rău de tot.', $rand['motiv_anulare'] ?? '');
 
         if (!empty($config['dezvoltare'])) {
-            $nou = substr((string) file_get_contents($logEmail), $inainte);
+            goleșteCoada();
+            goleșteCoada();
+    $nou = substr((string) file_get_contents($logEmail), $inainte);
 
             verifica('i-a plecat mesaj celui care confirmase', true,
                 str_contains($nou, SEMN . 'vine@invalid.local'));
@@ -623,7 +649,9 @@ if ($BAZA === '') {
         verifica('a doua anulare e refuzată', 404, $r['cod']);
 
         if (!empty($config['dezvoltare'])) {
-            $nou = substr((string) file_get_contents($logEmail), $inainte);
+            goleșteCoada();
+            goleșteCoada();
+    $nou = substr((string) file_get_contents($logEmail), $inainte);
             verifica('și nu mai pleacă niciun mesaj', false,
                 str_contains($nou, SEMN . 'vine@invalid.local'));
         }
@@ -656,7 +684,9 @@ if ($BAZA === '') {
         verifica('și rămâne aprobat', 'aprobat', ($stare->fetch()['stare_moderare'] ?? ''));
 
         if (!empty($config['dezvoltare'])) {
-            $nou = substr((string) file_get_contents($logEmail), $inainte);
+            goleșteCoada();
+            goleșteCoada();
+    $nou = substr((string) file_get_contents($logEmail), $inainte);
             verifica('fără nicio veste plecată degeaba', false,
                 str_contains($nou, SEMN . 'vine@invalid.local'));
         }
@@ -681,7 +711,9 @@ if ($BAZA === '') {
             ($stare->fetch()['stare_moderare'] ?? ''));
 
         if (!empty($config['dezvoltare'])) {
-            $nou = substr((string) file_get_contents($logEmail), $inainte);
+            goleșteCoada();
+            goleșteCoada();
+    $nou = substr((string) file_get_contents($logEmail), $inainte);
             verifica('și nu pleacă nicio veste degeaba', false,
                 str_contains($nou, SEMN . 'vine@invalid.local'));
         }

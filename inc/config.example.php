@@ -230,22 +230,26 @@ return [
     'smtp_criptare' => 'smtps',       // 'smtps' pe 465, 'tls' pe 587
 
     /**
-     * Câte mesaje pe minut duce găzduirea.
+     * Câte mesaje duce o rulare a cronului care golește coada.
      *
-     * NU E O ALEGERE DE-A NOASTRĂ, e plafonul scris în panoul găzduirii, și se
-     * schimbă odată cu ea. Trimiterile în serie (newsletterul zilnic, anunțul
-     * din admin) își țin singure pasul ăsta — vezi asteaptaRandulUrmator() din
-     * inc/posta.php. Mesajele obișnuite, cele care răspund unei apăsări de
-     * buton, nu așteaptă niciodată.
+     * NU E O ALEGERE DE-A NOASTRĂ: iese din plafonul găzduirii (zece mesaje pe
+     * minut, șase sute pe ceas) și din cât de des îți lasă ea să pornești cronul.
      *
-     * DE CE CONTEAZĂ: cine sare peste plafon nu primește un avertisment, ci i
-     * se oprește poșta pentru tot restul orei — inclusiv confirmările de cont
-     * și recuperările de parolă ale oamenilor care n-au nicio treabă cu
-     * newsletterul.
+     * La un cron DIN MINUT ÎN MINUT — `* * * * *` — opt înseamnă opt pe minut:
+     * sub plafon, cu loc rămas pentru mesajele care pleacă pe loc (confirmări de
+     * cont, recuperări de parolă). Dacă găzduirea nu lasă cron mai des de cinci
+     * minute, pui 40 și cronul la cinci minute: același ritm.
      *
-     * 0 = fără frână (server propriu).
+     * ZECE AR FI FOST FIX ȘASE SUTE PE CEAS, adică plafonul lovit din plin, fără
+     * nimic de rezervă. Opt lasă o pătrime liberă.
+     *
+     * DE CE CONTEAZĂ: cine sare peste plafon nu primește un avertisment, ci i se
+     * oprește poșta pentru tot restul orei — inclusiv confirmările de cont ale
+     * unor oameni care n-au nicio treabă cu ce s-a trimis.
+     *
+     * Vezi cron/trimite-emailuri.php și inc/coada.php.
      */
-    'email_pe_minut' => 10,
+    'emailuri_pe_rulare' => 8,
 
     // ------------------------------------------------------------ Google
     /**
