@@ -32,13 +32,25 @@ require_once __DIR__ . '/email.php';
 /**
  * Câți abonați se servesc la o rulare.
  *
- * Nu e o limită de siguranță, e o frână: găzduirile obișnuite au un plafon de
- * mesaje pe oră, iar un site care îl sare o dată se trezește cu poșta oprită
- * pentru toată ziua. Ce nu încape azi... rămâne pe mâine — și e în regulă, un
- * newsletter zilnic nu se recuperează. La numărul ăsta de oameni, plafonul nici
- * nu se atinge; cifra e aici pentru ziua în care va fi altfel.
+ * A FOST 400, ADICĂ O SINGURĂ RULARE PE ZI CARE SERVEA PE TOATĂ LUMEA. Nu se
+ * mai poate: găzduirea are un plafon de zece mesaje pe minut și șase sute pe
+ * ceas, iar patru sute plecate deodată nu doar că-l sar, ci opresc poșta
+ * site-ului pentru tot restul orei — inclusiv confirmările de cont și
+ * recuperările de parolă ale unor oameni care n-au nicio treabă cu
+ * newsletterul.
+ *
+ * CINCIZECI, CU PAS DE MELC ÎNTRE ELE. La zece pe minut, o rulare ține cinci
+ * minute și pleacă la cincizeci de oameni. Cronul trece din sfert în sfert de
+ * ceas de la 12:00 încolo (vezi cron/newsletter-zilnic.php), deci două sute pe
+ * ceas — bine sub plafon, cu loc rămas pentru mesajele obișnuite ale site-ului.
+ *
+ * ȘI SE POATE FACE AȘA DOAR FIINDCĂ ȘTAMPILA E PE OM, nu pe rulare:
+ * `newsletter_trimis_la` spune, pentru fiecare, dacă i-a plecat AZI. Deci
+ * rulările de după prima nu iau lucrurile de la capăt, ci continuă exact de
+ * unde s-a ajuns, iar nimeni nu primește de două ori. Fără ștampila aceea,
+ * împărțirea în teancuri n-ar fi fost cu putință deloc.
  */
-const NEWSLETTER_PE_RULARE = 400;
+const NEWSLETTER_PE_RULARE = 50;
 
 /** Câte evenimente se scriu în mesaj. */
 const NEWSLETTER_MAX_EVENIMENTE = 12;
@@ -364,6 +376,20 @@ function trimiteNewsletterulZilei(bool $uscat = false, ?int $clipa = null): arra
             $rezultat['sarite']++;
             continue;
         }
+
+        /**
+         * Pasul cerut de găzduire — ZECE MESAJE PE MINUT, nu mai multe.
+         *
+         * Stă DUPĂ ștampilă și ÎNAINTE de trimitere, dinadins: dacă rularea e
+         * tăiată în timpul așteptării, omul rămâne ștampilat fără să fi primit
+         * nimic, adică pierde newsletterul de azi. Pusă înainte de ștampilă, o
+         * tăiere l-ar fi lăsat neștampilat, iar rularea următoare i-ar fi
+         * trimis — dar atunci două rulări pornite deodată ar fi putut trimite
+         * amândouă, fiindcă între întrebare și ștampilă ar fi încăput șase
+         * secunde de așteptare. Dintre „nu primește azi" și „primește de două
+         * ori", se alege primul.
+         */
+        asteaptaRandulUrmator();
 
         $plecat = emailNewsletterZilnic(
             (string) $om['email'],

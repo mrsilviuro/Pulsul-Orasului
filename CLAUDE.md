@@ -735,7 +735,13 @@ inc/
                       ANUNT_PE_TRIMITERE (300) NU TAIE ÎN TĂCERE, spre deosebire
                       de frâna newsletterului: acolo cine n-a încăput azi
                       primește mâine, aici nu revine nimeni — deci pagina spune
-                      cifra ÎNAINTE de apăsare, dacă lista a crescut peste ea
+                      cifra ÎNAINTE de apăsare, dacă lista a crescut peste ea.
+                      CIFRA E 40, ȘI E MICĂ DINADINS: găzduirea duce zece
+                      mesaje pe minut, deci patruzeci înseamnă patru minute de
+                      cerere web care așteaptă cu ceasul în mână. DE AICI
+                      DECURGE CĂ PAGINA ARE UN CAPĂT — peste vreo patruzeci de
+                      abonați, un anunț n-are ce căuta într-o cerere web și îi
+                      trebuie o coadă și un cron, ca newsletterului
   multumiri.php     → e-mailul de mulțumire de după eveniment: cine îl
                       primește, când, și semnul că a plecat o singură dată
                       (evenimente.multumiri_trimise_la). Îl cheamă doar
@@ -848,6 +854,55 @@ inc/
   afisare-eveniment.php → CUM ARATĂ un eveniment pe ecran (antet, copertă,
                       caseta cu detalii, descrierea). Folosit și de event.php,
                       și de previzualizare.php — schimbă aici, nu în pagini
+  posta.php         → CUM PLEACĂ un mesaj de pe server — inc/email.php spune CE
+                      scrie în el, ăsta pe ce drum iese din casă. Erau amândouă
+                      acolo cât drumul era unul singur (mail(), două rânduri).
+                      DE CE SMTP ȘI NU mail(): pe cele mai multe găzduiri
+                      cPanel, serverul pune semnătura DKIM doar pe ce intră pe
+                      ușa din față, adică prin SMTP cu parolă; ce predă PHP
+                      direct pleacă NESEMNAT, iar azi asta e cules de Gmail
+                      aproape din reflex. Aia e cea mai mare parte din „zvonul"
+                      cu spamul — nu funcția PHP e vinovată, ci semnătura pe
+                      care ea n-o primește. Al doilea câștig: AFLI CÂND N-A
+                      MERS. mail() întoarce `true` dacă serverul local a LUAT
+                      mesajul din mână, nu dacă l-a și dus; SMTP dă înapoi vorba
+                      serverului („over quota", „relay denied"), singurul fel de
+                      a afla că ai sărit plafonul ÎNAINTE să ți se închidă
+                      contul. CE NU REZOLVĂ: fără SPF/DKIM/DMARC bine puse în
+                      DNS, tot în „Spam" ajung — întâi DNS-ul, apoi drumul.
+                      drumulPostei() desface 'auto' într-un singur loc, fiindcă
+                      întrebarea o pun trei (trimiteEmail, frâna, panoul din
+                      admin). deCeNuMergeSmtp() e o vorbă scrisă pentru un om,
+                      tot dintr-un singur loc. CĂDEREA PE mail() E TĂCUTĂ
+                      DINADINS — un site care nu mai poate confirma un cont
+                      fiindcă lipsește un dosar e mai rău — DAR SE SCRIE ÎN LOG
+                      ȘI PE PANOU: tăcută și nevăzută ar fi însemnat că cineva
+                      pune datele SMTP, vede mesajele plecând, și crede ani de
+                      zile că merg pe drumul bun. POȘTAȘUL E UNUL SINGUR, cu
+                      conexiunea ținută deschisă (SMTPKeepAlive): altfel
+                      newsletterul ar deschide cincizeci de conexiuni într-un
+                      minut, ceea ce din afară arată exact ca cineva care
+                      încearcă parole. DE AICI PARTEA PERICULOASĂ: PHPMailer NU
+                      golește singur lista de destinatari după send(), deci al
+                      doilea mesaj ar pleca și către primul om. Golirea se face
+                      la ÎNCEPUTUL fiecărei trimiteri, nu la sfârșitul celei
+                      dinainte — una uitată la sfârșit nu se vede niciodată. E
+                      cea mai urâtă scăpare cu putință (omul primește scrisoarea
+                      altcuiva) și nu s-ar vedea nicăieri: mesajele pleacă,
+                      logul scrie „trimis". O păzește o probă.
+                      TOT AICI FRÂNA: asteaptaRandulUrmator(), pasul cerut de
+                      găzduire (`email_pe_minut`). SE CHEAMĂ DOAR DIN
+                      TRIMITERILE ÎN SERIE (newsletter, anunț), niciodată
+                      dintr-un mesaj obișnuit — la o confirmare de cont nu
+                      există „mesajul dinainte", iar o pauză acolo ar ține omul
+                      uitându-se la o pagină care se învârte. Nu e o politețe:
+                      cine sare plafonul nu primește un avertisment, i se
+                      OPREȘTE POȘTA pentru tot restul orei, cu tot cu
+                      confirmările și recuperările de parolă ale unor oameni
+                      care n-au nicio treabă cu newsletterul. Când drumul e spre
+                      fișier nu se așteaptă deloc: nu există niciun server de
+                      apărat, iar o probă care ar sta două minute degeaba e o
+                      probă pe care n-o mai rulează nimeni
   email.php         → șablon unic pentru toate email-urile (table-based, inline
                       style). CASETA DE CITAT e desenată dintr-un singur loc și
                       o cer DOUĂ blocuri: `citat` (ce a scris omul — comentariul
@@ -1021,7 +1076,13 @@ cron/               → scripturi rulate din cron (doar CLI, .htaccess le bloche
                       anonimizeaza-conturi.php      — o dată pe zi
                       multumeste-participantilor.php — din oră în oră
                       aminteste-de-eveniment.php     — din oră în oră
-                      newsletter-zilnic.php         — o dată pe zi, la 12:00
+                      newsletter-zilnic.php         — din sfert în sfert de ceas,
+                        de la 12 la 17 (`0,15,30,45 12-17 * * *`). NU o dată pe
+                        zi, deși e un newsletter zilnic: găzduirea duce zece
+                        mesaje pe minut, deci lista se servește în teancuri de
+                        NEWSLETTER_PE_RULARE (50), iar rulările de după prima
+                        continuă de unde s-a ajuns. Se poate așa DOAR fiindcă
+                        ștampila e pe om, nu pe rulare
 sql/                → schema.sql + migrări numerotate (002, 003, 004, 005-google,
                       006-tine-minte, 007-setari, 008-mesaje-contact,
                       009-evenimente, 010-limita-evenimente,
@@ -1105,6 +1166,21 @@ teste/              → router.php: serverul de probă cu ADRESE FRUMOASE.
                       evenimenteleDeAzi() ar pica în orice zi în care se
                       întâmplă ceva în oraș, adică tocmai în zilele care
                       contează)
+                      test-posta.php (drumul pe care pleacă un mesaj; NU cere
+                      nici baza, nici serverul, și nu trimite nimic. Partea de
+                      SMTP se probează cu un SERVER DE MINCIUNĂ strecurat prin
+                      setSMTPInstance() — un obiect care spune „da" la tot și
+                      ține minte plicurile. Așa proba cheamă chiar
+                      trimitePrinSmtp(), pe drumul ei întreg, și singurul lucru
+                      care lipsește e firul până la găzduire. PRIMA VARIANTĂ
+                      COMPUNEA MESAJUL DE MÂNĂ ÎN PROBĂ și se proba pe sine:
+                      codul adevărat putea să nu golească destinatarii, iar
+                      proba trecea liniștită. Păzește mai presus de orice că al
+                      doilea mesaj nu pleacă și către omul dintâi. Sare singură
+                      dacă PHPMailer nu e instalat — biblioteca nu e în repo,
+                      iar o probă care ar cere-o ar fi picat pe orice mașină pe
+                      care încă n-a fost pusă, adică ar fi învățat pe toată
+                      lumea s-o sară)
                       test-anunt.php (anunțul scris de mână; cere baza, iar
                       partea de HTTP cere și serverul — se sare singură. Ca
                       proba newsletterului, stinge bifa de vești la toți membrii
@@ -1154,7 +1230,18 @@ teste/              → router.php: serverul de probă cu ADRESE FRUMOASE.
                       aceeași cifră ca antetul, și că la a doua cerere cifra e
                       alta)
 private/            → loguri (emailuri-trimise.log), protejat prin .htaccess
-.htaccess           → CEL DIN RĂDĂCINĂ nu închide nimic (celelalte șase, da):
+PHPMailer/          → biblioteca de trimis e-mailuri, ÎNCĂRCATĂ DE MÂNĂ de la
+                      https://github.com/PHPMailer/PHPMailer, așa încât să
+                      existe `PHPMailer/src/PHPMailer.php`. NU E ÎN REPO și nu
+                      trebuie să ajungă: e cod străin, ținut la zi de altcineva,
+                      iar în istoria noastră ar fi înghețat la versiunea din
+                      ziua în care a fost pus. `.gitignore` lasă să urce
+                      SINGURUL fișier al nostru de acolo — `.htaccess`-ul care
+                      închide dosarul pentru web — ca încuietoarea să fie la
+                      locul ei încă dinainte să ajungă biblioteca. Cât timp
+                      lipsește, mesajele pleacă mai departe prin mail() și se
+                      scrie un rând în logul de erori: vezi deCeNuMergeSmtp()
+.htaccess           → CEL DIN RĂDĂCINĂ nu închide nimic (celelalte șapte, da):
                       https obligatoriu, mod_deflate pe text (style.css 180 KB
                       + main.js 230 KB → sub 100 împachetate), cache de un an
                       pe css/js — au voie fiindcă adresa poartă `?v=`, vezi
@@ -1197,6 +1284,15 @@ assets/css/style.css, assets/js/main.js, assets/img/
 - `fus_orar => 'Europe/Bucharest'`
 - `url_site` — fără `/` la final
 - `email_expeditor` — trebuie să fie pe domeniul propriu (SPF/DKIM), altfel spam
+- `smtp_gazda` / `smtp_port` / `smtp_user` / `smtp_parola` / `smtp_criptare` —
+  serverul de poștă al găzduirii. `smtp_user` TREBUIE să fie aceeași adresă ca
+  `email_expeditor`: te conectezi cu una și scrii „From" cu alta, iar DMARC
+  tocmai asta cerne. Nu e o piedică (mesajul pleacă), dar e o strâmbătate, și de
+  aceea se scrie pe panoul din admin — `adreseleSePotrivesc()`. Goale = se cade
+  pe `mail()`, cu un rând în logul de erori
+- `email_pe_minut` — plafonul găzduirii, NU o alegere de-a noastră. Trimiterile
+  în serie își țin singure pasul ăsta (`asteaptaRandulUrmator`); mesajele
+  obișnuite nu așteaptă niciodată. 0 = fără frână
 - `google_client_id` / `google_client_secret` — goale = butoanele Google nu se afișează deloc
 
 ## Autentificare — ce trebuie respectat mereu

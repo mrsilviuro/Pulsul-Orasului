@@ -179,8 +179,10 @@ return [
     /**
      * Cum pleacă mesajele:
      *
-     *   'auto'    — mail() pe site-ul public, fișier în dezvoltare (implicit)
-     *   'mail'    — mereu prin funcția mail() a serverului
+     *   'auto'    — fișier în dezvoltare; pe site-ul public SMTP dacă datele de
+     *               mai jos sunt trecute, altfel mail() (implicit)
+     *   'smtp'    — prin serverul de poștă al găzduirii, cu parolă
+     *   'mail'    — prin funcția mail() a serverului
      *   'fisier'  — nu se trimite nimic; mesajele se scriu în
      *               private/emailuri-trimise.log, iar ultimul și în
      *               private/ultimul-email.html, ca să-i poți vedea aspectul
@@ -188,6 +190,62 @@ return [
      * În XAMPP nu există server de e-mail, de aceea 'auto' scrie în fișier.
      */
     'email_metoda' => 'auto',
+
+    /**
+     * SERVERUL DE POȘTĂ AL GĂZDUIRII (SMTP).
+     *
+     * DE CE NU E DE AJUNS mail(). Pe cele mai multe găzduiri de tip cPanel,
+     * serverul pune semnătura DKIM doar pe mesajele care intră pe ușa din față
+     * — adică prin SMTP, cu parolă. Ce predă PHP direct pleacă nesemnat, iar un
+     * mesaj nesemnat e cules azi de Gmail și Outlook aproape din reflex. Asta e
+     * cea mai mare parte din povestea cu „mail() ajunge în spam": nu funcția e
+     * de vină, ci semnătura pe care ea n-o primește.
+     *
+     * DAR SINGUR NU FACE MINUNI: dacă în DNS-ul domeniului nu stau SPF, DKIM și
+     * DMARC cum trebuie, mesajele ajung tot în „Spam". Întâi DNS-ul, apoi asta.
+     *
+     * Valorile se iau din panoul găzduirii, de la „Connect Devices" al căsuței.
+     * `smtp_user` TREBUIE să fie aceeași adresă ca `email_expeditor` de mai sus:
+     * dacă te conectezi cu una și scrii „From" cu alta, verificările de
+     * aliniere (DMARC) se supără, iar unele servere refuză de-a dreptul.
+     *
+     * Portul 465 merge cu 'smtps' (TLS de la prima vorbă) — așa scrie în panou.
+     * Portul 587 merge cu 'tls' (conexiune curată, ridicată la TLS pe urmă).
+     *
+     * BIBLIOTECA NU VINE CU SITE-UL: se descarcă de la
+     * https://github.com/PHPMailer/PHPMailer și se pune în „PHPMailer/" la
+     * rădăcina site-ului, așa încât să existe „PHPMailer/src/PHPMailer.php".
+     * Cât timp lipsește, mesajele pleacă mai departe prin mail() și se scrie un
+     * rând în logul de erori — vezi deCeNuMergeSmtp() din inc/posta.php. Starea
+     * se vede și în zona de administrare, jos pe panou.
+     *
+     * PAROLA ASTA E O PAROLĂ ADEVĂRATĂ: cine o are poate trimite mesaje în
+     * numele domeniului. Fișierul de față nu urcă niciodată pe GitHub — vezi
+     * .gitignore — și nu are ce căuta în altă parte.
+     */
+    'smtp_gazda'    => '',            // ex: mail.pulsulorasului.ro
+    'smtp_port'     => 465,
+    'smtp_user'     => '',            // aceeași adresă ca 'email_expeditor'
+    'smtp_parola'   => '',
+    'smtp_criptare' => 'smtps',       // 'smtps' pe 465, 'tls' pe 587
+
+    /**
+     * Câte mesaje pe minut duce găzduirea.
+     *
+     * NU E O ALEGERE DE-A NOASTRĂ, e plafonul scris în panoul găzduirii, și se
+     * schimbă odată cu ea. Trimiterile în serie (newsletterul zilnic, anunțul
+     * din admin) își țin singure pasul ăsta — vezi asteaptaRandulUrmator() din
+     * inc/posta.php. Mesajele obișnuite, cele care răspund unei apăsări de
+     * buton, nu așteaptă niciodată.
+     *
+     * DE CE CONTEAZĂ: cine sare peste plafon nu primește un avertisment, ci i
+     * se oprește poșta pentru tot restul orei — inclusiv confirmările de cont
+     * și recuperările de parolă ale oamenilor care n-au nicio treabă cu
+     * newsletterul.
+     *
+     * 0 = fără frână (server propriu).
+     */
+    'email_pe_minut' => 10,
 
     // ------------------------------------------------------------ Google
     /**

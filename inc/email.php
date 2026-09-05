@@ -29,6 +29,7 @@ declare(strict_types=1);
  */
 
 require_once __DIR__ . '/bootstrap.php';
+require_once __DIR__ . '/posta.php';   // pe ce drum pleacă mesajul
 
 /* ============================ TRIMITEREA =============================== */
 
@@ -145,28 +146,45 @@ function trimiteEmail(string $catre, string $subiect, array $blocuri,
 
     /* --------------------------- Plecarea ----------------------------- */
 
-    $metoda = (string) ($config['email_metoda'] ?? 'auto');
-
-    if ($metoda === 'auto') {
-        // În XAMPP nu există server de e-mail, deci mail() ar da mereu greș.
-        $metoda = !empty($config['dezvoltare']) ? 'fisier' : 'mail';
-    }
+    /* Desfacerea lui 'auto' stă în inc/posta.php, fiindcă aceeași întrebare o
+       pun și frâna de la trimiterile în serie, și rândul de stare din admin. */
+    $metoda = drumulPostei();
 
     if ($metoda === 'fisier') {
         return scrieEmailInFisier($catre, $subiect, $textAnteturi, $corp);
     }
 
     /**
-     * Al cincilea parametru pune adresa și în „plicul" mesajului, nu doar în
-     * antetul From. Fără el, serverul trimite de pe adresa contului de
-     * găzduire (ceva de forma user@srv123.host.ro), care nu se potrivește cu
-     * domeniul nostru — iar nepotrivirea aia e exact ce caută verificarea SPF
-     * când hotărăște dacă mesajul e spam.
+     * CĂDEREA PE DRUMUL VECHI SE SCRIE ÎN LOG, DE FIECARE DATĂ.
+     *
+     * Cerut anume SMTP și lipsind ceva, mesajul pleacă tot — un site care nu
+     * mai poate confirma un cont fiindcă lipsește un dosar e mai rău decât unul
+     * ale cărui mesaje ajung în „Spam". Dar TĂCUT ar fi fost cel mai rău dintre
+     * toate: cineva ar fi pus datele SMTP în config, ar fi văzut că mesajele
+     * pleacă, și ar fi crezut ani de zile că merg pe drumul cel bun.
      */
-    $plecat = @mail($catre, $subiectCodat, $mesaj, $textAnteturi, '-f' . $expeditor);
+    if ($metoda === 'smtp' && ($piedica = deCeNuMergeSmtp()) !== '') {
+        error_log('PulsulOrasului: SMTP e cerut, dar nu merge — mesajul pleacă '
+                . 'prin mail(). ' . $piedica);
+        $metoda = 'mail';
+    }
 
-    if (!$plecat) {
-        error_log('PulsulOrasului: mail() a dat greș pentru un mesaj de tip „' . $subiect . '".');
+    if ($metoda === 'smtp') {
+        $plecat = trimitePrinSmtp($catre, $subiect, $corp, $expeditor,
+                                  $numeExpedior, $raspunsCatre, $anteturiInPlus);
+    } else {
+        /**
+         * Al cincilea parametru pune adresa și în „plicul" mesajului, nu doar
+         * în antetul From. Fără el, serverul trimite de pe adresa contului de
+         * găzduire (ceva de forma user@srv123.host.ro), care nu se potrivește
+         * cu domeniul nostru — iar nepotrivirea aia e exact ce caută
+         * verificarea SPF când hotărăște dacă mesajul e spam.
+         */
+        $plecat = @mail($catre, $subiectCodat, $mesaj, $textAnteturi, '-f' . $expeditor);
+
+        if (!$plecat) {
+            error_log('PulsulOrasului: mail() a dat greș pentru un mesaj de tip „' . $subiect . '".');
+        }
     }
 
     // În dezvoltare păstrăm și o copie, ca să se poată citi ce s-a trimis.

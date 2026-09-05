@@ -42,11 +42,19 @@ require_once __DIR__ . '/email.php';
  * trimitere și o scrie pe față (vezi admin-anunt.php): dacă lista a crescut
  * peste ea, omul de casă află înainte să apese, nu după.
  *
- * Trei sute e cam cât duce o cerere de PHP într-un minut de mail() și cam cât
- * plafonul de mesaje pe oră al unei găzduiri obișnuite. La numărul de acum al
- * membrilor nici nu se atinge; cifra e aici pentru ziua în care va fi altfel.
+ * A FOST 300, ȘI ERA O CIFRĂ SCOASĂ DIN BURTĂ. Găzduirea duce zece mesaje pe
+ * minut, deci trei sute înseamnă o JUMĂTATE DE ORĂ de cerere web care așteaptă
+ * cu ceasul în mână — plus plafonul de șase sute pe ceas sărit în drum, adică
+ * poșta site-ului oprită pentru toată lumea.
+ *
+ * PATRUZECI e cât încape cinstit într-o apăsare de buton: patru minute, cu
+ * pasul de melc cu tot. Nu e o cifră frumoasă, e cea mai mare care nu minte.
+ *
+ * DE AICI DECURGE CĂ PAGINA ASTA ARE UN CAPĂT: peste vreo patruzeci de abonați,
+ * un anunț nu mai are ce căuta într-o cerere web și îi trebuie o coadă și un
+ * cron, ca newsletterului. Cât timp nu există, tăietura se spune pe față.
  */
-const ANUNT_PE_TRIMITERE = 300;
+const ANUNT_PE_TRIMITERE = 40;
 
 /**
  * Cine primește anunțul.
@@ -143,6 +151,13 @@ function trimiteAnuntul(string $titlu, string $mesaj, ?array $doarCatre = null):
     $rezultat = ['catre' => count($oameni), 'trimise' => 0, 'picate' => 0];
 
     foreach ($oameni as $om) {
+        /**
+         * Pasul cerut de găzduire. La o probă către sine e un singur mesaj,
+         * deci nu se așteaptă nimic — funcția socotește din clipa mesajului
+         * DINAINTE, iar la primul nu există unul.
+         */
+        asteaptaRandulUrmator();
+
         $plecat = emailAnuntCatreMembri(
             (string) $om['email'],
             (string) $om['prenume'],

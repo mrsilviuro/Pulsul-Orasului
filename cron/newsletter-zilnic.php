@@ -17,8 +17,26 @@ declare(strict_types=1);
  *     php cron/newsletter-zilnic.php
  *     php cron/newsletter-zilnic.php --uscat   (arată, nu trimite)
  *
- * DIN CRON (cPanel → Cron Jobs), O DATĂ PE ZI, LA 12:00:
- *     0 12 * * *  php /home/UTILIZATOR/public_html/cron/newsletter-zilnic.php
+ * DIN CRON (cPanel → Cron Jobs), DIN SFERT ÎN SFERT DE CEAS, DE LA 12 LA 17:
+ *     0,15,30,45 12-17 * * *  php /home/UTILIZATOR/public_html/cron/newsletter-zilnic.php
+ *
+ * DE CE DE MAI MULTE ORI PE ZI, DACĂ E UN NEWSLETTER ZILNIC. Fiindcă găzduirea
+ * duce zece mesaje pe minut și șase sute pe ceas. O rulare care ar servi toată
+ * lista deodată sare plafonul, iar cine îl sare nu primește un avertisment: i se
+ * oprește poșta pentru tot restul orei — cu tot cu confirmările de cont și
+ * recuperările de parolă ale unor oameni care n-au nicio treabă cu newsletterul.
+ * Deci lista se servește în teancuri de NEWSLETTER_PE_RULARE (50), cu pas de
+ * melc între mesaje, iar rulările de după prima continuă de unde s-a ajuns.
+ *
+ * SE POATE AȘA DOAR FIINDCĂ ȘTAMPILA E PE OM, nu pe rulare: cine a primit azi
+ * nu mai intră în teancul următor (vezi abonatiiNewsletterului). Rulările în
+ * plus dintr-o zi în care lista s-a terminat din prima nu fac nimic și nu costă
+ * nimic — o interogare care nu găsește pe nimeni.
+ *
+ * PÂNĂ LA 17, nu toată noaptea: un newsletter care spune „ce se întâmplă azi"
+ * și ajunge la 23:00 e o batjocură. Dacă lista a crescut atât încât să nu
+ * încapă în cele cinci ceasuri, nu se mai lungește fereastra — atunci chiar e
+ * momentul unui serviciu de trimis e-mailuri.
  *
  * De ce la prânz și nu dimineața: la 12 se știe deja cum e ziua — au apucat să
  * se scrie și anunțurile puse în cursul dimineții — iar pentru ceva de la 19:00
@@ -151,6 +169,12 @@ if ($uscat) {
 }
 
 $r = trimiteNewsletterulZilei(false, $acum);
+
+/* Conexiunea cu serverul de poștă a stat deschisă tot teancul (vezi postasul()
+   din inc/posta.php). Aici s-a terminat treaba, deci se închide — o cerere web
+   n-ar avea nevoie, PHP închide oricum tot la sfârșit, dar o rulare de cron
+   ține minute bune și n-are de ce să lase o legătură atârnând. */
+inchidePostasul();
 
 scrieInLogulNewsletterului(
     $cateEvenimente($r['evenimente']) . ' după ' . date('H:i', $acum) . ', '

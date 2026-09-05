@@ -5463,6 +5463,39 @@ a.admin-nav__link:hover { background: var(--bg-soft); color: var(--text); }
   font-size: 12.5px; line-height: 1.6; color: var(--text-faint);
 }
 
+/* ---------------------------- starea poștei -----------------------------
+   Sub comutatorul de șantier, și scrisă la fel de stins ca permisul de
+   dispozitiv: e o lămurire despre cum e legat serverul, nu ceva de apăsat.
+   Roșie doar când mesajele pleacă nesemnate — atunci chiar e de făcut ceva. */
+.posta {
+  margin-top: 18px;
+  padding: 16px 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.posta--rau {
+  border-color: rgba(224, 57, 59, .45);
+  background: rgba(224, 57, 59, .06);
+}
+
+.posta__titlu { font-size: 15px; margin: 0 0 6px; }
+.posta__vorba {
+  margin: 0 0 6px;
+  font-size: 13px; line-height: 1.6; color: var(--text-soft);
+}
+.posta__vorba:last-child { margin-bottom: 0; }
+.posta__vorba--mic { font-size: 12.5px; color: var(--text-faint); }
+/* Nu roșu: poșta MERGE, doar e strâmb pus. Roșul e pentru „nu pleacă semnat". */
+.posta__vorba--atentie { color: #a1631a; font-weight: 600; }
+[data-theme="dark"] .posta__vorba--atentie { color: #e0a83c; }
+
+.posta__vorba code {
+  padding: 1px 5px; border-radius: 5px;
+  background: var(--surface-2);
+  font-size: 12px;
+}
+
 /* --------------------------- anunțul pe e-mail --------------------------
    Singura pagină de administrare care nu e un tabel: aici se SCRIE ceva, nu se
    hotărăște ceva despre rânduri. De aceea are lățimea unui text de citit, nu a

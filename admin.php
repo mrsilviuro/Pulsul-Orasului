@@ -14,6 +14,7 @@ declare(strict_types=1);
  */
 
 require_once __DIR__ . '/inc/admin.php';
+require_once __DIR__ . '/inc/posta.php';   // pentru rândul de stare a poștei
 
 $membru = cerePazaDeStaff('/admin.php');
 
@@ -182,6 +183,72 @@ require __DIR__ . '/inc/antet.php';
           permisul se scrie singur la prima cerere a unui om al casei.</p>
         <?php endif; ?>
       </div>
+    </section>
+
+    <!-- ========================= STAREA POȘTEI =========================
+      DE CE E O LINIE PE ECRAN, ȘI NU DOAR UN RÂND ÎN LOG. Căderea de pe SMTP
+      pe mail() e tăcută dinadins — un site care nu mai poate confirma un cont
+      fiindcă lipsește un dosar ar fi mai rău. Dar tăcută ȘI nevăzută înseamnă
+      că cineva pune datele în config, vede că mesajele pleacă, și crede ani de
+      zile că merg pe drumul cel bun. Aici scrie negru pe alb pe care drum merg,
+      fără SSH și fără să caute prin loguri.
+    ============================================================== -->
+    <?php
+      $drumulPostei  = drumulPostei();
+      $piedicaPostei = $drumulPostei === 'smtp' ? '' : deCeNuMergeSmtp();
+    ?>
+    <section class="posta<?= $drumulPostei === 'mail' ? ' posta--rau' : '' ?>"
+             aria-labelledby="posta-titlu">
+      <h2 class="posta__titlu" id="posta-titlu">
+        <?php if ($drumulPostei === 'smtp'): ?>
+        Mesajele pleacă prin serverul de poștă
+        <?php elseif ($drumulPostei === 'fisier'): ?>
+        Mesajele nu pleacă nicăieri
+        <?php else: ?>
+        Mesajele pleacă prin <code>mail()</code>
+        <?php endif; ?>
+      </h2>
+
+      <?php if ($drumulPostei === 'smtp'): ?>
+      <p class="posta__vorba">
+        Conectat la <code><?= h((string) setarileSmtp()['gazda']) ?></code>, ca
+        <code><?= h((string) setarileSmtp()['user']) ?></code>. Așa primesc
+        semnătura DKIM a găzduirii — drumul pe care e cel mai puțin probabil să
+        ajungă în „Spam".
+      </p>
+
+      <?php if (!adreseleSePotrivesc()): ?>
+      <!-- Nu e o piedică — mesajele pleacă — dar e taman strâmbătatea din care
+           se nasc mesajele puse deoparte de DMARC, și e greu de bănuit dacă
+           nu-ți spune cineva. -->
+      <p class="posta__vorba posta__vorba--atentie">
+        Dar te conectezi ca <code><?= h((string) setarileSmtp()['user']) ?></code>
+        și scrii de pe <code><?= h((string) ($config['email_expeditor'] ?? '')) ?></code>.
+        Verificarea DMARC le vrea aceleași — pune în <code>smtp_user</code>
+        chiar adresa din <code>email_expeditor</code>.
+      </p>
+      <?php endif; ?>
+
+      <?php elseif ($drumulPostei === 'fisier'): ?>
+      <p class="posta__vorba">
+        E pornit modul de dezvoltare, iar mesajele se scriu în
+        <code>private/emailuri-trimise.log</code>. Pe site-ul adevărat,
+        <code>dezvoltare</code> trebuie să fie <code>false</code>.
+      </p>
+
+      <?php else: ?>
+      <p class="posta__vorba"><?= h($piedicaPostei) ?></p>
+      <p class="posta__vorba">
+        Pleacă mai departe, dar nesemnate cu DKIM, deci o parte bună vor ajunge
+        în „Spam".
+      </p>
+      <?php endif; ?>
+
+      <p class="posta__vorba posta__vorba--mic">
+        Trimiterile în serie țin pasul de
+        <strong><?= (int) emailuriPeMinut() ?></strong> mesaje pe minut, cât
+        duce găzduirea. Mesajele obișnuite nu așteaptă niciodată.
+      </p>
     </section>
   </div>
 </main>

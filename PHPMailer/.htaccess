@@ -1,0 +1,24 @@
+# =========================================================================
+#  Aici se pune biblioteca PHPMailer: descărcată de la
+#  https://github.com/PHPMailer/PHPMailer, așa încât să existe
+#  „PHPMailer/src/PHPMailer.php".
+#
+#  NIMIC DIN DOSARUL ĂSTA NU SE SERVEȘTE PRIN WEB. Fișierele ei sunt cerute de
+#  PHP de pe disc (vezi inc/posta.php), iar asta n-are nicio treabă cu ce se
+#  poate deschide din browser. Arhiva de pe GitHub vine însă cu „examples/",
+#  „test/" și un „composer.json" care spune ce versiune folosim — lucruri care
+#  n-au ce căuta la vedere, iar versiunea unei biblioteci scrisă pe față e
+#  taman ce caută cine adună ținte după biblioteci vechi.
+#
+#  Fișierul ăsta e SINGURUL din dosar care urcă pe GitHub (vezi .gitignore):
+#  biblioteca e cod străin, se ține la zi de altcineva, și se încarcă de mână.
+#  Așa, încuietoarea e la locul ei încă dinainte să ajungă ea aici.
+# =========================================================================
+
+<IfModule mod_authz_core.c>
+    Require all denied
+</IfModule>
+<IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+</IfModule>

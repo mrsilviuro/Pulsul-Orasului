@@ -7,6 +7,14 @@ private/*
 !private/.htaccess
 !private/.gitignore
 
+# Biblioteca PHPMailer, încărcată de mână de la
+# https://github.com/PHPMailer/PHPMailer. E cod străin, ținut la zi de
+# altcineva — n-are ce căuta în istoria repo-ului nostru, unde ar fi înghețat
+# la versiunea din ziua în care a fost adăugat. Urcă doar încuietoarea, ca ea
+# să fie la locul ei încă dinainte să ajungă biblioteca acolo.
+PHPMailer/*
+!PHPMailer/.htaccess
+
 # Fișiere lăsate în urmă de editoare și de sistem
 .DS_Store
 Thumbs.db
