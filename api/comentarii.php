@@ -361,18 +361,24 @@ function instiinteazaDeAnuntImportant(array $eveniment, array $rand, int $autorI
     $adresa = urlIntreg(urlEveniment((string) $eveniment['slug'])) . '#c' . (int) $rand['id'];
     $autor  = numeleDinComentariu($rand);
 
+    /* Acordul („organizatoarea evenimentului") se ia din același rând ca
+       numele, prin sexAfisat: la un cont golit numele e „Utilizator șters",
+       iar acordul trebuie să meargă cu el. */
+    $sexAutor = sexAfisat($rand['sex_cont'] ?? null, $rand['stare_cont'] ?? null);
+
     /**
      * LA RÂND: un eveniment cu treizeci de înscriși ar fi însemnat treizeci de
      * mesaje trimise pe loc, dintr-o cerere web, în timp ce organizatorul se
      * uită la butonul „Trimite". Acum se scriu treizeci de rânduri și pagina
      * răspunde. Vezi laCoada() din inc/coada.php.
      */
-    laCoada(static function () use ($oameni, $autor, $eveniment, $rand, $adresa) {
+    laCoada(static function () use ($oameni, $autor, $sexAutor, $eveniment, $rand, $adresa) {
         foreach ($oameni as $om) {
             emailComentariuImportant(
                 (string) $om['email'],
                 (string) $om['prenume'],
                 $autor,
+                $sexAutor,
                 (string) $eveniment['titlu'],
                 (string) $rand['text'],
                 $adresa
@@ -416,7 +422,12 @@ function instiinteazaDeComentariu(array $eveniment, array $rand, ?array $catre, 
         numeleDinComentariu($rand),
         (string) $eveniment['titlu'],
         (string) $rand['text'],
-        $adresa
+        $adresa,
+        /* Acordul e cu CEL CARE PRIMEȘTE („ești organizatoarea evenimentului"),
+           nu cu cel care a scris comentariul. Contul lui e activ oricum —
+           interogarea cere `stare = 'activ'` —, deci nu se pune întrebarea
+           despre contul șters. */
+        sexAfisat((string) ($om['sex'] ?? ''))
     ));
 }
 

@@ -1466,6 +1466,31 @@ sistem. Regulile care s-au strâns din trecerea de purificare:
   „Nimic nu e pierdut: intră pe pagina de editare…".
 - **Un singur nume pentru un lucru**: „eveniment", nu „activitate"; „publică",
   nu „postează"; „părere", nu „feedback".
+- **ACORDUL SE FACE DUPĂ OM, nu la masculin din obișnuință.** „P. Camelia, pe
+  care îl urmărești" a plecat așa într-un e-mail adevărat. Litera după care se
+  scrie vine din `sexAfisat()` (inc/validare.php), SORA lui `numeAfisat()` — se
+  cheamă ÎMPREUNĂ, una lângă alta, fiindcă numele și acordul trebuie luate din
+  ACELAȘI rând. Funcțiile de e-mail primesc sexul ca parametru FĂRĂ valoare din
+  lipsă, dinadins: cine uită să-l dea află la scriere, nu din cutia poștală a
+  cuiva.
+  ATENȚIE, DOI OAMENI ÎNTR-O FRAZĂ: la anulare („Organizatoarea a fost nevoită
+  … erai înscrisă") și la scoaterea de pe listă („Ai fost scoasă … de către
+  organizatorul evenimentului") acordurile se fac după oameni DEOSEBIȚI. Scrise
+  după același sex, unul din două iese greșit mereu.
+  CONTUL GOLIT SE SCRIE LA MASCULIN, oricât ar scrie în bază: numele lui e
+  „Utilizator șters", o vorbă masculină, iar anonimizarea NU atinge coloana
+  `sex`. Fără regula asta ieșea „Utilizator șters, pe care o urmărești" — două
+  cuvinte care se ceartă, despre un om care tocmai ceruse să nu se mai spună
+  nimic despre el. O ține tot `sexAfisat()`, dintr-un singur loc.
+  CE NU SE ATINGE: acordul cu EVENIMENTUL („l-a anulat") — acela e masculin
+  oricine l-ar fi pus la cale; „te-ai înscris" și „ai fost" (perfect compus, nu
+  se acordă niciodată); și „un membru al echipei", care dinadins nu spune cine.
+  „ești membru pe PulsulOrasului.Ro" din subsolul fiecărui mesaj rămâne așa:
+  acolo „membru" e vorba generică, nu una despre bărbați.
+  PROBELE SE UITĂ LA VORBE, cu oameni de amândouă felurile: test-validare
+  (`sexAfisat` însuși), test-urmariri, test-anulare, test-comentarii,
+  test-participanti. Toate probele de dinainte foloseau numai bărbați — de
+  aceea greșeala a trăit atât.
 - **MESAJELE DE CÂMP SUNT SCRISE DE DOUĂ ORI**, o dată în `inc/validare.php` și
   o dată în `assets/js/main.js` (verificarea din browser). SCHIMBATE ÎNTR-UN
   SINGUR LOC, omul citește o vorbă înainte de trimitere și alta după, pe

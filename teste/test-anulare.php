@@ -180,7 +180,9 @@ if (empty($config['dezvoltare'])) {
         'Sâmbătă, 22 august 2026',
         'S-a stricat vremea și nu avem unde ne adăposti.',
         'https://exemplu.test/index.php',
-        true
+        true,
+        'M',   // Radu, cel care citește
+        'F'    // Ioana, cea care a anulat
     );
 
     verifica('mesajul pleacă', true, $plecat);
@@ -217,7 +219,7 @@ if (empty($config['dezvoltare'])) {
     emailAnulareEveniment(
         SEMN . 'uita@invalid.local', 'Elena', 'Alergare de seară',
         'Sâmbătă, 22 august 2026', 'Motiv oarecare de probă.',
-        'https://exemplu.test/index.php', false
+        'https://exemplu.test/index.php', false, 'F', 'F'
     );
 
     goleșteCoada();
@@ -225,6 +227,18 @@ if (empty($config['dezvoltare'])) {
 
     verifica('cui era doar interesat i se spune altfel', true,
         str_contains($nou, 'știam că erai interesat'));
+
+    /**
+     * ACORDUL SE FACE DUPĂ DOI OAMENI DEOSEBIȚI, în aceeași propoziție: cea
+     * care a anulat (Ioana) și cea care citește (Elena). Scrise amândouă la
+     * masculin — cum erau —, mesajul îi spunea Elenei „erai interesat" despre
+     * un eveniment pe care „Organizatorul a fost nevoit" să-l anuleze, deși
+     * amândouă sunt femei.
+     */
+    verifica('și la feminin, fiindcă Elena e femeie', true,
+        str_contains($nou, 'erai interesată'));
+    verifica('iar cea care a anulat, la fel',        true,
+        str_contains($nou, 'Organizatoarea l-a anulat'));
     verifica('și nu i se spune că era pe listă', false,
         str_contains((string) preg_replace('/\s+/u', ' ', $nou), 'erai înscris pe listă'));
 
@@ -233,7 +247,7 @@ if (empty($config['dezvoltare'])) {
     emailAnulareEveniment(
         SEMN . 'vine@invalid.local', 'Radu', 'Test <b>gras</b>',
         '', 'Motiv cu <script>alert(1)</script> în el.',
-        'https://exemplu.test/index.php', true
+        'https://exemplu.test/index.php', true, 'M', 'F'
     );
 
     goleșteCoada();

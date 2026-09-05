@@ -931,6 +931,78 @@ verifica('și cel doar interesat',      true,  in_array($strain, $iduri, true));
 verifica('organizatorul, nu',          false, in_array($organizator, $iduri, true));
 verifica('nici contul golit',          false, in_array($participant, $iduri, true));
 
+echo "\n=== ACORDUL DIN E-MAILURI ===\n";
+
+/**
+ * CUM SE SCRIE DESPRE UN OM, în cele două mesaje care pleacă de sub un
+ * comentariu. Se cheamă funcțiile de e-mail de-a dreptul: aici se probează
+ * VORBELE, iar cine le duce e treaba altei suite.
+ *
+ * Ce a fost stricat: „organizatorul evenimentului" scris la fel pentru
+ * oricine. La un anunț important pus de o femeie ieșea „P. Ioana,
+ * organizatorul evenimentului", iar celui care primea vestea despre un
+ * comentariu nou i se spunea „ești organizatorul" chiar dacă era ea.
+ */
+global $config;
+
+$logEmail = __DIR__ . '/../private/emailuri-trimise.log';
+
+if (empty($config['dezvoltare'])) {
+    echo "  (`dezvoltare` e oprit în config.php — partea asta s-a sărit)\n";
+} else {
+    /** Ce a intrat în log de la o trimitere, cu spațiile strânse. */
+    $scrisIn = static function (callable $ce) use ($logEmail): string {
+        $de_la = is_file($logEmail) ? (int) filesize($logEmail) : 0;
+        $ce();
+
+        return (string) preg_replace('/\s+/u', ' ',
+            substr((string) file_get_contents($logEmail), $de_la));
+    };
+
+    /* --- anunțul important: acordul e cu cel care l-a SCRIS --- */
+    $text = $scrisIn(static fn () => emailComentariuImportant(
+        'ea@invalid.local', 'Radu', 'P. Ioana', 'F',
+        'Ieșire de probă', 'Ne mutăm pe terenul de alături.', 'https://exemplu.test/'));
+
+    verifica('anunț de la o femeie: „organizatoarea"', true,
+        str_contains($text, 'P. Ioana, organizatoarea evenimentului'));
+    verifica('fără „organizatorul" rătăcit',           false,
+        str_contains($text, ', organizatorul evenimentului'));
+
+    $text = $scrisIn(static fn () => emailComentariuImportant(
+        'el@invalid.local', 'Ioana', 'P. Radu', 'M',
+        'Ieșire de probă', 'Ne mutăm pe terenul de alături.', 'https://exemplu.test/'));
+
+    verifica('de la un bărbat: „organizatorul"', true,
+        str_contains($text, 'P. Radu, organizatorul evenimentului'));
+
+    /* --- comentariul nou: acordul e cu cel care CITEȘTE --- */
+    $text = $scrisIn(static fn () => emailComentariuNou(
+        'ea@invalid.local', 'Ioana', 'comentariu', 'P. Radu',
+        'Ieșire de probă', 'Ce faină pare!', 'https://exemplu.test/', 'F'));
+
+    verifica('vestea către o organizatoare', true,
+        str_contains($text, 'ești organizatoarea evenimentului'));
+
+    $text = $scrisIn(static fn () => emailComentariuNou(
+        'el@invalid.local', 'Radu', 'comentariu', 'P. Ioana',
+        'Ieșire de probă', 'Ce faină pare!', 'https://exemplu.test/', 'M'));
+
+    verifica('și către un organizator', true,
+        str_contains($text, 'ești organizatorul evenimentului'));
+
+    /**
+     * LA UN RĂSPUNS NU SE SPUNE NIMIC DESPRE ROL, deci acordul n-are ce
+     * strica: încheierea e alta, despre bifa din setări.
+     */
+    $text = $scrisIn(static fn () => emailComentariuNou(
+        'ea@invalid.local', 'Ioana', 'raspuns', 'P. Radu',
+        'Ieșire de probă', 'Da, vin!', 'https://exemplu.test/', 'F'));
+
+    verifica('la un răspuns nu se pomenește rolul', false,
+        str_contains($text, 'organizator'));
+}
+
 /* =========================== curățenie ============================= */
 
 curata();

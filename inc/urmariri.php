@@ -179,7 +179,7 @@ function instiinteazaUrmaritorii(int $evenimentId): int
                 e.ora_inceput, e.data_eveniment, e.membru_id, e.stare_moderare,
                 c.nume AS categorie, c.imagine_default,
                 m.nume AS org_nume, m.prenume AS org_prenume, m.stare AS org_stare,
-                m.permalink AS org_permalink
+                m.permalink AS org_permalink, m.sex AS org_sex
            FROM evenimente e
            JOIN categorii c ON c.id = e.categorie_id
            JOIN membri m    ON m.id = e.membru_id
@@ -236,6 +236,11 @@ function instiinteazaUrmaritorii(int $evenimentId): int
         ? NUME_CONT_STERS
         : numeAfisat((string) $ev['org_nume'], (string) $ev['org_prenume']);
 
+    /* Acordul se ia ÎMPREUNĂ cu numele, din același rând: „X, pe care o
+       urmărești". La un cont golit, sexAfisat() dă 'M', ca acordul să meargă
+       cu „Utilizator șters". */
+    $sexCine = sexAfisat($ev['org_sex'] ?? null, $ev['org_stare'] ?? null);
+
     $plecate = 0;
 
     /**
@@ -253,12 +258,13 @@ function instiinteazaUrmaritorii(int $evenimentId): int
      * anunț respins și aprobat din nou tot nu scrie de două ori acelorași
      * oameni.
      */
-    laCoada(static function () use (&$plecate, $oameni, $cine, $randuri, $ev) {
+    laCoada(static function () use (&$plecate, $oameni, $cine, $sexCine, $randuri, $ev) {
         foreach ($oameni as $om) {
             if (emailEvenimentDeLaUrmarit(
                 (string) $om['email'],
                 (string) $om['prenume'],
                 $cine,
+                $sexCine,
                 $randuri[0],
                 urlIntreg(urlProfil((string) ($ev['org_permalink'] ?? '')))
             )) {

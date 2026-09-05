@@ -21,6 +21,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../inc/interese.php';
 require_once __DIR__ . '/../inc/stergere.php';
+require_once __DIR__ . '/../inc/email.php';   // pentru acordul din vestea de scoatere
 
 $treceri = 0; $picaturi = 0;
 
@@ -669,6 +670,70 @@ verifica('cel de interesați, nu', false,
 $panouriFara = raspunsulPanourilor(evenimentDinBaza2($evenimentId));
 verifica('fără steag, niciun număr nicăieri', false,
     str_contains($panouriFara['participant']['lista'], '0722111222'));
+
+echo "\n=== ACORDUL DIN VESTEA DE SCOATERE ===\n";
+
+/**
+ * DOI OAMENI ÎN ACEEAȘI FRAZĂ: cel scos („Ai fost scoasă") și cel care l-a
+ * scos („de către organizatoarea evenimentului").
+ *
+ * Primul se făcea de mult după om; al doilea, deloc — scria „organizatorul"
+ * oricine ar fi apăsat butonul. Se probează amândouă odată, tocmai fiindcă e
+ * ușor să se îndrepte unul și să rămână celălalt.
+ */
+global $config;
+
+$logEmail = __DIR__ . '/../private/emailuri-trimise.log';
+
+if (empty($config['dezvoltare'])) {
+    echo "  (`dezvoltare` e oprit în config.php — partea asta s-a sărit)\n";
+} else {
+    $scrisIn = static function (callable $ce) use ($logEmail): string {
+        $de_la = is_file($logEmail) ? (int) filesize($logEmail) : 0;
+        $ce();
+
+        return (string) preg_replace('/\s+/u', ' ',
+            substr((string) file_get_contents($logEmail), $de_la));
+    };
+
+    /* Ea, scoasă de ea. */
+    $text = $scrisIn(static fn () => emailExcludereParticipant(
+        'ea@invalid.local', 'Elena', 'F', 'Ieșire de probă',
+        'https://exemplu.test/', 'organizator', '', false, 'F'));
+
+    verifica('cea scoasă: „Ai fost scoasă"',        true, str_contains($text, 'Ai fost scoasă'));
+    verifica('cea care a scos-o: „organizatoarea"', true,
+        str_contains($text, 'de către organizatoarea evenimentului'));
+
+    /* El, scos de el. */
+    $text = $scrisIn(static fn () => emailExcludereParticipant(
+        'el@invalid.local', 'Radu', 'M', 'Ieșire de probă',
+        'https://exemplu.test/', 'organizator', '', false, 'M'));
+
+    verifica('cel scos: „Ai fost scos"',          true, str_contains($text, 'Ai fost scos'));
+    verifica('cel care l-a scos: „organizatorul"', true,
+        str_contains($text, 'de către organizatorul evenimentului'));
+
+    /* Ea, scoasă de el: cele două acorduri NU se iau după același om. */
+    $text = $scrisIn(static fn () => emailExcludereParticipant(
+        'ea@invalid.local', 'Elena', 'F', 'Ieșire de probă',
+        'https://exemplu.test/', 'organizator', '', false, 'M'));
+
+    verifica('amestecat, fiecare cu acordul lui', true,
+        str_contains($text, 'Ai fost scoasă')
+        && str_contains($text, 'de către organizatorul evenimentului'));
+
+    /**
+     * OMUL CASEI RĂMÂNE „un membru al echipei", fără niciun acord — vorba aia
+     * nu spune cine anume, dinadins.
+     */
+    $text = $scrisIn(static fn () => emailExcludereParticipant(
+        'ea@invalid.local', 'Elena', 'F', 'Ieșire de probă',
+        'https://exemplu.test/', 'staff', '', false, 'F'));
+
+    verifica('staff-ul rămâne nenumit', true, str_contains($text, 'un membru al echipei'));
+    verifica('și fără vreun organizator', false, str_contains($text, 'organizato'));
+}
 
 /* =========================== curățenie ============================= */
 

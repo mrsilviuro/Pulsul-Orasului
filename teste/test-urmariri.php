@@ -73,15 +73,16 @@ function curata(): void
 curata();
 register_shutdown_function('curata');
 
-function faMembru(string $cheie, string $prenume, string $stare = 'activ'): int
+function faMembru(string $cheie, string $prenume, string $stare = 'activ',
+                  string $sex = 'M'): int
 {
     db()->prepare(
         'INSERT INTO membri (permalink, nume, prenume, email, sex, data_nasterii,
                              parola_hash, stare, este_staff, creat_la, confirmat_la)
-         VALUES (?,?,?,?,"M","1990-01-01",?,?,0,?,?)'
+         VALUES (?,?,?,?,?,"1990-01-01",?,?,0,?,?)'
     )->execute([
         substr(SEMN . $cheie, 0, 16), 'Probă', $prenume,
-        SEMN . $cheie . '@invalid.local',
+        SEMN . $cheie . '@invalid.local', $sex,
         password_hash(PAROLA, PASSWORD_DEFAULT), $stare, acum(), acum(),
     ]);
 
@@ -260,6 +261,73 @@ verifica('aprobat, dar cu ziua trecută: nimic', 0,
 
 /* Și un eveniment care nu există nu supără pe nimeni. */
 verifica('un id inexistent nu strică nimic', 0, instiinteazaUrmaritorii(0));
+
+/* ==================================================================== */
+sectiune('acordul se face după om');
+
+/**
+ * „P. Camelia, pe care ÎL urmărești" — așa a scris mesajul până acum, oricui.
+ *
+ * Nicio probă n-o prindea, fiindcă toți oamenii de probă erau bărbați: suita
+ * trecea liniștită, iar greșeala se vedea doar în cutia poștală a unui om
+ * adevărat. De aceea secțiunea asta își face anume o organizatoare.
+ *
+ * ACORDUL SE IA DIN ACELAȘI RÂND CA NUMELE (sexAfisat, lângă numeAfisat), și
+ * de aceea se probează amândouă odată: dacă vreodată numele ar veni dintr-un
+ * rând și acordul din altul, aici s-ar vedea.
+ */
+if (!empty($config['dezvoltare'])) {
+
+    /** Ce a intrat în log de la o veste, cu spațiile strânse. */
+    $vesteaDespre = static function (int $idEveniment) use ($logEmail): string {
+        $de_la = is_file($logEmail) ? (int) filesize($logEmail) : 0;
+        instiinteazaUrmaritorii($idEveniment);
+        goleșteCoada();
+
+        return (string) preg_replace('/\s+/u', ' ',
+            substr((string) file_get_contents($logEmail), $de_la));
+    };
+
+    /* --- ea --- */
+    $ea = faMembru('ea', 'Camelia', 'activ', 'F');
+    db()->prepare('INSERT INTO urmariri (urmaritor_id, urmarit_id, creat_la) VALUES (?,?,?)')
+        ->execute([$fan, $ea, acum()]);
+
+    $vestea = $vesteaDespre(faEveniment($ea, 'tsturm-ea', 'aprobat'));
+
+    verifica('despre o femeie: „pe care o urmărești"', true,
+        str_contains($vestea, 'pe care o urmărești'));
+    verifica('și niciun „îl" rătăcit',                false,
+        str_contains($vestea, 'îl urmărești'));
+    verifica('la fel și în coada mesajului',          true,
+        str_contains($vestea, 'fiindcă o urmărești pe'));
+
+    /* --- el, ca să se vadă că nu s-a stricat celălalt capăt --- */
+    $vestea = $vesteaDespre(faEveniment($org, 'tsturm-el', 'aprobat'));
+
+    verifica('despre un bărbat: „pe care îl urmărești"', true,
+        str_contains($vestea, 'pe care îl urmărești'));
+
+    /**
+     * CONTUL GOLIT SE SCRIE LA MASCULIN, oricare ar fi sexul rămas în bază.
+     *
+     * Numele devine „Utilizator șters" — o vorbă masculină —, iar anonimizarea
+     * NU șterge coloana `sex` (vezi inc/stergere.php). Fără sexAfisat(), o
+     * femeie care și-a șters contul ar fi rămas cu „Utilizator șters, pe care
+     * o urmărești": două cuvinte alăturate care se ceartă, despre un om care
+     * tocmai ceruse să nu se mai spună nimic despre el.
+     */
+    $dusaF = faMembru('dusaf', 'Ștearsă', 'sters', 'F');
+    db()->prepare('INSERT INTO urmariri (urmaritor_id, urmarit_id, creat_la) VALUES (?,?,?)')
+        ->execute([$fan, $dusaF, acum()]);
+
+    $vestea = $vesteaDespre(faEveniment($dusaF, 'tsturm-dusaf', 'aprobat'));
+
+    verifica('contul golit se scrie la masculin', true,
+        str_contains($vestea, 'pe care îl urmărești'));
+    verifica('cu numele pe potrivă',              true,
+        str_contains($vestea, NUME_CONT_STERS));
+}
 
 /* ==================================================================== */
 sectiune('cum arată butonul');
