@@ -1552,6 +1552,34 @@ function esteContSters(?string $stare): bool
 }
 
 /**
+ * Litera după care se face ACORDUL când se scrie despre un om: 'F' ori 'M'.
+ *
+ * DE CE NU E DE AJUNS `$sex === 'F'`. Sunt două lucruri de care atârnă, iar al
+ * doilea se uită ușor:
+ *
+ *   1. Sexul din rândul lui, firește.
+ *   2. DACĂ MAI E CINEVA ÎN RÂND. Contul șters se scrie „Utilizator șters" —
+ *      o vorbă MASCULINĂ —, iar acordul trebuie să meargă cu ce se vede pe
+ *      ecran, nu cu ce a rămas în bază. Altfel ieșea „Utilizator șters, pe
+ *      care o urmărești": două cuvinte alăturate care se ceartă între ele. Pe
+ *      deasupra, anonimizarea NU șterge coloana `sex` (vezi inc/stergere.php),
+ *      deci acordul la feminin ar fi spus mai departe, despre un cont golit,
+ *      un lucru pe care omul tocmai ceruse să nu-l mai spună nimeni.
+ *
+ * SORA LUI numeAfisat(): oriunde se scrie un nume de om ȘI se face un acord
+ * după el, cele două se cheamă împreună, una lângă alta. Despărțite, într-o zi
+ * numele ar veni dintr-un rând și acordul din altul.
+ */
+function sexAfisat(?string $sex, ?string $stare = null): string
+{
+    if (esteContSters($stare)) {
+        return 'M';
+    }
+
+    return $sex === 'F' ? 'F' : 'M';
+}
+
+/**
  * Vârsta în ani împliniți, dintr-o dată de forma „1990-05-17".
  *
  * Întoarce null dacă data lipsește sau nu se înțelege — mai bine nu afișăm

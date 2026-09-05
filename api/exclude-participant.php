@@ -189,7 +189,11 @@ if ($omul !== null) {
         urlIntreg(urlEveniment((string) $eveniment['slug'])),
         $rol,
         $rezultat['text'],
-        $interzis
+        $interzis,
+        /* Al doilea om din aceeași frază: cel care a apăsat butonul, adică
+           chiar cel conectat acum. Contează numai la rolul „organizator" —
+           „un membru al echipei" nu spune cine anume, dinadins. */
+        sexAfisat((string) ($membru['sex'] ?? ''))
     ));
 
     /* „Înștiințat" înseamnă de acum „pus la rând": mesajul pleacă din cron, nu

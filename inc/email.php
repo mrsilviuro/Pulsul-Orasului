@@ -1041,7 +1041,9 @@ function emailMesajDeContact(array $mesaj, ?int $membruId): bool
 
     $cine = $membruId === null
         ? 'Vizitator fără cont.'
-        : 'Membrul #' . $membruId . ' — datele sunt luate din contul lui.';
+        /* „din contul lui" spunea „el" despre oricine. Aici mesajul e pentru
+           noi, nu pentru om, deci nu se face acordul — se scoate pronumele. */
+        : 'Membrul #' . $membruId . ' — datele sunt luate din contul de pe site.';
 
     /**
      * Mesajul omului intră ca paragraf obișnuit, deci trece prin aceeași
@@ -1087,9 +1089,15 @@ function emailExcludereParticipant(
     string $adresaEveniment,
     string $rol,
     string $motiv,
-    bool $interzis
+    bool $interzis,
+    string $sexCineA
 ): bool {
-    $cineA = $rol === 'organizator' ? 'organizatorul evenimentului' : 'un membru al echipei';
+    /* DOI OAMENI ÎN ACEEAȘI FRAZĂ: cel scos (mai jos, $scos) și cel care l-a
+       scos. „un membru al echipei" rămâne neatins — e o vorbă care nu spune
+       cine anume, tocmai ca să nu se spună. */
+    $cineA = $rol === 'organizator'
+        ? ($sexCineA === 'F' ? 'organizatoarea evenimentului' : 'organizatorul evenimentului')
+        : 'un membru al echipei';
 
     // Acordul se face după om, ca peste tot pe site: „scoasă" pentru ea,
     // „scos" pentru el. E un mesaj neplăcut oricum — măcar să fie scris ca
@@ -1274,11 +1282,27 @@ function emailAnulareEveniment(
     string $candAvutLoc,
     string $motiv,
     string $adresaSite,
-    bool $eraParticipant
+    bool $eraParticipant,
+    string $sexPrimitor,
+    string $sexOrganizator
 ): bool {
+    /**
+     * PATRU ACORDURI ÎNTR-O SINGURĂ PROPOZIȚIE, și se fac după DOI oameni
+     * deosebiți: cel care a anulat și cel care citește. Scrise toate după
+     * același sex — cum erau — mesajul îi spunea unei femei „erai înscris" și
+     * despre o organizatoare „a fost nevoit".
+     *
+     * „îl anuleze" și „l-a anulat" NU se ating: acolo acordul e cu EVENIMENTUL,
+     * care e masculin oricine l-ar fi pus la cale.
+     */
+    $cineA   = $sexOrganizator === 'F' ? 'Organizatoarea' : 'Organizatorul';
+    $nevoit  = $sexOrganizator === 'F' ? 'nevoită'        : 'nevoit';
+    $inscris = $sexPrimitor    === 'F' ? 'înscrisă'       : 'înscris';
+    $interes = $sexPrimitor    === 'F' ? 'interesată'     : 'interesat';
+
     $primul = $eraParticipant
-    ? 'Avem o veste neplăcută: „' . $titluEveniment . '” nu se mai ține. Organizatorul a fost nevoit să îl anuleze, iar tu erai înscris pe listă.'
-    : 'Avem o veste neplăcută: „' . $titluEveniment . '” nu se mai ține. Organizatorul l-a anulat, iar noi știam că erai interesat de el.';
+    ? 'Avem o veste neplăcută: „' . $titluEveniment . '” nu se mai ține. ' . $cineA . ' a fost ' . $nevoit . ' să îl anuleze, iar tu erai ' . $inscris . ' pe listă.'
+    : 'Avem o veste neplăcută: „' . $titluEveniment . '” nu se mai ține. ' . $cineA . ' l-a anulat, iar noi știam că erai ' . $interes . ' de el.';
 
     $paragrafe = [$primul];
 
@@ -1447,7 +1471,8 @@ function emailComentariuNou(
     string $numeAutor,
     string $titluEveniment,
     string $textComentariu,
-    string $adresaComentariu
+    string $adresaComentariu,
+    string $sexPrimitor
 ): bool {
     $eRaspuns = $fel === 'raspuns';
 
@@ -1462,7 +1487,11 @@ function emailComentariuNou(
         $paragrafe = [
             $numeAutor . ' a lăsat un comentariu la evenimentul tău, „' . $titluEveniment . '”.',
         ];
-        $incheiere = 'Primești acest e-mail deoarece ești organizatorul evenimentului. Poți gestiona sau opri aceste notificări din setările contului tău.';
+        /* Acordul e cu CEL CARE CITEȘTE, nu cu autorul comentariului: aici i se
+           spune lui de ce a primit mesajul. */
+        $incheiere = 'Primești acest e-mail deoarece ești '
+                   . ($sexPrimitor === 'F' ? 'organizatoarea' : 'organizatorul')
+                   . ' evenimentului. Poți gestiona sau opri aceste notificări din setările contului tău.';
     }
 
     $blocuri = [
@@ -1508,6 +1537,7 @@ function emailComentariuImportant(
     string $catre,
     string $prenume,
     string $numeAutor,
+    string $sexAutor,
     string $titluEveniment,
     string $textComentariu,
     string $adresaComentariu
@@ -1515,7 +1545,8 @@ function emailComentariuImportant(
     $blocuri = [
         'salut'     => 'Bună, ' . $prenume . '!',
         'paragrafe' => [
-            $numeAutor . ', organizatorul evenimentului „' . $titluEveniment
+            $numeAutor . ', ' . ($sexAutor === 'F' ? 'organizatoarea' : 'organizatorul')
+            . ' evenimentului „' . $titluEveniment
             . '", a lăsat un anunț important. Uite ce scrie:',
         ],
         'citat'     => ['cine' => $numeAutor, 'text' => $textComentariu],
@@ -1737,7 +1768,7 @@ function emailDorintaHotarata(string $catre, string $prenume, string $dorinta,
                               }
 
 /**
- * „Cineva pe care îl urmărești a pus un anunț nou."
+ * „Cineva pe care îl/o urmărești a pus un anunț nou."
  *
  * UN SINGUR CARTONAȘ, nu o listă — asta e toată deosebirea față de
  * newsletterul zilnic, și e chiar rostul urmăririi: cine ține la un singur om
@@ -1755,14 +1786,20 @@ function emailEvenimentDeLaUrmarit(
     string $catre,
     string $prenume,
     string $cineOrganizeaza,
+    string $sexOrganizator,
     array $cartonas,
     string $adresaProfil
 ): bool {
+    /* „pe care ÎL urmărești" / „pe care O urmărești". Vine gata hotărât de la
+       cel care cheamă, prin sexAfisat(), ca acordul să meargă cu numele scris
+       alături — inclusiv la un cont golit, care se scrie la masculin. */
+    $peCare = $sexOrganizator === 'F' ? 'o' : 'îl';
+
     $blocuri = [
         'salut'     => 'Bună, ' . $prenume . '!',
         'paragrafe' => [
-            $cineOrganizeaza . ', pe care îl urmărești, tocmai a pus la cale ceva nou. '
-            . 'Uite despre ce e vorba:',
+            $cineOrganizeaza . ', pe care ' . $peCare . ' urmărești, tocmai a pus la cale '
+            . 'ceva nou. Uite despre ce e vorba:',
         ],
         'lista'     => [$cartonas],
         'buton'     => ['text' => 'Vezi evenimentul', 'href' => $cartonas['href'] ?? ''],
@@ -1771,7 +1808,7 @@ function emailEvenimentDeLaUrmarit(
            curat — o etichetă scrisă de mână s-ar vedea ca atare pe ecran.
            Adresa profilului se scrie întreagă, ca omul s-o poată apăsa oricum
            ar citi mesajul. */
-        'incheiere' => 'Primești mesajul ăsta fiindcă îl urmărești pe ' . $cineOrganizeaza
+        'incheiere' => 'Primești mesajul ăsta fiindcă ' . $peCare . ' urmărești pe ' . $cineOrganizeaza
                      . '. Dacă nu mai vrei, deschide-i profilul (' . $adresaProfil
                      . ') și apasă din nou butonul „Urmărești" — se oprește pe loc.',
     ];

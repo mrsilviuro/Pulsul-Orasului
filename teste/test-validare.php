@@ -107,6 +107,41 @@ echo "\n=== NUME AFIȘAT ===\n";
 verifica('Popescu Ionuț -> P. Ionuț', 'P. Ionuț', numeAfisat('Popescu','Ionuț'));
 verifica('ștefan -> Ș. ...', 'Ș. Ana', numeAfisat('ștefan','Ana'));
 
+echo "\n=== ACORDUL DUPĂ OM ===\n";
+
+/**
+ * Litera după care se scrie „pe care ÎL / O urmărești".
+ *
+ * SORA lui numeAfisat(), și de aceea probată lângă el: numele și acordul se
+ * iau ÎMPREUNĂ, din același rând. Despărțite, într-o zi numele ar veni dintr-un
+ * rând și acordul din altul — iar asta chiar s-a văzut într-un e-mail adevărat:
+ * „P. Camelia, pe care îl urmărești".
+ */
+verifica('femeia, la feminin',   'F', sexAfisat('F'));
+verifica('bărbatul, la masculin', 'M', sexAfisat('M'));
+
+/* Ce nu se înțelege se scrie la masculin, nu se ghicește. */
+verifica('gol -> masculin',      'M', sexAfisat(''));
+verifica('lipsă -> masculin',    'M', sexAfisat(null));
+verifica('aiurea -> masculin',   'M', sexAfisat('altceva'));
+
+/**
+ * CONTUL GOLIT SE SCRIE LA MASCULIN, oricât ar scrie în bază.
+ *
+ * Numele lui devine „Utilizator șters", o vorbă masculină, iar anonimizarea NU
+ * atinge coloana `sex` (vezi inc/stergere.php). Fără regula asta, o femeie
+ * care și-a șters contul rămânea cu „Utilizator șters, pe care o urmărești":
+ * două cuvinte alăturate care se ceartă între ele, despre un om care tocmai
+ * ceruse să nu se mai spună nimic despre el.
+ */
+verifica('contul șters, deși F',  'M', sexAfisat('F', 'sters'));
+verifica('și deși M',             'M', sexAfisat('M', 'sters'));
+verifica('dar unul activ, nu',    'F', sexAfisat('F', 'activ'));
+
+/* Cele 30 de zile de răgaz nu schimbă nimic — ca la esteContSters(). */
+verifica('cererea de ștergere nu-l stinge', 'F', sexAfisat('F', 'activ'));
+verifica('nici suspendarea',                'F', sexAfisat('F', 'suspendat'));
+
 echo "\n=== PAROLA TEMPORARĂ ===\n";
 $pt = parolaTemporaraNoua();
 verifica('6 caractere', 6, strlen($pt));

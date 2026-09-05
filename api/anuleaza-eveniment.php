@@ -148,8 +148,17 @@ $picate  = 0;
  * ar afla că nu se mai ține ieșirea de diseară cu jumătate de oră mai târziu.
  * Un anunț nou poate aștepta; o anulare, nu.
  */
+/**
+ * ACORDUL SE FACE DUPĂ DOI OAMENI, nu după unul.
+ *
+ * Cel care a anulat („Organizatoarea a fost nevoită") e mereu același — chiar
+ * cel care apasă butonul acum. Cel care citește („erai înscrisă") se schimbă
+ * la fiecare rând din listă, de aceea sexul lui se ia înăuntrul buclei.
+ */
+$sexOrganizator = sexAfisat((string) ($membru['sex'] ?? ''), (string) ($membru['stare'] ?? ''));
+
 laCoada(static function () use (&$trimise, &$picate, $deInstiintat, $eveniment,
-                                $candAvutLoc, $motiv, $adresaSite) {
+                                $candAvutLoc, $motiv, $adresaSite, $sexOrganizator) {
     foreach ($deInstiintat as $om) {
         $plecat = emailAnulareEveniment(
             (string) $om['email'],
@@ -158,7 +167,9 @@ laCoada(static function () use (&$trimise, &$picate, $deInstiintat, $eveniment,
             $candAvutLoc,
             $motiv['text'],
             $adresaSite,
-            (string) $om['stare'] === 'participant'
+            (string) $om['stare'] === 'participant',
+            sexAfisat((string) ($om['sex'] ?? '')),
+            $sexOrganizator
         );
 
         $plecat ? $trimise++ : $picate++;

@@ -82,7 +82,10 @@ function comentariileEvenimentului(int $evenimentId, int $membruId = 0): array
         'SELECT c.id, c.parinte_id, c.raspuns_la_id, c.text, c.sters, c.important,
                 c.creat_la, c.editat_la, c.membru_id,
                 m.permalink, m.nume, m.prenume, m.poza,
-                m.stare AS stare_cont, m.este_staff,
+                -- `sex` nu se arată nicăieri pe ecran: îl cere ACORDUL din
+                -- e-mailul de anunț important („organizatoarea evenimentului"),
+                -- iar el trebuie luat din ACELAȘI rând din care vine numele.
+                m.stare AS stare_cont, m.sex AS sex_cont, m.este_staff,
 
                 (SELECT COUNT(*) FROM comentarii_aprecieri a
                   WHERE a.comentariu_id = c.id) AS aprecieri,
@@ -665,7 +668,9 @@ function omDeInstiintatLaComentariu(array $eveniment, int $autorId, ?array $catr
     }
 
     $q = db()->prepare(
-        'SELECT id, email, prenume
+        /* `sex` nu se arată nicăieri: îl cere ACORDUL din mesaj — omului i se
+           scrie „ești organizatoarea evenimentului", nu „organizatorul". */
+        'SELECT id, email, prenume, sex
            FROM membri
           WHERE id = ? AND stare = \'activ\' AND email_comentarii = 1
           LIMIT 1'
