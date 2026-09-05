@@ -251,6 +251,22 @@ return [
      */
     'emailuri_pe_rulare' => 8,
 
+    /**
+     * CÂTE MESAJE PE MINUT DUCE GĂZDUIREA. Nu e o alegere de-a noastră, e
+     * plafonul lor — de aceea stă aici, lângă cifra de mai sus.
+     *
+     * Se folosește la o singură socoteală, dar aceea contează: `plafon` minus
+     * `emailuri_pe_rulare` = câte locuri rămân într-un minut pentru mesajele
+     * care pleacă PE LOC (confirmarea de cont, parola temporară). Când iese
+     * zero, panoul din admin („Poșta") o spune pe față: cine își face cont fix
+     * în minutul în care cronul își duce teancul primește confirmarea abia la
+     * rularea următoare.
+     *
+     * NU TAIE NIMIC: cifra asta nu îngrădește cronul, doar face socoteala
+     * vizibilă. Un plafon scris greșit aici n-are cum să oprească poșta.
+     */
+    'plafon_pe_minut' => 10,
+
     // ------------------------------------------------------------ Google
     /**
      * Datele aplicației din Google Cloud Console.

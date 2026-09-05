@@ -148,11 +148,51 @@ require __DIR__ . '/inc/antet.php';
       Nu așteaptă niciun mesaj la rând.
       <?php else: ?>
       <strong><?= $laRand ?></strong>
-      <?= $laRand === 1 ? 'mesaj așteaptă' : 'mesaje așteaptă' ?> la rând;
-      cronul duce <?= (int) coadaPeRulare() ?> la fiecare pornire.
+      <?= $laRand === 1 ? 'mesaj așteaptă' : 'mesaje așteaptă' ?> la rând.
       <?php endif; ?>
       În ultimul ceas au plecat <strong><?= catePlecateInUltimulCeas() ?></strong>.
     </p>
+
+    <!--
+      CÂT DUCE CRONUL, ȘI DE UNDE VINE CIFRA.
+      Scria doar cifra, iar când ea nu se potrivea cu ce era scris în config
+      n-avea cum să se lămurească nimeni fără SSH: sunt trei căi spre ea (cheia
+      nouă, cea veche, valoarea din lipsă), și cel mai des vinovatul e un
+      `inc/config.php` mai vechi decât `config.example.php`, rămas cu
+      `email_pe_minut`. Un panou de diagnostic n-are voie să pună ghicitori.
+    -->
+    <?php $cheia = deUndeVineCoadaPeRulare(); $ramanLocuri = locuriRamasePeMinut(); ?>
+    <p class="posta__vorba posta__vorba--mic">
+      Cronul duce <strong><?= (int) coadaPeRulare() ?></strong> la fiecare
+      pornire<?php if ($cheia !== ''): ?>, din <code><?= h($cheia) ?></code> în
+      <code>inc/config.php</code><?php else: ?> — cifra din lipsă, fiindcă în
+      <code>inc/config.php</code> nu e scrisă nici
+      <code>emailuri_pe_rulare</code>, nici <code>email_pe_minut</code><?php endif; ?>.
+      Găzduirea duce <strong><?= plafonPeMinut() ?></strong> pe minut.
+    </p>
+
+    <?php if ($ramanLocuri > 0): ?>
+    <p class="posta__vorba posta__vorba--mic">
+      Rămân <strong><?= $ramanLocuri ?></strong>
+      <?= $ramanLocuri === 1 ? 'loc' : 'locuri' ?> într-un minut pentru ce
+      pleacă pe loc: confirmarea de cont și parola temporară.
+    </p>
+    <?php else: ?>
+    <!--
+      AICI E SCĂPAREA CARE NU SE VEDE ALTFEL NICĂIERI. Cronul duce fix cât
+      plafonul (sau peste), deci cine își face cont exact în minutul acela e al
+      unsprezecelea, iar serverul îl refuză. Nu se pierde nimic — mesajul intră
+      în coadă cu prioritate și pleacă în minutul următor —, dar omul stă cu
+      ochii pe cutia poștală, iar întârzierea e chiar acolo unde doare.
+    -->
+    <p class="posta__vorba posta__vorba--atentie">
+      Nu mai rămâne niciun loc într-un minut pentru mesajele care pleacă pe loc.
+      Cine își face cont fix în minutul în care cronul își duce teancul primește
+      confirmarea abia la rularea următoare. Scrie
+      <code>'emailuri_pe_rulare' =&gt; <?= max(1, plafonPeMinut() - 2) ?></code>
+      în <code>inc/config.php</code>, ca să rămână două locuri de rezervă.
+    </p>
+    <?php endif; ?>
 
     <?php if ($vorbaPicate !== ''): ?>
     <p class="posta__vorba posta__raspuns"><?= h($vorbaPicate) ?></p>

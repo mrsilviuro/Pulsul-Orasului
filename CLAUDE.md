@@ -1399,7 +1399,23 @@ assets/css/style.css, assets/js/main.js, assets/img/
   plafonul lovit din plin, fără nimic de rezervă pentru mesajele care pleacă pe
   loc. Se citește prin `coadaPeRulare()`, care înțelege și vechiul
   `email_pe_minut`, ca o setare deja scrisă într-un config.php să nu se stingă
-  tăcut
+  tăcut. DE UNDE A IEȘIT CIFRA SE SCRIE PE PANOU (deUndeVineCoadaPeRulare):
+  sunt trei căi spre ea — cheia nouă, cea veche, valoarea din lipsă —, iar un
+  număr care nu spune de unde vine e taman felul de amănunt din care se pierd
+  ceasuri. S-a întâmplat: panoul scria 10, `config.example.php` scria 8, iar
+  vinovatul era un `inc/config.php` de pe server mai vechi, rămas cu
+  `email_pe_minut => 10`
+- `plafon_pe_minut` — câte mesaje pe minut duce găzduirea (10). NU îngrădește
+  nimic și nu taie nimic din ce face cronul: se folosește la o singură
+  socoteală, dar aceea contează — `plafon` minus `emailuri_pe_rulare` = CÂTE
+  LOCURI RĂMÂN într-un minut pentru mesajele care pleacă PE LOC. Când iese
+  zero, panoul din admin o spune pe față, fiindcă altfel nu se vede nicăieri:
+  cine își face cont fix în minutul în care cronul își duce teancul e al
+  unsprezecelea, serverul îl refuză, iar confirmarea îi vine abia la rularea
+  următoare. NU SE PIERDE — mesajul picat intră în coadă cu prioritate (a doua
+  răscruce din trimiteEmail) și pleacă primul la rularea următoare — dar omul
+  stă cu ochii pe cutia poștală, iar întârzierea e chiar acolo unde doare. De
+  aceea opt, nu zece
 - `google_client_id` / `google_client_secret` — goale = butoanele Google nu se afișează deloc
 
 ## Autentificare — ce trebuie respectat mereu

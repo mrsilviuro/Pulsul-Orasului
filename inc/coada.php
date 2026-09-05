@@ -74,6 +74,61 @@ function coadaPeRulare(): int
 }
 
 /**
+ * DIN CE CHEIE A IEȘIT CIFRA DE MAI SUS — pentru panoul din admin.
+ *
+ * EXISTĂ DINTR-O ÎNTREBARE ADEVĂRATĂ: panoul scria „cronul duce 10", iar în
+ * config scria 8, și n-avea cum să se lămurească nimeni fără SSH. Sunt trei
+ * căi spre cifra aceea — cheia nouă, cea veche și valoarea din lipsă — iar un
+ * număr care nu spune de unde vine e taman felul de amănunt din care se nasc
+ * ceasuri pierdute. Un panou de diagnostic n-are voie să pună ghicitori.
+ *
+ * Cel mai des: cheia nouă e scrisă în config.example.php, dar `inc/config.php`
+ * de pe server e mai vechi și încă poartă `email_pe_minut`. Cheia veche CÂȘTIGĂ
+ * doar dacă cea nouă lipsește de tot.
+ */
+function deUndeVineCoadaPeRulare(): string
+{
+    global $config;
+
+    if (isset($config['emailuri_pe_rulare']) && (int) $config['emailuri_pe_rulare'] > 0) {
+        return 'emailuri_pe_rulare';
+    }
+
+    if (isset($config['email_pe_minut']) && (int) $config['email_pe_minut'] > 0) {
+        return 'email_pe_minut';
+    }
+
+    return '';   // din lipsă
+}
+
+/**
+ * CÂTE MESAJE PE MINUT DUCE GĂZDUIREA. Nu e o alegere de-a noastră, e plafonul
+ * lor — de aceea stă în config, ca `emailuri_pe_rulare`.
+ *
+ * Se folosește la o singură socoteală, dar aceea contează: câte locuri rămân
+ * într-un minut pentru mesajele care pleacă PE LOC (confirmarea de cont,
+ * parola temporară). Dacă cronul duce fix cât plafonul, omul care își face cont
+ * exact în minutul acela e al unsprezecelea, iar serverul îl refuză.
+ */
+function plafonPeMinut(): int
+{
+    global $config;
+
+    $cat = (int) ($config['plafon_pe_minut'] ?? 10);
+
+    return $cat > 0 ? $cat : 10;
+}
+
+/**
+ * Câte locuri rămân într-un minut pentru ce pleacă pe loc. Poate ieși ZERO sau
+ * negativ, și atunci chiar asta trebuie spus, nu ascuns.
+ */
+function locuriRamasePeMinut(): int
+{
+    return plafonPeMinut() - coadaPeRulare();
+}
+
+/**
  * De câte ori se încearcă un mesaj înainte să fie lăsat în pace.
  *
  * Fără plafonul ăsta, un mesaj către o adresă care nu mai există s-ar învârti
