@@ -8,8 +8,8 @@ declare(strict_types=1);
  * conectat.
  *
  * Patru lucruri, despărțite vizual pentru că sunt de greutăți foarte
- * diferite: parola, telefonul, newsletterul și, jos de tot, ștergerea
- * contului.
+ * diferite: parola, telefonul, înștiințările pe e-mail și, jos de tot,
+ * ștergerea contului.
  */
 
 require_once __DIR__ . '/inc/auth.php';
@@ -28,18 +28,16 @@ if ($membru === null) {
  * Conturile deschise cu Google au parola_hash NULL — nu e o lipsă, e chiar
  * felul lor de a fi. Lor nu avem ce parolă veche să le cerem.
  */
-$q = db()->prepare('SELECT parola_hash, telefon, newsletter, email_comentarii, email_feedback
+$q = db()->prepare('SELECT parola_hash, telefon, email_comentarii, email_feedback
                       FROM membri WHERE id = ? LIMIT 1');
 $q->execute([(int) $membru['id']]);
 $setari = $q->fetch() ?: [];
 
 $areParola  = !empty($setari['parola_hash']);
 $telefon    = (string) ($setari['telefon'] ?? '');
-$newsletter = !isset($setari['newsletter']) || (int) $setari['newsletter'] === 1;
-
-// Ca la newsletter: lipsa coloanei înseamnă „pornit". Toate trei sunt pornite
-// din start (vezi sql/021 și sql/027), iar un rând citit dintr-o bază mai veche
-// nu trebuie să arate bifa stinsă cât timp serverul îi scrie oricum.
+// Lipsa coloanei înseamnă „pornit": amândouă sunt pornite din start (vezi
+// sql/021 și sql/027), iar un rând citit dintr-o bază mai veche nu trebuie să
+// arate bifa stinsă cât timp serverul îi scrie oricum.
 $emailComentarii = !isset($setari['email_comentarii']) || (int) $setari['email_comentarii'] === 1;
 $emailFeedback   = !isset($setari['email_feedback'])   || (int) $setari['email_feedback']   === 1;
 
@@ -187,22 +185,8 @@ require __DIR__ . '/inc/antet.php';
 
       <!-- `form--bife`: numai bife cu text lung, deci un spațiu mai larg între
            ele decât între câmpuri obișnuite — vezi lămurirea din style.css. -->
-      <form class="form form--bife" id="newsletter-form" novalidate>
+      <form class="form form--bife" id="instiintari-form" novalidate>
         <input type="hidden" name="csrf" value="<?= h($csrf) ?>">
-
-        <div class="field">
-          <label class="check">
-            <input type="checkbox" id="st-newsletter" name="newsletter"
-                   <?= $newsletter ? 'checked' : '' ?>>
-            <!-- Bifa ASTA deschide DOUĂ uși, și amândouă trebuie scrise în ea:
-                 mesajul zilnic cu evenimentele zilei și anunțurile scrise de
-                 mână de echipă (admin-anunt.php). Cât timp scria doar
-                 „evenimente noi, cel mult unul pe zi", al doilea venea peste o
-                 promisiune care nu-l cuprindea. -->
-            <span>Vreau să primesc e-mail cu ce se întâmplă în oraș: evenimentele
-                  zilei (cel mult unul pe zi) și anunțurile din partea echipei.</span>
-          </label>
-        </div>
 
         <div class="field">
           <label class="check">

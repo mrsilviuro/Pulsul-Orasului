@@ -110,7 +110,7 @@ require __DIR__ . '/inc/antet.php';
           <strong><?= $cate ?></strong>
           <span><?= h($s['unitate']) ?></span>
           <?php else: ?>
-          <span class="admin-cart__linistit"><?= h($s['linistit'] ?? 'nimic de făcut') ?></span>
+          <span class="admin-cart__linistit">nimic de făcut</span>
           <?php endif; ?>
         </span>
       </a>

@@ -57,7 +57,7 @@ $inceput = time();
  *
  * Altfel o rulare cu multe evenimente ar folosi alt „acum" la primul și altul
  * la ultimul, iar fereastra s-ar plimba sub picioarele ei. Aceeași grijă ca la
- * cron/newsletter-zilnic.php.
+ * cron/multumeste-participantilor.php.
  */
 $clipa = time();
 
@@ -154,6 +154,10 @@ if ($trimise > 0 || $picate > 0) {
         . $picate . ' picate, în ' . (time() - $inceput) . 's'
     );
 }
+
+/* Conexiunea cu serverul de poștă a stat deschisă tot teancul (vezi postasul()
+   din inc/posta.php). Aici s-a terminat treaba, deci se închide. */
+inchidePostasul();
 
 echo '[' . date('Y-m-d H:i:s') . '] Gata: ' . $cateEvenimente(count($evenimente)) . ', '
    . $trimise . ' trimise, ' . $picate . " picate.\n";

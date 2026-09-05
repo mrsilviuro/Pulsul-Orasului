@@ -97,24 +97,6 @@ const EVALUARE_TEXT_MIN = 10;     // caractere — vezi verificaTextEvaluare()
 const EVALUARE_TEXT_MAX = 1500;
 
 /**
- * Vestea scrisă de mână către toată lista — vezi verificaAnunt().
- *
- * TITLUL AJUNGE SUBIECTUL MESAJULUI, deci e singurul lucru pe care omul îl vede
- * înainte de a hotărî dacă deschide. Minimul e mic (un „Ne mutăm" spune tot), dar
- * maximul e strâns: peste vreo șaizeci de semne, programele de e-mail îl taie cu
- * trei puncte, iar ce s-a scris după ele n-a fost citit de nimeni. O sută
- * lasă loc, fără să mintă că tot ce încape se și vede.
- *
- * MINIMUL MESAJULUI E ÎNADINS MARE. Toată apărarea de pe pagina asta e împotriva
- * unui singur lucru — un mesaj plecat înainte de a fi gata — iar treizeci de
- * caractere e cam cât ai scris când te-ai întrerupt la jumătatea primei fraze.
- */
-const ANUNT_TITLU_MIN = 4;
-const ANUNT_TITLU_MAX = 100;
-const ANUNT_TEXT_MIN  = 30;
-const ANUNT_TEXT_MAX  = 5000;
-
-/**
  * Aduce diacriticele românești la forma corectă (virgulă dedesubt).
  *
  * Multe tastaturi și programe mai vechi produc ş și ţ cu sedilă — arată
@@ -1242,60 +1224,6 @@ function verificaDorinta(array $date, array $oraseValide): array
                           . DORINTA_MAX . ' câte încap.';
     } else {
         $curat['dorinta'] = $text;
-    }
-
-    return ['erori' => $erori, 'curat' => $curat];
-}
-
-/**
- * Vestea scrisă de mână către toți cei cu bifa de newsletter.
- *
- * TITLUL E UN RÂND, nu un text: ajunge subiectul mesajului, iar un subiect cu
- * Enter în el ar fi însemnat un antet rupt în două (vezi lămurirea despre
- * injecția în anteturi din inc/email.php). De aceea trece prin pregatesteText(),
- * care scoate caracterele de control cu tot cu rândul nou.
- *
- * MESAJUL, dimpotrivă, ÎȘI PĂSTREAZĂ PARAGRAFELE: e o scrisoare, nu o etichetă,
- * iar omul le-a pus dintr-un motiv. curataTextPeRanduri() e chiar funcția prin
- * care trece și descrierea unui eveniment — taie caracterele de control, dar nu
- * și rândul nou, și strânge la unul singur șirurile de rânduri goale.
- *
- * Nu se cere niciun HTML și nu trece niciunul: șablonul de e-mail scapă tot ce
- * primește, la fel ca `h()` în pagini (regula 9 din CLAUDE.md). Ce se scrie aici
- * ajunge text, oricâte etichete ar fi puse în el.
- */
-function verificaAnunt(array $date): array
-{
-    $erori = [];
-    $curat = [];
-
-    $titlu = pregatesteText(is_string($date['titlu'] ?? null) ? $date['titlu'] : '');
-    $cateT = mb_strlen($titlu, 'UTF-8');
-
-    if ($titlu === '') {
-        $erori['titlu'] = 'Scrie un titlu — el ajunge subiectul mesajului.';
-    } elseif ($cateT < ANUNT_TITLU_MIN) {
-        $erori['titlu'] = 'Titlul pare cam scurt. Mai adaugă câteva litere.';
-    } elseif ($cateT > ANUNT_TITLU_MAX) {
-        $erori['titlu'] = 'Titlul e cam lung — încape în cel mult '
-                        . ANUNT_TITLU_MAX . ' de caractere, iar tu ai scris ' . $cateT . '.';
-    } else {
-        $curat['titlu'] = $titlu;
-    }
-
-    $mesaj = curataTextPeRanduri(is_string($date['mesaj'] ?? null) ? $date['mesaj'] : '');
-    $cateM = mb_strlen($mesaj, 'UTF-8');
-
-    if ($mesaj === '') {
-        $erori['mesaj'] = 'Scrie ce ai de spus.';
-    } elseif ($cateM < ANUNT_TEXT_MIN) {
-        $erori['mesaj'] = 'Mai scrie puțin: ai ' . $cateM . ' caractere din '
-                        . ANUNT_TEXT_MIN . ' cerute.';
-    } elseif ($cateM > ANUNT_TEXT_MAX) {
-        $erori['mesaj'] = 'Mesajul e cam lung — încape în cel mult '
-                        . ANUNT_TEXT_MAX . ' de caractere, iar tu ai scris ' . $cateM . '.';
-    } else {
-        $curat['mesaj'] = $mesaj;
     }
 
     return ['erori' => $erori, 'curat' => $curat];

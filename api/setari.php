@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 /**
- * PulsulOrasului.Ro — salvarea setărilor mărunte: telefonul și newsletterul.
+ * PulsulOrasului.Ro — salvarea setărilor mărunte: telefonul și înștiințările.
  *
  * Un singur punct pentru amândouă, cu „sectiune" spunând care formular a
  * trimis. Sunt două câmpuri, nu două povești: două fișiere ar fi însemnat de
@@ -91,7 +91,7 @@ if ($sectiune === 'telefon') {
 
 /* ------------------------ Ce e-mailuri vrea omul ---------------------- */
 
-if ($sectiune === 'newsletter') {
+if ($sectiune === 'instiintari') {
     /**
      * Orice altceva decât un „da" limpede înseamnă nu.
      *
@@ -101,19 +101,22 @@ if ($sectiune === 'newsletter') {
     $daLimpede = static fn (string $cheie): bool =>
         !empty($date[$cheie]) && $date[$cheie] !== 'false';
 
-    $vrea      = $daLimpede('newsletter');
     $vreaComen = $daLimpede('email_comentarii');
     $vreaFdb   = $daLimpede('email_feedback');
 
     /**
-     * Toate trei într-o singură scriere, fiindcă vin dintr-un singur formular:
-     * trei UPDATE-uri ar fi putut lăsa una salvată și celelalte nu, dacă pica
+     * Amândouă într-o singură scriere, fiindcă vin dintr-un singur formular:
+     * două UPDATE-uri ar fi putut lăsa una salvată și cealaltă nu, dacă pica
      * ceva la mijloc — iar omul ar fi văzut „salvat" pentru o hotărâre făcută
      * pe jumătate.
+     *
+     * ERAU TREI. A treia era bifa de newsletter, plecată odată cu newsletterul
+     * zilnic: azi niciun mesaj de pe site nu mai vine nechemat, deci n-a mai
+     * rămas nimic de bifat acolo.
      */
-    db()->prepare('UPDATE membri SET newsletter = ?, email_comentarii = ?, email_feedback = ?
+    db()->prepare('UPDATE membri SET email_comentarii = ?, email_feedback = ?
                     WHERE id = ?')
-        ->execute([$vrea ? 1 : 0, $vreaComen ? 1 : 0, $vreaFdb ? 1 : 0, (int) $membru['id']]);
+        ->execute([$vreaComen ? 1 : 0, $vreaFdb ? 1 : 0, (int) $membru['id']]);
 
     /**
      * Mesajul spune ce s-a ales, nu doar „gata".
@@ -127,7 +130,6 @@ if ($sectiune === 'newsletter') {
      */
     $aprinse = [];
 
-    if ($vrea)      { $aprinse[] = 'când apar evenimente noi'; }
     if ($vreaComen) { $aprinse[] = 'când cineva îți comentează sau îți răspunde'; }
     if ($vreaFdb)   { $aprinse[] = 'când cineva îți lasă un feedback scris'; }
 
@@ -143,7 +145,6 @@ if ($sectiune === 'newsletter') {
 
     raspunsJson([
         'ok'               => true,
-        'newsletter'       => $vrea,
         'email_comentarii' => $vreaComen,
         'email_feedback'   => $vreaFdb,
         'mesaj'            => $mesaj,

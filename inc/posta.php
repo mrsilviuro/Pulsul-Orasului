@@ -398,15 +398,26 @@ function emailuriPeMinut(): int
 /**
  * Ține pasul cerut de găzduire, între două mesaje dintr-o trimitere în serie.
  *
- * SE CHEAMĂ DOAR DIN TRIMITERILE ÎN SERIE (newsletter, anunț), niciodată
- * dintr-un mesaj obișnuit: la o confirmare de cont nu există „mesajul dinainte",
- * iar o pauză acolo ar face omul să se uite la o pagină care se învârte degeaba.
+ * SE CHEAMĂ DOAR DIN CRONURILE CARE TRIMIT ÎN SERIE — mementoul de dinaintea
+ * unui eveniment (inc/amintiri.php) și mulțumirea de după (inc/multumiri.php)
+ * —, niciodată dintr-un mesaj obișnuit: la o confirmare de cont nu există
+ * „mesajul dinainte", iar o pauză acolo ar face omul să se uite la o pagină
+ * care se învârte degeaba.
  *
  * NU E O POLITEȚE, E O APĂRARE. Găzduirea numără mesajele pe minut și pe ceas;
  * cine sare plafonul nu primește un avertisment, ci i se oprește poșta — pentru
  * tot ce urmează în ora aceea, inclusiv confirmările de cont și recuperările de
- * parolă ale oamenilor care n-au nicio treabă cu newsletterul. De aceea frâna
- * stă aici, în drumul de plecare, nu în fiecare loc care trimite.
+ * parolă ale unor oameni care n-au nicio treabă cu ce tocmai s-a trimis. De
+ * aceea frâna stă aici, în drumul de plecare, nu în fiecare loc care trimite.
+ *
+ * CE NU E FRÂNAT, ȘI DE CE. Trei locuri trimit în serie DINTR-O CERERE WEB:
+ * anularea unui eveniment (api/anuleaza-eveniment.php), anunțul important al
+ * organizatorului (api/comentarii.php) și vestea către urmăritori
+ * (inc/urmariri.php). Acolo frâna ar ține omul cu ochii pe o pagină care se
+ * învârte câte șase secunde de fiecare înscris — la treizeci de oameni, trei
+ * minute. Deci NU se cheamă, iar la un eveniment mare plafonul se poate sări.
+ * Adevărata dezlegare e o coadă și un cron, ca la restul; până atunci, asta e
+ * scris aici ca să se știe, nu ca să pară rezolvat.
  *
  * Se socotește din CLIPA MESAJULUI DINAINTE, nu dintr-o pauză fixă: dacă
  * trimiterea a durat ea însăși două secunde, se mai așteaptă doar patru.

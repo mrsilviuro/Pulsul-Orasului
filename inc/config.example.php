@@ -297,7 +297,7 @@ return [
      * zilnic.
      *
      * POATE RĂMÂNE GOALĂ. Când e goală, se face una din datele care există
-     * deja aici (vezi cheieDezabonare din inc/newsletter.php), deci
+     * deja aici (vezi cheieSantier din inc/constructie.php), deci
      * newsletterul merge din prima, fără niciun pas de pregătire. Alegerea a
      * fost între asta și „încă o setare pe care cineva o uită, iar mesajul
      * pleacă fără ieșire" — iar un newsletter fără ieșire ajunge la „Spam", și

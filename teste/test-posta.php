@@ -116,7 +116,7 @@ sectiune('pasul de melc');
 /**
  * Frâna care ține plafonul găzduirii. NU e o politețe: cine sare peste zece
  * mesaje pe minut rămâne fără poștă pentru tot restul orei — cu tot cu
- * confirmările de cont ale unor oameni care n-au nicio treabă cu newsletterul.
+ * confirmările de cont ale unor oameni care n-au nicio treabă cu ce s-a trimis.
  */
 $config['email_pe_minut'] = 10;
 verifica('citește plafonul din config', 10, emailuriPeMinut());
@@ -292,7 +292,7 @@ if (!$avem) {
      * AICI E PROBA CARE CONTEAZĂ CEL MAI MULT DIN TOT FIȘIERUL.
      *
      * Poștașul e unul singur, cu conexiunea deschisă, fiindcă altfel
-     * newsletterul ar deschide cincizeci de conexiuni într-un minut — ceea ce
+     * un eveniment mare ar deschide zeci de conexiuni într-un minut — ceea ce
      * arată din afară exact ca cineva care încearcă parole. Prețul e că
      * PHPMailer NU golește singur lista de destinatari după send(): al doilea
      * mesaj ar pleca și către primul om, al treilea către primii doi.
@@ -316,21 +316,25 @@ if (!$avem) {
         || str_contains($trei['text'], 'bogdan@exemplu-probe.ro'));
 
     /**
-     * ȘI ANTETURILE DE PRISOS SE GOLESC. „List-Unsubscribe" îl poartă doar
-     * newsletterul și anunțul scris de mână — cele două mesaje care vin
-     * nechemate. Rămas pe poștaș, ar fi ajuns pe confirmarea de cont a
-     * următorului om, cu un buton „Dezabonează-te" pe un mesaj de la care n-are
-     * de unde să se dezaboneze.
+     * ȘI ANTETURILE DE PRISOS SE GOLESC.
+     *
+     * Azi niciun mesaj de pe site nu mai cere anteturi în plus — au plecat
+     * odată cu newsletterul zilnic și cu anunțul scris de mână, singurele două
+     * care veneau nechemate și de aceea purtau „List-Unsubscribe". Mecanismul
+     * rămâne însă în trimiteEmail(), pentru ziua în care va fi din nou un mesaj
+     * de felul acela, iar proba rămâne cu el: un antet lipit de poștaș ar fi
+     * ajuns pe confirmarea de cont a următorului om, cu un buton
+     * „Dezabonează-te" pe un mesaj de la care n-are de unde să se dezaboneze.
      */
     $cuIesire = $trimite('dan@exemplu-probe.ro', 'Azi în oraș',
         ['List-Unsubscribe' => '<https://exemplu-probe.ro/dezabonare.php?m=1&s=abc>']);
 
-    verifica('newsletterul poartă ieșirea', true,
+    verifica('un antet în plus ajunge în mesaj', true,
         str_contains($cuIesire['text'], 'List-Unsubscribe'));
 
     $dupaEl = $trimite('emil@exemplu-probe.ro', 'Bun venit');
 
-    verifica('dar mesajul următor NU o mai poartă', false,
+    verifica('dar mesajul următor NU îl mai poartă', false,
         str_contains($dupaEl['text'], 'List-Unsubscribe'));
 
     /* Cinci mesaje date serverului, nu patru și nici șase. */

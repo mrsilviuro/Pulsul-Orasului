@@ -193,6 +193,14 @@ function trimiteMultumiriPentruEveniment(array $eveniment): array
     }
 
     foreach ($oameni as $om) {
+        /**
+         * Pasul cerut de găzduire — vezi asteaptaRandulUrmator() din
+         * inc/posta.php. Un eveniment cu treizeci de înscriși înseamnă treizeci
+         * de mesaje deodată, adică taman plafonul sărit. E un cron, deci
+         * așteptarea nu ține pe nimeni în loc.
+         */
+        asteaptaRandulUrmator();
+
         $plecat = emailMultumireParticipare(
             (string) $om['email'],
             (string) $om['prenume'],
